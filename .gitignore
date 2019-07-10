@@ -2,6 +2,7 @@
 .nox
 *.pyc
 /dist/
+/trw.egg-info/
 /*.egg-info
 /*.egg
 __pycache__
