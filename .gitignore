@@ -1,0 +1,8 @@
+.idea
+.nox
+*.pyc
+/dist/
+/*.egg-info
+/*.egg
+__pycache__
+.pytest_cache
