@@ -2,6 +2,7 @@
 .nox
 *.pyc
 /dist/
+/build/
 /trw.egg-info/
 /*.egg-info
 /*.egg

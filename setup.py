@@ -1,7 +1,8 @@
-from setuptools import setup, find_packages
+import re
 from codecs import open
 from os import path
-import re
+
+from setuptools import find_packages, setup
 
 META_PATH = path.join('src', 'trw', 'metadata.py')
 

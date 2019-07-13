@@ -1,3 +1,11 @@
 # flake8: noqa
 
-from .metadata import __name__, __version__, __description__, __url__, __author__, __email__, __license__
+from .metadata import (
+    __author__,
+    __description__,
+    __email__,
+    __license__,
+    __name__,
+    __url__,
+    __version__,
+)

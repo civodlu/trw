@@ -1,3 +1,5 @@
+nox
 sphinx
 sphinx-autoapi
 sphinxcontrib-napoleon
+sphinx_rtd_theme
