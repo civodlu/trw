@@ -3,8 +3,8 @@
 *.pyc
 /dist/
 /build/
-/trw.egg-info/
-/*.egg-info
+/*.egg-info/
 /*.egg
 __pycache__
 .pytest_cache
+/docs/build

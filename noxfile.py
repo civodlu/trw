@@ -1,7 +1,9 @@
-import nox
-import webbrowser
-import os
 import glob
+import os
+import webbrowser
+
+import nox
+
 
 def find_files(root_folder, extension):
     """
@@ -50,3 +52,10 @@ def docs(session):
     for file in python_files:
         if not '__init__.py' in file:
             session.run('python', '-m', 'doctest', '-v', file)
+
+@nox.session
+def publish(session):
+   session.install('twine')
+   session.run('python', 'setup.py', 'bdist_wheel')
+   # TODO remove exsiting build/dist
+   session.run('twine', 'upload', 'dist/*')

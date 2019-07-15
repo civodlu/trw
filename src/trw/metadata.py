@@ -1,5 +1,5 @@
 __name__ = "trw"
-__version__ = "2019.07.07.dev0"
+__version__ = "0.0.1"
 __description__ = "Train, test, debug and optimize PyTorch models"
 __url__ = "https://github.com/civodlu/trw"
 __author__ = "Civodlu"
