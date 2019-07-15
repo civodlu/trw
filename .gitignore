@@ -2,9 +2,8 @@
 .nox
 *.pyc
 /dist/
-/build/
+**/build/
 /*.egg-info/
 /*.egg
 __pycache__
 .pytest_cache
-/docs/build
