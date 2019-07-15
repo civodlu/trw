@@ -1,8 +1,7 @@
 Torch Research Workflows
 ========================
 
-.. image:: build
-   :target: https://dev.azure.com/civodlu/trw/_apis/build/status/civodlu.trw?branchName=master
+.. image:: https://dev.azure.com/civodlu/trw/_apis/build/status/civodlu.trw?branchName=master
 
 
 Purpose
