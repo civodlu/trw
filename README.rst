@@ -32,6 +32,7 @@ To install use pip:
 Or clone the repo:
 
     $ git clone https://github.com/civodlu/trw.git
+    
     $ python setup.py install
     
 Example
