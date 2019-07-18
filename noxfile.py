@@ -16,8 +16,12 @@ def find_files(root_folder, extension):
 def tests(session):
     # run all tests
     session.install('pytest')
+    session.install('pytest-cov')
     session.install('.')
-    session.run('pytest')
+
+    session.run('pytest', '--cov-report', 'term', '--cov-report', 'html', '--cov', 'trw', '--m')
+
+
 
 @nox.session
 def beautify(session):
