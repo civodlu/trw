@@ -19,9 +19,7 @@ def tests(session):
     session.install('pytest-cov')
     session.install('.')
 
-    session.run('pytest', '--cov-report', 'term', '--cov-report', 'html', '--cov', 'trw', '--m')
-
-
+    session.run('pytest', '--cov-report', 'term', '--cov-report', 'html', '--cov', 'trw')
 
 @nox.session
 def beautify(session):
