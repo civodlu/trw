@@ -1,5 +1,3 @@
-pytorch
-torchvision
 matplotlib
 numpy
 sklearn
