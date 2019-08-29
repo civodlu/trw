@@ -4,6 +4,9 @@ import webbrowser
 
 import nox
 
+torch_version = [
+    'torch==1.2.0+cpu', 'torchvision==0.4.0+cpu', '-f', 'https://download.pytorch.org/whl/torch_stable.html'
+]
 
 def find_files(root_folder, extension):
     """
@@ -11,10 +14,12 @@ def find_files(root_folder, extension):
     """
     files = [f for f in glob.glob(root_folder + '/**/*' + extension, recursive=True)]
     return files
-
-@nox.session
+ 
+@nox.session(reuse_venv=True)
 def tests(session):
     # run all tests
+    session.install(*torch_version)
+    
     session.install('pytest')
     session.install('pytest-cov')
     session.install('.')
@@ -40,6 +45,7 @@ def lint(session):
 def docs(session):
     #session.install("-r", "requirements-dev.txt")
     #session.install(".")
+    #session.install(*torch_version)
 
     # build the documentation
     session.run('sphinx-build', 'docs/source', 'docs/build')
