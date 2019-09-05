@@ -5,7 +5,7 @@ import numpy as np
 import tempfile
 
 
-#root_output = 'c:/tmp/'
+# root_output = 'c:/tmp/'
 root_output = tempfile.mkdtemp()
 
 class NumpyDatasets(torch.utils.data.Dataset):

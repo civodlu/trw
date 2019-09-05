@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch
 import torch.utils.data
 import trw.train
-from . import utils
+import utils
 import functools
 
 

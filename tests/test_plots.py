@@ -1,7 +1,7 @@
 from unittest import TestCase
 import trw
 import os
-from . import utils
+import utils
 import numpy as np
 
 

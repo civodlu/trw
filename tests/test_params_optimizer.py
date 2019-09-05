@@ -7,7 +7,7 @@ import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from . import utils
+import utils
 
 
 def log_nothing(str):
