@@ -5,6 +5,23 @@ from . import sequence_map
 import collections
 from queue import Empty
 import copy
+import time
+
+
+class Performance:
+    def __init__(self):
+        self.nb_times = 0
+        self.total_time_sec = 0.0
+
+    def add(self, time_elapsed):
+        self.nb_times += 1
+        self.total_time_sec += time_elapsed
+
+    def get_average_time(self):
+        if self.nb_times == 0:
+            return 0
+
+        return self.total_time_sec / self.nb_times
 
 
 class SequenceAsyncReservoir(sequence.Sequence):
@@ -77,6 +94,10 @@ class SequenceAsyncReservoir(sequence.Sequence):
         self.maximum_number_of_samples_per_epoch = maximum_number_of_samples_per_epoch
         self.number_samples_generated = 0
 
+        # keep track of average performance of receiving and sending objects to the workers
+        self.perf_receiving = Performance()
+        self.perf_sending = Performance()
+
     def subsample(self, nb_samples):
         subsampled_source = self.source_split.subsample(nb_samples)
         return SequenceAsyncReservoir(
@@ -123,11 +144,14 @@ class SequenceAsyncReservoir(sequence.Sequence):
         """
         Fill the input queue of jobs to be completed
         """
-        # print('fill_queue', os.getpid(), 'NOW=', datetime.datetime.now().time(), self.function_to_run)
         try:
             while not self.job_executer.input_queue.full():
                 i = self.iter_source.next_item(blocking=False)
+
+                time_blocked_start = time.perf_counter()
                 self.job_executer.input_queue.put(i)
+                time_blocked_end = time.perf_counter()
+                self.perf_sending.add(time_blocked_end - time_blocked_start)
         except StopIteration:
             # we are done! Reset the input iterator
             self.iter_source = self.source_split.__iter__()
@@ -142,10 +166,11 @@ class SequenceAsyncReservoir(sequence.Sequence):
         # retrieve the results from the output queue and fill the reservoir
         while not self.job_executer.output_queue.empty():
             try:
-                # time_blocked_start = time.time()
+                time_blocked_start = time.perf_counter()
                 items = self.job_executer.output_queue.get()
-                # time_blocked_end = time.time()
-                # self.time_spent_in_blocked_state += time_blocked_end - time_blocked_start
+                time_blocked_end = time.perf_counter()
+                self.perf_receiving.add(time_blocked_end - time_blocked_start)
+
                 self.reservoir.append(items)
             except Empty:
                 break

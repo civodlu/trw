@@ -126,8 +126,7 @@ class TestDatasetLoaderPerf(TestCase):
         assert len(bs) == trw.train.len_batch(batch) / batch_size
         return time_end - time_start
 
-    # TODO investigate
-    """
+
     def test_pipeline_numpy(self):
         shape_small = [60000, 1]
         shape_large = [60000, 10000]
@@ -164,7 +163,7 @@ class TestDatasetLoaderPerf(TestCase):
 
         # we expect to have large differences for the timing of small/larget numpy arrays
         self.assertTrue(time_numpy_large > 1.8 * time_numpy_small)
-    """
+
 
     def test_job_and_worker_processing_overlap(self):
         # The idea of the data pipeline is that we have data to process using the GPU (or `job`)

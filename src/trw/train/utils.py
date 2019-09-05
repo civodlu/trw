@@ -67,7 +67,7 @@ def len_batch(batch):
     :param batch: a data split or a `collections.Sequence`
     :return: the number of elements within a data split
     """
-    if isinstance(batch, collections.Sequence):
+    if isinstance(batch, (collections.Sequence, torch.Tensor)):
         return len(batch)
 
     for name, values in batch.items():
@@ -401,43 +401,6 @@ def transfer_batch_to_device(batch, device, non_blocking=False):
     return device_batch
 
 
-def find_tensor_leaves_with_grad(tensor):
-    """
-    Find the input leaves of a tensor. Considered Input leaves are tensors with attribute `requires_grad=True`
-
-    Input Leaves must have `requires_grad=True`, else they will not be discoverable.
-
-    Args:
-        tensor: a torch.Tensor
-
-    Returns:
-        a list of torch.Tensor with attribute `requires_grad=True` that is an input of `tensor`
-    """
-    leaves = []
-    visited = set()
-
-    queue = [tensor.grad_fn]
-    while len(queue) > 0:
-        current = queue.pop()
-        visited.add(current)
-
-        if isinstance(current, torch.Tensor) and not isinstance(current, torch.nn.Parameter):
-            leaves.append(current)
-
-        if hasattr(current, 'next_functions'):
-            for next, _ in current.next_functions:
-                if next not in visited:
-                    if hasattr(next, 'variable'):
-                        queue.append(next.variable)
-                    elif hasattr(next, 'next_functions'):
-                        queue.append(next)
-                    elif next is None:
-                        pass
-                    else:
-                        assert 0
-    return leaves
-
-
 class CleanAddedHooks:
     """
     Context manager that automatically track added hooks on the model and remove them when
@@ -492,3 +455,10 @@ class CleanAddedHooks:
             if len(module._backward_hooks) > 0:
                 modules_kvp_backward[module] = set(module._backward_hooks.keys())
         return modules_kvp_forward, modules_kvp_backward
+
+
+def get_device(module):
+    """
+    Return the device of a module. This may be incorrect if we have a module split accross different devices
+    """
+    return next(module.parameters()).device

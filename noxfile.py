@@ -43,9 +43,9 @@ def lint(session):
 
 @nox.session(reuse_venv=True)
 def docs(session):
-    #session.install("-r", "requirements-dev.txt")
-    #session.install(".")
-    #session.install(*torch_version)
+    session.install("-r", "requirements-dev.txt")
+    session.install(".")
+    session.install(*torch_version)
 
     # build the documentation
     session.run('sphinx-build', 'docs/source', 'docs/build')

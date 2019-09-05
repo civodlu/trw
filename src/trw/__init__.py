@@ -1,5 +1,3 @@
-# flake8: noqa
-
 from .metadata import (
     __author__,
     __description__,
@@ -11,9 +9,8 @@ from .metadata import (
 )
 
 from . import train
-#from . import transforms
-#from . import datasets
-#from . import layers
-#from . import hparams
-#from . import arch
-#from . import simple_layers
+from . import transforms
+from . import datasets
+from . import layers
+from . import hparams
+from . import simple_layers

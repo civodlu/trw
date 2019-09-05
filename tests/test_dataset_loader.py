@@ -244,6 +244,7 @@ class TestDatasetLoader(TestCase):
             assert len(batch['indices']) == 2
             indices.append(batch['indices'])
             
+            
         assert len(indices) == 3
         assert torch.sum(torch.stack(indices)) == 1 + 2 + 3 + 4 + 5
 
@@ -351,6 +352,7 @@ class TestDatasetLoader(TestCase):
             break
         split.job_executer.close()
 
+
     def test_split_subsample(self):
         nb_indices = 40
         split = {
@@ -372,3 +374,53 @@ class TestDatasetLoader(TestCase):
         # we resampled the sequence to 10 samples with a batch size of 5
         # so we expect 2 batches
         self.assertTrue(len(batches) == 2)
+
+
+
+
+
+
+"""
+    def test_TODO(self):
+        nb_indices = 10
+        nb_workers = 5
+
+        indices = np.asarray(list(range(nb_indices)))
+        split = {
+            'indices': indices,
+        }
+
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data, nb_workers=nb_workers).map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        # process creation is quite slow on windows (>0.7s), so create the processes first
+        # so that creation time is not included in processing time
+        for batch in split:
+            break
+        time.sleep(5)
+
+        print('STARTED', datetime.datetime.now().time())
+        time_start = time.time()
+        batches = []
+        ids = set()
+        for batch in split:
+            # time_processed = time.time()
+            # processed_time = time_processed - batch['time_augmented']
+            # loaded_time = time_processed - batch['time_loaded']
+            # created_time = time_processed - batch['time_created']
+            # batch['time_processed'] = time_processed
+            #print('FINAL BATCH', batch)
+            # print('TIME----', processed_time, loaded_time, created_time, 'NOW=', datetime.datetime.now().time())
+            batches.append(batch)
+            ids.add(str(batch['indices'][0]))
+
+        expected_time = nb_indices * 2.0 / nb_workers + nb_indices * 0.1
+        time_end = time.time()
+        total_time = time_end - time_start
+        print('total_time', total_time, 'Target time=', expected_time, 'nb_jobs=', len(batches), 'nb_jobs_expected=', len(indices) * 10)
+
+        assert len(batches) == len(indices) * 10, 'nb={}'.format(len(batches))
+        assert len(ids) == len(indices)
+        assert total_time < expected_time + 0.2
+
+if __name__ == '__main__':
+    TestSplit().test_TODO()
+"""

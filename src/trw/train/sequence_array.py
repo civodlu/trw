@@ -31,7 +31,7 @@ class SequenceArray(sequence.Sequence):
         self.use_advanced_indexing = use_advanced_indexing
 
         # create a unique UID
-        if sample_uid_name is not None:
+        if sample_uid_name is not None and sample_uid_name not in split:
             split[sample_uid_name] = np.asarray(np.arange(utils.len_batch(split)))
 
     def subsample(self, nb_samples):
