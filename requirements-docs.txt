@@ -7,3 +7,11 @@ twine
 pytest-cov
 pytorch
 torchvision
+matplotlib
+numpy
+sklearn
+scikit-image
+pandas
+tensorboardX
+tensorboard
+onnx
