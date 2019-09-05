@@ -2,8 +2,8 @@ import torch
 import functools
 import collections
 import torch.nn as nn
-from . import utils
-from . import metrics
+from trw.train import utils
+from trw.train import metrics
 
 
 class Output:

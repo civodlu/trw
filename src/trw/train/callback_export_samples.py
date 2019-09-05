@@ -1,10 +1,10 @@
 import os
 import functools
 import logging
-from . import callback
-from . import trainer
-from . import utils
-from . import sample_export
+from trw.train import callback
+from trw.train import trainer
+from trw.train import utils
+from trw.train import sample_export
 
 
 logger = logging.getLogger(__name__)

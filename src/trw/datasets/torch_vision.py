@@ -1,5 +1,5 @@
 import torchvision
-from .utils import named_dataset
+from trw.datasets.utils import named_dataset
 
 
 @named_dataset(names=['images', 'targets'])

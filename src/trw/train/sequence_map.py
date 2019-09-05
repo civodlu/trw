@@ -6,7 +6,7 @@ from torch import multiprocessing as mp
 from queue import Empty
 import functools
 
-from . import sequence
+from trw.train import sequence
 
 
 logger = logging.getLogger(__name__)

@@ -3,11 +3,9 @@ import collections
 from trw.train import utils
 import torch
 import torch.utils.data.dataloader
-from . import sampler
+from trw.train import sampler
 import functools
 import weakref
-
-
 
 
 # specific windows platform debugging

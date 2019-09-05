@@ -1,6 +1,6 @@
-from . import callback_tensorboard
-from . import utils
-from . import trainer
+from trw.train import callback_tensorboard
+from trw.train import utils
+from trw.train import trainer
 import os
 import logging
 import torch

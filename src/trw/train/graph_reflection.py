@@ -5,7 +5,7 @@ such as finding layers of specified types in a nn.Module or using the `grad_fn`
 
 import torch
 import torch.nn as nn
-from . import utils
+from trw.train import utils
 import collections
 
 

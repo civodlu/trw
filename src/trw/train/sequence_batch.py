@@ -1,4 +1,4 @@
-from . import sequence
+from trw.train import sequence
 
 
 class SequenceBatch(sequence.Sequence):

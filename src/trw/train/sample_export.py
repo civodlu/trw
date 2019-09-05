@@ -4,7 +4,7 @@ We assume throughout that the image format is (samples, channels, height, width)
 
 import numpy as np
 import numbers
-from . import utils
+from trw.train import utils
 
 
 def as_rgb_image(value):

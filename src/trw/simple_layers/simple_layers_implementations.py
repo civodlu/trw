@@ -1,4 +1,4 @@
-from . import simple_layers
+from trw.simple_layers import simple_layers
 import torch
 import torch.nn as nn
 import functools

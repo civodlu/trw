@@ -1,5 +1,5 @@
-from . import utils
-from . import outputs as outputs_trw
+from trw.train import utils
+from trw.train import outputs as outputs_trw
 import collections
 import torch
 import logging

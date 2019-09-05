@@ -4,7 +4,7 @@ Defines the main plots and reports used for the analysis of our models
 
 import matplotlib.pyplot as plt
 import numpy as np
-from . import utils
+from trw.train import utils
 import collections
 from textwrap import wrap
 import itertools

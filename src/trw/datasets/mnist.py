@@ -1,10 +1,12 @@
 import collections
-from .torchvision import *
+from trw.datasets.torch_vision import *
 import trw.train
 import os
 
+
 def identity(batch):
     return batch
+
 
 def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_workers=5, data_processing_batch_size=200, normalize_0_1=False):
     if root is None:

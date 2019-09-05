@@ -2,9 +2,9 @@ import os
 import logging
 import collections
 
-from . import callback
-from . import utils
-from . import analysis_plots
+from trw.train import callback
+from trw.train import utils
+from trw.train import analysis_plots
 
 
 logger = logging.getLogger(__name__)

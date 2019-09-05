@@ -1,5 +1,5 @@
-from . import params
-from . import params_optimizer_random_search
+from trw.hparams import params
+from trw.hparams import params_optimizer_random_search
 import os
 import copy
 import math

@@ -1,8 +1,8 @@
 import collections
 import numpy as np
 import torch
-from . import crop
-from . import pad
+from trw.transforms import crop
+from trw.transforms import pad
 
 
 class Transform:

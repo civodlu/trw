@@ -1,4 +1,4 @@
-from . import callback
+from trw.train import callback
 import logging
 import os
 import collections

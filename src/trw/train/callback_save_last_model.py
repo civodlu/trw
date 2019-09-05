@@ -1,5 +1,5 @@
-from . import callback
-from . import trainer
+from trw.train import callback
+from trw.train import trainer
 import os
 import logging
 

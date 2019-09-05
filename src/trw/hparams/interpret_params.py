@@ -6,9 +6,9 @@ from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import os
-from . import params_optimizer_random_search
-from ..train import utils
-from ..train import analysis_plots
+from trw.hparams import params_optimizer_random_search
+from trw.train import utils
+from trw.train import analysis_plots
 import math
 import numbers
 import logging

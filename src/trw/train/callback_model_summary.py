@@ -1,6 +1,6 @@
-from . import callback
-from . import utils
-from . import trainer
+from trw.train import callback
+from trw.train import utils
+from trw.train import trainer
 import collections
 import torch
 import torch.nn as nn

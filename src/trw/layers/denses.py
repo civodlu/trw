@@ -1,5 +1,5 @@
 import torch.nn as nn
-from .flatten import Flatten
+from trw.layers.flatten import Flatten
 
 
 def denses(sizes, dropout_probability=None, with_batchnorm=False, batchnorm_momentum=0.1, activation=nn.ReLU, last_layer_is_output=False, with_flatten=True):

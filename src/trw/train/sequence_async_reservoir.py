@@ -1,6 +1,6 @@
-from . import sampler
-from . import sequence
-from . import sequence_map
+from trw.train import sampler
+from trw.train import sequence
+from trw.train import sequence_map
 
 import collections
 from queue import Empty

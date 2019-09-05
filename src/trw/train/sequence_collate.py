@@ -1,5 +1,5 @@
-from . import sequence
-from . import utils
+from trw.train import sequence
+from trw.train import utils
 
 
 class SequenceCollate(sequence.Sequence):

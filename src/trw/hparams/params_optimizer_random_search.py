@@ -1,4 +1,4 @@
-from . import params
+from trw.hparams import params
 import pickle
 import os
 import copy

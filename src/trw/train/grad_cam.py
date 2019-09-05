@@ -1,5 +1,5 @@
-from . import graph_reflection
-from . import utils
+from trw.train import graph_reflection
+from trw.train import utils
 from trw.layers import upsample
 import torch
 import numpy as np

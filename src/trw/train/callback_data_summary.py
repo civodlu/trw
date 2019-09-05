@@ -1,5 +1,5 @@
-from . import callback
-from . import utils
+from trw.train import callback
+from trw.train import utils
 import collections
 import numpy as np
 import logging

@@ -1,8 +1,8 @@
-from . import callback
-from . import utils
-from . import outputs as trf_outputs
-from . import sample_export
-from . import trainer
+from trw.train import callback
+from trw.train import utils
+from trw.train import outputs as trf_outputs
+from trw.train import sample_export
+from trw.train import trainer
 import numpy as np
 import os
 import functools

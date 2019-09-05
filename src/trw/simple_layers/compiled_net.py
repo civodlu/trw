@@ -6,9 +6,9 @@ from enum import Enum
 import collections
 import torch.nn as nn
 import weakref
-from .simple_layers import SimpleLayerBase, SimpleOutputBase
-from .simple_layers_implementations import Input
-from .ordered_set import OrderedSet
+from trw.simple_layers import SimpleLayerBase, SimpleOutputBase
+from trw.simple_layers.simple_layers_implementations import Input
+from trw.simple_layers.ordered_set import OrderedSet
 
 
 def find_layer_type(nodes: list, layer_type):

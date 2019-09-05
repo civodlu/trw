@@ -1,7 +1,7 @@
-from . import callback
-from . import utils
-from . import sequence_array
-from . import sample_export
+from trw.train import callback
+from trw.train import utils
+from trw.train import sequence_array
+from trw.train import sample_export
 import logging
 import os
 import collections

@@ -1,4 +1,4 @@
-from . import callback_tensorboard
+from trw.train import callback_tensorboard
 import logging
 
 

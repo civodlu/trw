@@ -1,6 +1,6 @@
 import trw.layers
 
-from . import simple_layers
+from trw.simple_layers import simple_layers
 
 
 def convs_3d(parent, channels, *args, **kwargs):

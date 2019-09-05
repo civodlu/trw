@@ -1,6 +1,6 @@
-from . import sequence
-from . import sampler
-from . import utils
+from trw.train import sequence
+from trw.train import sampler
+from trw.train import utils
 import numpy as np
 import copy
 import torch

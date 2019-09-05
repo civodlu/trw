@@ -1,6 +1,6 @@
 import torch.nn as nn
-from .flatten import Flatten
-from .utils import div_shape
+from trw.layers.flatten import Flatten
+from trw.layers.utils import div_shape
 
 
 def convs_3d(channels, convolution_kernels=(5, 5, 5), strides=(1, 1, 1), pooling_size=(2, 2, 2), convolution_repeats=None, activation=nn.ReLU, with_flatten=False, dropout_probability=None, with_batchnorm=False, with_lrn=False, lrn_size=2, batchnorm_momentum=0.1, padding='same'):

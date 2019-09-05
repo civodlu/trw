@@ -1,12 +1,12 @@
 import os
-from . import callback
-from . import trainer
-from . import utils
-from . import sample_export
-from . import sequence_array
-from . import outputs as outputs_trw
-from . import guided_back_propagation
-from . import grad_cam
+from trw.train import callback
+from trw.train import trainer
+from trw.train import utils
+from trw.train import sample_export
+from trw.train import sequence_array
+from trw.train import outputs as outputs_trw
+from trw.train import guided_back_propagation
+from trw.train import grad_cam
 from enum import Enum
 import torch
 import torch.nn

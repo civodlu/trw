@@ -1,4 +1,4 @@
-from . import Sequence
+from trw.train import Sequence
 import collections
 from torch.utils import data
 
