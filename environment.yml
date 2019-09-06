@@ -32,7 +32,6 @@ dependencies:
   - tk=8.6.8=hfa6e2cd_0
   - torchvision=0.4.0=py36_cpu
   - vc=14.1=h0510ff6_4
-  - vs2015_runtime=14.15.26706=h3a45250_4
   - wheel=0.33.4=py36_0
   - wincertstore=0.2=py36h7fe50ca_0
   - xz=5.2.4=h2fa13f4_4
