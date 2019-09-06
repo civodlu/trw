@@ -3,6 +3,7 @@ import functools
 import skimage
 import collections
 import trw
+import torch
 
 
 def noisy(image, noise_type):
@@ -177,12 +178,12 @@ def _add_circle(imag, mask, shapes_added, scale_factor):
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 
 
-def _create_image(shape, nb_classes=None, global_scale_factor=1.0, max_classes=None):
+def _create_image(shape, nb_classes_at_once=None, global_scale_factor=1.0, max_classes=None, background=255):
     """
 
     Args:
         shape: the shape of an image [height, width]
-        nb_classes: the number of classes to be included in each sample. If `None`,
+        nb_classes_at_once: the number of classes to be included in each sample. If `None`,
             all the classes will be included
         global_scale_factor: the scale of the shapes to generate
         max_classes: the maximum number of classes to be used. If `None`, all classes can
@@ -193,8 +194,8 @@ def _create_image(shape, nb_classes=None, global_scale_factor=1.0, max_classes=N
     """
     objects = [
         ('square', functools.partial(_add_square, scale_factor=10.0 * global_scale_factor)),
-        ('rectangle', functools.partial(_add_rectangle, scale_factor=10.0 * global_scale_factor)),
         ('cross', functools.partial(_add_cross, scale_factor=10.0 * global_scale_factor)),
+        ('rectangle', functools.partial(_add_rectangle, scale_factor=10.0 * global_scale_factor)),
         ('circle', functools.partial(_add_circle, scale_factor=10.0 * global_scale_factor)),
         ('triangle', functools.partial(_add_triangle, scale_factor=10.0 * global_scale_factor)),
     ]
@@ -202,12 +203,12 @@ def _create_image(shape, nb_classes=None, global_scale_factor=1.0, max_classes=N
     if max_classes is not None:
         objects = objects[:max_classes]
 
-    if nb_classes is not None:
+    if nb_classes_at_once is not None:
         np.random.shuffle(objects)
-        objects = objects[:nb_classes]
+        objects = objects[:nb_classes_at_once]
 
     img = np.zeros([3] + list(shape), dtype=np.uint8)
-    img.fill(255)
+    img.fill(background)
     mask = np.zeros([1] + list(shape), dtype=np.uint8)
 
     shapes_added = []
@@ -215,12 +216,22 @@ def _create_image(shape, nb_classes=None, global_scale_factor=1.0, max_classes=N
     for fn_name, fn in objects:
         shape = fn(img, mask, shapes_added)
         shapes_added.append(shape)
-        shapes_infos.append((fn_name, (shape[0] + shape[1]) / 2))
+        shapes_infos.append((fn_name, ((shape[0] + shape[1]) / 2).astype(np.float32)))
 
     return img, mask, shapes_infos
 
 
-def create_fake_symbols_2d_datasset(nb_samples, image_shape, ratio_valid=0.2, nb_classes=None, global_scale_factor=1.0, normalize_0_1=True, noise_fn=functools.partial(noisy, noise_type='poisson')):
+def create_fake_symbols_2d_datasset(
+        nb_samples,
+        image_shape,
+        ratio_valid=0.2,
+        nb_classes_at_once=None,
+        global_scale_factor=1.0,
+        normalize_0_1=True,
+        noise_fn=functools.partial(noisy, noise_type='poisson'),
+        max_classes=None,
+        batch_size=64,
+        background=255):
     """
     Create artificial 2D for classification and segmentation problems
 
@@ -230,11 +241,12 @@ def create_fake_symbols_2d_datasset(nb_samples, image_shape, ratio_valid=0.2, nb
         nb_samples: the number of samples to be generated
         image_shape: the shape of an image [height, width]
         ratio_valid: the ratio of samples to be used for the validation split
-        nb_classes: the number of classes to be included in each sample. If `None`,
+        nb_classes_at_once: the number of classes to be included in each sample. If `None`,
             all the classes will be included
         global_scale_factor: the scale of the shapes to generate
         noise_fn: a function to create noise in the image
         normalize_0_1: if True, the data will be normalized (i.e., image & position will be in range [0..1])
+        max_classes: the total number of classes available
 
     Returns:
         a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits
@@ -243,7 +255,7 @@ def create_fake_symbols_2d_datasset(nb_samples, image_shape, ratio_valid=0.2, nb
     class_dict = collections.OrderedDict()
     samples = []
     for i in range(nb_samples):
-        r = _create_image(image_shape, nb_classes=nb_classes, global_scale_factor=global_scale_factor)
+        r = _create_image(image_shape, nb_classes_at_once=nb_classes_at_once, global_scale_factor=global_scale_factor, max_classes=max_classes, background=background)
         samples.append(r)
 
         for class_name, _ in r[2]:
@@ -253,12 +265,12 @@ def create_fake_symbols_2d_datasset(nb_samples, image_shape, ratio_valid=0.2, nb
     # unpack the shape infos so that we have the same size for all features
     dataset = collections.defaultdict(list)
     for image, mask, shapes in samples:
-        if normalize_0_1:
-            image = image.astype(np.float32) / 255.0
         if noise_fn is not None:
             image = noise_fn(image)
         if image.dtype != np.float32:
             image = image.astype(np.float32)
+        if normalize_0_1:
+            image = (image.astype(np.float32) / 255.0 - 0.7) * 5
         dataset['image'].append(image)
         dataset['mask'].append(mask)
         shapes_dict = dict(shapes)
@@ -280,13 +292,14 @@ def create_fake_symbols_2d_datasset(nb_samples, image_shape, ratio_valid=0.2, nb
     dataset_train = {}
     dataset_valid = {}
     for feature_name, feature_values in dataset.items():
-        pass
+        if feature_name in class_dict:
+            feature_values = np.asarray(feature_values, dtype=np.int64)
+        dataset_train[feature_name] = torch.from_numpy(np.asarray(feature_values[:nb_train]))
+        dataset_valid[feature_name] = torch.from_numpy(np.asarray(feature_values[nb_train:]))
 
-    #dataset_train = {feature_name: np.asarray(feature_values[:nb_train]) for feature_name, feature_values in dataset.items()}
-    #dataset_valid = {feature_name: np.asarray(feature_values[nb_train:]) for feature_name, feature_values in dataset.items()}
     return {
         'fake_symbols_2d': {
-            'train': trw.train.SequenceArray(dataset_train),
-            'valid': trw.train.SequenceArray(dataset_valid),
+            'train': trw.train.SequenceArray(dataset_train, sampler=trw.train.SamplerRandom(batch_size=batch_size)),
+            'valid': trw.train.SequenceArray(dataset_valid, sampler=trw.train.SamplerRandom(batch_size=batch_size)),
         }
     }

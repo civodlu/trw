@@ -65,6 +65,8 @@ class _CaptureLastModuleType:
             self.recorded_modules.append((module, module_input, module_output))
 
     def get_module(self):
+        if len(self.recorded_modules) == 0:
+            return
         if len(self.recorded_modules) < self.relative_index:
             return None
         return self.recorded_modules[0]
