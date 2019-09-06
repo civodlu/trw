@@ -7,4 +7,6 @@ conda install pytorch torchvision cpuonly -c pytorch
 cd D:\devel\trw
 pip install -e .
 pip install -r requirements-dev.txt
+
+conda env export --no-builds -f environment.yml
 conda env export > environment.yml
