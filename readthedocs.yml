@@ -13,18 +13,15 @@ sphinx:
 formats: []
 
 # Optionally set the version of Python and requirements required to build your docs
-python:
-  version: 3.6
-  system_packages: true
-  install:
-    - requirements: requirements-dev.txt
-    - method: pip
-      path: .
+#python:
+#  version: 3.6
+#  install:
+#    - requirements: requirements-docs.txt
 
 conda:
   environment: environment.yml
   
-#python:
-#  install:
-#   - method: pip
-#     path: .
+python:
+  install:
+    - method: pip
+      path: .
