@@ -1,12 +1,3 @@
-nox
-sphinx
-sphinx-autoapi
-sphinxcontrib-napoleon
-sphinx_rtd_theme
-twine
-pytest-cov
-pytorch
-torchvision
 matplotlib
 numpy
 sklearn
@@ -15,3 +6,11 @@ pandas
 tensorboardX
 tensorboard
 onnx
+pytorch
+nox
+sphinx
+sphinx-autoapi
+sphinxcontrib-napoleon
+sphinx_rtd_theme
+twine
+pytest-cov
