@@ -3,9 +3,9 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - cpuonly=1.0
+  - cpuonly
   - python=3.6.7
-  - pytorch=1.2.0
-  - torchvision=0.4.0
+  - pytorch
+  - torchvision
   - pip:
-    - sphinx-autoapi==1.1.0
+    - sphinx-autoapi
