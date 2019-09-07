@@ -6,3 +6,4 @@ dependencies:
   - cpuonly=1.0
   - python=3.6.7
   - pytorch=1.2.0
+  - torchvision=0.4.0
