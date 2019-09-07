@@ -6,7 +6,7 @@ pandas
 tensorboardX
 tensorboard
 onnx
-pytorch
+torch
 nox
 sphinx
 sphinx-autoapi
