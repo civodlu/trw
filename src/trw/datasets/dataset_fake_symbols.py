@@ -273,7 +273,15 @@ def create_fake_symbols_2d_datasset(
             image = (image.astype(np.float32) / 255.0 - 0.7) * 5
         dataset['image'].append(image)
         dataset['mask'].append(mask)
+
         shapes_dict = dict(shapes)
+
+        if nb_classes_at_once == 1:
+            # if we have only one shape per sample, group all classes in
+            # a single feature
+            c = next(iter(shapes_dict.keys()))
+            c_id = class_dict[c]
+            dataset['classification'].append(c_id)
 
         for class_name, class_id in class_dict.items():
             shape_pos = shapes_dict.get(class_name)
@@ -292,7 +300,7 @@ def create_fake_symbols_2d_datasset(
     dataset_train = {}
     dataset_valid = {}
     for feature_name, feature_values in dataset.items():
-        if feature_name in class_dict:
+        if feature_name in class_dict or feature_name == 'classification':
             feature_values = np.asarray(feature_values, dtype=np.int64)
         dataset_train[feature_name] = torch.from_numpy(np.asarray(feature_values[:nb_train]))
         dataset_valid[feature_name] = torch.from_numpy(np.asarray(feature_values[nb_train:]))
