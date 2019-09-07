@@ -7,21 +7,14 @@ version: 2
 # Optionally build your docs in additional formats such as PDF and ePub
 formats: []
 
-# Optionally set the version of Python and requirements required to build your docs
-#python:
-#  version: 3.6
-#  install:
-#    - requirements: requirements-docs.txt
-
 conda:
-  environment: environment.yml
+  environment: readthedocs-environment.yml
   
 python:
   install:
     - requirements: requirements-dev.txt
     - method: pip
       path: .
-
 
 # Build documentation in the docs/ directory with Sphinx
 sphinx:
