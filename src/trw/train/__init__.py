@@ -33,7 +33,7 @@ from .callback_tensorboard_record_model import CallbackTensorboardRecordModel
 from .callback_export_best_history import CallbackExportBestHistory
 from .callback_learning_rate_finder import CallbackLearningRateFinder
 from .callback_learning_rate_recorder import CallbackLearningRateRecorder
-from .callback_explain_decision import CallbackExplainDecision
+from .callback_explain_decision import CallbackExplainDecision,  ExplainableAlgorithm
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor

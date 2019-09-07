@@ -43,7 +43,7 @@ class CallbackExplainDecision(callback.Callback):
     """
     Explain the decision of a model
     """
-    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='test', algorithm=(ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.GuidedBackPropagation), output_name=None, nb_explanations=1):
+    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.GuidedBackPropagation), output_name=None, nb_explanations=1, algorithms_kwargs=None):
         """
         Args:
             max_samples: the maximum number of examples to export
@@ -54,11 +54,13 @@ class CallbackExplainDecision(callback.Callback):
             output_name: the output to be used as classification target. If `None`, report the first output belonging to a `OutputClassification`
             nb_explanations: the number of alternative explanations to be exported. nb_explanations = 1, explain the current guess, nb_explanations = 2,
                 in addition calculate the explanation for the next best guess and so on for nb_explanations = 3
+            algorithms_kwargs: additional argument (a dictionary of dictionary of algorithm argument) to be provided to the algorithm or `None`.
         """
         self.max_samples = max_samples
         self.dirname = dirname
         self.dataset_name = dataset_name
         self.split_name = split_name
+        self.algorithms_kwargs = algorithms_kwargs
 
         # since all `explanation` algorithms all have drawbacks, we will
         # want to export multiple explanations and so make it a list
@@ -121,6 +123,10 @@ class CallbackExplainDecision(callback.Callback):
 
         nb_samples = min(self.max_samples, utils.len_batch(self.batch))
         for algorithm in self.algorithms:
+            algorithm_kwargs = {}
+            if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:
+                algorithm_kwargs = self.algorithms_kwargs.get(algorithm)
+
             if algorithm == ExplainableAlgorithm.GradCAM:
                 # do sample by sample to simplify the export procedure
                 for n in range(nb_samples):
@@ -136,7 +142,7 @@ class CallbackExplainDecision(callback.Callback):
                             # we want to back-propagate up to the inputs
                             tensor.requires_grad = True
 
-                    gradcam = grad_cam.GradCam()
+                    gradcam = grad_cam.GradCam(**algorithm_kwargs)
                     r = gradcam.generate_cam(model, batch_n, target_class_name=output_name)
                     if r is None:
                         # the algorithm failed, go to the next one
@@ -169,7 +175,7 @@ class CallbackExplainDecision(callback.Callback):
 
             if algorithm == ExplainableAlgorithm.GuidedBackPropagation:
                 with utils.CleanAddedHooks(model) as context:
-                    gbp = guided_back_propagation.GuidedBackprop(model)
+                    gbp = guided_back_propagation.GuidedBackprop(model, **algorithm_kwargs)
                     # do sample by sample to simplify the export procedure
                     for n in range(nb_samples):
                         batch_n = sequence_array.SequenceArray.get(
