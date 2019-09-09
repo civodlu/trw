@@ -166,11 +166,8 @@ class ContinuousPower(HyperParam):
     """
     Represent a continuous power hyper-parameter
     
-    This type of distribution can be useful to test e.g., learning rate hyper-parameter.
-    
-    Given a random number x generated from uniform interval (min_range, max_range), return::
-    
-    10 ** x
+    This type of distribution can be useful to test e.g., learning rate hyper-parameter. Given a
+    random number x generated from uniform interval (min_range, max_range), return 10 ** x
     """
     def __init__(self, current_value, exponent_min, exponent_max):
         """
@@ -208,6 +205,7 @@ class HyperParameters:
     def __init__(self, hparams=None):
         """
         Create the hyper-parameter repository
+
         :param hparams: if not None, the initial parameters
         """
         if hparams is not None:
@@ -218,6 +216,7 @@ class HyperParameters:
     def create(self, hparam_name, hparam):
         """
         Create an hyper parameter if it is not already present
+
         :param hparam_name: the name of the hyper-parameter to create
         :param hparam: the hyper-parameter description and value
         :return: the hyper parameter value

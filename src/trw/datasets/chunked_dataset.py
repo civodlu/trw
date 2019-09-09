@@ -186,6 +186,7 @@ class DatasetChunked(torch.utils.data.Dataset):
     Chunked datasets to enable larger than RAM datasets to be processed
 
     The idea is to have a very large dataset split in chunks. Each chunks contains `N` samples. Chunks are loaded in two parts:
+    
     * the sample data: a binary file containing `N` samples. The samples are only loaded when requested
     * the header: this is loaded when the dataset is instantiated, it contains header description (e.g., file offset position per sample)
       and custom attributes

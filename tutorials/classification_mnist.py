@@ -1,5 +1,4 @@
 import trw
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
@@ -43,7 +42,8 @@ model, results = trainer.fit(
     inputs_fn=lambda: trw.datasets.create_mnist_datasset(),
     run_prefix='mnist_cnn',
     model_fn=lambda options: Net(),
-    optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=0.1))
+    optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
+        datasets=datasets, model=model, learning_rate=0.1))
 
 # calculate statistics of the final epoch
 output = results['outputs']['mnist']['test']['softmax']

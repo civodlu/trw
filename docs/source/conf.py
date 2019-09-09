@@ -44,6 +44,10 @@ extensions = [
 autoapi_type = 'python'
 autoapi_dirs = ['../../src/trw/']
 
+doctest_global_setup  = """
+import trw
+"""
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

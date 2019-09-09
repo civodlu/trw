@@ -43,9 +43,9 @@ def lint(session):
 
 @nox.session(reuse_venv=True)
 def docs(session):
-    session.install("-r", "requirements-dev.txt")
-    session.install(".")
-    session.install(*torch_version)
+    #session.install("-r", "requirements-dev.txt")
+    #session.install(".")
+    #session.install(*torch_version)
 
     # build the documentation
     session.run('sphinx-build', 'docs/source', 'docs/build')
@@ -55,11 +55,11 @@ def docs(session):
     webbrowser.open_new(path)
 
     # run the python commands contained in the docstrings
-    python_files = find_files('src', extension='.py')
-    print('Python files:\n', python_files)
-    for file in python_files:
-        if not '__init__.py' in file:
-            session.run('python', '-m', 'doctest', '-v', file)
+    #python_files = find_files('src', extension='.py')
+    #print('Python files:\n', python_files)
+    #for file in python_files:
+    #    if not '__init__.py' in file:
+    #        session.run('python', '-m', 'doctest', '-v', file)
 
 @nox.session
 def publish(session):
