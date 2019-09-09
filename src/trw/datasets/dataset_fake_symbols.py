@@ -6,7 +6,7 @@ import trw
 import torch
 
 
-def noisy(image, noise_type):
+def _noisy(image, noise_type):
     """
 
     Args:
@@ -66,9 +66,11 @@ def noisy(image, noise_type):
 
 
 def _random_location(image_shape, figure_shape):
-    maximum_location = image_shape[0] - figure_shape[0], image_shape[1] - figure_shape[1]
-    location = np.asarray([np.random.random_integers(0, maximum_location[0]), np.random.random_integers(0, maximum_location[1])])
-    return location
+    image_shape = np.asarray(image_shape)
+    figure_shape = np.asarray(figure_shape)
+    maximum_location = image_shape - figure_shape
+    location = [np.random.random_integers(0, l) for l in maximum_location]
+    return np.asarray(location)
 
 
 def _random_color():
@@ -79,7 +81,7 @@ def _random_color():
 def _add_shape(imag, mask, shape, shapes_added, scale_factor, color, min_overlap_distance=30):
     shape_shape = np.asarray(shape.shape)
     shape_imag_2d = imag.shape[1:]
-    expected_shape = (int(shape.shape[0] * scale_factor) + 1, int(shape.shape[1] * scale_factor) + 1)
+    expected_shape = (np.asarray(shape_shape) * scale_factor).astype(int) + 1
 
     distance = 0
     location = None
@@ -94,111 +96,37 @@ def _add_shape(imag, mask, shape, shapes_added, scale_factor, color, min_overlap
             if distance_shape < distance:
                 distance = distance_shape
 
-    shape_scaled = skimage.transform.rescale(shape, (scale_factor, scale_factor), order=0, multichannel=False)
+    shape_scaled = skimage.transform.rescale(shape, scale_factor, order=0, multichannel=False)
     indices = np.where(shape_scaled > 0)
-    indices = [indices[0] + location[0], indices[1] + location[1]]
+    indices = [
+        coords + location[index] for index, coords in enumerate(indices)
+    ]
 
-    imag[:, indices[0], indices[1]] = color
-    mask[:, indices[0], indices[1]] = 1
+    # TODO generalize to N > 3
+    if len(indices) == 2:
+        imag[:, indices[0], indices[1]] = color
+        mask[:, indices[0], indices[1]] = 1
+    elif len(indices) == 3:
+        imag[:, indices[0], indices[1], indices[2]] = color
+        mask[:, indices[0], indices[1], indices[2]] = 1
+    else:
+        raise NotImplemented()
     return location, location + np.asarray(shape_scaled.shape)
 
 
-def _add_square(imag, mask, shapes_added, scale_factor):
-    color = _random_color()
-
-    shape = np.asarray([
-        [0, 0, 0, 0, 0, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 0, 0, 0, 0, 0],
-    ], dtype=np.float)
-
-    return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
-
-
-def _add_rectangle(imag, mask, shapes_added, scale_factor):
-    color = _random_color()
-
-    shape = np.asarray([
-        [0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 1, 1, 1, 1, 0],
-        [0, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-    ], dtype=np.float)
-
-    return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
-
-
-def _add_cross(imag, mask, shapes_added, scale_factor):
-    color = _random_color()
-
-    shape = np.asarray([
-        [0, 0, 1, 1, 0, 0],
-        [0, 0, 1, 1, 0, 0],
-        [1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1],
-        [0, 0, 1, 1, 0, 0],
-        [0, 0, 1, 1, 0, 0],
-    ], dtype=np.float)
-
-    return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
-
-
-def _add_triangle(imag, mask, shapes_added, scale_factor):
-    color = _random_color()
-
-    shape = np.asarray([
-        [1, 0, 0, 0, 0, 0],
-        [1, 1, 0, 0, 0, 0],
-        [1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 1, 0, 0],
-        [1, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1],
-    ], dtype=np.float)
-
-    return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
-
-
-def _add_circle(imag, mask, shapes_added, scale_factor):
-    color = _random_color()
-
-    shape = np.asarray([
-        [0, 0, 1, 1, 0, 0],
-        [0, 1, 1, 1, 1, 0],
-        [1, 1, 1, 1, 1, 1],
-        [1, 1, 1, 1, 1, 1],
-        [0, 1, 1, 1, 1, 0],
-        [0, 0, 1, 1, 0, 0],
-    ], dtype=np.float)
-
-    return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
-
-
-def _create_image(shape, nb_classes_at_once=None, global_scale_factor=1.0, max_classes=None, background=255):
+def _create_image(shape, objects, nb_classes_at_once=None, max_classes=None, background=255):
     """
 
     Args:
         shape: the shape of an image [height, width]
         nb_classes_at_once: the number of classes to be included in each sample. If `None`,
             all the classes will be included
-        global_scale_factor: the scale of the shapes to generate
         max_classes: the maximum number of classes to be used. If `None`, all classes can
             be used, else a random subset
 
     Returns:
-
+        image, mask and shape information
     """
-    objects = [
-        ('square', functools.partial(_add_square, scale_factor=10.0 * global_scale_factor)),
-        ('cross', functools.partial(_add_cross, scale_factor=10.0 * global_scale_factor)),
-        ('rectangle', functools.partial(_add_rectangle, scale_factor=10.0 * global_scale_factor)),
-        ('circle', functools.partial(_add_circle, scale_factor=10.0 * global_scale_factor)),
-        ('triangle', functools.partial(_add_triangle, scale_factor=10.0 * global_scale_factor)),
-    ]
 
     if max_classes is not None:
         objects = objects[:max_classes]
@@ -221,14 +149,16 @@ def _create_image(shape, nb_classes_at_once=None, global_scale_factor=1.0, max_c
     return img, mask, shapes_infos
 
 
-def create_fake_symbols_2d_datasset(
+def create_fake_symbols_datasset(
         nb_samples,
         image_shape,
+        dataset_name,
+        shapes_fn,
         ratio_valid=0.2,
         nb_classes_at_once=None,
         global_scale_factor=1.0,
         normalize_0_1=True,
-        noise_fn=functools.partial(noisy, noise_type='poisson'),
+        noise_fn=functools.partial(_noisy, noise_type='poisson'),
         max_classes=None,
         batch_size=64,
         background=255):
@@ -245,17 +175,23 @@ def create_fake_symbols_2d_datasset(
             all the classes will be included
         global_scale_factor: the scale of the shapes to generate
         noise_fn: a function to create noise in the image
+        shapes_fn: the function to create the different shapes
         normalize_0_1: if True, the data will be normalized (i.e., image & position will be in range [0..1])
         max_classes: the total number of classes available
+        batch_size: the size of the batch for the dataset
+        background: the background value of the sample (before normalization if `normalize_0_1` is `True`)
+        dataset_name: the name of the returned dataset
 
     Returns:
         a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits
     """
-    assert len(image_shape) == 2, 'must be a Height x width tuple'
     class_dict = collections.OrderedDict()
     samples = []
+
+    objects = shapes_fn(global_scale_factor=global_scale_factor)
+
     for i in range(nb_samples):
-        r = _create_image(image_shape, nb_classes_at_once=nb_classes_at_once, global_scale_factor=global_scale_factor, max_classes=max_classes, background=background)
+        r = _create_image(image_shape, nb_classes_at_once=nb_classes_at_once, objects=objects, max_classes=max_classes, background=background)
         samples.append(r)
 
         for class_name, _ in r[2]:
@@ -306,8 +242,11 @@ def create_fake_symbols_2d_datasset(
         dataset_valid[feature_name] = torch.from_numpy(np.asarray(feature_values[nb_train:]))
 
     return {
-        'fake_symbols_2d': {
+        dataset_name: {
             'train': trw.train.SequenceArray(dataset_train, sampler=trw.train.SamplerRandom(batch_size=batch_size)),
             'valid': trw.train.SequenceArray(dataset_valid, sampler=trw.train.SamplerRandom(batch_size=batch_size)),
         }
     }
+
+
+

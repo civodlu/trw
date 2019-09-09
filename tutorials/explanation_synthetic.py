@@ -22,7 +22,7 @@ model, results = trainer.fit(
         nb_classes_at_once=1,
         nb_samples=10000,
         global_scale_factor=0.3),
-    run_prefix='explanation_synthetic',
+    run_prefix='explanation_synthetic2',
     model_fn=create_net_simple,
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(datasets=datasets, model=model, learning_rate=0.001))
 
