@@ -1,5 +1,5 @@
 Torch Research Workflows
-========================
+************************
 
 .. image:: https://dev.azure.com/civodlu/trw/_apis/build/status/civodlu.trw?branchName=master
    :target: https://dev.azure.com/civodlu/trw/_build/results
@@ -9,7 +9,7 @@ Torch Research Workflows
    :alt: Documentation Status
 
 Purpose
--------
+=======
 
 The aim of this library is to simplify the process of building, optimizing, testing and debugging
 deep learning models using PyTorch as well as providing implementations of some of the latest
@@ -26,7 +26,7 @@ Some key features of the framework:
 * Keep track of the results for retrospective analysis and model selection
 
 Installation / Usage
---------------------
+====================
 
 To install use pip:
 
@@ -39,10 +39,28 @@ Or clone the repo:
     
     $ python setup.py install
     
-Example on the MNIST dataset
-----------------------------
+	
+Example: classification of the MNIST dataset
+============================================
 
-Let's import the required modules:
+MNIST dataset
+-------------
+
+We will be using the MNIST classification task as an example to give an overview of the framework. The purpose 
+of this task is to classify a 28x28 white and black image into one of the ten possible digits. We have access to
+55,000 training images to train the model parameters, 5,000 images for validation to select the best hyper-parameters
+this task and 10,000 images to assess the model.
+
+.. image:: docs/source/images/mnistdigits.png
+    :align: center
+    :alt: MNIST examples
+    :height: 300px
+
+
+Specify and train the model
+---------------------------
+
+In this section we define a classification model, but first, let's import commonly required modules:
 
 .. testcode::
 
@@ -51,8 +69,9 @@ Let's import the required modules:
 	import torch.nn.functional as F
 	import numpy as np
 
-
-Then we can define a neural network:
+Using the native PyTorch API, we define our model. To specify a node of
+our model should be used as a classification unit, we use the :class:`trw.train.OutputClassification`.
+By default it will use the multi-class cross entropy loss:
 
 .. testcode::
 
@@ -103,3 +122,14 @@ Finally, we can create a :class:`trw.train.Trainer` to start the training and ev
 	accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
 	assert accuracy >= 0.95
 
+Evaluation of the model
+-----------------------
+
+Inspecting the input data
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Basic Statistics
+^^^^^^^^^^^^^^^^
+
+Example errors
+^^^^^^^^^^^^^^
