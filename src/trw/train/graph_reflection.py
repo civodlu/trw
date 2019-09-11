@@ -7,7 +7,13 @@ import torch
 import torch.nn as nn
 from trw.train import utils
 import collections
+import logging
+import traceback
+import sys
+import io
 
+
+logger = logging.getLogger(__name__)
 
 def find_tensor_leaves_with_grad(tensor):
     """
@@ -72,7 +78,7 @@ class _CaptureLastModuleType:
         return self.recorded_modules[0]
 
 
-def find_last_forward_types(model, inputs, types=(nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0):
+def find_last_forward_types(model, inputs, types, relative_index=0):
     """
     Perform a forward pass of the model with given inputs and retrieve the last layer of the specified type
 
@@ -86,12 +92,18 @@ def find_last_forward_types(model, inputs, types=(nn.Conv2d, nn.Conv3d, nn.Conv1
         None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
     """
     with utils.CleanAddedHooks(model):
-        capture_conv = _CaptureLastModuleType(types, relative_index=relative_index)
-        for module in model.modules():
-            if not isinstance(module, nn.Sequential):
-                module.register_forward_hook(capture_conv)
-
-        outputs = model(inputs)
+        try:
+            capture_conv = _CaptureLastModuleType(types, relative_index=relative_index)
+            for module in model.modules():
+                if not isinstance(module, nn.Sequential):
+                    module.register_forward_hook(capture_conv)
+    
+            outputs = model(inputs)
+            
+        except Exception as e:
+            io_string = io.StringIO()
+            traceback.print_exc(file=io_string)
+            logger.error('find_last_forward_types: exception={}'.format(io_string.getvalue()))
 
     collected_module = capture_conv.get_module()
     if collected_module is not None:

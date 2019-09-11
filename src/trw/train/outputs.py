@@ -58,7 +58,7 @@ class OutputEmbedding(Output):
         """
         
         Args:
-            output:
+            output: the output from which the embedding will be created
             clean_loss_term_each_batch: if True, the loss term output will be removed from the output in
                 order to free memory just before the next batch. For example, if we want to collect statistics
                 on the embedding, we do not need to keep track of the output embedding and in particular for
@@ -70,8 +70,7 @@ class OutputEmbedding(Output):
     def evaluate_batch(self, batch, is_training):
         loss_term = collections.OrderedDict()
 
-        loss_term['output'] = utils.to_value(self.output)  # TODO put this back!
-        #loss_term['output'] = self.output  #utils.to_value(self.output)
+        loss_term['output'] = utils.to_value(self.output)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         return loss_term
     

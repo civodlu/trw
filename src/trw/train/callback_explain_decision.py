@@ -121,7 +121,7 @@ class CallbackExplainDecision(callback.Callback):
             logger.error('can\'t find a classification output')
             return
 
-        nb_samples = min(self.max_samples, utils.len_batch(self.batch))
+        nb_samples = min(self.max_samples, utils.len_batch(batch))
         for algorithm in self.algorithms:
             algorithm_kwargs = {}
             if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:
@@ -131,8 +131,8 @@ class CallbackExplainDecision(callback.Callback):
                 # do sample by sample to simplify the export procedure
                 for n in range(nb_samples):
                     batch_n = sequence_array.SequenceArray.get(
-                        self.batch,
-                        utils.len_batch(self.batch),
+                        batch,
+                        utils.len_batch(batch),
                         np.asarray([n]),
                         transforms=None,
                         use_advanced_indexing=True)
