@@ -66,6 +66,22 @@ class OutputRecord(simple_layers.SimpleOutputBase):
     def get_module(self):
         # output layer, doesn't have a `Module` implementation
         return None
+    
+    
+class OutputEmbedding(simple_layers.SimpleOutputBase):
+    """
+    Create an embedding for display purposes
+    """
+    def __init__(self, node, output_name):
+        super().__init__(node=node, output_name=output_name, shape=node.shape)
+        self.module_type = trw.train.OutputEmbedding
+
+    def forward(self, inputs, batch):
+        return self.module_type(inputs)
+
+    def get_module(self):
+        # output layer, doesn't have a `Module` implementation
+        return None
 
 
 class ReLU(simple_layers.SimpleModule):
