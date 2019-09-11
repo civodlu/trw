@@ -289,6 +289,13 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
     """
     assert isinstance(output_nodes, list), 'must be a list'
 
+    # make sure we don't have outputs with the same name
+    outputs_names = set()
+    for output in output_nodes:
+        name = output.output_name
+        assert name not in outputs_names, 'output with the same name:{}, node={}'.format(name, str(output))
+        outputs_names.add(name)
+
     input_nodes = find_layer_type(output_nodes, Input)
 
     # here we record all nodes reachable from the output

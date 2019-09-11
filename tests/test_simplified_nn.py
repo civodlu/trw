@@ -215,6 +215,20 @@ class TestSimplifiedNN(TestCase):
         outputs = net(inputs)
         assert len(outputs) == 2
         
-        
-        
-        
+    def test_same_output_name_error(self):
+        """
+        We expect an error: 2 outputs can NOT have the same name!
+        """
+        input_1 = trw.simple_layers.Input(shape=[None, 1], feature_name='input_1')
+        output_1 = trw.simple_layers.OutputRecord(input_1, output_name='output_1')
+        output_2 = trw.simple_layers.OutputRecord(input_1, output_name='output_1')
+
+        exception_raised = False
+        try:
+            trw.simple_layers.compile_nn([output_1, output_2])
+        except:
+            # we should get an exception
+            exception_raised = True
+
+        self.assertTrue(exception_raised)  # compile should have failed: 2 outputs with the same name!
+    
