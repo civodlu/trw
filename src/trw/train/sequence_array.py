@@ -56,6 +56,7 @@ class SequenceArray(sequence.Sequence):
     def get(split, nb_samples, indices, transforms, use_advanced_indexing):
         """
         Collect the split indices given and apply a series of transformations
+
         Args:
             nb_samples: the total number of samples of split
             split: a mapping of `np.ndarray` or `torch.Tensor`

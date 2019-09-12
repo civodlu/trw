@@ -46,10 +46,10 @@ class HyperParametersOptimizerRandomSearchLocal:
 
     We need to define the hyper parameter evaluation function::
     
-    def evaluate_hparams(hparams):
-        # evaluate an hyper-parameter configuration and return a loss value and some additional information
-        # e.g., result report
-        return 0.0, {}
+        def evaluate_hparams(hparams):
+            # evaluate an hyper-parameter configuration and return a loss value and some additional information
+            # e.g., result report
+            return 0.0, {}
         
     """
 

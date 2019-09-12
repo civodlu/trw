@@ -106,7 +106,7 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
     Create an optimizer and scheduler
 
     Note:
-    if model is `ModuleDict`, then the optimizer will only consider the parameters
+        if model is an instance of`ModuleDict`, then the optimizer will only consider the parameters
         `model[dataset_name].parameters()` else `model.parameters()`
 
     Args:

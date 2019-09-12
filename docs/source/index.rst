@@ -33,10 +33,4 @@ Contents:
 .. include:: input_pipeline.rst
 
 
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
 

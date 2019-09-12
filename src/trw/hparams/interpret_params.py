@@ -235,8 +235,8 @@ def analyse_hyperparameters(hprams_path_pattern,
     WARNING:
     [1] With correlated features, strong features can end up with low scores and the method can be biased towards
     variables with many categories. See for more details:
-        see http://blog.datadive.net/selecting-good-features-part-iii-random-forests/
-        and https://link.springer.com/article/10.1186%2F1471-2105-8-25
+    see http://blog.datadive.net/selecting-good-features-part-iii-random-forests/
+    and https://link.springer.com/article/10.1186%2F1471-2105-8-25
 
     :param params_forest_n_estimators: number of trees used to estimate the loss from the hyperparameters
     :param params_forest_max_features_ratio: the maximum number of features to be used. Note we don't want to

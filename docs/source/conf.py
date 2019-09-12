@@ -36,6 +36,7 @@ extensions = [
     'autoapi.extension',
     'sphinx.ext.napoleon',
     'sphinx.ext.doctest',
+    'sphinx.ext.todo',
     #'sphinx.ext.autodoc',
     #'sphinx.ext.viewcode', 
     #'sphinx.ext.intersphinx'
