@@ -63,6 +63,7 @@ def as_image_ui8(image, min_value=None, max_value=None):
 def export_image(image, path):
     """
     Export an image
+
     :param image: a RGB image (float or ui8) with format (channels, height, width)
     :param path: where to write the image
     :return:

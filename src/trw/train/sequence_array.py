@@ -7,11 +7,15 @@ import torch
 import collections
 
 
+# this the name used for the sample UID
+sample_uid_name = 'sample_uid'
+
+
 class SequenceArray(sequence.Sequence):
     """
     Create a sequence of batches from numpy arrays, lists and :class:`torch.Tensor`
     """
-    def __init__(self, split, sampler=sampler.SamplerRandom(), transforms=None, use_advanced_indexing=True, sample_uid_name='sample_uid'):
+    def __init__(self, split, sampler=sampler.SamplerRandom(), transforms=None, use_advanced_indexing=True, sample_uid_name=sample_uid_name):
         """
 
         Args:

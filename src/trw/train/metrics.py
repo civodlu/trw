@@ -58,3 +58,12 @@ def default_regression_metrics():
     return [
         MetricLoss(),
     ]
+
+
+def default_segmentation_metrics():
+    """"
+    Default list of metrics used for classification
+    """
+    return [
+        MetricLoss(),
+    ]
