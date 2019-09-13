@@ -4,6 +4,8 @@ import collections
 import torch.nn as nn
 from trw.train import utils
 from trw.train import metrics
+from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
+from trw.train import losses
 
 
 class Output:
@@ -12,15 +14,17 @@ class Output:
     """
     output_ref_tag = 'output_ref'
 
-    def __init__(self, output, criterion_fn, collect_output=False):
+    def __init__(self, output, criterion_fn, collect_output=False, sample_uid_name=None):
         """
         :param output: a `torch.Tensor` to be recorded
         :param criterion_fn: the criterion function to be used to evaluate the output
         :param collect_output:
+        :pram sample_uid_name: collect sample UID along with the output
         """
         self.output = output
         self.criterion_fn = criterion_fn
         self.collect_output = collect_output
+        self.sample_uid_name = sample_uid_name
 
     def evaluate_batch(self, batch, is_training):
         """
@@ -79,6 +83,92 @@ class OutputEmbedding(Output):
             del loss_term['output']
             del self.output
             self.output = None
+            
+            
+def segmentation_criteria_ce_dice(output, truth, ce_weight=0.5):
+    cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')(output, truth)
+    dice_loss = 0
+    loss = ce_weight * cross_entropy_loss + (1 - ce_weight) * dice_loss
+    return loss
+    
+
+class OutputSegmentation(Output):
+    """
+    Segmentation output
+    """
+    def __init__(
+            self,
+            output,
+            target_name,
+            criterion_fn=losses.DiceLoss,
+            collect_only_non_training_output=False,
+            metrics=metrics.default_segmentation_metrics(),
+            loss_reduction=torch.mean,
+            weight_name=None,
+            loss_scaling=1.0,
+            output_postprocessing=functools.partial(torch.argmax, dim=-1)):
+        """
+
+        :param output:
+        :param target_name:
+        :param criterion_fn:
+        :param collect_only_non_training_output:
+        :param metrics:
+        :param loss_reduction:
+        :param weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
+        :param loss_scaling: scale the loss by a scalar
+        :param output_postprocessing:
+        """
+        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=False)
+        self.target_name = target_name
+        self.loss_reduction = loss_reduction
+        self.output_postprocessing = output_postprocessing
+        self.collect_only_non_training_output = collect_only_non_training_output
+        self.metrics = metrics
+        self.weight_name = weight_name
+        self.loss_scaling = loss_scaling
+
+    def extract_history(self, outputs):
+        history = collections.OrderedDict()
+        for metric in self.metrics:
+            r = metric(outputs)
+            if r is not None:
+                metric_name, metric_value = r
+                history[metric_name] = metric_value
+        return history
+
+    def evaluate_batch(self, batch, is_training):
+        truth = batch.get(self.target_name)
+        assert truth is not None, 'classes `{}` is missing in current batch!'.format(self.target_name)
+
+        loss_term = {}
+        losses = self.criterion_fn()(self.output, truth)
+        assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
+        assert utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+
+        # do NOT keep the original output else memory will be an issue
+        del self.output
+        self.output = None
+
+        if self.weight_name is not None:
+            weights = batch.get(self.weight_name)
+            assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
+            assert len(weights) == len(losses), 'must have a weight per sample'
+            assert len(weights.shape) == 1, 'must be a 1D vector'
+
+            # expand to same shape size so that we can easily broadcast the weight
+            weights = weights.reshape([weights.shape[0]] + [1] * (len(losses.shape) - 1))
+            
+        else:
+            weights = torch.ones_like(losses)
+
+        # weight the loss of each sample by the corresponding weight
+        weighted_losses = weights * losses
+
+        loss_term['losses'] = weighted_losses.data
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
+        loss_term[Output.output_ref_tag] = self  # keep a back reference
+        return loss_term
 
 
 class OutputClassification(Output):
@@ -97,7 +187,8 @@ class OutputClassification(Output):
             weight_name=None,
             loss_scaling=1.0,
             output_postprocessing=functools.partial(torch.argmax, dim=-1),
-            maybe_optional=False):
+            maybe_optional=False,
+            sample_uid_name=default_sample_uid_name):
         """
         
         Args:
@@ -112,8 +203,9 @@ class OutputClassification(Output):
             loss_scaling: scale the loss by a scalar
             output_postprocessing:
             maybe_optional: if True, the loss term may be considered optional if the ground truth is not part of the batch
+            sample_uid_name (str): if not None, collect the sample UID
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output)
+        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output, sample_uid_name=sample_uid_name)
         self.classes_name = classes_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
@@ -161,6 +253,9 @@ class OutputClassification(Output):
                 loss_term['output'] = utils.to_value(self.output_postprocessing(self.output.data))
                 loss_term['output_truth'] = utils.to_value(truth)
 
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
+
         # do NOT keep the original output else memory will be an issue
         del self.output
         self.output = None
@@ -188,11 +283,7 @@ def mean_all(x):
     :param x: a Tensor
     :return: the mean of all values
     """
-    #dim = 1
-    #for d in x.shape[1:]:
-    #    dim *= d
-    x = x.view((-1))
-    return torch.mean(x)
+    return torch.mean(x.view((-1)))
 
 
 class OutputRegression(Output):
@@ -278,7 +369,7 @@ class OutputRegression(Output):
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         return loss_term
-
+    
 
 class OutputRecord(Output):
     """

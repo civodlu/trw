@@ -4,7 +4,7 @@ from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, tra
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn
 
-from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord
+from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation
 from .utils import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
     default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
@@ -34,6 +34,7 @@ from .callback_export_best_history import CallbackExportBestHistory
 from .callback_learning_rate_finder import CallbackLearningRateFinder
 from .callback_learning_rate_recorder import CallbackLearningRateRecorder
 from .callback_explain_decision import CallbackExplainDecision,  ExplainableAlgorithm
+from .callback_export_classification_by_epoch import CallbackExportClassificationByEpoch
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor
@@ -46,3 +47,5 @@ from .sequence_collate import SequenceCollate
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 
 from .sample_export import as_rgb_image, as_image_ui8, export_image
+
+from .losses import DiceLoss
