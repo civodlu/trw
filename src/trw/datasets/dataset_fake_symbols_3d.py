@@ -63,7 +63,8 @@ def create_fake_symbols_3d_datasset(
         dataset_name: the name of the returned dataset
 
     Returns:
-        a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits
+        a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits with features `image`,
+        `mask`, `classification`, `<shape_name>_center`
     """
     assert len(image_shape) == 3, 'must be a DxHxW list'
     return create_fake_symbols_datasset(

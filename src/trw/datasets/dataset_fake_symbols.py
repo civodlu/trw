@@ -105,10 +105,10 @@ def _add_shape(imag, mask, shape, shapes_added, scale_factor, color, min_overlap
     # TODO generalize to N > 3
     if len(indices) == 2:
         imag[:, indices[0], indices[1]] = color
-        mask[:, indices[0], indices[1]] = 1
+        mask[indices[0], indices[1]] = 1
     elif len(indices) == 3:
         imag[:, indices[0], indices[1], indices[2]] = color
-        mask[:, indices[0], indices[1], indices[2]] = 1
+        mask[indices[0], indices[1], indices[2]] = 1
     else:
         raise NotImplemented()
     return location, location + np.asarray(shape_scaled.shape)
@@ -137,7 +137,7 @@ def _create_image(shape, objects, nb_classes_at_once=None, max_classes=None, bac
 
     img = np.zeros([3] + list(shape), dtype=np.uint8)
     img.fill(background)
-    mask = np.zeros([1] + list(shape), dtype=np.uint8)
+    mask = np.zeros(shape, dtype=np.int64)
 
     shapes_added = []
     shapes_infos = []
@@ -183,7 +183,8 @@ def create_fake_symbols_datasset(
         dataset_name: the name of the returned dataset
 
     Returns:
-        a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits
+        a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits with features `image`,
+        `mask`, `classification`, `<shape_name>_center`
     """
     class_dict = collections.OrderedDict()
     samples = []
