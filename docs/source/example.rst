@@ -1,8 +1,8 @@
 Example: classification of the MNIST dataset
-============================================
+********************************************
 
 MNIST dataset
--------------
+=============
 
 We will be using the MNIST classification task as an example to give an overview of the framework. The purpose 
 of this task is to classify a 28x28 white and black image into one of the ten possible digits. We have access to
@@ -16,7 +16,7 @@ this task and 10,000 images to assess the model.
 
 
 Specify and train the model
----------------------------
+===========================
 
 In this section we define a classification model, but first, let's import commonly required modules:
 
@@ -81,13 +81,94 @@ Finally, we can create a :class:`trw.train.Trainer` to start the training and ev
 	assert accuracy >= 0.95
 
 Evaluation of the model
------------------------
+=======================
+
+By default `TRW` keeps track of useful information to check input inputa data, evaluate and debug
+the model. By default, the following folders will be created:
+
+.. code-block::
+
+	. mnist_cnn_r0
+		├── random_samples
+		├── augmentations
+		├── tensorboard
+		├── history
+		├── lr_recorder
+		├── history
+		├── errors
+		| best_history.txt
+		| last.model
+		| last.model.result
+		| softmax-mnist-test-cm.png
+		| softmax-mnist-test-report.txt
+		| softmax-mnist-train-cm.png
+		| softmax-mnist-train-report.txt
+		| trainer.txt
+		
 
 Inspecting the input data
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
+
+The :class:`trw.train.Trainer` will output random samples in `mnist_cnn_r0/random_samples/mnist`. 
+Features of a sample that can be natively exported in a meaningful format (e.g., .png for an image). 
+For example, `mnist_test_s0_e0.png` will be a random image from the test split:
+
+.. figure:: images/mnist_test_s0_e0_images.png
+    :align: center
+
+
+Other metadata that cannot be exported to a known format will be summarized in a text file. For example, 
+`mnist_test_s0_e0.txt` will store metadata such as sample ID, target class:
+
+.. code-block::
+	
+	targets=5
+	sample_uid=6573
+	dataset_name=mnist
+	split_name=test
+	term_softmax_output=6
+	targets_str=5 - five
+
+
+Inspecting the data augmentations
+---------------------------------
+
+To make sure the data augmentation is behaving as expected, it is useful to export them. By default 
+augmentations will be stored in the `mnist_cnn_r0/augmentations/mnist` folder. Internally, 
+:class:`trw.train.SequenceArray` will create a unique ID per sample that will be used to keep track
+of the augmentations.
 
 Basic Statistics
-^^^^^^^^^^^^^^^^
+----------------
+
+At the end of the training, meaningful statistics will be gathered:
+
+* ROC and AUC for binary classification
+* Confusion matrix
+* Accuracy, precision, recall, F1 score, most common errors
+* track the evolution of accuracy and losses during the training
+
+.. figure:: images/softmax-mnist-test-cm.png
+    :align: center
+
 
 Example errors
-^^^^^^^^^^^^^^
+--------------
+
+Embedding analysis
+------------------
+
+.. figure:: images/mnist_embedding.png
+    :align: center
+
+
+Explainable decisions
+---------------------
+
+Error evolution by epoch
+------------------------
+
+Model Export
+------------
+
+Finally, the model is stored as PyTorch model and exported to a `onnx` format.

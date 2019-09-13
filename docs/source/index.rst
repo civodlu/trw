@@ -1,8 +1,12 @@
+.. sectnum::
+
+======================================
 Torch Research Workflows Documentation
-**************************************
+======================================
+
 
 Purpose
-=======
+*******
 
 The aim of this library is to simplify the process of building, optimizing, testing and debugging
 deep learning models using PyTorch as well as providing implementations of some of the latest
@@ -11,7 +15,7 @@ your particular needs.
 
 Some key features of the framework:
 
-* Easy to use, flexible and extensible API to build simple & complex models 
+* Easy to use, flexible and extensible API to build simple & complex models with multiple inputs, outputs and tasks
 * Model debugging (e.g., activation statistics of each layer, gradient norm for each layer, embedding visualization)
 * Model understanding and result analysis (e.g., attention maps, confusion matrix, ROC curves, model comparisons, errors)
 * Support hyper-parameter optimization (random search, hyperband) and analysis
@@ -20,7 +24,7 @@ Some key features of the framework:
 
 
 Contents:
-=========
+*********
 
 .. contents::
 
@@ -31,6 +35,7 @@ Contents:
 
 .. include:: example.rst
 .. include:: input_pipeline.rst
+.. include:: simple_layers.rst
 
 
 

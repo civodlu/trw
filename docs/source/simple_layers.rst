@@ -1,0 +1,4 @@
+
+Simplified neural network specification
+***************************************
+

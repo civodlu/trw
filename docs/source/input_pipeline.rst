@@ -1,8 +1,8 @@
 Input pipeline
-==============
+**************
 
 :class:`trw.train.SequenceArray`
---------------------------------
+================================
 
 To fully utilize our GPU to train a deep learning model, it is required the data is efficiently processed and sent to the GPU. If the input pipeline is not
 optimized, the training will be unnecessarily time consuming and as such is a critical component to have set up appropriately.
@@ -26,7 +26,7 @@ GPU utilization.
 	
 	
 :class:`trw.train.SequenceMap`
-------------------------------
+==============================
 
 One way to make the data augmentation performant is to overlap the CPU (e.g., preprocessing & data augmentation) with the GPU (e.g., model training). This can be done using :class:`trw.train.SequenceMap`,
 which will use a pool of process workers to perform the processing (CPUn) while the main thread will orchestrate the background jobs.
@@ -41,7 +41,7 @@ may not be straightforward as it depends on the specific configuration (GPU time
 
 
 :class:`trw.train.SequenceAsyncReservoir`
------------------------------------------
+=========================================
 
 :class:`trw.train.SequenceMap` will stall the pipeline in case the CPU is not fast enough to calculate the next batch of data. To avoid this problem, :class:`trw.train.SequenceAsyncReservoir` uses a reservoir of
 processed samples that can be directly sent to GPU even if the next batch is not available. In the background, process workers will process the data and fill the reservoir, slowly replacing the content
@@ -53,4 +53,4 @@ of the reservoir over time.
     Representation of a pipeline using :class:`trw.train.SequenceAsyncReservoir`. The data augmentation is performed by workers that will fill a reservoir. The next batch of data is sampled from the reservoir and avoid stalling the pipeline.
 
 Examples of pipelines
----------------------
+=====================
