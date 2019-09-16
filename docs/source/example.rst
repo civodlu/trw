@@ -133,7 +133,7 @@ Other metadata that cannot be exported to a known format will be summarized in a
 Inspecting the data augmentations
 ---------------------------------
 
-To make sure the data augmentation is behaving as expected, it is useful to export them. By default 
+To make sure the data augmentation is behaving as expected, it is useful to visualize them. By default 
 augmentations will be stored in the `mnist_cnn_r0/augmentations/mnist` folder. Internally, 
 :class:`trw.train.SequenceArray` will create a unique ID per sample that will be used to keep track
 of the augmentations.
@@ -143,10 +143,10 @@ Basic Statistics
 
 At the end of the training, meaningful statistics will be gathered:
 
-* ROC and AUC for binary classification
-* Confusion matrix
-* Accuracy, precision, recall, F1 score, most common errors
-* track the evolution of accuracy and losses during the training
+* ROC and AUC for binary classification,
+* Confusion matrix,
+* Accuracy, precision, recall, F1 score, most common errors,
+* Evolution of accuracy and losses during the training.
 
 .. figure:: images/softmax-mnist-test-cm.png
     :align: center
@@ -155,8 +155,35 @@ At the end of the training, meaningful statistics will be gathered:
 Example errors
 --------------
 
+Using the callback :class:`trw.train.CallbackExportClassificationErrors`, a selected number of 
+samples with errors will be exported. Another useful view is to display the errors by epoch 
+using :class:`trw.train.CallbackExportClassificationByEpoch` and inspect the samples that 
+are the most frequently classified and in particular in the training split.  These are the 
+errors the classifier has the most difficulty assimilating and often reveal the outliers. Here 
+is an example below on the train split:
+
+.. figure:: images/mnist-train-softmax-e40.png
+    :align: center
+	
+    The samples are displayed on the x-axis (one per pixel) and y-axis shows the epochs. `Green` 
+    indicates a sample was correctly classified and red indicates an error. Samples are sorted
+    by error frequency.
+	
+	
+Here are the most difficult examples to classify. This can be used quickly identify outliers:
+
+.. figure:: images/outliers.png
+    :align: center
+	
+    Examples of outliers spotted using :class:`trw.train.CallbackExportClassificationByEpoch`
+
+
 Embedding analysis
 ------------------
+
+:class:`trw.train.CallbackTensorboardEmbedding` allows to export an intermediate tensor (or commonly referred to
+as `embedding`) to the tensorboard embedding tab. This can be useful to understand what the model considers as similar
+samples and possibly detect common trends.
 
 .. figure:: images/mnist_embedding.png
     :align: center
@@ -165,10 +192,9 @@ Embedding analysis
 Explainable decisions
 ---------------------
 
-Error evolution by epoch
-------------------------
 
 Model Export
 ------------
 
-Finally, the model is stored as PyTorch model and exported to a `onnx` format.
+Finally, the model is stored as PyTorch model and exported to a `onnx` format. This allows interoperability
+between major deep learning frameworks (e.g., for production).
