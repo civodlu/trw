@@ -1,6 +1,7 @@
 from trw.train import callback
 from trw.train import utils
 from trw.train import sequence_array
+from trw.train import sequence
 from trw.train import sample_export
 import logging
 import os
@@ -49,6 +50,10 @@ class CallbackExportAugmentations(callback.Callback):
 
             split = dataset.get(self.split_name)
             if split is None:
+                continue
+
+            if not isinstance(split, sequence.Sequence):
+                logger.warning('split is not a `trw.train.Sequence`, can\'t subsample the sequence. This split is discarded!')
                 continue
 
             # run the augmentations on the subsampled split

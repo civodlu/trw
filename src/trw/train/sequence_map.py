@@ -184,6 +184,17 @@ class SequenceMap(sequence.Sequence):
         self.jobs_queued = None
         # self.time_spent_in_blocked_state = 0.0
 
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
+
+        # do not use worker processes: we probably just want a much smaller sequence
+        return SequenceMap(
+            subsampled_source,
+            nb_workers=0,
+            function_to_run=self.function_to_run,
+            preprocess_fn=self.preprocess_fn,
+            collate_fn=self.collate_fn)
+
     def subsample(self, nb_samples):
         subsampled_source = self.source_split.subsample(nb_samples)
 
@@ -194,6 +205,7 @@ class SequenceMap(sequence.Sequence):
             function_to_run=self.function_to_run,
             preprocess_fn=self.preprocess_fn,
             collate_fn=self.collate_fn)
+
 
     def fill_queue(self):
         # print('fill_queue', os.getpid(), 'NOW=', datetime.datetime.now().time(), self.function_to_run)

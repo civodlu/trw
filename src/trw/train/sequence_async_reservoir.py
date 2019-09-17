@@ -112,6 +112,25 @@ class SequenceAsyncReservoir(sequence.Sequence):
             maximum_number_of_samples_per_epoch=None
         )
 
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        if new_sampler is None:
+            sampler_to_use = copy.deepcopy(self.reservoir_sampler)
+        else:
+            sampler_to_use = copy.deepcopy(new_sampler)
+
+        subsampled_source = self.subsample_uids(uids, uids_name, new_sampler)
+        return SequenceAsyncReservoir(
+            subsampled_source,
+            len(uids),
+            self.function_to_run,
+            min_reservoir_samples=len(uids),
+            nb_workers=1,
+            max_jobs_at_once=self.max_jobs_at_once,
+            reservoir_sampler=sampler_to_use,
+            collate_fn=self.collate_fn,
+            maximum_number_of_samples_per_epoch=None
+        )
+
     def initializer(self):
         if self.iter_source is None:
             self.iter_source = self.source_split.__iter__()
@@ -218,5 +237,3 @@ class SequenceAsyncReservoir(sequence.Sequence):
         self.initializer()
         return self
 
-    def __len__(self):
-        return len(self.reservoir)

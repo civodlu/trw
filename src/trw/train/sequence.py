@@ -68,13 +68,6 @@ class Sequence:
             # do something with our batch
 
     """
-    def __len__(self):
-        """
-        Returns:
-            Number of samples of a sequence. if None, this sequence may not have a fixed number of samples
-        """
-        return None
-
     def __init__(self, source_split):
         self.source_split = source_split
         self.next_split = None
@@ -272,7 +265,19 @@ class Sequence:
         """
         raise NotImplemented()
 
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        """
+        Sub-sample a sequence to samples with specified UIDs.
 
+        Args:
+            uids (list): the uids. If `new_sampler` keeps the ordering, then the samples of the resampled sequence should follow `uids` ordering
+            uids_name (str): the name of the UIDs
+            new_sampler (Sampler): the sampler to be used for the subsampler sequence. If `None`, re-use the existing
+
+        Returns:
+            a subsampled `Sequence`
+        """
+        raise NotImplemented()
 
 
 

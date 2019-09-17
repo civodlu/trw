@@ -30,6 +30,7 @@ from trw.train import callback_learning_rate_finder
 from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
 from trw.train import callback_export_classification_by_epoch
+from trw.train import callback_worst_samples_by_epoch
 
 logger = logging.getLogger(__name__)
 
@@ -571,7 +572,7 @@ def default_per_epoch_callbacks(logger=default_logger):
     Default callbacks to be performed at the end of each epoch
     """
     return [
-        callback_export_classification_by_epoch.CallbackExportClassificationByEpoch(),
+        callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch(),
 
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
 
@@ -872,9 +873,10 @@ class Trainer:
                 run_eval=run_eval)
             history.append(history_epoch)
 
+            last_epoch = epoch + 1 == num_epochs
             for callback in callbacks_per_epoch:
                 callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
                 #try:
                 #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
                 #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)

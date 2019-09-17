@@ -26,6 +26,10 @@ class SequenceBatch(sequence.Sequence):
         subsampled_source = self.source_split.subsample(nb_samples)
         return SequenceBatch(subsampled_source, batch_size=self.batch_size, discard_batch_not_full=self.discard_batch_not_full, collate_fn=self.collate_fn)
 
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
+        return SequenceBatch(subsampled_source, batch_size=self.batch_size, discard_batch_not_full=self.discard_batch_not_full, collate_fn=self.collate_fn)
+
     def __next__(self):
         items = []
         try:

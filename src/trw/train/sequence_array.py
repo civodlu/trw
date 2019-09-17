@@ -39,8 +39,11 @@ class SequenceArray(sequence.Sequence):
             split[sample_uid_name] = np.asarray(np.arange(utils.len_batch(split)))
 
     def subsample(self, nb_samples):
+        # get random indices
         subsample_sample = sampler.SamplerRandom(batch_size=nb_samples)
         subsample_sample.initializer(self.split)
+
+        # extract the indices
         indices = next(iter(subsample_sample))
         subsampled_split = SequenceArray.get(
             self.split,
@@ -50,6 +53,43 @@ class SequenceArray(sequence.Sequence):
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
         )
         return SequenceArray(subsampled_split, copy.deepcopy(self.sampler), transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
+
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        uid_values = self.split.get(uids_name)
+        assert uid_values is not None, 'no UIDs with name={}'.format(uids_name)
+
+        # find the samples that are in `uids`
+        indices_to_keep = []
+        uids_set = set(uids)
+        for index, uid in enumerate(uid_values):
+            if uid in uids_set:
+                indices_to_keep.append(index)
+
+        # reorder the `indices_to_keep` following the `uids` ordering
+        uids_ordering = {uid: index for index, uid in enumerate(uids)}
+        kvp_index_ordering = []
+        for index in indices_to_keep:
+            uid = uid_values[index]
+            ordering = uids_ordering[uid]
+            kvp_index_ordering.append((index, ordering))
+        kvp_uids_ordering = sorted(kvp_index_ordering, key=lambda value: value[1])
+        indices_to_keep = [index for index, ordering in kvp_uids_ordering]
+
+        # extract the samples
+        subsampled_split = SequenceArray.get(
+            self.split,
+            utils.len_batch(self.split),
+            indices_to_keep,
+            self.transforms,
+            use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
+        )
+
+        if new_sampler is None:
+            new_sampler = copy.deepcopy(self.sampler)
+        else:
+            new_sampler = copy.deepcopy(new_sampler)
+
+        return SequenceArray(subsampled_split, new_sampler, transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
 
     def initializer(self):
         self.nb_samples = utils.len_batch(self.split)
@@ -116,5 +156,3 @@ class SequenceArray(sequence.Sequence):
         self.initializer()
         return self
 
-    def __len__(self):
-        return self.nb_samples

@@ -155,9 +155,9 @@ At the end of the training, meaningful statistics will be gathered:
 Example errors
 --------------
 
-Using the callback :class:`trw.train.CallbackExportClassificationErrors`, a selected number of 
+Using the callback :class:`trw.train.CallbackWorstSamplesByEpoch`, a selected number of
 samples with errors will be exported. Another useful view is to display the errors by epoch 
-using :class:`trw.train.CallbackExportClassificationByEpoch` and inspect the samples that 
+using :class:`trw.train.CallbackWorstSamplesByEpoch` and inspect the samples that
 are the most frequently classified and in particular in the training split.  These are the 
 errors the classifier has the most difficulty assimilating and often reveal the outliers. Here 
 is an example below on the train split:
@@ -175,7 +175,7 @@ Here are the most difficult examples to classify. This can be used quickly ident
 .. figure:: images/outliers.png
     :align: center
 	
-    Examples of outliers spotted using :class:`trw.train.CallbackExportClassificationByEpoch`
+    Examples of outliers spotted using :class:`trw.train.CallbackWorstSamplesByEpoch`
 
 
 Embedding analysis

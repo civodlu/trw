@@ -100,7 +100,7 @@ class OutputSegmentation(Output):
             self,
             output,
             target_name,
-            criterion_fn=losses.DiceLoss,
+            criterion_fn=losses.LossDiceMulticlass,
             collect_only_non_training_output=False,
             metrics=metrics.default_segmentation_metrics(),
             loss_reduction=torch.mean,

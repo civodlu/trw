@@ -35,7 +35,7 @@ from .callback_export_classification_errors import CallbackExportClassificationE
 from .callback_learning_rate_finder import CallbackLearningRateFinder
 from .callback_learning_rate_recorder import CallbackLearningRateRecorder
 from .callback_explain_decision import CallbackExplainDecision,  ExplainableAlgorithm
-from .callback_export_classification_by_epoch import CallbackExportClassificationByEpoch
+from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor
@@ -49,4 +49,4 @@ from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, Samp
 
 from .sample_export import as_rgb_image, as_image_ui8, export_image
 
-from .losses import DiceLoss
+from .losses import LossDiceMulticlass

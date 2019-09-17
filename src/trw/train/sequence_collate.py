@@ -25,6 +25,10 @@ class SequenceCollate(sequence.Sequence):
         subsampled_source = self.source_split.subsample(nb_samples)
         return SequenceCollate(subsampled_source, collate_fn=self.collate_fn, device=self.device)
 
+    def subsample_uids(self, uids, uids_name, new_sampler=None):
+        subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
+        return SequenceCollate(subsampled_source, collate_fn=self.collate_fn, device=self.device)
+
     def __next__(self):
         items = self.iter_source.__next__()
         items = self.collate_fn(items, device=self.device)
