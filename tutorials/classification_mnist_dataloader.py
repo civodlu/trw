@@ -40,11 +40,9 @@ def create_data():
     """
     Create the datasets using pytorch data loader
     """
-    transforms = [
-        torchvision.transforms.ToTensor(),
-    ]
+    transforms = torchvision.transforms.ToTensor()
     batch_size = 1000
-    num_workers = 1
+    num_workers = 0
     
     # first, check if we have some environment variables configured
     root = os.environ.get('TRW_DATA_ROOT')

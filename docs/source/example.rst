@@ -95,6 +95,7 @@ the model. By default, the following folders will be created:
 		├── history
 		├── lr_recorder
 		├── history
+		├── worst_samples_by_epoch
 		├── errors
 		| best_history.txt
 		| last.model
@@ -165,9 +166,9 @@ is an example below on the train split:
 .. figure:: images/mnist-train-softmax-e40.png
     :align: center
 	
-    The samples are displayed on the x-axis (one per pixel) and y-axis shows the epochs. `Green` 
-    indicates a sample was correctly classified and red indicates an error. Samples are sorted
-    by error frequency.
+    The samples are displayed on the x-axis (one per pixel) and y-axis shows the epochs. `Red` 
+    indicates a sample with high loss while yellow indicates samples with low loss. Samples are sorted
+    by overall loss.
 	
 	
 Here are the most difficult examples to classify. This can be used quickly identify outliers:
@@ -175,7 +176,7 @@ Here are the most difficult examples to classify. This can be used quickly ident
 .. figure:: images/outliers.png
     :align: center
 	
-    Examples of outliers spotted using :class:`trw.train.CallbackWorstSamplesByEpoch`
+    Examples of outliers and annotation mistakes spotted using :class:`trw.train.CallbackWorstSamplesByEpoch`
 
 
 Embedding analysis
