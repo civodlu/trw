@@ -29,7 +29,6 @@ from trw.train import callback_export_best_history
 from trw.train import callback_learning_rate_finder
 from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
-from trw.train import callback_export_classification_by_epoch
 from trw.train import callback_worst_samples_by_epoch
 
 logger = logging.getLogger(__name__)
@@ -41,10 +40,10 @@ def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch):
     data to the current batch)
 
     Args:
-        dataset_name: the name of the dataset the `batch` belongs to
-        split_name: the name of the split the `batch` belongs to
+        dataset_name (str): the name of the dataset the `batch` belongs to
+        split_name (str): the name of the split the `batch` belongs to
         batch: the current batch of data
-        callbacks_per_batch: the callbacks (a list) to be executed for each batch.
+        callbacks_per_batch (list): the callbacks to be executed for each batch.
             Each callback must be callable with `(dataset_name, split_name, batch)`.
             if `None`, no callbacks
     """

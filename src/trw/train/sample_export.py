@@ -91,7 +91,7 @@ def export_as_image(name, samples, sample_id, export_root, txt_file):
     :return:
     """
     samples = utils.to_value(samples)
-    if not isinstance(samples, np.ndarray) or len(samples.shape) <= 3:
+    if not isinstance(samples, np.ndarray) or len(samples.shape) <= 2:
         return False
     rgb = as_rgb_image(samples[sample_id])
     if rgb is None:

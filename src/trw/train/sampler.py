@@ -23,19 +23,26 @@ class Sampler(object):
         Args:
             data_source: the data source to iterate
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __iter__(self):
         """
         Returns: an iterator the return indices of the original data source
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def __len__(self):
         """
         Returns: the number of elements the sampler will return in a single iteration
         """
-        raise NotImplementedError
+        raise NotImplementedError()
+    
+    def get_batch_size(self):
+        """
+        Returns:
+           the size of the batch
+        """
+        raise NotImplementedError()
 
 
 class _SamplerSequentialIter:
@@ -75,6 +82,9 @@ class SamplerSequential(Sampler):
 
     def __len__(self):
         return len(self.data_source)
+
+    def get_batch_size(self):
+        return self.batch_size
 
 
 class SamplerRandom(Sampler):
@@ -131,6 +141,9 @@ class SamplerRandom(Sampler):
 
     def __len__(self):
         return self.num_samples
+    
+    def get_batch_size(self):
+        return self.batch_size
 
 
 class SamplerSubsetRandom(Sampler):
@@ -153,6 +166,9 @@ class SamplerSubsetRandom(Sampler):
 
     def __len__(self):
         return len(self.indices)
+    
+    def get_batch_size(self):
+        return 1
 
 
 class SamplerClassResampling(Sampler):
@@ -239,3 +255,6 @@ class SamplerClassResampling(Sampler):
 
         # this is just an estimate
         return self.nb_samples_to_generate
+    
+    def get_batch_size(self):
+        return self.batch_size

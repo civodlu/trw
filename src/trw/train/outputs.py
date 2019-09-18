@@ -24,6 +24,10 @@ class Output:
         self.output = output
         self.criterion_fn = criterion_fn
         self.collect_output = collect_output
+
+        # this can be used to collect the UIDs of the sample the output was calculated from
+        # this can be particularly useful for various tasks: track data augmentation,
+        #
         self.sample_uid_name = sample_uid_name
 
     def evaluate_batch(self, batch, is_training):
@@ -58,7 +62,7 @@ class OutputEmbedding(Output):
 
     This is only used to record a tensor that we consider an embedding (e.g., to be exported to tensorboard)
     """
-    def __init__(self, output, clean_loss_term_each_batch=False):
+    def __init__(self, output, clean_loss_term_each_batch=False, sample_uid_name=default_sample_uid_name):
         """
         
         Args:
@@ -67,8 +71,9 @@ class OutputEmbedding(Output):
                 order to free memory just before the next batch. For example, if we want to collect statistics
                 on the embedding, we do not need to keep track of the output embedding and in particular for
                 large embeddings
+            sample_uid_name: UID name to be used for collecting the embedding of the samples
         """
-        super().__init__(output=output, criterion_fn=None, collect_output=True)
+        super().__init__(output=output, criterion_fn=None, collect_output=True, sample_uid_name=sample_uid_name)
         self.clean_loss_term_each_batch = clean_loss_term_each_batch
 
     def evaluate_batch(self, batch, is_training):
@@ -87,7 +92,9 @@ class OutputEmbedding(Output):
             
 def segmentation_criteria_ce_dice(output, truth, ce_weight=0.5):
     cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')(output, truth)
-    dice_loss = 0
+    cross_entropy_loss = cross_entropy_loss.sum(tuple(range(1, len(cross_entropy_loss.shape))))
+    
+    dice_loss = losses.LossDiceMulticlass()(output, truth)
     loss = ce_weight * cross_entropy_loss + (1 - ce_weight) * dice_loss
     return loss
     
@@ -100,13 +107,16 @@ class OutputSegmentation(Output):
             self,
             output,
             target_name,
-            criterion_fn=losses.LossDiceMulticlass,
-            collect_only_non_training_output=False,
+            #criterion_fn=losses.LossDiceMulticlass,
+            criterion_fn=lambda: segmentation_criteria_ce_dice,
+            collect_only_non_training_output=True,
             metrics=metrics.default_segmentation_metrics(),
             loss_reduction=torch.mean,
             weight_name=None,
             loss_scaling=1.0,
-            output_postprocessing=functools.partial(torch.argmax, dim=-1)):
+            collect_output=True,
+            output_postprocessing=functools.partial(torch.argmax, dim=1),
+            sample_uid_name=default_sample_uid_name):
         """
 
         :param output:
@@ -117,9 +127,11 @@ class OutputSegmentation(Output):
         :param loss_reduction:
         :param weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
         :param loss_scaling: scale the loss by a scalar
+        :param collect_output: if `True`, the output segmentation found and truth are collected (mandatory if we have to export it)
+        :param collect_only_non_training_output: if `True`, only the non-training data will be collected
         :param output_postprocessing:
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=False)
+        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=False, sample_uid_name=sample_uid_name)
         self.target_name = target_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
@@ -127,6 +139,7 @@ class OutputSegmentation(Output):
         self.metrics = metrics
         self.weight_name = weight_name
         self.loss_scaling = loss_scaling
+        self.collect_output = collect_output
 
     def extract_history(self, outputs):
         history = collections.OrderedDict()
@@ -145,8 +158,18 @@ class OutputSegmentation(Output):
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+        
+        if self.collect_output:
+            # we may not want to collect any outputs or training outputs to save some time
+            if not self.collect_only_non_training_output or not is_training:
+                # detach the output so as not to calculate gradients. Keep the truth so that we
+                # can calculate statistics (e.g., accuracy, FP/FN...)
+                loss_term['output_raw'] = utils.to_value(self.output)
+                loss_term['output'] = utils.to_value(self.output_postprocessing(self.output.data))
+                loss_term['output_truth'] = utils.to_value(truth)
 
         # do NOT keep the original output else memory will be an issue
+        # (e.g., CUDA device)
         del self.output
         self.output = None
 
@@ -161,6 +184,9 @@ class OutputSegmentation(Output):
             
         else:
             weights = torch.ones_like(losses)
+            
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -186,7 +212,7 @@ class OutputClassification(Output):
             loss_reduction=torch.mean,
             weight_name=None,
             loss_scaling=1.0,
-            output_postprocessing=functools.partial(torch.argmax, dim=-1),
+            output_postprocessing=functools.partial(torch.argmax, dim=1),  # we want to export the class (i.e., the channel component)
             maybe_optional=False,
             sample_uid_name=default_sample_uid_name):
         """
@@ -201,7 +227,8 @@ class OutputClassification(Output):
             loss_reduction:
             weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
             loss_scaling: scale the loss by a scalar
-            output_postprocessing:
+            output_postprocessing: the output will be postprocessed by this function. For example,
+                we could extract the final classification instead of the loggit
             maybe_optional: if True, the loss term may be considered optional if the ground truth is not part of the batch
             sample_uid_name (str): if not None, collect the sample UID
         """
@@ -301,7 +328,8 @@ class OutputRegression(Output):
             loss_reduction=mean_all,
             weight_name=None,
             loss_scaling=1.0,
-            output_postprocessing=lambda x: x):
+            output_postprocessing=lambda x: x,
+            sample_uid_name=default_sample_uid_name):
         """
 
         :param output:
@@ -315,7 +343,7 @@ class OutputRegression(Output):
         :param loss_scaling: scale the loss by a scalar
         :param output_postprocessing:
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output)
+        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output, sample_uid_name=sample_uid_name)
         self.target_name = target_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
@@ -361,6 +389,9 @@ class OutputRegression(Output):
             assert len(weights.shape) == 1, 'must be a 1D vector'
         else:
             weights = torch.ones_like(losses)
+            
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses

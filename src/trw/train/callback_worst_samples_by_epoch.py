@@ -4,11 +4,13 @@ from trw.train import outputs as trw_outputs
 from trw.train import sample_export
 from trw.train import sequence_array
 from trw.train import sampler
+from trw.train import trainer
 import os
 import logging
 import collections
 import numpy as np
 from matplotlib import cm
+import copy
 
 
 logger = logging.getLogger(__name__)
@@ -50,34 +52,44 @@ def get_first_output_of_interest(outputs, dataset_name, split_name, output_of_in
     return None
 
 
-def export_samples(dataset_name, split_name, sequence, max_samples, root, uids_name, datasets_infos):
-    """
-    Export samples of a sequence
-    """
-    # export the features
-    nb_samples_exported = 0
-    for batch in sequence:
-        nb_samples = utils.len_batch(batch)
-        ids_values = utils.to_value(batch.get(uids_name))
-        assert ids_values is not None
-        for n in range(nb_samples):
-            if nb_samples_exported >= max_samples:
-                break
-
-            id = ids_values[n]
-            sample_output = os.path.join(root, dataset_name + '_' + split_name + '_rank-' + str(nb_samples_exported) + '_s' + str(id))
+def export_samples_v2(dataset_name, split_name, device, split, model, losses, root, datasets_infos, max_samples, callbacks_per_batch):
+    nb_exported_samples = 0
+    
+    def per_batch_export_fn(dataset_name, split_name, batch, loss_terms):
+        nonlocal nb_exported_samples
+        nonlocal max_samples
+        nonlocal root
+        nonlocal datasets_infos
+        
+        # merge the outputs with the batch, then export everything
+        classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, split_name)
+        output_and_batch_merged = copy.copy(batch)
+        for output_name, output in loss_terms.items():
+            for output_value_name, output_value in output.items():
+                output_and_batch_merged[output_name + '_' + output_value_name] = output_value
+            
+        # finally, export the errors
+        batch_size = utils.len_batch(batch)
+        for sample_id in range(batch_size):
+            sample_output = os.path.join(root, dataset_name + '_' + split_name + '_s' + str(nb_exported_samples))
             txt_file = sample_output + '.txt'
-            classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, split_name)
             with open(txt_file, 'w') as f:
                 sample_export.export_sample(
-                    batch,
-                    n,
+                    output_and_batch_merged,
+                    sample_id,
                     sample_output + '_',
                     f,
                     features_to_discard=['output_ref', 'loss'],
                     classification_mappings=classification_mappings)
+            nb_exported_samples += 1
+            
+        if nb_exported_samples >= max_samples:
+            raise StopIteration()  # abort the loop, we have already too many samples
 
-            nb_samples_exported += 1
+    trainer.eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
+                      history=None,
+                      callbacks_per_batch=callbacks_per_batch,
+                      callbacks_per_batch_loss_terms=[per_batch_export_fn])
 
 
 class CallbackWorstSamplesByEpoch(callback.Callback):
@@ -176,7 +188,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
         std_loss = np.std(last_epoch_losses)
         return sorted_errors_by_sample, np.median(last_epoch_losses), mean_loss + 6 * std_loss
 
-    def export_stats(self, datasets, datasets_infos):
+    def export_stats(self, model, losses, datasets, datasets_infos, options, callbacks_per_batch):
         if self.current_epoch is None or len(self.errors_by_split) == 0:
             return
 
@@ -215,7 +227,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                         loss_sum += loss
                     f.write('uid={}, loss_sum={}, nb={}\n'.format(uid, loss_sum, len(loss_epoch_list)))
 
-            # optionally, export the actual samples
+            # optionally, export the actual samples with model outputs
             if self.export_top_k_samples > 0:
                 dataset = datasets[self.dataset_name]
                 if dataset is None:
@@ -225,14 +237,20 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                     return
                 uids_to_export = [t[0] for t in sorted_errors_by_sample[:self.export_top_k_samples]]
                 subsampled_split = split.subsample_uids(uids=uids_to_export, uids_name=self.uids_name, new_sampler=sampler.SamplerSequential())
-                export_samples(
-                    self.dataset_name,
-                    split_name,
-                    subsampled_split,
-                    self.export_top_k_samples,
-                    self.root,
-                    uids_name=self.uids_name,
-                    datasets_infos=datasets_infos)
+
+                device = options['workflow_options']['device']
+                
+                export_samples_v2(
+                    dataset_name=self.dataset_name,
+                    split_name=split_name,
+                    device=device,
+                    split=subsampled_split,
+                    model=model,
+                    losses=losses,
+                    root=self.root,
+                    datasets_infos=datasets_infos,
+                    max_samples=self.export_top_k_samples,
+                    callbacks_per_batch=callbacks_per_batch)
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         if self.dataset_name is None and outputs is not None:
@@ -255,9 +273,9 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                 output = split_output.get(self.output_name)
                 if output is not None and 'uid' in output:
                     uids = output['uid']
-                    losses = utils.to_value(output['losses'])
-                    assert len(uids) == len(losses)
-                    for loss, uid in zip(losses, uids):
+                    output_losses = utils.to_value(output['losses'])
+                    assert len(uids) == len(output_losses)
+                    for loss, uid in zip(output_losses, uids):
                         # record the epoch: for example if we have resampled dataset,
                         # we may not have all samples selected every epoch so we can
                         # display properly these epochs
@@ -265,4 +283,10 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
 
         last_epoch = kwargs.get('last_epoch')
         if last_epoch:
-            self.export_stats(datasets, datasets_infos)
+            self.export_stats(
+                model=model,
+                losses=losses,
+                datasets=datasets,
+                datasets_infos=datasets_infos,
+                options=options,
+                callbacks_per_batch=callbacks_per_batch)
