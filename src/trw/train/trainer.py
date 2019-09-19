@@ -550,6 +550,9 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     Default callbacks to be performed before the fitting of the model
     """
     callbacks = [
+        callback_explain_decision.CallbackExplainDecision(split_name='test'),  # TODO REMOVE
+
+
         callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
         callback_model_summary.CallbackModelSummary(logger=logger),
         callback_data_summary.CallbackDataSummary(logger=logger),
@@ -796,7 +799,9 @@ class Trainer:
         logger.info('started Trainer.fit(). Options={}'.format(options))
 
         datasets_infos = None
+        logger.info('creating datasets...')
         datasets = inputs_fn()
+        logger.info('datasets created successfully!')
         assert datasets is not None, '`datasets` is None!'
         if isinstance(datasets, tuple):
             if len(datasets) == 2:
@@ -804,8 +809,10 @@ class Trainer:
                 datasets, datasets_infos = datasets
             else:
                 assert 0, 'expected tuple `datasets` or `datasets, datasets_infos`'
-            
+
+        logger.info('creating model...')
         model = model_fn(options)
+        logger.info('model created successfully!')
         
         if isinstance(model, torch.nn.ModuleDict):
             # if we have sub-models, we MUST define a `forward` method
@@ -814,12 +821,18 @@ class Trainer:
         
         # migrate the model to the specified device
         device = options['workflow_options']['device']
+
+        logger.info('model moved to device={}'.format(device))
         model.to(device)
         
         # instantiate the optimizer and scheduler
+        logger.info('creating optimizers...')
         optimizers, schedulers = optimizers_fn(datasets, model)
+        logger.info('optimizers created successfully!')
 
+        logger.info('creating losses...')
         losses = loss_creator(datasets, losses_fn)
+        logger.info('losses created successfully!')
 
         num_epochs = options['training_parameters']['num_epochs']
 
@@ -829,6 +842,12 @@ class Trainer:
 
         history = []
 
+        logger.info('creating callbacks...')
+        if self.callbacks_per_epoch_fn is not None:
+            callbacks_per_epoch = self.callbacks_per_epoch_fn()
+        else:
+            callbacks_per_epoch = []
+            
         callbacks_per_batch = []
         if self.trainer_callbacks_per_batch is not None:
             callbacks_per_batch.append(self.trainer_callbacks_per_batch)
@@ -838,9 +857,11 @@ class Trainer:
         callbacks_per_batch_loss_terms = []
         if self.callbacks_per_batch_loss_terms_fn is not None:
             callbacks_per_batch_loss_terms += self.callbacks_per_batch_loss_terms_fn()
+        logger.info('callbacks created successfully!')
 
         # run the callbacks  before training
         if self.callbacks_pre_training_fn is not None:
+            logger.info('running pre-training callbacks...')
             callbacks = self.callbacks_pre_training_fn()
             for callback in callbacks:
                 callback(options, history, model, losses=losses, outputs=None, datasets=datasets,
@@ -851,12 +872,11 @@ class Trainer:
                 #except Exception as e:
                 #    print('callback={} failed with exception={}'.format(callback, e))
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
+            logger.info('pre-training callbacks completed!')
 
-        if self.callbacks_per_epoch_fn is not None:
-            callbacks_per_epoch = self.callbacks_per_epoch_fn()
-        else:
-            callbacks_per_epoch = []
+        
         for epoch in range(num_epochs):
+            logger.info('started training epoch {}'.format(epoch))
             run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
 
             outputs_epoch, history_epoch = self.run_epoch_fn(
@@ -872,6 +892,8 @@ class Trainer:
                 run_eval=run_eval)
             history.append(history_epoch)
 
+            logger.info('finished training epoch {}'.format(epoch))
+
             last_epoch = epoch + 1 == num_epochs
             for callback in callbacks_per_epoch:
                 callback(options, history, model, losses=losses, outputs=outputs_epoch,
@@ -882,9 +904,12 @@ class Trainer:
                 #except Exception as e:
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
 
+            logger.info('callbacks epoch {}'.format(epoch))
+
         # finally run the post-training callbacks
         outputs_epoch = None
         if with_final_evaluation:
+            logger.info('started final evaluation...')
             outputs_epoch, history_epoch = self.run_epoch_fn(
                 options,
                 datasets,
@@ -896,9 +921,11 @@ class Trainer:
                 callbacks_per_batch,
                 callbacks_per_batch_loss_terms,
                 run_eval=True)
+            logger.info('finished final evaluation...')
             history.append(history_epoch)
 
         if self.callbacks_post_training_fn is not None:
+            logger.info('started post training callbacks...')
             callbacks_post_training = self.callbacks_post_training_fn()
             for callback in callbacks_post_training:
                 callback(options, history, model, losses=losses, outputs=outputs_epoch, datasets=datasets,
@@ -910,10 +937,14 @@ class Trainer:
                 #    print('callback={} failed with exception={}'.format(callback, e))
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
 
+            logger.info('finished post training callbacks...')
+
         # increment the number of runs
         options['workflow_options']['trainer_run'] += 1
 
         logging.root.removeHandler(handler)
+
+        logger.info('training completed!')
 
         return model, {
             'history': history,
