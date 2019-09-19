@@ -88,16 +88,35 @@ class OutputEmbedding(Output):
             del loss_term['output']
             del self.output
             self.output = None
-            
-            
+
+
 def segmentation_criteria_ce_dice(output, truth, ce_weight=0.5):
+    """
+    loss combining cross entropy and multiclass dice
+
+    Args:
+        output: the output value
+        truth: the truth
+        ce_weight: the weight of the cross entropy to use. This controls the importance of the
+            cross entropy loss to the overall segmentation loss
+
+    Returns:
+        a torch tensor
+    """
     cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')(output, truth)
-    cross_entropy_loss = cross_entropy_loss.sum(tuple(range(1, len(cross_entropy_loss.shape))))
+    cross_entropy_loss = cross_entropy_loss.mean(tuple(range(1, len(cross_entropy_loss.shape))))
     
     dice_loss = losses.LossDiceMulticlass()(output, truth)
     loss = ce_weight * cross_entropy_loss + (1 - ce_weight) * dice_loss
     return loss
-    
+
+
+def segmentation_output_postprocessing(mask_pb):
+    """
+    Post-process the mask probability of the segmentation into discrete segmentation map
+    """
+    return torch.unsqueeze(torch.argmax(mask_pb))
+
 
 class OutputSegmentation(Output):
     """
