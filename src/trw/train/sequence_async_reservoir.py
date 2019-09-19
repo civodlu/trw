@@ -42,7 +42,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
             min_reservoir_samples=1,
             nb_workers=1,
             max_jobs_at_once=None,
-            reservoir_sampler=sampler.SamplerSequential(),
+            reservoir_sampler=None,
             collate_fn=None,
             maximum_number_of_samples_per_epoch=None):
         """
@@ -51,9 +51,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
             max_reservoir_samples: the maximum number of samples of the reservoir
             function_to_run: the function to run asynchronously
             min_reservoir_samples: the minimum of samples of the reservoir needed before an output sequence can be created
-            nb_workers: the number of workers that will process `function_to_run`
+            nb_workers: the number of workers that will process `function_to_run`. Must be >= 1
             max_jobs_at_once: the maximum number of jobs that can be pushed in the result list at once. If 0, no limit. If None: set to the number of workers
-            reservoir_sampler: a sampler that will be used to sample the reservoir or None if no sampling needed
+            reservoir_sampler: a sampler that will be used to sample the reservoir or None for sequential sampling of the reservoir
             collate_fn: a function to post-process the samples into a single batch, or None if not to be collated
             maximum_number_of_samples_per_epoch: the maximum number of samples per epoch to generate.
                 If we reach this maximum, this will not empty the reservoir but simply interrupt the sequence so
@@ -102,9 +102,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
         subsampled_source = self.source_split.subsample(nb_samples)
         return SequenceAsyncReservoir(
             subsampled_source,
-            nb_samples,
+            self.max_reservoir_samples,
             self.function_to_run,
-            min_reservoir_samples=nb_samples,
+            min_reservoir_samples=self.min_reservoir_samples,
             nb_workers=1,
             max_jobs_at_once=self.max_jobs_at_once,
             reservoir_sampler=copy.deepcopy(self.reservoir_sampler),
@@ -118,12 +118,13 @@ class SequenceAsyncReservoir(sequence.Sequence):
         else:
             sampler_to_use = copy.deepcopy(new_sampler)
 
-        subsampled_source = self.subsample_uids(uids, uids_name, new_sampler)
+        subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
+        
         return SequenceAsyncReservoir(
             subsampled_source,
-            len(uids),
+            self.max_reservoir_samples,
             self.function_to_run,
-            min_reservoir_samples=len(uids),
+            min_reservoir_samples=self.min_reservoir_samples,
             nb_workers=1,
             max_jobs_at_once=self.max_jobs_at_once,
             reservoir_sampler=sampler_to_use,
@@ -215,6 +216,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
         if self.reservoir_sampler is not None:
             # items are actually a list of indices!
             indices = self.iter_reservoir.__next__()
+            print(indices)
             if isinstance(indices, collections.Iterable):
                 items = [self.reservoir[index] for index in indices]
                 self.number_samples_generated += len(items)

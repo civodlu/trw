@@ -102,3 +102,68 @@ class TestSampler(TestCase):
             time_epoch = time_end - time_start
             print('TIME=', time_end - time_start)
             self.assertTrue(time_epoch * 10 < time_ref)
+
+    def test_subsample_uid(self):
+        """
+        Make sure we can resample the sequence with UID
+        """
+        nb_indices = 800
+        paths = [[i, 42] for i in range(nb_indices)]
+        split = {'path': np.asarray(paths)}
+        max_reservoir_samples = 200
+
+        sampler = trw.train.SamplerSequential()
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            max_reservoir_samples=max_reservoir_samples,
+            min_reservoir_samples=max_reservoir_samples,
+            function_to_run=function_to_run).collate().batch(40)
+        
+        subsampled_sequence = sequence.subsample_uids(uids=np.arange(200, 300), uids_name=trw.train.default_sample_uid_name)
+        
+        nb_samples = 0
+        values = set()
+        for batch in subsampled_sequence:
+            batch_set = set(trw.train.to_value(batch['sample_uid']))
+            nb_samples += trw.train.len_batch(batch)
+            values = values.union(batch_set)
+
+        assert len(values) == 100
+        assert np.min(list(values)) == 200
+        assert np.max(list(values)) == 299
+
+    def test_uniform_sampling(self):
+        """
+        Make sure we sample uniformly the samples
+        """
+        nb_indices = 20
+        nb_reservoir_samples = 10
+        maximum_number_of_samples_per_epoch = 5
+        nb_epochs = 5000
+
+        sampler = trw.train.SamplerRandom()
+        split = {'path': np.asarray(np.arange(nb_indices))}
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            max_reservoir_samples=nb_reservoir_samples,
+            min_reservoir_samples=nb_reservoir_samples,
+            function_to_run=function_to_run,
+            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch).collate()
+
+        frequencies = collections.defaultdict(lambda: 0)
+        nb_samples = 0
+
+        for epoch in range(nb_epochs):
+            for batch in sequence:
+                nb_batch_samples = trw.train.len_batch(batch)
+                for n in range(nb_batch_samples):
+                    nb_samples += 1
+                    uid = int(trw.train.to_value(batch[trw.train.default_sample_uid_name][n]))
+                    frequencies[uid] += 1
+
+        expected_sampling = nb_samples / nb_indices
+        tolerance = 0.05
+        for uid, sampling in frequencies.items():
+            assert abs(expected_sampling - sampling) < tolerance * expected_sampling, 'expected={}, found={}'.format(expected_sampling, sampling)
