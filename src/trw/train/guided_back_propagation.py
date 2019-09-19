@@ -19,12 +19,21 @@ class GuidedBackprop():
         * the model will be instrumented, use `trw.train.CleanAddedHooks` to remove the
             hooks once guided back-propagation is finished
     """
-    def __init__(self, model):
+    def __init__(self, model, unguided_gradient=False):
+        """
+
+        Args:
+            model: the model
+            unguided_gradient: if `False`, calculate the guided gradient. If `True`,
+        """
         self.model = model
         self.forward_relu_outputs = []
 
         self.model.eval()
-        self.update_relus()
+        self.unguided_gradient = unguided_gradient
+
+        if not unguided_gradient:
+            self.update_relus()
 
     def update_relus(self):
         """
@@ -72,7 +81,7 @@ class GuidedBackprop():
             i = [('input', inputs)]
         return i
 
-    def generate_gradients(self, inputs, target_class, target_class_name=None):
+    def __call__(self, inputs, target_class, target_class_name):
         """
         Generate the guided back-propagation gradient
 
@@ -82,12 +91,15 @@ class GuidedBackprop():
             target_class_name: the name of the output class if multiple outputs
 
         Returns:
-            a dictionary (input, gradient)
+            a tuple (output_name, dictionary (input, gradient))
         """
         model_output = self.model(inputs)
         if isinstance(model_output, collections.Mapping):
             assert target_class_name is not None
             model_output = model_output.get(target_class_name)
+
+        if not self.unguided_gradient and len(self.forward_relu_outputs) == 0:
+            logger.error('GuidedBackprop.__call__: the model doesn\'t have RELU layers!')
 
         if model_output is None:
             return None
@@ -110,7 +122,9 @@ class GuidedBackprop():
 
         # extract gradient
         inputs_kvp = {name: utils.to_value(i.grad) for name, i in inputs_kvp}
-        return inputs_kvp
+
+        self.forward_relu_outputs = None  # clean the state
+        return target_class_name, inputs_kvp
 
     @staticmethod
     def get_positive_negative_saliency(gradient):

@@ -13,14 +13,93 @@ import torch.nn
 import numpy as np
 import logging
 import collections
+import functools
 
 
 logger = logging.getLogger(__name__)
 
 
 class ExplainableAlgorithm(Enum):
-    GuidedBackPropagation = 1
-    GradCAM = 2
+    GuidedBackPropagation = guided_back_propagation.GuidedBackprop
+    GradCAM = grad_cam.GradCam
+    Gradient = functools.partial(guided_back_propagation.GuidedBackprop, unguided_gradient=True)
+
+
+def run_classification_explanation(
+        root,
+        dataset_name,
+        split_name,
+        model,
+        batch,
+        datasets_infos,
+        nb_samples,
+        algorithm_name,
+        algorithm_fn,
+        output_name,
+        algorithm_kwargs=None,
+        nb_explanations=1,
+        epoch=None):
+    """
+    Run an explanation of a classification output
+    """
+
+    # do sample by sample to simplify the export procedure
+    for n in range(nb_samples):
+        batch_n = sequence_array.SequenceArray.get(
+            batch,
+            utils.len_batch(batch),
+            np.asarray([n]),
+            transforms=None,
+            use_advanced_indexing=True)
+
+        for tensor in batch_n.values():
+            if isinstance(tensor, torch.Tensor) and torch.is_floating_point(tensor):
+                # we want to back-propagate up to the inputs
+                tensor.requires_grad = True
+
+        outputs = model(batch_n)
+        output = outputs.get(output_name)
+        assert output is not None
+        output_np = utils.to_value(output.output)[0]
+        max_class_indices = (-output_np).argsort()[0:nb_explanations]
+
+        # make sure the model is not contaminated by uncleaned hooks
+        r = None
+        with utils.CleanAddedHooks(model) as context:
+            algorithm_instance = algorithm_fn(model=model, **algorithm_kwargs)
+            r = algorithm_instance(inputs=batch_n, target_class_name=output_name, target_class=max_class_indices[0])
+        if r is None:
+            # the algorithm failed, go to the next one
+            return
+
+        selected_output_name, cams_dict = r
+        assert nb_explanations == 1, 'TODO handle for multiple explanations!'
+
+        for input_name, g in cams_dict.items():
+            if g is None:
+                # discard this input!
+                continue
+            assert len(g) == 1, 'BUG: expected a single sample!'
+            enumerate_i = 0
+            c = max_class_indices[enumerate_i]  # the class output
+            c_name = fill_class_name(output, c, datasets_infos, dataset_name, split_name)
+
+            filename = 'sample-{}-output-{}-epoch-{}-rank-{}-alg-{}-explanation_for-{}'.format(n, input_name, epoch, enumerate_i, algorithm_name, c_name)
+            filename = utils.safe_filename(filename)
+            export_path = os.path.join(root, filename)
+
+            with open(export_path + '.txt', 'w') as f:
+                batch_n['explanation'] = g
+                batch_n['output_found'] = str(output_np)
+                batch_n['output_name_found'] = c_name
+
+                positive, negative = guided_back_propagation.GuidedBackprop.get_positive_negative_saliency(g)
+                batch_n['explanation_positive'] = positive
+                batch_n['explanation_negative'] = negative
+
+                sample_export.export_sample(batch_n, 0, export_path + '-', f)
+                f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
+                f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
 
 
 def fill_class_name(output, class_index, datasets_infos, dataset_name, split_name):
@@ -43,7 +122,7 @@ class CallbackExplainDecision(callback.Callback):
     """
     Explain the decision of a model
     """
-    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.GuidedBackPropagation), output_name=None, nb_explanations=1, algorithms_kwargs=None):
+    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.GuidedBackPropagation, ExplainableAlgorithm.Gradient), output_name=None, nb_explanations=1, algorithms_kwargs=None):
         """
         Args:
             max_samples: the maximum number of examples to export
@@ -100,7 +179,7 @@ class CallbackExplainDecision(callback.Callback):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('started CallbackExplainDecision.__call__')
         device = options['workflow_options']['device']
-        model.eval()  # we hare in evaluation mode!
+        model.eval()  # we are in evaluation mode!
 
         if self.batch is None:
             self.first_time(datasets)
@@ -112,7 +191,6 @@ class CallbackExplainDecision(callback.Callback):
             utils.create_or_recreate_folder(root)
 
         batch = utils.transfer_batch_to_device(self.batch, device=device)
-        batch_size = utils.len_batch(batch)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         outputs = model(batch)
@@ -127,107 +205,19 @@ class CallbackExplainDecision(callback.Callback):
             if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:
                 algorithm_kwargs = self.algorithms_kwargs.get(algorithm)
 
-            if algorithm == ExplainableAlgorithm.GradCAM:
-                # do sample by sample to simplify the export procedure
-                for n in range(nb_samples):
-                    batch_n = sequence_array.SequenceArray.get(
-                        batch,
-                        utils.len_batch(batch),
-                        np.asarray([n]),
-                        transforms=None,
-                        use_advanced_indexing=True)
-
-                    for tensor in batch_n.values():
-                        if isinstance(tensor, torch.Tensor) and torch.is_floating_point(tensor):
-                            # we want to back-propagate up to the inputs
-                            tensor.requires_grad = True
-
-                    gradcam = grad_cam.GradCam(**algorithm_kwargs)
-                    r = gradcam.generate_cam(model, batch_n, target_class_name=output_name)
-                    if r is None:
-                        # the algorithm failed, go to the next one
-                        continue
-
-                    selected_output_name, cams_dict = r
-                    assert self.nb_explanations == 1, 'TODO handle for multiple explanations!'
-
-                    outputs = model(batch_n)
-                    output = outputs.get(selected_output_name)
-                    assert output is not None
-                    output_np = utils.to_value(output.output)[0]
-                    max_class_indices = (-output_np).argsort()[0:self.nb_explanations]
-
-                    for input_name, cams in cams_dict.items():
-                        assert len(cams) == 1
-                        enumerate_i = 0
-                        c = max_class_indices[enumerate_i]  # the class output
-                        c_name = fill_class_name(output, c, datasets_infos, self.dataset_name, self.split_name)
-
-                        filename = 'sample-{}-output-{}-epoch-{}-rank-{}-alg-{}-explanation_for-{}'.format(n, input_name, len(history), enumerate_i, algorithm, c_name)
-                        filename = utils.safe_filename(filename)
-                        export_path = os.path.join(root, filename)
-
-                        with open(export_path + '.txt', 'w') as f:
-                            batch_n['explanation'] = cams[0].reshape([1, 1] + list(cams[0].shape))  # add a sample and a filter components
-                            batch_n['output_found'] = str(output_np)
-                            batch_n['output_name_found'] = c_name
-                            sample_export.export_sample(batch_n, 0, export_path + '-', f)
-
-            if algorithm == ExplainableAlgorithm.GuidedBackPropagation:
-                with utils.CleanAddedHooks(model) as context:
-                    gbp = guided_back_propagation.GuidedBackprop(model, **algorithm_kwargs)
-                    # do sample by sample to simplify the export procedure
-                    for n in range(nb_samples):
-                        batch_n = sequence_array.SequenceArray.get(
-                            batch,
-                            batch_size,
-                            np.asarray([n]),
-                            transforms=None,
-                            use_advanced_indexing=True)
-
-                        for tensor in batch_n.values():
-                            if isinstance(tensor, torch.Tensor) and torch.is_floating_point(tensor):
-                                # we want to back-propagate up to the inputs
-                                tensor.requires_grad = True
-
-                        outputs = model(batch_n)
-                        output = outputs.get(output_name)
-                        assert output is not None
-
-                        # find the outputs with maximum probability
-                        output_np = utils.to_value(output.output)[0]
-                        max_class_indices = (-output_np).argsort()[0:self.nb_explanations]
-
-                        for enumerate_i, c in enumerate(max_class_indices):
-                            grad_inputs = gbp.generate_gradients(batch_n, target_class_name=output_name, target_class=c)
-
-                            # find a meaningful name for the class, else revert to the index
-                            c_name = fill_class_name(output, c, datasets_infos, self.dataset_name, self.split_name)
-
-                            # export each input
-                            for input_name, g in grad_inputs.items():
-                                if g is None:
-                                    continue
-                                assert g.shape[0] == 1  # we should hae a single sample!
-
-                                filename = 'sample-{}-output-{}-epoch-{}-rank-{}-alg-{}-explanation_for-{}'.format(n, input_name, len(history), enumerate_i, algorithm, c_name)
-                                filename = utils.safe_filename(filename)
-                                export_path = os.path.join(root, filename)
-
-                                # for reference, export the input as well
-                                with open(export_path + '.txt', 'w') as f:
-                                    batch_n['explanation'] = g
-                                    batch_n['output_found'] = str(output_np)
-                                    positive, negative = guided_back_propagation.GuidedBackprop.get_positive_negative_saliency(g)
-                                    batch_n['explanation_positive'] = positive
-                                    batch_n['explanation_negative'] = negative
-
-                                    sample_export.export_sample(batch_n, 0, export_path + '-', f)
-                                    f.write('gradient norm={}\n'.format(np.linalg.norm(g)))
-                                    f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
-                                    f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
-
-                if context.nb_hooks_removed == 0:
-                    logger.error('The model doesn\'t have any ReLu node!')
+            run_classification_explanation(
+                root,
+                self.dataset_name,
+                self.split_name,
+                model,
+                batch,
+                datasets_infos,
+                nb_samples,
+                algorithm.name,
+                algorithm_fn=algorithm.value,
+                output_name=output_name,
+                algorithm_kwargs=algorithm_kwargs,
+                nb_explanations=1,
+                epoch=len(history))
 
         logger.info('successfully completed CallbackExplainDecision.__call__!')

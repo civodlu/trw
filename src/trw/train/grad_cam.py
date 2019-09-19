@@ -1,6 +1,7 @@
 from trw.train import graph_reflection
 from trw.train import utils
 from trw.layers import upsample
+from trw.train import outputs as outputs_trw
 import torch
 import numpy as np
 import logging
@@ -16,17 +17,24 @@ class GradCam:
     This is based on the paper "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization",
     Ramprasaath R et al.
     """
-    def __init__(self, find_convolution=graph_reflection.find_last_forward_convolution):
-        self.find_convolution = find_convolution
+    def __init__(self, model, find_convolution=graph_reflection.find_last_forward_convolution):
+        """
 
-    def generate_cam(self, model, inputs, target_class_name=None, target_class=None):
+        Args:
+            model: the model
+            find_convolution: a function to find the convolution of interest of the model
+        """
+
+        self.find_convolution = find_convolution
+        self.model = model
+
+    def __call__(self, inputs, target_class_name=None, target_class=None):
         """
 
         TODO:
             * handle multiple-inputs
 
         Args:
-            model: the model
             inputs: the inputs to be fed to the model
             target_class_name: the output node to be used. If `None`:
                 * if model output is a single tensor then use this as target output
@@ -39,8 +47,8 @@ class GradCam:
             a tuple (output name, a dictionary (input_name, GradCAMs))
         """
         logger.info('generate_cam, target_class_name={}, target_class={}'.format(target_class_name, target_class))
-        model.eval()  # make sure we are in eval mode
-        r = self.find_convolution(model, inputs)
+        self.model.eval()  # make sure we are in eval mode
+        r = self.find_convolution(self.model, inputs)
         if r is None:
             logger.error('`find_convolution` did not find a convolution of interest. Grad-CAM not calculated!')
             return None
@@ -78,7 +86,7 @@ class GradCam:
                 selected_output = model_outputs
             else:
                 for output_name, output in model_outputs.items():
-                    if isinstance(output, model_outputs.OutputClassification):
+                    if isinstance(output, outputs_trw.OutputClassification):
                         selected_output = output.output
                         selected_output_name = output_name
                         break
@@ -105,11 +113,11 @@ class GradCam:
         nb_classes = selected_output.shape[1]
         nb_samples = utils.len_batch(inputs)
 
-        model_device = utils.get_device(model)
+        model_device = utils.get_device(self.model)
         one_hot_output = torch.FloatTensor(nb_samples, nb_classes).to(device=model_device).zero_()
         one_hot_output[:, target_class] = 1
 
-        model.zero_grad()
+        self.model.zero_grad()
         module_output_gradient = None
 
         def set_module_output_gradient(g):
@@ -149,10 +157,12 @@ class GradCam:
             cam = np.maximum(cam, 0)
             cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # Normalize between 0-1
 
-            cams.append(cam)
+            # make sure we have a `filter` component in the image
+            cam = np.expand_dims(cam, axis=0)
+            cams.append(np.expand_dims(cam, axis=0))
 
         logger.info('generate_cam successful!')
 
         return selected_output_name, {
-            input_name: cams
+            input_name: np.asarray(cams)
         }
