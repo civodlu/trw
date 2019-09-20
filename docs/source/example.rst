@@ -176,7 +176,9 @@ Here are the most difficult examples to classify. This can be used quickly ident
 .. figure:: images/outliers.png
     :align: center
 	
-    Examples of outliers and annotation mistakes spotted using :class:`trw.train.CallbackWorstSamplesByEpoch`
+    Examples of outliers and annotation mistakes in the original MNIST dataset 
+    spotted using :class:`trw.train.CallbackWorstSamplesByEpoch` callback.
+
 
 
 Embedding analysis
@@ -188,6 +190,9 @@ samples and possibly detect common trends.
 
 .. figure:: images/mnist_embedding.png
     :align: center
+	
+    Embedding of the MNIST dataset displayed using Tensorboard.
+
 
 
 Explainable decisions
