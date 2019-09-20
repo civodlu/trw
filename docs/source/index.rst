@@ -34,8 +34,8 @@ Contents:
    
 
 .. include:: example.rst
-.. include:: input_pipeline.rst
 .. include:: simple_layers.rst
+.. include:: input_pipeline.rst
 
 
 

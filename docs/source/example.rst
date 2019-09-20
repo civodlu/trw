@@ -52,7 +52,7 @@ By default it will use the multi-class cross entropy loss:
 			x = self.relu_fc1(self.fc1(x))
 			x = self.fc2(x)
 
-			# here we create a softmax output that will use
+			# Here we create a softmax output that will use
 			# the `targets` feature as classification target
 			return {
 				'softmax': trw.train.OutputClassification(x, 'targets')
@@ -63,7 +63,7 @@ Finally, we can create a :class:`trw.train.Trainer` to start the training and ev
 
 .. testcode::
 
-	# configure and run the training/evaluation
+	# Configure and run the training/evaluation
 	options = trw.train.create_default_options(num_epochs=10)
 	trainer = trw.train.Trainer()
 
@@ -75,7 +75,7 @@ Finally, we can create a :class:`trw.train.Trainer` to start the training and ev
 		optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
 			datasets=datasets, model=model, learning_rate=0.1))
 
-	# calculate statistics of the final epoch
+	# Calculate statistics of the final epoch
 	output = results['outputs']['mnist']['test']['softmax']
 	accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
 	assert accuracy >= 0.95
@@ -88,7 +88,7 @@ the model. By default, the following folders will be created:
 
 .. code-block::
 
-	. mnist_cnn_r0
+	mnist_cnn_r0
 		├── random_samples
 		├── augmentations
 		├── tensorboard
@@ -192,7 +192,15 @@ samples and possibly detect common trends.
 
 Explainable decisions
 ---------------------
+TBD
 
+Hyper-parameter selection & visualization
+-----------------------------------------
+TBD
+
+Archtecture search
+------------------
+TBD
 
 Model Export
 ------------
