@@ -158,7 +158,7 @@ class CallbackExplainDecision(callback.Callback):
             self.dataset_name = next(iter(datasets))
 
         if datasets[self.dataset_name].get(self.split_name) is None:
-            logger.error('can\'t find split={} for dataset={}'.format(self.dataset_name, self.split_name))
+            logger.error('can\'t find split={} for dataset={}'.format(self.split_name, self.dataset_name))
             self.dataset_name = None
             return
 
