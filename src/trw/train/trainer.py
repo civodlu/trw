@@ -550,9 +550,6 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     Default callbacks to be performed before the fitting of the model
     """
     callbacks = [
-        callback_explain_decision.CallbackExplainDecision(split_name='test'),  # TODO REMOVE
-
-
         callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
         callback_model_summary.CallbackModelSummary(logger=logger),
         callback_data_summary.CallbackDataSummary(logger=logger),
@@ -569,18 +566,20 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     return callbacks
 
 
-def default_per_epoch_callbacks(logger=default_logger):
+def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True):
     """
     Default callbacks to be performed at the end of each epoch
     """
-    return [
-        callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch(),
-
+    callbacks = [
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
-
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
     ]
+
+    if with_worst_samples_by_epoch:
+        callbacks.append(callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch())
+
+    return callbacks
 
 
 def default_post_training_callbacks(embedding_name='embedding', dataset_name=None, split_name='valid', discard_train_error_export=False, export_errors=True, explain_decision=False):
