@@ -3,8 +3,8 @@ import numpy as np
 
 
 def create_net(options):
-    i = trw.simple_layers.Input([None, 1, 28, 28], 'images')
-    n = trw.simple_layers.Conv2d(i, out_channels=16, kernel_size=5, stride=2)
+    n = trw.simple_layers.Input([None, 1, 28, 28], 'images')
+    n = trw.simple_layers.Conv2d(n, out_channels=16, kernel_size=5, stride=2)
     n = trw.simple_layers.ReLU(n)
     n = trw.simple_layers.MaxPool2d(n, 2, 2)
     n = trw.simple_layers.Flatten(n)
