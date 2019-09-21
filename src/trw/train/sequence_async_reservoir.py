@@ -216,7 +216,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
         if self.reservoir_sampler is not None:
             # items are actually a list of indices!
             indices = self.iter_reservoir.__next__()
-            print(indices)
             if isinstance(indices, collections.Iterable):
                 items = [self.reservoir[index] for index in indices]
                 self.number_samples_generated += len(items)

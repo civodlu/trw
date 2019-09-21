@@ -2,7 +2,6 @@ from trw.train import callback
 from trw.train import utils
 from trw.train import trainer
 import collections
-import torch
 import torch.nn as nn
 import numpy as np
 import logging
@@ -11,38 +10,57 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def summary(model, batch, logger, device):
+def model_summary(model, batch, logger):
     # this code is based on https://github.com/sksq96/pytorch-summary
     # and adapted to accept dictionary as input
     def register_hook(module):
         def hook(module, input, output, batch_size=-1):
+            nonlocal parameters_counted
+
             class_name = str(module.__class__).split(".")[-1].split("'")[0]
             module_idx = len(summary)
 
             m_key = "%s-%i" % (class_name, module_idx + 1)
             summary[m_key] = collections.OrderedDict()
-            summary[m_key]["input_shape"] = list(input[0].size())
-            summary[m_key]["input_shape"][0] = batch_size
+
+            if isinstance(input[0], collections.Mapping):
+                summary[m_key]["input_shape"] = (-1)
+            else:
+                summary[m_key]["input_shape"] = list(input[0].size())
+                summary[m_key]["input_shape"][0] = batch_size
             if isinstance(output, (list, tuple)):
                 summary[m_key]["output_shape"] = [
                     [-1] + list(o.size())[1:] for o in output
                 ]
             else:
-                summary[m_key]["output_shape"] = list(output.size())
-                summary[m_key]["output_shape"][0] = batch_size
+                if not isinstance(output, collections.Mapping):
+                    summary[m_key]["output_shape"] = list(output.size())
+                    summary[m_key]["output_shape"][0] = batch_size
+                else:
+                    # the module has multiple outputs. Don't display
+                    summary[m_key]["output_shape"] = -1
 
-            params = 0
-            if hasattr(module, "weight") and hasattr(module.weight, "size"):
-                params += torch.prod(torch.LongTensor(list(module.weight.size())))
-                summary[m_key]["trainable"] = module.weight.requires_grad
-            if hasattr(module, "bias") and hasattr(module.bias, "size"):
-                params += torch.prod(torch.LongTensor(list(module.bias.size())))
+            total_trainable_params = 0  # ALL parameters of the layer (i.e., in case of recursion, counts all sub-module parameters)
+            params = 0  # if we have recursion, these are the unique parameters
+            trainable = False
+            for p in module.parameters():
+                if p.requires_grad:
+                    total_trainable_params += np.prod(np.asarray(p.shape))
+
+                if p not in parameters_counted:
+                    # make sure there is double counted parameters!
+                    parameters_counted.add(p)
+                    if p.requires_grad:
+                        trainable = True
+                        params += np.prod(np.asarray(p.shape))
+
             summary[m_key]["nb_params"] = params
+            summary[m_key]["trainable"] = trainable
+            summary[m_key]["total_trainable_params"] = total_trainable_params
 
-        if not isinstance(module, (nn.Sequential, nn.ModuleList)) and module != model:
-            if not hasattr(module, 'runtime_actions'):  # this is a trw.simple_layers.CompiledNet
-                hooks.append(module.register_forward_hook(hook))
+        hooks.append(module.register_forward_hook(hook))
 
+    parameters_counted = set()
     summary = collections.OrderedDict()
     hooks = []
     model.apply(register_hook)
@@ -51,19 +69,21 @@ def summary(model, batch, logger, device):
     for h in hooks:
         h.remove()
 
-    logger("----------------------------------------------------------------")
-    line_new = "{:>20}  {:>25} {:>15}".format("Layer (type)", "Output Shape", "Param #")
+    logger("---------------------------------------------------------------------------------------------------------")
+    line_new = "{:>20}  {:>25} {:>25} {:>15} {:>15}".format("Layer (type)", "Input Shape", "Output Shape", "Param #", "Total Param #")
     logger(line_new)
-    logger("================================================================")
+    logger("=========================================================================================================")
     total_params = 0
     total_output = 0
     trainable_params = 0
     for layer in summary:
         # input_shape, output_shape, trainable, nb_params
-        line_new = "{:>20}  {:>25} {:>15}".format(
+        line_new = "{:>20} {:>25} {:>25} {:>15} {:>15}".format(
             layer,
+            str(summary[layer]["input_shape"]),
             str(summary[layer]["output_shape"]),
             "{0:,}".format(summary[layer]["nb_params"]),
+            "{0:,}".format(summary[layer]["total_trainable_params"]),
         )
         total_params += summary[layer]["nb_params"]
         total_output += np.prod(summary[layer]["output_shape"])
@@ -76,15 +96,21 @@ def summary(model, batch, logger, device):
     total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
     total_params_size = abs(utils.to_value(total_params) * 4. / (1024 ** 2.))
 
-    logger("================================================================")
+    logger("================================================================================")
     logger("Total params: {0:,}".format(total_params))
     logger("Trainable params: {0:,}".format(trainable_params))
     logger("Non-trainable params: {0:,}".format(total_params - trainable_params))
-    logger("----------------------------------------------------------------")
+    logger("--------------------------------------------------------------------------------")
     logger("Forward/backward pass size (MB): %0.2f" % total_output_size)
     logger("Params size (MB): %0.2f" % total_params_size)
-    logger("----------------------------------------------------------------")
-    return trainable_params
+    logger("--------------------------------------------------------------------------------")
+
+    return {
+        'total_params': total_params,
+        'trainable_params': trainable_params,
+        'forward_backward_size_mb': total_output_size,
+        'params_size_mb': total_params_size,
+    }
 
 
 class CallbackModelSummary(callback.Callback):
@@ -112,15 +138,5 @@ class CallbackModelSummary(callback.Callback):
         batch = utils.transfer_batch_to_device(batch, device=device)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
         
-        trainable_parameters_method1 = summary(model, batch, logger=self.logger, device=device)
-
-        # cross check to make sure there is no issue in the calculation:
-        parameters = [p.shape for p in model.parameters() if p.requires_grad]
-        parameters = [np.prod(p) if len(p) != 0 else 1 for p in parameters]
-        trainable_parameters_method2 = np.sum(parameters)
-
-        if trainable_parameters_method1 != trainable_parameters_method2:
-            logger.warning('discrepencies in the number of trainable parameters. Found using hook={}, found using model.parameters()={}. Other numbers may not be valid.'.
-                           format(trainable_parameters_method1, trainable_parameters_method2))
-        else:
-            logger.info('successfully completed CallbackModelSummary.__call__')
+        model_summary(model, batch, logger=self.logger)
+        logger.info('successfully completed CallbackModelSummary.__call__')

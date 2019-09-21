@@ -24,7 +24,7 @@ from .callback_export_history import CallbackExportHistory
 from .callback_export_classification_report import CallbackExportClassificationReport
 from .callback_export_augmentations import CallbackExportAugmentations
 from .callback_data_summary import CallbackDataSummary
-from .callback_model_summary import CallbackModelSummary
+from .callback_model_summary import CallbackModelSummary, model_summary
 from .callback_skip_epoch import CallbackSkipEpoch
 from .callback_tensorboard import CallbackClearTensorboardLog
 from .callback_tensorboard_embedding import CallbackTensorboardEmbedding
