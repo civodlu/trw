@@ -36,6 +36,7 @@ Contents:
 .. include:: example.rst
 .. include:: simple_layers.rst
 .. include:: input_pipeline.rst
+.. include:: unbalanced_data.rst
 
 
 

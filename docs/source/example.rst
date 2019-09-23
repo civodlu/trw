@@ -1,5 +1,5 @@
-Example: classification of the MNIST dataset
-********************************************
+A tour of TRW using the MNIST dataset
+*************************************
 
 MNIST dataset
 =============
@@ -195,13 +195,113 @@ samples and possibly detect common trends.
 
 
 
-Explainable decisions
----------------------
-TBD
-
 Hyper-parameter selection & visualization
 -----------------------------------------
-TBD
+
+Tuning hyper-parameters is one of the crucial steps to train a deep learning model. It is often what makes the difference
+between a model that is average and one that is doing magic. The challenge whith hyper-parameters is that they will vary
+wildly depending on the task or dataset. One of the most basic tool to optimize hyper-parameters is to use random search.
+That is, we will repeat the training of a model a specified numbr of times with hyper-parameters randomly selected for each
+training. `TRW` provides an easy mechanism to set up hyper-parameter optimization using 
+:class:`trw.hparams.HyperParametersOptimizerRandomSearchLocal`
+
+
+First, weed to set up the hyper-parameters:
+
+.. testcode::
+
+	def create_net(hparams):
+		# create 2 model hyper-parameters
+		number_hidden = hparams.create('number_hidden', trw.hparams.DiscreteIntegrer(500, 100, 1000))
+		number_conv1_channels = hparams.create('number_conv1_channels', trw.hparams.DiscreteIntegrer(16, 4, 64))
+
+		n = trw.simple_layers.Input([None, 1, 28, 28], 'images')
+		n = trw.simple_layers.Conv2d(n, out_channels=number_conv1_channels, kernel_size=5, stride=2)
+		n = trw.simple_layers.ReLU(n)
+		n = trw.simple_layers.MaxPool2d(n, 2, 2)
+		n = trw.simple_layers.Flatten(n)
+		n = trw.simple_layers.Linear(n, number_hidden)
+		n = trw.simple_layers.ReLU(n)
+		n = trw.simple_layers.Linear(n, 10)
+		n = trw.simple_layers.OutputClassification(n, output_name='softmax', classes_name='targets')
+		return trw.simple_layers.compile_nn([n])
+
+
+Then we need to specify how to evaluate the hyper-parameters:
+
+.. testcode::
+
+	def evaluate_hparams(hparams):
+		learning_rate = hparams.create('learning_rate', trw.hparams.ContinuousUniform(0.1, 1e-5, 1.0))
+
+		# disable most of the reporting so that we don't end up with
+		# thousands of files that are not useful for hyper-parameter search
+		trainer = trw.train.Trainer(
+			callbacks_pre_training_fn=None,
+			callbacks_post_training_fn=None,
+			callbacks_per_epoch_fn=lambda: [trw.train.callback_epoch_summary.CallbackEpochSummary()])
+		
+		model, results = trainer.fit(
+			options,
+			inputs_fn=lambda: trw.datasets.create_mnist_datasset(normalize_0_1=True),
+			run_prefix='run',
+			model_fn=lambda options: create_net(hparams),
+			optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=learning_rate))
+		
+		hparam_loss = trw.train.to_value(results['outputs']['mnist']['test']['overall_loss']['loss'])
+		hparam_infos = results['history']
+		return hparam_loss, hparam_infos
+
+
+Finally, run the parameter search and its analysis:
+
+.. testcode::
+
+	# configure and run the training/evaluation
+	options = trw.train.create_default_options(num_epochs=5)
+	hparams_root = os.path.join(options['workflow_options']['logging_directory'], 'mnist_cnn_hparams')
+	trw.train.utils.create_or_recreate_folder(hparams_root)
+	options['workflow_options']['logging_directory'] = hparams_root
+
+	# run the hyper-parameter search
+	random_search = trw.hparams.HyperParametersOptimizerRandomSearchLocal(
+		evaluate_hparams_fn=evaluate_hparams,
+		repeat=40)
+	random_search.optimize(hparams_root)
+
+	# finally analyse the run
+	hparams_report = os.path.join(hparams_root, 'report')
+	trw.hparams.analyse_hyperparameters(
+		hprams_path_pattern=hparams_root + '\hparams-*.pkl',
+		output_path=hparams_report)
+
+
+This will perform 40 training with random parameters and outputs a report. We can use these trainings to estimate
+the importance of the hyper-parameters. It is an important indicator as often, many of the
+hyper-parameters have little influence on the model performance. This hyper-paramater
+weighting indicates which hyper-parameters we should focus the search on:
+
+
+.. figure:: images/hyper-parameter_importance.png
+    :align: center
+	
+    Hyper-parameter importance. This indicates the dominant hyper-parameters and allows
+    us to discard the hyper-parameters that do not influence much the model
+	
+
+The hyper-parameters can be displayed relative to the loss and maybe we can gain
+additional insights:
+
+.. figure:: images/hyper-parameter_learning-rate.png
+    :align: center
+	
+    Here we can see that when the learning rate is set too high, the model more often
+    performs poorly than with lower the learning rates.
+
+
+Import parameters to optimize are learning rate, batch size or model parameters (e.g., activation function, 
+number of convolutional filters, filter size, number of layers).
+
 
 Archtecture search
 ------------------
