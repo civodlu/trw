@@ -65,7 +65,7 @@ def double_values(item):
     return item
 
 
-class TestDatasetLoader(TestCase):
+class TestSequenceMap(TestCase):
     def test_map_async_20(self):
         # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
         split_np = {'values': np.arange(100, 120)}
@@ -80,7 +80,7 @@ class TestDatasetLoader(TestCase):
         print('test_map_async_1.TIME=', time_end - time_start)
 
         self.assertTrue(len(vs) == 20)
-        
+
     def test_map_sync_multiple_items(self):
         # make sure we have iterate through each item of the returned items
         split_np = {'values': np.arange(100, 120)}
@@ -89,18 +89,18 @@ class TestDatasetLoader(TestCase):
         vs = []
         for v in split:
             vs.append(v['volume'].shape)
-        
+
         self.assertTrue(len(vs) == 20 * 5)
 
     def test_map_async_multiple_items(self):
         # make sure we have iterate through each item of the returned items
         split_np = {'values': np.arange(100, 120)}
         split = trw.train.SequenceArray(split_np).map(load_5_items, nb_workers=3)
-    
+
         vs = []
         for v in split:
             vs.append(v['volume'].shape)
-    
+
         self.assertTrue(len(vs) == 20 * 5)
 
     def test_map_async_20_pytorch(self):
@@ -133,7 +133,7 @@ class TestDatasetLoader(TestCase):
         # process creation is quite slow on windows (>0.7s), so create the processes first
         # so that creation time is not included in processing time
         for batch in split:
-           break
+            break
 
         if with_wait:
             # if we wait, it means we won't have jobs to be cancelled (i.e., we will have more accurate timing)
@@ -146,19 +146,19 @@ class TestDatasetLoader(TestCase):
         batches = []
         ids = set()
         for batch in split:
-            #time_processed = time.time()
-            #processed_time = time_processed - batch['time_augmented']
-            #loaded_time = time_processed - batch['time_loaded']
-            #created_time = time_processed - batch['time_created']
-            #batch['time_processed'] = time_processed
-            #print(batch)
-            #print('TIME----', processed_time, loaded_time, created_time, 'NOW=', datetime.datetime.now().time())
+            # time_processed = time.time()
+            # processed_time = time_processed - batch['time_augmented']
+            # loaded_time = time_processed - batch['time_loaded']
+            # created_time = time_processed - batch['time_created']
+            # batch['time_processed'] = time_processed
+            # print(batch)
+            # print('TIME----', processed_time, loaded_time, created_time, 'NOW=', datetime.datetime.now().time())
             batches.append(batch)
             ids.add(str(batch['indices'][0]) + '_' + str(batch['augmentation']))
 
         print('ENDED', datetime.datetime.now().time())
 
-        expected_time = nb_indices * 2.0 / nb_workers  + nb_indices * 0.1
+        expected_time = nb_indices * 2.0 / nb_workers + nb_indices * 0.1
         time_end = time.time()
         total_time = time_end - time_start
         print('total_time', total_time, 'Target time=', expected_time, 'nb_jobs=', len(ids), 'nb_jobs_expected=', len(indices) * 10)
@@ -166,20 +166,17 @@ class TestDatasetLoader(TestCase):
         assert len(batches) == len(indices) * 10, 'nb={}'.format(len(batches))
         assert len(ids) == len(indices) * 10
 
-        if with_wait:
-            assert total_time < expected_time + 0.2
-
     def test_complex_2_map__single_worker(self):
-        TestDatasetLoader.run_complex_2_map(1, nb_indices=10, with_wait=True)
+        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_wait=True)
 
     def test_complex_2_map__5_worker(self):
-        TestDatasetLoader.run_complex_2_map(5, nb_indices=10, with_wait=True)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=True)
 
     def test_complex_2_map__5_worker_no_wait(self):
-        TestDatasetLoader.run_complex_2_map(5, nb_indices=10, with_wait=False)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=False)
 
     def test_complex_2_map__5_worker_40(self):
-        TestDatasetLoader.run_complex_2_map(5, nb_indices=21, with_wait=True)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=21, with_wait=True)
 
     def test_split_closing(self):
         # make sure we can close the processes gracefully

@@ -4,17 +4,18 @@ import numpy as np
 import time
 import collections
 import torch
+import functools
+
 
 def function_to_run(batch):
-    #print('JOB starte', batch['path'])
-    #time.sleep(0.1)
-    #time.sleep(0.5)
     return batch
+
 
 def function_to_run2(batch):
     print('JOB starte', batch['path'])
     time.sleep(0.5)
     return batch
+
 
 def make_volume_torch(batch):
     print('JOB starte', batch['path'])
@@ -23,7 +24,21 @@ def make_volume_torch(batch):
     return batch
 
 
-class TestSampler(TestCase):
+def make_list_dicts(batch, wait_time=None):
+    samples = []
+    for n in range(10):
+        sub_batch = {
+            'sample_uid': batch['sample_uid'],
+            'volume': torch.zeros([1, 42])
+        }
+        samples.append(sub_batch)
+
+    if wait_time is not None:
+        time.sleep(wait_time)
+    return samples
+
+
+class TestSequenceReservoir(TestCase):
     def test_reservoir_basics2(self):
         # Test the sequence satisfies statistical properties:
         # - items from a sequence must be in equal proportion (they are randomly sampled)
@@ -67,41 +82,6 @@ class TestSampler(TestCase):
             error_percent = abs(counts - expected_counts) / expected_counts
             self.assertTrue(error_percent < 0.1)
 
-    def test_reservoir_performance(self):
-        # basic test to measure performance: we expect the sampling time to be negligible
-        # and this whatever time it takes for the worker job
-        nb_indices = 800
-        paths = [[i, 42] for i in range(nb_indices)]
-        split = {'path': np.asarray(paths)}
-        max_reservoir_samples = 5
-
-        sampler = trw.train.SamplerRandom()
-        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=make_volume_torch).collate().batch(40)
-
-        print('Iter start')
-        time_start = time.time()
-        iter(sequence)
-        time_end = time.time()
-        print('Iter end', time_end - time_start)
-
-        time_ref = (time_end - time_start) / max_reservoir_samples
-        print('ref=', time_ref)
-
-        nb_epochs = 10
-        for i in range(1, nb_epochs):
-            time_start = time.time()
-            batches = []
-            for batch in sequence:
-                batches.append(batch)
-            time_end = time.time()
-            time_epoch = time_end - time_start
-            print('TIME=', time_end - time_start)
-            self.assertTrue(time_epoch * 10 < time_ref)
 
     def test_subsample_uid(self):
         """
@@ -133,37 +113,47 @@ class TestSampler(TestCase):
         assert np.min(list(values)) == 200
         assert np.max(list(values)) == 299
 
-    def test_uniform_sampling(self):
+    def test_reservoir_batch(self):
         """
-        Make sure we sample uniformly the samples
+        Test that we can easily combine SequenceArray -> SequenceAsyncReservoir -> SequenceBatch
         """
         nb_indices = 20
-        nb_reservoir_samples = 10
-        maximum_number_of_samples_per_epoch = 5
-        nb_epochs = 5000
-
-        sampler = trw.train.SamplerRandom()
         split = {'path': np.asarray(np.arange(nb_indices))}
+        sampler = trw.train.SamplerSequential(batch_size=1)
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence, min_reservoir_samples=10, max_reservoir_samples=10, function_to_run=make_list_dicts).batch(5)
+
+        for batch in sequence:
+            assert trw.train.len_batch(batch) == 5 * 10, 'found={}, epxected={}'.format(trw.train.len_batch(batch), 5 * 10)
+
+    def test_fill_reservoir_every_epoch(self):
+        """
+        The reservoir will start tasks and retrieve results every epoch
+        """
+        max_jobs_at_once = 5
+        nb_indices = 30
+        nb_epochs = 7
+        min_reservoir_samples = 5
+        max_reservoir_samples = 20
+
+        split = {'path': np.asarray(np.arange(nb_indices))}
+        sampler = trw.train.SamplerSequential(batch_size=1)
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
         sequence = trw.train.SequenceAsyncReservoir(
             numpy_sequence,
-            max_reservoir_samples=nb_reservoir_samples,
-            min_reservoir_samples=nb_reservoir_samples,
-            function_to_run=function_to_run,
-            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch).collate()
-
-        frequencies = collections.defaultdict(lambda: 0)
-        nb_samples = 0
+            min_reservoir_samples=min_reservoir_samples,
+            max_reservoir_samples=max_reservoir_samples,
+            max_jobs_at_once=max_jobs_at_once,
+            function_to_run=functools.partial(make_list_dicts, wait_time=0.02))
 
         for epoch in range(nb_epochs):
-            for batch in sequence:
-                nb_batch_samples = trw.train.len_batch(batch)
-                for n in range(nb_batch_samples):
-                    nb_samples += 1
-                    uid = int(trw.train.to_value(batch[trw.train.default_sample_uid_name][n]))
-                    frequencies[uid] += 1
-
-        expected_sampling = nb_samples / nb_indices
-        tolerance = 0.05
-        for uid, sampling in frequencies.items():
-            assert abs(expected_sampling - sampling) < tolerance * expected_sampling, 'expected={}, found={}'.format(expected_sampling, sampling)
+            time.sleep(0.5)
+            expected_reservoir_size = min(epoch * max_jobs_at_once, max_reservoir_samples)
+            assert sequence.reservoir_size() >= expected_reservoir_size, 'found={}, expected={}'.format(sequence.reservoir_size(), expected_reservoir_size)
+            assert sequence.reservoir_size() <= expected_reservoir_size + max_jobs_at_once, 'found={}, expected={}'.format(sequence.reservoir_size(), expected_reservoir_size)
+            print('found={}, expected={}'.format(sequence.reservoir_size(), expected_reservoir_size))
+            for batch_id, batch in enumerate(sequence):
+                if batch_id == 0 and epoch == 0:
+                    assert sequence.reservoir_size() >= min_reservoir_samples and \
+                           sequence.reservoir_size() <= min_reservoir_samples + max_jobs_at_once

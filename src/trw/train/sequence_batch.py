@@ -35,7 +35,11 @@ class SequenceBatch(sequence.Sequence):
         try:
             for i in range(self.batch_size):
                 item = self.iter_source.__next__()
-                items.append(item)
+                if isinstance(item, list):
+                    # multiple items, concatenate all the items at once
+                    items += item
+                else:
+                    items.append(item)
         except StopIteration:
             if len(items) == 0 or (len(items) != self.batch_size and self.discard_batch_not_full):
                 raise StopIteration()

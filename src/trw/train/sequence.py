@@ -46,6 +46,17 @@ def collate_dicts_pytorch(list_of_dicts):
     return r
 
 
+def remove_nested_list(items):
+    """
+    Remove 2 nested list where items is just a list (one element) of list
+    """
+    if isinstance(items, list) and len(items) == 1 and isinstance(items[0], list):
+        # we have a list of list, remove one level of list!
+        return items[0]
+
+    return items
+
+
 # one problem with the default pytorch collate is that it is creating a new dimension
 # for the samples instead of concatenating the samples
 default_collate_list_of_dicts = functools.partial(utils.collate_list_of_dicts, device=None)
@@ -150,7 +161,7 @@ class Sequence:
             nb_workers=1,
             max_jobs_at_once=None,
             reservoir_sampler=sampler.SamplerSequential(),
-            collate_fn=None,
+            collate_fn=remove_nested_list,
             maximum_number_of_samples_per_epoch=None):
         """
         Create a sequence created from a reservoir. The purpose of this sequence is to maximize the GPU for batches of data

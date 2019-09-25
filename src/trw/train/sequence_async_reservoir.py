@@ -1,4 +1,3 @@
-from trw.train import sampler
 from trw.train import sequence
 from trw.train import sequence_map
 
@@ -31,6 +30,8 @@ class SequenceAsyncReservoir(sequence.Sequence):
     The idea is to have long loading processes work in the background while still using as efficiently as possible
     the data that is currently loaded. The data is slowly being replaced by freshly loaded data over time.
 
+    Jobs are started and results retrieved at the beginning of each epoch
+
     This sequence can be interrupted (e.g., after a certain number of batches have been returned). When the sequence
     is restarted, the reservoir will not be emptied.
     """
@@ -43,7 +44,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
             nb_workers=1,
             max_jobs_at_once=None,
             reservoir_sampler=None,
-            collate_fn=None,
+            collate_fn=sequence.remove_nested_list,
             maximum_number_of_samples_per_epoch=None):
         """
         Args:
@@ -89,7 +90,8 @@ class SequenceAsyncReservoir(sequence.Sequence):
             nb_workers=nb_workers,
             function_to_run=self.function_to_run,
             max_jobs_at_once=max_jobs_at_once,
-            worker_post_process_results_fun=None)
+            worker_post_process_results_fun=None,
+            output_queue_size=0)
 
         self.maximum_number_of_samples_per_epoch = maximum_number_of_samples_per_epoch
         self.number_samples_generated = 0
@@ -111,6 +113,13 @@ class SequenceAsyncReservoir(sequence.Sequence):
             collate_fn=self.collate_fn,
             maximum_number_of_samples_per_epoch=None
         )
+
+    def reservoir_size(self):
+        """
+        Returns:
+            The current number of samples in the reservoir
+        """
+        return len(self.reservoir)
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         if new_sampler is None:
@@ -136,8 +145,8 @@ class SequenceAsyncReservoir(sequence.Sequence):
         if self.iter_source is None:
             self.iter_source = self.source_split.__iter__()
 
-        self.fill_queue()
-        self._retrieve_results()
+        self._retrieve_results_and_fill_queue()
+
         if len(self.reservoir) < self.min_reservoir_samples:
             # before we can iterate on sample, we must have enough samples in the reservoir!
             self._wait_for_job_completion()
@@ -176,7 +185,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # we are done! Reset the input iterator
             self.iter_source = self.source_split.__iter__()
 
-    def _retrieve_results(self):
+    def _retrieve_results_and_fill_queue(self):
         """
         Retrieve results from the output queue
         """
@@ -190,7 +199,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
                 items = self.job_executer.output_queue.get()
                 time_blocked_end = time.perf_counter()
                 self.perf_receiving.add(time_blocked_end - time_blocked_start)
-
                 self.reservoir.append(items)
             except Empty:
                 break
@@ -200,7 +208,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
         Block the processing until we have enough result in the reservoir
         """
         while len(self.reservoir) < self.min_reservoir_samples:
-            self._retrieve_results()
+            self._retrieve_results_and_fill_queue()
 
     def _get_next(self):
         """
@@ -210,8 +218,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
         if self.maximum_number_of_samples_per_epoch is not None and self.number_samples_generated >= self.maximum_number_of_samples_per_epoch:
             # we have reached the maximum number of samples, stop the sequence
             raise StopIteration()
-
-        self._retrieve_results()
 
         if self.reservoir_sampler is not None:
             # items are actually a list of indices!

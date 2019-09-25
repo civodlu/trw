@@ -4,6 +4,10 @@ import numpy as np
 import collections
 
 
+def function_to_run(batch):
+    return batch
+
+
 class TestSampler(TestCase):
     def test_sequential_batch_1(self):
         split = {
@@ -159,3 +163,37 @@ class TestSampler(TestCase):
             assert value >= 0 and value <= 2
             assert count == nb_samples // 3
 
+    def test_uniform_sampling(self):
+        """
+        Make sure we sample uniformly the samples
+        """
+        nb_indices = 20
+        nb_reservoir_samples = 10
+        maximum_number_of_samples_per_epoch = 5
+        nb_epochs = 5000
+
+        sampler = trw.train.SamplerRandom()
+        split = {'path': np.asarray(np.arange(nb_indices))}
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            max_reservoir_samples=nb_reservoir_samples,
+            min_reservoir_samples=nb_reservoir_samples,
+            function_to_run=function_to_run,
+            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch).collate()
+
+        frequencies = collections.defaultdict(lambda: 0)
+        nb_samples = 0
+
+        for epoch in range(nb_epochs):
+            for batch in sequence:
+                nb_batch_samples = trw.train.len_batch(batch)
+                for n in range(nb_batch_samples):
+                    nb_samples += 1
+                    uid = int(trw.train.to_value(batch[trw.train.default_sample_uid_name][n]))
+                    frequencies[uid] += 1
+
+        expected_sampling = nb_samples / nb_indices
+        tolerance = 0.05
+        for uid, sampling in frequencies.items():
+            assert abs(expected_sampling - sampling) < tolerance * expected_sampling, 'expected={}, found={}'.format(expected_sampling, sampling)

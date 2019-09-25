@@ -5,6 +5,10 @@ from trw.train import utils
 class SequenceCollate(sequence.Sequence):
     """
     Group the data into a sequence of dictionary of torch.Tensor
+
+    This can be useful to combine batches of dictionaries into a single batch with all features
+    concatenated on axis 0. Often used in conjunction of :class:`trw.train.SequenceAsyncReservoir`
+    and :class:`trw.train.SequenceMap`.
     """
     def __init__(self, source_split, collate_fn=utils.default_collate_fn, device=None):
         """
@@ -31,7 +35,12 @@ class SequenceCollate(sequence.Sequence):
 
     def __next__(self):
         items = self.iter_source.__next__()
+
+        #import time
+        #start = time.perf_counter()
         items = self.collate_fn(items, device=self.device)
+        #end = time.perf_counter()
+        #print('TIME=', end - start)
         return items
 
     def __iter__(self):

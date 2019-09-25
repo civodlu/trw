@@ -37,16 +37,20 @@ class JobExecutor:
         these datasets BUT in python < 3.8 (multiprocessing) and also in pytorch <= 1.1 (torch.multiprocessing), there doesn't seem to have standard
         and portable memory sharing facilities and will revert to file based sharing
     """
-    def __init__(self, nb_workers, function_to_run, max_jobs_at_once=0, worker_post_process_results_fun=None):
+    def __init__(self, nb_workers, function_to_run, max_jobs_at_once=0, worker_post_process_results_fun=None, output_queue_size=0):
         """
         :param nb_workers: the number of workers to process the jobs
         :param max_jobs_at_once: the maximum number of jobs active (but not necessarily run) at once. If `JobExecutor.output_queue` is larger than `max_jobs_at_once`, the queue will block
         until more jobs are completed downstream. If None, there is no limit
         :param function_to_run: a function with argument `item` to be processed. The return values will be pushed to `JobExecutor.output_queue`
         :param worker_post_process_results_fun: a function used to post-process the worker results. It takes as input `results, channel_main_to_worker, channel_worker_to_main`
+        :param output_queue_size: the output queue size. If `0`, no maximum size. If `None`, same as `max_jobs_at_once`
         """
         self.input_queue = mp.Queue(maxsize=max_jobs_at_once)
-        self.output_queue = mp.Queue(maxsize=max_jobs_at_once)
+        if output_queue_size is None:
+            self.output_queue = mp.Queue(maxsize=max_jobs_at_once)
+        else:
+            self.output_queue = mp.Queue(maxsize=output_queue_size)
         self.nb_workers = nb_workers
 
         # we can't cancel jobs, so instead record a session ID. If session of the worker and current session ID do not match
