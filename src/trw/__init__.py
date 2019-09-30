@@ -14,3 +14,4 @@ from . import datasets
 from . import layers
 from . import hparams
 from . import simple_layers
+from . import arch
