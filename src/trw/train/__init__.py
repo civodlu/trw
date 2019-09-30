@@ -1,7 +1,8 @@
 from .options import create_default_options
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
-    create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, create_scheduler_step_lr, \
-    run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
+    run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks
+
+from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, create_scheduler_step_lr, \
     create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn
 
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name

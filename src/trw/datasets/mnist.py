@@ -1,7 +1,7 @@
 import collections
-from trw.datasets.torch_vision import *
 import trw.train
 import os
+import torchvision
 
 
 def identity(batch):
@@ -17,12 +17,12 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
         # else default a standard folder
         root = './data'
 
-    train_dataset = MNIST(
+    train_dataset = torchvision.datasets.MNIST(
         root=root,
         train=True,
         download=True)
 
-    test_dataset = MNIST(
+    test_dataset = torchvision.datasets.NIST(
         root=root,
         train=False,
         download=True)
