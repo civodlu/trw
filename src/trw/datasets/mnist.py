@@ -36,6 +36,7 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
     if transforms is None:
         sequence = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size))
     else:
+        assert batch_size % data_processing_batch_size == 0
         sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
         sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 10)
         sequence = sequence.batch(batch_size // data_processing_batch_size)
@@ -49,7 +50,7 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
     # generate the class mapping
     mapping = dict()
     mappinginv = dict()
-    for id, name in enumerate(MNIST.classes):
+    for id, name in enumerate(torchvision.MNIST.classes):
         mapping[name] = id
         mappinginv[id] = name
     output_mappings = {'targets': {'mapping': mapping, 'mappinginv': mappinginv}}

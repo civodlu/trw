@@ -15,6 +15,7 @@ class SequenceBatch(sequence.Sequence):
         """
         super().__init__(source_split)
 
+        assert batch_size > 0
         assert isinstance(source_split, sequence.Sequence), '`source_split` must be a `Sequence`'
         self.source_split = source_split
         self.batch_size = batch_size

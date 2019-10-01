@@ -6,7 +6,7 @@ import numpy as np
 import torch
 
 
-def create_cifar10_dataset(batch_size=128, root=None, transforms=None, nb_workers=5, data_processing_batch_size=200, normalize_0_1=True):
+def create_cifar10_dataset(batch_size=300, root=None, transforms=None, nb_workers=2, data_processing_batch_size=50, normalize_0_1=True):
     if root is None:
         # first, check if we have some environment variables configured
         root = os.environ.get('TRW_DATA_ROOT')
@@ -32,6 +32,7 @@ def create_cifar10_dataset(batch_size=128, root=None, transforms=None, nb_worker
     if transforms is None:
         sequence = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size))
     else:
+        assert batch_size % data_processing_batch_size == 0
         sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
         sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 10)
         sequence = sequence.batch(batch_size // data_processing_batch_size)
