@@ -208,6 +208,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
 
             for sample_index, (uid, loss_epochs) in enumerate(sorted_errors_by_sample):
                 for loss, epoch in loss_epochs:
+                    loss = float(loss)
                     normalized_0_1_loss = (loss - min_loss) / (max_loss - min_loss)
                     if normalized_0_1_loss < 0:
                         normalized_0_1_loss = 0.0

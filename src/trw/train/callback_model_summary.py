@@ -26,7 +26,11 @@ def model_summary(model, batch, logger):
             if isinstance(input[0], collections.Mapping):
                 summary[m_key]["input_shape"] = (-1)
             else:
-                summary[m_key]["input_shape"] = list(input[0].size())
+                if isinstance(input[0], list):
+                    input_shapes = [list(i.shape) for i in input[0]]
+                    summary[m_key]["input_shape"] = input_shapes
+                else:
+                    summary[m_key]["input_shape"] = list(input[0].size())
                 summary[m_key]["input_shape"][0] = batch_size
             if isinstance(output, (list, tuple)):
                 summary[m_key]["output_shape"] = [
