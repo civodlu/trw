@@ -1,3 +1,3 @@
 from .crop import transform_batch_random_crop
 from .pad import transform_batch_pad_numpy, transform_batch_pad_torch, transform_batch_pad
-from .transforms import Transform, TransformRandomCrop
+from .transforms import Transform, TransformRandomCrop, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_3_or_above

@@ -4,6 +4,7 @@ import trw.transforms
 import numpy as np
 import time
 import torch
+import functools
 
 
 class TestTransform(TestCase):
@@ -176,5 +177,38 @@ class TestTransform(TestCase):
         time_split_with_transform_last_workers = time_split_with_transform_last_workers_end - time_split_with_transform_last_workers_start
         print('TIME with augmentation last main thread=', time_split_with_transform_last_workers)
 
+    def test_transform_base_criteria(self):
+        # filter by name
+        batch = {
+            'test_1': 0,
+            'test_2': 42,
+        }
 
+        criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['test_2'])
+        transform_fn = lambda _1, _2: 43
+
+        transformer = trw.transforms.TransformBatchWithCriteria(criteria_fn=criteria_fn, transform_fn=transform_fn)
+        transformed_batch = transformer(batch)
+        assert transformed_batch['test_1'] == 0
+        assert transformed_batch['test_2'] == 43
+
+    def test_transform_base_exception(self):
+        # make sure we are NOT transforming in place
+        batch = {
+            'test_1': 0,
+            'test_2': np.zeros([10]),
+        }
+
+        criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['test_2'])
+        transform_fn = lambda _1, value: value
+
+        transformer = trw.transforms.TransformBatchWithCriteria(criteria_fn=criteria_fn, transform_fn=transform_fn)
+
+        failed = False
+        try:
+            transformer(batch)
+        except:
+            failed = True
+
+        assert failed
 
