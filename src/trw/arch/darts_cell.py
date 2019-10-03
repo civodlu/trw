@@ -3,6 +3,7 @@ import torch
 from trw.arch import darts_ops
 import torch.nn.functional as F
 import collections
+import numpy as np
 
 
 class MixedLayer(nn.Module):
@@ -20,9 +21,15 @@ class MixedLayer(nn.Module):
 
     def forward(self, x, weights):
         assert len(weights) == len(self.layers), 'we have {} layers. Expecting same number of weights but got={}'.format(len(self.layers), len(len(weights)))
-        res = [w * layer(x) for w, layer in zip(weights, self.layers)]
-        # element-wise add by torch.add
-        res = sum(res)
+
+        if len(weights) == 1:
+            # we have a single weight, there is no need to apply the weighting
+            # since there is no primitive choice!
+            res = self.layers[0](x)
+        else:
+            # weighted sum of the primitives
+            res = [w * layer(x) for w, layer in zip(weights, self.layers)]
+            res = sum(res)
         return res
 
 
@@ -42,7 +49,7 @@ def _identity(x):
 
 
 class Cell(nn.Module):
-    def __init__(self, primitives, cpp, cp, c, is_reduction, is_reduction_prev, internal_nodes=4, cell_merge_output_fn=default_cell_output, weights=None, with_preprocessing=True):
+    def __init__(self, primitives, cpp, cp, c, is_reduction, is_reduction_prev, internal_nodes=4, cell_merge_output_fn=default_cell_output, weights=None, with_preprocessing=True, genotype=None):
         """
         :param internal_nodes: number of nodes inside a cell
         :param cpp: the previous's previous number of channels
@@ -53,6 +60,7 @@ class Cell(nn.Module):
         :param is_reduction_prev: when previous cell reduced width, s1_d = s0_d//2
         in order to keep same shape between s1 and s0, we adopt prep0 layer to
         reduce the s0 width by half.
+        :param genotype: a list of primitive name. This describe the primitive to be used for each internal node link
         """
         super().__init__()
 
@@ -61,6 +69,8 @@ class Cell(nn.Module):
         # indicating current cell is is_reduction or not
         self.is_reduction = is_reduction
         self.is_reduction_prev = is_reduction_prev
+        self.primitive_names = list(primitives.keys())
+        self.genotype = genotype
 
         # preprocess0 deal with output from prev_prev cell
         if with_preprocessing:
@@ -93,11 +103,28 @@ class Cell(nn.Module):
             for j in range(2 + i):
                 # for is_reduction cell, it will reduce the heading 2 inputs only
                 stride = 2 if is_reduction and j < 2 else 1
-                layer = MixedLayer(primitives, c, stride)
+
+                if genotype is None:
+                    # here we are in search mode
+                    layer = MixedLayer(primitives, c, stride)
+                else:
+                    # here we already have a specified configuration so just construct
+                    # the internal links with the specified nodes
+                    primitive_name = genotype[self.nb_links]
+                    assert primitive_name in primitives, 'can\'t find primitive `{}` among our primitives={}'.format(primitive_name, list(primitives.keys()))
+                    p = primitives[genotype[self.nb_links]]
+                    layer = MixedLayer([p], c, stride)
+
                 self.layers.append(layer)
                 self.nb_links += 1
 
-        self.weights = self._create_weights(primitives, weights=weights)
+        if genotype is None:
+            self.weights = self._create_weights(primitives, weights=weights)
+        else:
+            # create fake weights: these will not be used since we have a single
+            # primitive per link
+            self.weights = self._create_weights([1], weights=weights)
+            self.weights.fill_(1.0)
 
     def _create_weights(self, primitives, weights):
         """
@@ -141,5 +168,21 @@ class Cell(nn.Module):
         return self.cell_merge_output_fn(states)
 
     def get_weights(self):
+        """
+        Returns:
+            The primitive weights for this cell. This is useful if we want to share the weights
+            among multiple cells
+        """
         return self.weights
 
+    def get_genotype(self):
+        """
+        Returns:
+            The `genotype` of the cell given the current primitive weighting
+        """
+        best_primitive_per_internal_link = []
+        weights_np = self.weights.detach().cpu().numpy()
+        for link_weights in weights_np:
+            best_primitive = int(np.argmax(link_weights))
+            best_primitive_per_internal_link.append(self.primitive_names[best_primitive])
+        return best_primitive_per_internal_link

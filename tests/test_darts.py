@@ -135,7 +135,7 @@ class TestDarts(TestCase):
         Make sure we only optimize the cell parameters on dataset `train_params`
         and only the cell's weights on the dataset `training_weights`
         """
-        options = trw.train.create_default_options(num_epochs=500)
+        options = trw.train.create_default_options(num_epochs=50)
         trainer = trw.train.Trainer()
         r = trainer.fit(
             options=options,
@@ -143,6 +143,8 @@ class TestDarts(TestCase):
             model_fn=lambda options: ModelDarts1D_fn_1(),
             optimizers_fn=lambda datasets, model: trw.arch.create_darts_adam_optimizers_fn(datasets, model, darts_weight_dataset_name='training_weights', learning_rate=0.01)
         )
+
+        genotype = r[0].cell.get_genotype()
 
         print('DONE')
 
