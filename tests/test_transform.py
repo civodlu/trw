@@ -192,23 +192,88 @@ class TestTransform(TestCase):
         assert transformed_batch['test_1'] == 0
         assert transformed_batch['test_2'] == 43
 
-    def test_transform_base_exception(self):
-        # make sure we are NOT transforming in place
+    def test_transform_random_flip_numpy(self):
         batch = {
-            'test_1': 0,
-            'test_2': np.zeros([10]),
+            'images': np.asarray([
+                [1, 2, 3],
+                [4, 5, 6]
+            ])
         }
 
-        criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['test_2'])
-        transform_fn = lambda _1, value: value
+        criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['images'])
+        transformer = trw.transforms.TransformRandomFlip(criteria_fn=criteria_fn, axis=1, flip_probability=1.0)
+        transformed_batch = transformer(batch)
 
-        transformer = trw.transforms.TransformBatchWithCriteria(criteria_fn=criteria_fn, transform_fn=transform_fn)
+        image_fliped = transformed_batch['images']
+        assert len(image_fliped) == 2
+        assert image_fliped.shape == (2, 3)
 
-        failed = False
-        try:
-            transformer(batch)
-        except:
-            failed = True
+        assert image_fliped[0, 0] == 3
+        assert image_fliped[0, 1] == 2
+        assert image_fliped[0, 2] == 1
 
-        assert failed
+        assert image_fliped[1, 0] == 6
+        assert image_fliped[1, 1] == 5
+        assert image_fliped[1, 2] == 4
 
+        # make sure the original images are NOT flipped!
+        image = batch['images']
+        assert image[0, 0] == 1
+        assert image[0, 1] == 2
+        assert image[0, 2] == 3
+
+    def test_transform_random_flip_torch(self):
+        batch = {
+            'images': torch.from_numpy(np.asarray([
+                [1, 2, 3],
+                [4, 5, 6]
+            ]))
+        }
+
+        criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['images'])
+        transformer = trw.transforms.TransformRandomFlip(criteria_fn=criteria_fn, axis=1, flip_probability=1.0)
+        transformed_batch = transformer(batch)
+
+        image_fliped = transformed_batch['images']
+        assert len(image_fliped) == 2
+        assert image_fliped.shape == (2, 3)
+
+        assert image_fliped[0, 0] == 3
+        assert image_fliped[0, 1] == 2
+        assert image_fliped[0, 2] == 1
+
+        assert image_fliped[1, 0] == 6
+        assert image_fliped[1, 1] == 5
+        assert image_fliped[1, 2] == 4
+
+        # make sure the original images are NOT flipped!
+        image = batch['images']
+        assert image[0, 0] == 1
+        assert image[0, 1] == 2
+        assert image[0, 2] == 3
+
+    def test_cutout_numpy(self):
+        batch = {
+            'images': np.ones([50, 3, 64, 128], dtype=np.uint8) * 255
+        }
+        transformer = trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 32))
+        transformed_batch = transformer(batch)
+        assert np.min(batch['images']) == 255, 'original image was modified!'
+
+        assert np.min(transformed_batch['images']) == 0, 'transformed image was NOT modified!'
+        for i in transformed_batch['images']:
+            nb_0 = np.where(i == 0)
+            assert len(nb_0[0]) == 3 * 16 * 32
+
+    def test_cutout_torch(self):
+        batch = {
+            'images': torch.ones([50, 3, 64, 128], dtype=torch.uint8) * 255
+        }
+        transformer = trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 32))
+        transformed_batch = transformer(batch)
+        assert torch.min(batch['images']) == 255, 'original image was modified!'
+
+        assert torch.min(transformed_batch['images']) == 0, 'transformed image was NOT modified!'
+        for i in transformed_batch['images']:
+            nb_0 = np.where(i.numpy() == 0)
+            assert len(nb_0[0]) == 3 * 16 * 32

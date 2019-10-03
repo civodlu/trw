@@ -1,9 +1,5 @@
-import collections
 import numpy as np
 import torch
-import functools
-from trw.transforms import crop
-from trw.transforms import pad
 
 
 class Transform:
@@ -30,12 +26,14 @@ class TransformBatchWithCriteria(Transform):
         self.transform_fn = transform_fn
 
     def __call__(self, batch):
+        new_batch = {}
         for feature_name, feature_value in batch.items():
             if self.criteria_fn(feature_name, feature_value):
                 transformed_feature_value = self.transform_fn(feature_name, feature_value)
-                assert transformed_feature_value is not feature_value, '`transform_fn` should NOT perform in-place operations'
-                batch[feature_name] = transformed_feature_value
-        return batch
+                new_batch[feature_name] = transformed_feature_value
+            else:
+                new_batch[feature_name] = feature_value
+        return new_batch
 
 
 def criteria_is_array_3_or_above(feature_name, feature_value):
@@ -55,51 +53,3 @@ def criteria_feature_name(feature_name, feature_value, feature_names):
     """
     return feature_name in feature_names
 
-
-def transform_random_crop(feature_name, feature_value, padding, mode='edge', constant_value=0):
-    """
-    Add a specified padding to the image and randomly crop it so that we have the same size as the original
-    image
-
-    Args:
-        feature_name: not used
-        feature_value: the value of the feature
-        padding: the padding to add to the feature value
-        constant_value: a constant value, depending on the mode selected
-        padding: a sequence of size `len(array.shape)-1` indicating the width of the
-            padding to be added at the beginning and at the end of each dimension (except for dimension 0)
-        mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')
-
-    Returns:
-        a padded and cropped image to original size
-    """
-    padded = pad.transform_batch_pad(feature_value, padding=padding, mode=mode, constant_value=constant_value)
-    cropped = crop.transform_batch_random_crop(padded, feature_value.shape[1:])
-    return cropped
-
-
-class TransformRandomCrop(TransformBatchWithCriteria):
-    """
-        Add padding on a numpy array of samples and random crop to original size
-
-        Args:
-            padding: a sequence of size `len(array.shape)-1` indicating the width of the
-                padding to be added at the beginning and at the end of each dimension (except for dimension 0)
-            feature_names: the name of the features to be padded. If `None`, a reasonable
-                guess on the feature to transform will be made
-            mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')
-
-        Returns:
-            a randomly cropped batch
-        """
-    def __init__(self, padding, feature_names=None, mode='edge', constant_value=0):
-        if feature_names is None:
-            criteria_fn = criteria_is_array_3_or_above
-        else:
-            criteria_fn = functools.partial(criteria_feature_name, feature_names=feature_names)
-
-        super().__init__(
-            criteria_fn=criteria_fn,
-            transform_fn=functools.partial(transform_random_crop, padding=padding, mode=mode, constant_value=constant_value)
-         )
-        self.criteria_fn = criteria_is_array_3_or_above
