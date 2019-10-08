@@ -23,5 +23,5 @@ steps:
 
 - script: |
     pip install pytest pytest-azurepipelines
-    pytest
+    pytest --ignore=performance
   displayName: 'pytest'
