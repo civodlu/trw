@@ -9,6 +9,32 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
+def post_process_output_id(output):
+    assert isinstance(output, outputs_trw.Output), 'must be a `trw.train.Output`'
+    return output.output
+
+
+def post_process_output_for_gradient_attribution(output):
+    """
+    Postptocess the output to be suitable for gradient attribution.
+
+    In particular, if we have a :class:`trw.train.OutputClassification`, we need to apply
+    a softmax operation so that we can backpropagate the loss of a particular class with
+    the appropriate value (1.0).
+
+    Args:
+        output: a :class:`trw.train.OutputClassification`
+
+    Returns:
+        a :class:`torch.Tensor`
+    """
+    assert isinstance(output, outputs_trw.Output), 'must be a `trw.train.Output`'
+    if isinstance(output, outputs_trw.OutputClassification):
+        return torch.softmax(output.output, dim=1)
+
+    return output.output
+
+
 class GuidedBackprop():
     """
     Produces gradients generated with guided back propagation from the given image
@@ -19,18 +45,20 @@ class GuidedBackprop():
         * the model will be instrumented, use `trw.train.CleanAddedHooks` to remove the
             hooks once guided back-propagation is finished
     """
-    def __init__(self, model, unguided_gradient=False):
+    def __init__(self, model, unguided_gradient=False, post_process_output=post_process_output_id):
         """
 
         Args:
             model: the model
-            unguided_gradient: if `False`, calculate the guided gradient. If `True`,
+            unguided_gradient: if `False`, calculate the guided gradient. If `True`, calculate the gradient only
+            post_process_output: a function to post-process the output of a model so that it is suitable for gradient attribution
         """
         self.model = model
         self.forward_relu_outputs = []
 
         self.model.eval()
         self.unguided_gradient = unguided_gradient
+        self.post_process_output = post_process_output
 
         if not unguided_gradient:
             self.update_relus()
@@ -65,7 +93,7 @@ class GuidedBackprop():
                 module.register_forward_hook(relu_forward_hook_function)
 
     @staticmethod
-    def get_inputs_with_gradients(inputs):
+    def get_floating_inputs_with_gradients(inputs):
         """
         Extract inputs that have a gradient
 
@@ -76,7 +104,8 @@ class GuidedBackprop():
             Return a list of tuple (name, input) for the input that have a gradient
         """
         if isinstance(inputs, collections.Mapping):
-            i = [(input_name, i) for input_name, i in inputs.items() if hasattr(i, 'grad')]
+            # if `i` is not a floating point, we can't calculate the gradient anyway...
+            i = [(input_name, i) for input_name, i in inputs.items() if hasattr(i, 'grad') and torch.is_floating_point(i)]
         else:
             i = [('input', inputs)]
         return i
@@ -93,6 +122,7 @@ class GuidedBackprop():
         Returns:
             a tuple (output_name, dictionary (input, gradient))
         """
+        self.model.eval()  # make sure we are in eval mode
         model_output = self.model(inputs)
         if isinstance(model_output, collections.Mapping):
             assert target_class_name is not None
@@ -105,7 +135,7 @@ class GuidedBackprop():
             return None
 
         if isinstance(model_output, outputs_trw.Output):
-            model_output = model_output.output
+            model_output = self.post_process_output(model_output)
 
         assert len(model_output.shape) == 2, 'must have samples x class probabilities shape'
 
@@ -118,7 +148,7 @@ class GuidedBackprop():
         # Backward pass
         model_output.backward(gradient=one_hot_output)
 
-        inputs_kvp = GuidedBackprop.get_inputs_with_gradients(inputs)
+        inputs_kvp = GuidedBackprop.get_floating_inputs_with_gradients(inputs)
 
         # extract gradient
         inputs_kvp = {name: utils.to_value(i.grad) for name, i in inputs_kvp}

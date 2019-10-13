@@ -457,8 +457,22 @@ class CleanAddedHooks:
         return modules_kvp_forward, modules_kvp_backward
 
 
-def get_device(module):
+def get_device(module, batch=None):
     """
     Return the device of a module. This may be incorrect if we have a module split accross different devices
     """
-    return next(module.parameters()).device
+    try:
+        p = next(module.parameters())
+        return p.device
+    except StopIteration:
+        # the model doesn't have parameters!
+        pass
+
+    if batch is not None:
+        # try to guess the device from the batch
+        for name, value in batch.items():
+            if isinstance(value, torch.Tensor):
+                return value.device
+
+    # we can't make an appropriate guess, just fail!
+    return None

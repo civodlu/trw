@@ -7,6 +7,7 @@ from trw.train import sequence_array
 from trw.train import outputs as outputs_trw
 from trw.train import guided_back_propagation
 from trw.train import grad_cam
+from trw.train import integrated_gradients
 from enum import Enum
 import torch
 import torch.nn
@@ -23,6 +24,7 @@ class ExplainableAlgorithm(Enum):
     GuidedBackPropagation = guided_back_propagation.GuidedBackprop
     GradCAM = grad_cam.GradCam
     Gradient = functools.partial(guided_back_propagation.GuidedBackprop, unguided_gradient=True)
+    IntegratedGradients = integrated_gradients.IntegratedGradients
 
 
 def run_classification_explanation(
@@ -38,7 +40,8 @@ def run_classification_explanation(
         output_name,
         algorithm_kwargs=None,
         nb_explanations=1,
-        epoch=None):
+        epoch=None,
+        average_filters=True):
     """
     Run an explanation of a classification output
     """
@@ -89,7 +92,10 @@ def run_classification_explanation(
             export_path = os.path.join(root, filename)
 
             with open(export_path + '.txt', 'w') as f:
-                batch_n['explanation'] = g
+                if average_filters:
+                    batch_n['explanation'] = np.reshape(np.average(np.abs(g), axis=1), [g.shape[0], 1] + list(g.shape[2:]))
+                else:
+                    batch_n['explanation'] = g
                 batch_n['output_found'] = str(output_np)
                 batch_n['output_name_found'] = c_name
 
@@ -97,9 +103,9 @@ def run_classification_explanation(
                 batch_n['explanation_positive'] = positive
                 batch_n['explanation_negative'] = negative
 
-                sample_export.export_sample(batch_n, 0, export_path + '-', f)
-                f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
-                f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
+                #sample_export.export_sample(batch_n, 0, export_path + '-', f)
+                #f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
+                #f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
 
 
 def fill_class_name(output, class_index, datasets_infos, dataset_name, split_name):
@@ -122,7 +128,7 @@ class CallbackExplainDecision(callback.Callback):
     """
     Explain the decision of a model
     """
-    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.GuidedBackPropagation, ExplainableAlgorithm.Gradient), output_name=None, nb_explanations=1, algorithms_kwargs=None):
+    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GuidedBackPropagation, ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.Gradient, ExplainableAlgorithm.IntegratedGradients), output_name=None, nb_explanations=1, algorithms_kwargs=None, average_filters=True):
         """
         Args:
             max_samples: the maximum number of examples to export
@@ -134,12 +140,14 @@ class CallbackExplainDecision(callback.Callback):
             nb_explanations: the number of alternative explanations to be exported. nb_explanations = 1, explain the current guess, nb_explanations = 2,
                 in addition calculate the explanation for the next best guess and so on for nb_explanations = 3
             algorithms_kwargs: additional argument (a dictionary of dictionary of algorithm argument) to be provided to the algorithm or `None`.
+            average_filters: if True, the explanation will be grey value (averaged)
         """
         self.max_samples = max_samples
         self.dirname = dirname
         self.dataset_name = dataset_name
         self.split_name = split_name
         self.algorithms_kwargs = algorithms_kwargs
+        self.average_filters = average_filters
 
         # since all `explanation` algorithms all have drawbacks, we will
         # want to export multiple explanations and so make it a list
@@ -218,6 +226,7 @@ class CallbackExplainDecision(callback.Callback):
                 output_name=output_name,
                 algorithm_kwargs=algorithm_kwargs,
                 nb_explanations=1,
-                epoch=len(history))
+                epoch=len(history),
+                average_filters=self.average_filters)
 
         logger.info('successfully completed CallbackExplainDecision.__call__!')

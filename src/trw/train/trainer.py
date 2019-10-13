@@ -699,8 +699,12 @@ class Trainer:
         
         # instantiate the optimizer and scheduler
         logger.info('creating optimizers...')
-        optimizers, schedulers = optimizers_fn(datasets, model)
-        logger.info('optimizers created successfully!')
+        if optimizers_fn is not None:
+            optimizers, schedulers = optimizers_fn(datasets, model)
+            logger.info('optimizers created successfully!')
+        else:
+            logger.info('optimizer fn is None! No optimizer created.')
+            optimizers, schedulers = None, None
 
         logger.info('creating losses...')
         losses = loss_creator(datasets, losses_fn)
@@ -746,37 +750,37 @@ class Trainer:
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
             logger.info('pre-training callbacks completed!')
 
-        
-        for epoch in range(num_epochs):
-            logger.info('started training epoch {}'.format(epoch))
-            run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
+        if optimizers is not None:
+            for epoch in range(num_epochs):
+                logger.info('started training epoch {}'.format(epoch))
+                run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
 
-            outputs_epoch, history_epoch = self.run_epoch_fn(
-                options,
-                datasets,
-                optimizers,
-                model,
-                losses,
-                schedulers,
-                history,
-                callbacks_per_batch,
-                callbacks_per_batch_loss_terms,
-                run_eval=run_eval)
-            history.append(history_epoch)
+                outputs_epoch, history_epoch = self.run_epoch_fn(
+                    options,
+                    datasets,
+                    optimizers,
+                    model,
+                    losses,
+                    schedulers,
+                    history,
+                    callbacks_per_batch,
+                    callbacks_per_batch_loss_terms,
+                    run_eval=run_eval)
+                history.append(history_epoch)
 
-            logger.info('finished training epoch {}'.format(epoch))
+                logger.info('finished training epoch {}'.format(epoch))
 
-            last_epoch = epoch + 1 == num_epochs
-            for callback in callbacks_per_epoch:
-                callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                #try:
-                #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
-                #except Exception as e:
-                #    logger.error('callback={} failed with exception={}'.format(callback, e))
+                last_epoch = epoch + 1 == num_epochs
+                for callback in callbacks_per_epoch:
+                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                    #try:
+                    #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                    #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                    #except Exception as e:
+                    #    logger.error('callback={} failed with exception={}'.format(callback, e))
 
-            logger.info('callbacks epoch {}'.format(epoch))
+                logger.info('callbacks epoch {}'.format(epoch))
 
         # finally run the post-training callbacks
         outputs_epoch = None

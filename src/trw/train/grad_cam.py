@@ -2,6 +2,7 @@ from trw.train import graph_reflection
 from trw.train import utils
 from trw.layers import upsample
 from trw.train import outputs as outputs_trw
+from trw.train import guided_back_propagation
 import torch
 import numpy as np
 import logging
@@ -17,16 +18,18 @@ class GradCam:
     This is based on the paper "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization",
     Ramprasaath R et al.
     """
-    def __init__(self, model, find_convolution=graph_reflection.find_last_forward_convolution):
+    def __init__(self, model, find_convolution=graph_reflection.find_last_forward_convolution, post_process_output=guided_back_propagation.post_process_output_id):
         """
 
         Args:
             model: the model
             find_convolution: a function to find the convolution of interest of the model
+            post_process_output: a function to post-process the output of a model so that it is suitable for gradient attribution
         """
 
         self.find_convolution = find_convolution
         self.model = model
+        self.post_process_output = post_process_output
 
     def __call__(self, inputs, target_class_name=None, target_class=None):
         """
@@ -87,7 +90,7 @@ class GradCam:
             else:
                 for output_name, output in model_outputs.items():
                     if isinstance(output, outputs_trw.OutputClassification):
-                        selected_output = output.output
+                        selected_output = self.post_process_output(output)
                         selected_output_name = output_name
                         break
                 if selected_output is None:
@@ -104,7 +107,7 @@ class GradCam:
                 logger.error('`The selected output={} was not found among the output of the model! '
                              'Grad-CAM not calculated!'.format(target_class_name))
                 return None
-            selected_output = selected_output.output
+            selected_output = self.post_process_output(selected_output)
 
         #
         # calculate CAM
@@ -115,7 +118,7 @@ class GradCam:
 
         model_device = utils.get_device(self.model)
         one_hot_output = torch.FloatTensor(nb_samples, nb_classes).to(device=model_device).zero_()
-        one_hot_output[:, target_class] = 1
+        one_hot_output[:, target_class] = 1.0
 
         self.model.zero_grad()
         module_output_gradient = None

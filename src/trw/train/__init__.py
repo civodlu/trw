@@ -14,7 +14,8 @@ from .callback import Callback
 
 from .graph_reflection import find_tensor_leaves_with_grad, find_last_forward_convolution, find_last_forward_types
 from .grad_cam import GradCam
-from .guided_back_propagation import GuidedBackprop
+from .guided_back_propagation import GuidedBackprop, post_process_output_for_gradient_attribution
+from .integrated_gradients import IntegratedGradients
 
 from .callback_epoch_summary import CallbackEpochSummary
 from .callback_export_samples import CallbackExportSamples
