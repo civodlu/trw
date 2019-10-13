@@ -14,6 +14,8 @@ class MixedLayer(nn.Module):
 
         super().__init__()
         self.layers = nn.ModuleList()
+        self.primitive_names = list(primitives.keys())
+
         for primitive_name, primitive_fn in primitives.items():
             layer = primitive_fn(c, stride, False)
             # layer = nn.Sequential(layer, nn.BatchNorm2d(c, affine=False))  # TODO deviation here
@@ -69,7 +71,6 @@ class Cell(nn.Module):
         # indicating current cell is is_reduction or not
         self.is_reduction = is_reduction
         self.is_reduction_prev = is_reduction_prev
-        self.primitive_names = list(primitives.keys())
         self.genotype = genotype
 
         # preprocess0 deal with output from prev_prev cell
@@ -113,7 +114,7 @@ class Cell(nn.Module):
                     primitive_name = genotype[self.nb_links]
                     assert primitive_name in primitives, 'can\'t find primitive `{}` among our primitives={}'.format(primitive_name, list(primitives.keys()))
                     p = primitives[genotype[self.nb_links]]
-                    layer = MixedLayer([p], c, stride)
+                    layer = MixedLayer({primitive_name: p}, c, stride)
 
                 self.layers.append(layer)
                 self.nb_links += 1
@@ -124,7 +125,8 @@ class Cell(nn.Module):
             # create fake weights: these will not be used since we have a single
             # primitive per link
             self.weights = self._create_weights([1], weights=weights)
-            self.weights.fill_(1.0)
+            with torch.no_grad():
+                self.weights.fill_(1.0)
 
     def _create_weights(self, primitives, weights):
         """
@@ -134,7 +136,6 @@ class Cell(nn.Module):
         if weights is None:
             weights = SpecialParameter(torch.randn(self.nb_links, len(primitives)))
             with torch.no_grad():
-                # TODO probably unnecessary `torch.no_grad()`
                 weights.mul_(1e-3)
         else:
             assert len(weights.shape) == 2
@@ -182,7 +183,10 @@ class Cell(nn.Module):
         """
         best_primitive_per_internal_link = []
         weights_np = self.weights.detach().cpu().numpy()
-        for link_weights in weights_np:
+        assert len(self.layers) == len(weights_np)
+        for link_id, link_weights in enumerate(weights_np):
             best_primitive = int(np.argmax(link_weights))
-            best_primitive_per_internal_link.append(self.primitive_names[best_primitive])
+            layer = self.layers[link_id]
+            primitive_name = layer.primitive_names[best_primitive]
+            best_primitive_per_internal_link.append(primitive_name)
         return best_primitive_per_internal_link

@@ -89,6 +89,14 @@ def primitive_exp(_1, _2, _3):
 def primitive_relu(_1, _2, _3):
     return ReluModule()
 
+def get_primitives():
+    return collections.OrderedDict([
+        ('linear', primitive_linear),
+        ('sin', primitive_sin),
+        # ('exp', primitive_exp),
+        # ('relu', primitive_relu),
+    ])
+
 
 class ModelDarts1D_fn_1(nn.Module):
     """
@@ -99,12 +107,7 @@ class ModelDarts1D_fn_1(nn.Module):
         super().__init__()
         self.bias = nn.Parameter(torch.zeros([1], dtype=torch.float32))
 
-        primitives = collections.OrderedDict([
-            ('linear', primitive_linear),
-            ('sin', primitive_sin),
-            #('exp', primitive_exp),
-            #('relu', primitive_relu),
-        ])
+        primitives = get_primitives()
 
         cell_merge_output_fn = functools.partial(trw.arch.default_cell_output, nb_outputs_to_use=1)
         self.cell = trw.arch.Cell(
@@ -115,7 +118,6 @@ class ModelDarts1D_fn_1(nn.Module):
             internal_nodes=1,
             with_preprocessing=False,
             cell_merge_output_fn=cell_merge_output_fn)
-
 
     def forward(self, batch):
         x = batch['x']
@@ -128,12 +130,10 @@ class ModelDarts1D_fn_1(nn.Module):
 
 
 class TestDarts(TestCase):
-    def test_parameter_optimized_by_dataset(self):
-        # TODO
-
+    def test_parameter_known_solution(self):
         """
-        Make sure we only optimize the cell parameters on dataset `train_params`
-        and only the cell's weights on the dataset `training_weights`
+        Create a synthetic problem with a single best value for the
+        cell weights and the NN weights. Make sure we find the expected solution
         """
         options = trw.train.create_default_options(num_epochs=50)
         trainer = trw.train.Trainer()
@@ -144,11 +144,30 @@ class TestDarts(TestCase):
             optimizers_fn=lambda datasets, model: trw.arch.create_darts_adam_optimizers_fn(datasets, model, darts_weight_dataset_name='training_weights', learning_rate=0.01)
         )
 
+        # this represents the architecture of a cell
+        # Now, create a cell that implements this architecture
         genotype = r[0].cell.get_genotype()
 
-        print('DONE')
+        # TODO  when we handle variable cell inputs, make sure we find the expected optimized parameters!
 
+        cell_merge_output_fn = functools.partial(trw.arch.default_cell_output, nb_outputs_to_use=1)
+        cell = trw.arch.Cell(
+            primitives=get_primitives(),
+            cpp=1, cp=1, c=1,
+            is_reduction=False,
+            is_reduction_prev=False,
+            internal_nodes=1,
+            with_preprocessing=False,
+            cell_merge_output_fn=cell_merge_output_fn,
+            genotype=genotype)
 
-        #datasets = create_darts_dataset_1d()
-        #for batch in datasets['train_params']:
-        #    print(batch)
+        # make sure the implementation has actually the same genotyper as the original!
+        genotype_2 = cell.get_genotype()
+        assert genotype_2 == genotype, 'the reconstruction must have the same genotype as the original!'
+
+    def test_parameter_known_solution(self):
+        """
+        Make sure we only optimize the cell parameters on dataset `train_params`
+        and only the cell's weights on the dataset `training_weights`
+        """
+        pass  # TODO
