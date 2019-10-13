@@ -1,6 +1,7 @@
 import trw
 import torch.nn as nn
 import torch.nn.functional as F
+import os
 
 
 class Net_simple(nn.Module):
@@ -8,8 +9,8 @@ class Net_simple(nn.Module):
         super().__init__()
 
         dropout_probability = options['training_parameters']['dropout_probability']
-        self.convs = trw.layers.convs_2d([3, 32, 64, 96], with_batchnorm=True)
-        self.denses = trw.layers.denses([1536, 256, 10], dropout_probability=dropout_probability, with_batchnorm=True, last_layer_is_output=True)
+        self.convs = trw.layers.convs_2d([3, 64, 128, 256], with_batchnorm=True, convolution_repeats=[3, 3, 3])
+        self.denses = trw.layers.denses([4096, 256, 10], dropout_probability=None, with_batchnorm=True, last_layer_is_output=True)
 
     def forward(self, batch):
         # a batch should be a dictionary of features
@@ -73,8 +74,10 @@ class Net_DARTS(nn.Module):
             if weights is None:
                 if reduction:
                     weights_reduction = cell.get_weights()
+                    self.cell_reduction = cell
                 else:
                     weights_normal = cell.get_weights()
+                    self.cell_normal = cell
 
             # update reduction_prev
             reduction_prev = reduction
@@ -104,9 +107,9 @@ class Net_DARTS(nn.Module):
             # weights are shared across all reduction cell or normal cell
             # according to current cell's type, it choose which architecture parameters
             # to use
-            weights = cell.get_weights() # [14, 8]
+            #weights = cell.get_weights() # [14, 8]
             # execute cell() firstly and then assign s0=s1, s1=result
-            s0, s1 = s1, cell([s0, s1], weights) # [40, 64, 32, 32]
+            s0, s1 = s1, cell([s0, s1]) # [40, 64, 32, 32]
 
         out = self.global_pooling(s1)
         logits = self.classifier(out.view(out.size(0), -1))
@@ -114,25 +117,39 @@ class Net_DARTS(nn.Module):
         return {
             'softmax': trw.train.OutputClassification(logits, 'targets')
         }
+    
+    def export_configuration(self, path):
+        with open(os.path.join(path, 'genotype_normal.txt'), 'w') as f:
+            f.write(str(self.cell_normal.get_genotype()))
+            
+        with open(os.path.join(path, 'genotype_reduction.txt'), 'w') as f:
+            f.write(str(self.cell_reduction.get_genotype()))
+    
+    
 
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
-    options = trw.train.create_default_options(num_epochs=40)
-    trainer = trw.train.Trainer()
+    options = trw.train.create_default_options(num_epochs=600)
+    trainer = trw.train.Trainer(callbacks_post_training_fn=None)
 
     transforms = [
-       trw.transforms.TransformRandomCrop(padding=[0, 4, 4])
+        trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
+        trw.transforms.TransformRandomCrop(padding=[0, 4, 4]),
     ]
 
     #transforms = None
 
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=10, data_processing_batch_size=10),
+        #inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=20, data_processing_batch_size=10),
+        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
         run_prefix='cifar10_darts_search',
-        model_fn=lambda options: Net_DARTS(options),
+        #model_fn=lambda options: Net_DARTS(options),
+        model_fn=lambda options: Net_simple(options),
         optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(
-            datasets=datasets, model=model, learning_rate=0.1))
+            datasets=datasets, model=model, learning_rate=0.01))
+    
+    model.export_configuration(options['workflow_options']['current_logging_directory'])
 
     print('DONE')
