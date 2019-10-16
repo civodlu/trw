@@ -22,7 +22,7 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
         train=True,
         download=True)
 
-    test_dataset = torchvision.datasets.NIST(
+    test_dataset = torchvision.datasets.MNIST(
         root=root,
         train=False,
         download=True)
@@ -50,7 +50,7 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
     # generate the class mapping
     mapping = dict()
     mappinginv = dict()
-    for id, name in enumerate(torchvision.MNIST.classes):
+    for id, name in enumerate(torchvision.datasets.MNIST.classes):
         mapping[name] = id
         mappinginv[id] = name
     output_mappings = {'targets': {'mapping': mapping, 'mappinginv': mappinginv}}
