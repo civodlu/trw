@@ -92,7 +92,7 @@ def run_classification_explanation(
             export_path = os.path.join(root, filename)
 
             with open(export_path + '.txt', 'w') as f:
-                if average_filters:
+                if average_filters and len(g.shape) >= 3:
                     batch_n['explanation'] = np.reshape(np.average(np.abs(g), axis=1), [g.shape[0], 1] + list(g.shape[2:]))
                 else:
                     batch_n['explanation'] = g
@@ -103,9 +103,9 @@ def run_classification_explanation(
                 batch_n['explanation_positive'] = positive
                 batch_n['explanation_negative'] = negative
 
-                #sample_export.export_sample(batch_n, 0, export_path + '-', f)
-                #f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
-                #f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
+                sample_export.export_sample(batch_n, 0, export_path + '-', f)
+                f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
+                f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
 
 
 def fill_class_name(output, class_index, datasets_infos, dataset_name, split_name):
