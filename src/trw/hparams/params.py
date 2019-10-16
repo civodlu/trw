@@ -96,7 +96,7 @@ class DiscreteIntegrer(HyperParam):
         """
         :return: a random value
         """
-        return np.random.random_integers(low=self.min_range, high=self.max_range)
+        return np.random.randint(low=self.min_range, high=self.max_range + 1)
 
     def __repr__(self):
         return 'DiscreteIntegrer value=%d, min=%d, max=%d' % (self.current_value, self.min_range, self.max_range)
@@ -124,7 +124,7 @@ class DiscreteBoolean(HyperParam):
         """
         :return: a random value
         """
-        return np.random.random_integers(low=0, high=1)
+        return np.random.randint(low=0, high=1 + 1)
 
     def __repr__(self):
         return 'DiscreteBoolean value=%d' % self.current_value

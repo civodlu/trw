@@ -55,7 +55,7 @@ def transform_batch_random_crop(array, crop_shape):
     # calculate the offset per dimension
     offsets = []
     for max_offset in max_offsets:
-        offset = np.random.random_integers(0, max_offset, nb_samples)
+        offset = np.random.randint(0, max_offset + 1, nb_samples)
         offsets.append(offset)
     offsets = np.stack(offsets, axis=-1)
 

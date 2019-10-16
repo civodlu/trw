@@ -69,12 +69,12 @@ def _random_location(image_shape, figure_shape):
     image_shape = np.asarray(image_shape)
     figure_shape = np.asarray(figure_shape)
     maximum_location = image_shape - figure_shape
-    location = [np.random.random_integers(0, l) for l in maximum_location]
+    location = [np.random.randint(0, l + 1) for l in maximum_location]
     return np.asarray(location)
 
 
 def _random_color():
-    color = np.random.random_integers(0, 255, [3]).astype(np.uint8).reshape([3, 1])
+    color = np.random.randint(0, 255 + 1, [3]).astype(np.uint8).reshape([3, 1])
     return color
 
 

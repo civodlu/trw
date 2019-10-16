@@ -6,7 +6,7 @@ import os
 
 def transorm_add_random(batch):
     batch_len = trw.train.len_batch(batch)
-    r = np.random.random_integers(0, 5, batch_len)
+    r = np.random.randint(0, 5 + 1, batch_len)
     batch['values'] = batch['values'] + r
     return batch
 

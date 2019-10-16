@@ -22,7 +22,7 @@ def cutout(image, cutout_size, cutout_value_fn):
     """
     nb_dims = len(cutout_size)
     assert len(image.shape) == nb_dims
-    offsets = [np.random.random_integers(0, image.shape[n] - cutout_size[n]) for n in range(len(cutout_size))]
+    offsets = [np.random.randint(0, image.shape[n] - cutout_size[n] + 1) for n in range(len(cutout_size))]
 
     if nb_dims == 1:
         cutout_value_fn(
