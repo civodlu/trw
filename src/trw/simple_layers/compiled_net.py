@@ -292,6 +292,7 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
     # make sure we don't have outputs with the same name
     outputs_names = set()
     for output in output_nodes:
+        assert isinstance(output, SimpleOutputBase), 'output must be a trw.simple_layers.SimpleOutputBase'
         name = output.output_name
         assert name not in outputs_names, 'output with the same name:{}, node={}'.format(name, str(output))
         outputs_names.add(name)
