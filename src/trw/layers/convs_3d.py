@@ -37,7 +37,7 @@ def convs_3d(channels, convolution_kernels=(5, 5, 5), strides=(1, 1, 1), pooling
 
     assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
     assert nb_convs == len(strides), 'must be specified for each convolutional layer'
-    assert nb_convs == len(pooling_size), 'must be specified for each convolutional layer'
+    assert pooling_size is None or nb_convs == len(pooling_size), 'must be specified for each convolutional layer'
 
     for n in range(len(channels) - 1):
         current = channels[n]

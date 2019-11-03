@@ -1,13 +1,13 @@
 from .options import create_default_options
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
-    run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks
+    run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, default_sum_all_losses
 
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, create_scheduler_step_lr, \
     create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn
 
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name
 from .utils import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
-    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device
+    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device, transfer_batch_to_device
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
 from .callback import Callback
@@ -38,6 +38,7 @@ from .callback_learning_rate_finder import CallbackLearningRateFinder
 from .callback_learning_rate_recorder import CallbackLearningRateRecorder
 from .callback_explain_decision import CallbackExplainDecision,  ExplainableAlgorithm
 from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
+from .callback_activation_statistics import CallbackActivationStatistics
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor
@@ -52,3 +53,4 @@ from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, Samp
 from .sample_export import as_rgb_image, as_image_ui8, export_image
 
 from .losses import LossDiceMulticlass
+from .upsample import upsample
