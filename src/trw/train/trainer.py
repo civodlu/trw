@@ -2,7 +2,6 @@ import torch
 import torch.optim
 import torch.nn
 import collections
-import functools
 import logging
 import numpy as np
 import numbers
@@ -30,6 +29,7 @@ from trw.train import callback_learning_rate_finder
 from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
 from trw.train import callback_worst_samples_by_epoch
+from trw.train import callback_activation_statistics
 
 logger = logging.getLogger(__name__)
 
@@ -216,6 +216,7 @@ def train_loop(
     nb_samples = 0
     try:
         for i, batch in enumerate(split):
+            assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
             # calculate the time for batch processing. In particular
             # this may be significant when using large data augmentations
             # and useful to optimize the data processing pipeline
@@ -239,9 +240,12 @@ def train_loop(
     
             all_loss_terms.append(loss_terms)
             loss = loss_fn(dataset_name, batch, loss_terms)
-            if optimizer is not None and apply_backward:
-                # if there is no optimizer, it means we did not want to change the parameters
-                loss.backward()
+            if optimizer is not None and apply_backward and isinstance(loss, torch.Tensor):
+                if isinstance(loss, torch.Tensor):
+                    # if there is no optimizer, it means we did not want to change the parameters
+                    loss.backward()
+                else:
+                    logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
             loss_terms['overall_loss'] = {'loss': loss}
             optimizer.step()
 
@@ -300,6 +304,7 @@ def eval_loop(
     
     try:
         for i, batch in enumerate(split):
+            assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
             batch = utils.transfer_batch_to_device(batch, device=device)
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
             with torch.no_grad():  # do not keep track of the gradient as we are just evaluating
@@ -439,7 +444,7 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     return callbacks
 
 
-def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True):
+def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True, with_activation_statistics=True):
     """
     Default callbacks to be performed at the end of each epoch
     """
@@ -451,6 +456,9 @@ def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epo
 
     if with_worst_samples_by_epoch:
         callbacks.append(callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch())
+
+    if with_activation_statistics:
+        callbacks.append(callback_activation_statistics.CallbackActivationStatistics())
 
     return callbacks
 
@@ -663,7 +671,8 @@ class Trainer:
         
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
-        formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        #formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        formatter = utils.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
 

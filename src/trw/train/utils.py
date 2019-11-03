@@ -6,6 +6,7 @@ import os
 import numpy as np
 import collections
 import numbers
+import datetime
 
 
 logger = logging.getLogger(__name__)
@@ -476,3 +477,15 @@ def get_device(module, batch=None):
 
     # we can't make an appropriate guess, just fail!
     return None
+
+
+class RuntimeFormatter(logging.Formatter):
+    """
+    Report the time since this formatter is instantiated
+    """
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.start_time = time.time()
+
+    def formatTime(self, record, datefmt=None):
+        return str(datetime.timedelta(seconds=record.created - self.start_time))
