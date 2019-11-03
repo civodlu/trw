@@ -1,4 +1,27 @@
 import os
+import numpy as np
+import torch
+from PIL import Image
+
+
+def pic_to_tensor(pic):
+    assert isinstance(pic, Image.Image), 'image must be a PIL Image'
+
+    i = np.array(pic)
+    if len(i.shape) == 2:
+        i = np.reshape(i, [i.shape[0], i.shape[1], 1])
+    i = i.transpose((2, 0, 1))
+    return torch.from_numpy(i)
+
+
+def pic_to_numpy(pic):
+    assert isinstance(pic, Image.Image), 'image must be a PIL Image'
+
+    i = np.array(pic)
+    if len(i.shape) == 2:
+        i = np.reshape(i, [i.shape[0], i.shape[1], 1])
+    i = i.transpose((2, 0, 1))
+    return i
 
 
 class named_dataset(object):
