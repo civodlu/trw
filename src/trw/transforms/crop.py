@@ -22,22 +22,18 @@ def _crop_1d(image, min, max):
     return image[min[0]:max[0]]
 
 
-def transform_batch_random_crop(array, crop_shape):
+def transform_batch_random_crop_offset(array, crop_shape):
     """
-    Randomly crop a numpy array of samples given a target size. This works for an arbitrary number of dimensions
+    Calculate the offsets of array to randomly crop it with shape `crop_shape`
 
     Args:
         array: a numpy array. Samples are stored in the first dimension
         crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop
 
     Returns:
-        a cropped array
+        a offsets to crop the array
     """
-    is_numpy = isinstance(array, np.ndarray)
-    is_torch = isinstance(array, torch.Tensor)
-
     nb_dims = len(array.shape) - 1
-    assert is_numpy or is_torch, 'must be a numpy array or pytorch.Tensor!'
     assert len(crop_shape) == nb_dims, 'padding must have shape size of {}, got={}'.format(nb_dims, len(crop_shape))
     for index, size in enumerate(crop_shape):
         assert array.shape[index + 1] >= size, \
@@ -59,6 +55,36 @@ def transform_batch_random_crop(array, crop_shape):
         offsets.append(offset)
     offsets = np.stack(offsets, axis=-1)
 
+    return offsets
+
+
+def transform_batch_random_crop(array, crop_shape, offsets=None, return_offsets=False):
+    """
+    Randomly crop a numpy array of samples given a target size. This works for an arbitrary number of dimensions
+
+    Args:
+        array: a numpy or Torch array. Samples are stored in the first dimension
+        crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop
+        offsets: if `None`, offsets will be randomly created to crop with `crop_shape`, else an array indicating
+            the crop position for each sample
+        return_offsets: if `True`, returns a tuple (cropped array, offsets)
+
+    Returns:
+        a cropped array
+    """
+    nb_dims = len(array.shape) - 1
+    nb_samples = array.shape[0]
+
+    is_numpy = isinstance(array, np.ndarray)
+    is_torch = isinstance(array, torch.Tensor)
+    assert is_numpy or is_torch, 'must be a numpy array or pytorch.Tensor!'
+
+    if offsets is None:
+        offsets = transform_batch_random_crop_offset(array, crop_shape)
+    else:
+        assert len(offsets) == len(array)
+        assert len(offsets[0]) == len(array.shape[1:])
+
     # select the crop function according to dimension
     if nb_dims == 1:
         crop_fn = _crop_1d
@@ -79,7 +105,37 @@ def transform_batch_random_crop(array, crop_shape):
         cropped_array.append(crop_fn(array[n], min_corner, min_corner + crop_shape))
 
     if is_numpy:
-        return np.asarray(cropped_array)
-    if is_torch:
-        return torch.stack(cropped_array)
-    assert 0, 'unreachable!'
+        output = np.asarray(cropped_array)
+    elif is_torch:
+        output = torch.stack(cropped_array)
+    else:
+        assert 0, 'unreachable!'
+
+    if return_offsets:
+        return output, offsets
+    return output
+
+
+def transform_batch_random_crop_joint(arrays, crop_shape):
+    """
+    Randomly crop a list of numpy arrays. Apply the same cropping for each array element
+
+    Args:
+        arrays: a list of numpy or Torch arrays. Samples are stored in the first dimension
+        crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop
+
+    Returns:
+        a cropped array
+    """
+
+    assert isinstance(arrays, list), 'must be a list of arrays'
+    assert isinstance(arrays[0], (torch.Tensor, np.ndarray)), 'must be a list of arrays'
+
+    shape = arrays[0].shape
+    for a in arrays[1:]:
+        # number of filters may be different (e.g., segmentation map & color image)
+        assert a.shape[2:] == shape[2:], 'joint crop MUST have the same shape! Found={} expected={}'.format(a.shape, shape)
+
+    offsets = transform_batch_random_crop_offset(arrays[0], crop_shape)
+    cropped_arrays = [transform_batch_random_crop(a, crop_shape=crop_shape, offsets=offsets) for a in arrays]
+    return cropped_arrays

@@ -125,6 +125,18 @@ class TestTransform(TestCase):
         self.assertTrue(min(xs) == size[2] // 2 - 8)
         self.assertTrue(max(xs) == size[2] // 2 + 8)
 
+    def test_random_crop_no_padding(self):
+        size = [1, 31, 63]
+        d = np.zeros([1000] + size, dtype=np.float)
+        d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
+        d = torch.from_numpy(d)
+
+        transform = trw.transforms.TransformRandomCrop(padding=None, size=[1, 16, 32])
+        batch = transform({'d': d})
+
+        d_transformed = batch['d'].data.numpy()
+
+        assert d_transformed.shape == (1000, 1, 16, 32)
 
     def test_transform_base_criteria(self):
         # filter by name
@@ -226,3 +238,116 @@ class TestTransform(TestCase):
         for i in transformed_batch['images']:
             nb_0 = np.where(i.numpy() == 0)
             assert len(nb_0[0]) == 3 * 16 * 32
+
+    def test_random_crop_pad_joint(self):
+        batch = {
+            'images': torch.zeros([50, 3, 64, 128], dtype=torch.int64),
+            'segmentations': torch.zeros([50, 1, 64, 128], dtype=torch.float32)
+        }
+
+        batch['images'][:, :, 32, 64] = 42
+        batch['segmentations'][:, :, 32, 64] = 42
+
+        transformer =trw.transforms.TransformRandomCropJoint(feature_names=['images', 'segmentations'], padding=[0, 16, 16], mode='constant')
+        transformed_batch = transformer(batch)
+
+        indices_images_42 = np.where(transformed_batch['images'].numpy()[:, 0, :, :] == 42)
+        indices_segmentations_42 = np.where(transformed_batch['segmentations'].numpy()[:, 0, :, :] == 42)
+        assert (indices_segmentations_42[2] == indices_images_42[2]).all()
+        assert (indices_segmentations_42[1] == indices_images_42[1]).all()
+
+    def test_random_flipped_joint(self):
+        batch = {
+            'images': torch.randint(high=42, size=[50, 3, 64, 128], dtype=torch.int64),
+        }
+        batch['segmentation'] = batch['images'].float()
+
+        transformer = trw.transforms.TransformRandomFlipJoint(feature_names=['images', 'segmentations'], axis=2)
+        transformed_batch = transformer(batch)
+
+        images = batch['images'].float()
+        assert (transformed_batch['segmentation'].numpy() == images.numpy()).all()
+
+    def test_random_resize_torch(self):
+        batch = {
+            'images': torch.randint(high=42, size=[50, 3, 16, 32], dtype=torch.int64),
+        }
+
+        transformer = trw.transforms.TransformResize(size=[32, 64])
+        transformed_batch = transformer(batch)
+
+        images = transformed_batch['images']
+        assert images.shape == (50, 3, 32, 64)
+        assert np.average(batch['images'].numpy()) == np.average(transformed_batch['images'].numpy())
+
+    def test_random_resize_numpy(self):
+        batch = {
+            'images': np.random.randint(low=0, high=42, size=[50, 3, 16, 32], dtype=np.int64),
+        }
+
+        transformer = trw.transforms.TransformResize(size=[32, 64], mode='nearest')
+        transformed_batch = transformer(batch)
+
+        images = transformed_batch['images']
+        assert images.shape == (50, 3, 32, 64)
+        assert np.average(batch['images']) == np.average(transformed_batch['images'])
+
+    def test_normalize_numpy(self):
+        images = np.random.randint(low=0, high=42, size=[10, 3, 5, 6], dtype=np.int64)
+        images[:, 1] *= 2
+        images[:, 2] *= 3
+
+        batch = {
+            'images': images,
+        }
+
+        mean = np.mean(images, axis=(0, 2, 3))
+        std = np.std(images, axis=(0, 2, 3))
+
+        transformer = trw.transforms.TransformNormalize(mean=mean, std=std)
+        transformed_batch = transformer(batch)
+        normalized_images = transformed_batch['images']
+
+        mean_normalized = np.mean(normalized_images, axis=(0, 2, 3))
+        std_normalized = np.std(normalized_images, axis=(0, 2, 3))
+
+        assert abs(np.average(mean_normalized)) < 0.1
+        assert abs(np.average(std_normalized) - 1) < 0.1
+
+    def test_normalize_torch(self):
+        images = torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.int64)
+        images[:, 1] *= 2
+        images[:, 2] *= 3
+
+        batch = {
+            'images': images,
+        }
+
+        mean = np.mean(images.numpy(), axis=(0, 2, 3))
+        std = np.std(images.numpy(), axis=(0, 2, 3))
+
+        transformer = trw.transforms.TransformNormalize(mean=mean, std=std)
+        transformed_batch = transformer(batch)
+        normalized_images = transformed_batch['images']
+
+        mean_normalized = np.mean(normalized_images.numpy(), axis=(0, 2, 3))
+        std_normalized = np.std(normalized_images.numpy(), axis=(0, 2, 3))
+
+        assert abs(np.average(mean_normalized)) < 0.1
+        assert abs(np.average(std_normalized) - 1) < 0.1
+
+    def test_transform_compose(self):
+        batch = {
+            'images': torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.int64)
+        }
+
+        transforms = [
+            trw.transforms.TransformNormalize(mean=[10, 10, 10], std=[1, 1, 1]),
+            trw.transforms.TransformNormalize(mean=[100, 100, 100], std=[1, 1, 1]),
+        ]
+
+        transformer = trw.transforms.TransformCompose(transforms)
+        transformed_batch = transformer(batch)
+
+        max_error = torch.max(torch.abs(batch['images'] - transformed_batch['images'] - 110))
+        assert float(max_error) < 1e-5

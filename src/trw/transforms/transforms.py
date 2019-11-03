@@ -12,7 +12,7 @@ class Transform:
 
 class TransformBatchWithCriteria(Transform):
     """
-    Helper function to apply a given transform function on features that satisty a criteria
+    Helper function to apply a given transform function on features that satisfy a criteria
     """
     def __init__(self, criteria_fn, transform_fn):
         """
@@ -33,6 +33,41 @@ class TransformBatchWithCriteria(Transform):
                 new_batch[feature_name] = transformed_feature_value
             else:
                 new_batch[feature_name] = feature_value
+        return new_batch
+
+
+class TransformBatchJointWithCriteria(Transform):
+    """
+    Helper function to apply a given transform function on features that satisfy a criteria. Feature will be jointly transformed
+    """
+    def __init__(self, criteria_fn, transform_fn):
+        """
+
+        Args:
+            criteria_fn: a function accepting as parameter `feature_name, feature_value` and returning True to apply the transform
+                or False to keep the original feature value
+            transform_fn: a function accepting parameters `feature_name, feature_value` and returning a transformed feature_value
+        """
+        self.criteria_fn = criteria_fn
+        self.transform_fn = transform_fn
+
+    def __call__(self, batch):
+        new_batch = {}
+
+        joint_feature_names = []
+        joint_feature_values = []
+        for feature_name, feature_value in batch.items():
+            if self.criteria_fn(feature_name, feature_value):
+                joint_feature_names.append(feature_name)
+                joint_feature_values.append(feature_value)
+            else:
+                new_batch[feature_name] = feature_value
+
+        if len(joint_feature_names) > 0:
+            joint_feature_values = self.transform_fn(joint_feature_names, joint_feature_values)
+            for feature_name, feature_value in zip(joint_feature_names, joint_feature_values):
+                new_batch[feature_name] = feature_value
+
         return new_batch
 
 

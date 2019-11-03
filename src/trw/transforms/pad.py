@@ -14,7 +14,7 @@ def transform_batch_pad_numpy(array, padding, mode='edge', constant_value=0):
         mode: `numpy.pad` mode
 
     Returns:
-        a padded batch
+        a padded array
     """
     assert isinstance(array, np.ndarray), 'must be a numpy array!'
     assert len(padding) == len(array.shape) - 1, 'padding must have shape size of {}'.format(len(array.shape) - 1)
@@ -36,13 +36,13 @@ def transform_batch_pad_torch(array, padding, mode='edge', constant_value=0):
     This function mimics the API of `transform_batch_pad_numpy` so they can be easily interchanged.
 
     Args:
-        array: a numpy array. Samples are stored in the first dimension
+        array: a Torch array. Samples are stored in the first dimension
         padding: a sequence of size `len(array.shape)-1` indicating the width of the
             padding to be added at the beginning and at the end of each dimension (except for dimension 0)
         mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')
 
     Returns:
-        a padded batch
+        a padded array
     """
     assert isinstance(padding, list), 'must be a list!'
     assert isinstance(array, torch.Tensor), 'must be a torch.Tensor!'
@@ -80,7 +80,7 @@ def transform_batch_pad(array, padding, mode='edge', constant_value=0):
         mode: `numpy.pad` mode
 
     Returns:
-        a padded batch
+        a padded array
     """
     if isinstance(array, np.ndarray):
         return transform_batch_pad_numpy(array, padding, mode, constant_value)
@@ -88,3 +88,21 @@ def transform_batch_pad(array, padding, mode='edge', constant_value=0):
         return transform_batch_pad_torch(array, padding, mode, constant_value)
 
     raise NotImplemented()
+
+
+def transform_batch_pad_joint(arrays, padding, mode='edge', constant_value=0):
+    """
+    Add padding on a list of numpy or tensor array of samples. Supports arbitrary number of dimensions
+
+    Args:
+        arrays: a numpy array. Samples are stored in the first dimension
+        padding: a sequence of size `len(array.shape)-1` indicating the width of the
+            padding to be added at the beginning and at the end of each dimension (except for dimension 0)
+        mode: `numpy.pad` mode
+
+    Returns:
+        a list of padded arrays
+    """
+    assert isinstance(arrays, list), 'must be a list of arrays'
+    padded_arrays = [transform_batch_pad(a, padding=padding, mode=mode, constant_value=constant_value) for a in arrays]
+    return padded_arrays
