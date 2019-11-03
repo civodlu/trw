@@ -12,3 +12,6 @@ DARTS https://github.com/dragen1860/DARTS-PyTorch
 
 CARS: Continuous Evolution for Efficient Neural Architecture Search
 https://github.com/huawei-noah/CARS
+
+"Interpretable Explanations of Black Boxes by Meaningful Perturbation"
+https://github.com/jacobgil/pytorch-explain-black-box

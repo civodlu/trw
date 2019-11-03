@@ -13,6 +13,7 @@ def create_net(options):
     n = trw.simple_layers.OutputClassification(n, output_name='softmax', classes_name='targets')
     return trw.simple_layers.compile_nn([n])
 
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
