@@ -4,9 +4,9 @@ from trw.transforms import cutout_function
 from trw.transforms.copy import copy
 
 
-def _transform_random_cutout(feature_name, feature_value, cutout_size, cutout_value_fn):
+def _transform_random_cutout(feature_name, feature_value_orig, cutout_size, cutout_value_fn):
     # make sure we do NOT modify the original images
-    feature_value = copy(feature_value)
+    feature_value = copy(feature_value_orig)
     for sample in feature_value:
         cutout_function.cutout(sample, cutout_size=cutout_size, cutout_value_fn=cutout_value_fn)
     return feature_value
