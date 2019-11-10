@@ -444,7 +444,7 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     return callbacks
 
 
-def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True, with_activation_statistics=True):
+def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True, with_activation_statistics=False):
     """
     Default callbacks to be performed at the end of each epoch
     """
