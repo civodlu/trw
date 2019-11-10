@@ -59,7 +59,7 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
     return optimizers, schedulers
 
 
-def create_adam_optimizers_fn(datasets, model, learning_rate, scheduler_fn=None):
+def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, scheduler_fn=None):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
@@ -67,16 +67,17 @@ def create_adam_optimizers_fn(datasets, model, learning_rate, scheduler_fn=None)
         datasets: a dictionary of dataset
         model: a model to optimize
         learning_rate: the initial learning rate
+        weight_decay: the weight decay
         scheduler_fn: a scheduler, or `None`
 
     Returns:
         An optimizer
     """
-    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate)
+    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay)
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 
-def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma):
+def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
@@ -86,15 +87,16 @@ def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, 
         learning_rate: the initial learning rate
         step_size: the number of epoch composing a step. Each step the learning rate will be multiplied by `gamma`
         gamma: the factor to apply to the learning rate every step
+        weight_decay : the weight decay
 
     Returns:
         An optimizer with a step scheduler
     """
     scheduler_fn = functools.partial(create_scheduler_step_lr, step_size=step_size, gamma=gamma)
-    return create_adam_optimizers_fn(datasets, model, learning_rate=learning_rate, scheduler_fn=scheduler_fn)
+    return create_adam_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn)
 
 
-def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, scheduler_fn=None):
+def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, scheduler_fn=None):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with optional scheduler
 
@@ -104,15 +106,16 @@ def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, sched
             learning_rate: the initial learning rate
             scheduler_fn: a scheduler, or `None`
             momentum: the momentum of the SGD
+            weight_decay: the weight decay
 
         Returns:
             An optimizer
         """
-    optimizer_fn = functools.partial(torch.optim.SGD, lr=learning_rate, momentum=momentum)
+    optimizer_fn = functools.partial(torch.optim.SGD, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 
-def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma):
+def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with step learning rate scheduler
 
@@ -122,9 +125,10 @@ def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, s
             learning_rate: the initial learning rate
             step_size: the number of epoch composing a step. Each step the learning rate will be multiplied by `gamma`
             gamma: the factor to apply to the learning rate every step
+            weight_decay: the weight decay
 
         Returns:
             An optimizer with a step scheduler
         """
     scheduler_fn = functools.partial(create_scheduler_step_lr, step_size=step_size, gamma=gamma)
-    return create_sgd_optimizers_fn(datasets, model, learning_rate=learning_rate, scheduler_fn=scheduler_fn)
+    return create_sgd_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn)

@@ -3,7 +3,7 @@ from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, tra
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, default_sum_all_losses
 
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, create_scheduler_step_lr, \
-    create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn
+    create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn
 
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name
 from .utils import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
