@@ -237,12 +237,12 @@ class OutputClassification(Output):
         """
         
         Args:
-            output:
-            classes_name:
-            criterion_fn:
-            collect_output:
-            collect_only_non_training_output:
-            metrics:
+            output: the raw output values
+            classes_name: the name of the features to be used as target. Targets must be a 1D vector of integers
+            criterion_fn: the criterion to minimize between the output and the target
+            collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
+            collect_only_non_training_output: if True, only the non-training splits will have the outputs collected
+            metrics: the metrics to be reported each epoch
             loss_reduction:
             weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
             loss_scaling: scale the loss by a scalar
