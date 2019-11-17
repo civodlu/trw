@@ -78,7 +78,7 @@ def upsample(tensor, size, mode='linear'):
             raise NotImplemented('dimension not implemented!')
 
     if mode == 'linear':
-        align_corners = False
+        align_corners = True
         if len(tensor.shape) == 4:
             # 2D case
             return nn.Upsample(mode='bilinear', size=size, align_corners=align_corners).forward(tensor)
