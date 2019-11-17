@@ -105,7 +105,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
     Note: we must recalculate the embedding as we need to associate a specific input (i.e., we can't store
     everything in memory so we need to collect what we need batch by batch)
     """
-    def __init__(self, embedding_name, dataset_name=None, split_name='test', image_name=None, maximum_samples=2000, keep_features_fn=keep_small_features):
+    def __init__(self, embedding_name, dataset_name=None, split_name=None, image_name=None, maximum_samples=2000, keep_features_fn=keep_small_features):
         """
         :param embedding_name: the name of the embedding to be used
         :param dataset_name: the name of the dataset to export the embedding. If `None`,
@@ -124,11 +124,15 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
         self.keep_features_fn = keep_features_fn
         self.features_to_discard = ['output_ref']
 
-    def first_time(self, datasets):
-        if self.dataset_name is None:
-            self.dataset_name = next(iter(datasets))
+    def first_time(self, datasets, options):
+        self.dataset_name, self.split_name = utils.find_default_dataset_and_split_names(
+            datasets,
+            default_dataset_name=self.dataset_name,
+            default_split_name=self.split_name,
+            train_split_name=options['workflow_options']['train_split']
+        )
 
-        if datasets[self.dataset_name].get(self.split_name) is None:
+        if self.dataset_name is None:
             return
 
         if self.image_name is None:
@@ -152,7 +156,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
         if logger_tb is None:
             return
         if self.dataset_name is None or self.image_name is None:
-            self.first_time(datasets)
+            self.first_time(datasets, options)
         if self.dataset_name is None or self.image_name is None:
             logger.info('embedding can not be calculated: dataset={}, split={}'.format(self.dataset_name, self.split_name))
             return None

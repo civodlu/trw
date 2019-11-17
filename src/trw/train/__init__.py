@@ -7,7 +7,7 @@ from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_schedule
 
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name
 from .utils import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
-    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device, transfer_batch_to_device
+    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device, transfer_batch_to_device, find_default_dataset_and_split_names
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
 from .callback import Callback
@@ -54,3 +54,6 @@ from .sample_export import as_rgb_image, as_image_ui8, export_image
 
 from .losses import LossDiceMulticlass
 from .upsample import upsample
+
+from .filter_gaussian import FilterFixed, FilterGaussian
+from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing

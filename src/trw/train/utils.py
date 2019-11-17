@@ -7,6 +7,8 @@ import numpy as np
 import collections
 import numbers
 import datetime
+import traceback as traceback_module
+import io
 
 
 logger = logging.getLogger(__name__)
@@ -435,6 +437,14 @@ class CleanAddedHooks:
         all_hooks_forward, all_hooks_backward = CleanAddedHooks.record_hooks(self.model)
         remove_hooks(self.initial_module_hooks_forward, all_hooks_forward, is_forward=True)
         remove_hooks(self.initial_module_hooks_backward, all_hooks_backward, is_forward=False)
+
+        if traceback is not None:
+            io_string = io.StringIO()
+            traceback_module.print_tb(traceback, file=io_string)
+
+            print('Exception={}'.format(io_string.getvalue()))
+            logger.error('CleanAddedHooks: exception={}'.format(io_string.getvalue()))
+
         return True
 
     @staticmethod
@@ -489,3 +499,37 @@ class RuntimeFormatter(logging.Formatter):
 
     def formatTime(self, record, datefmt=None):
         return str(datetime.timedelta(seconds=record.created - self.start_time))
+
+
+def find_default_dataset_and_split_names(datasets, default_dataset_name=None, default_split_name=None, train_split_name=None):
+    """
+    Return a good choice of dataset name and split name, possibly not the train split.
+
+    Args:
+        datasets: the datasets
+        default_dataset_name: a possible dataset name. If `None`, find a suitable dataset, if not, the dataset
+            must be present
+        default_split_name: a possible split name. If `None`, find a suitable split, if not, the dataset
+            must be present. if `train_split_name` is specified, the selected split name will be different from `train_split_name`
+        train_split_name: if not `None`, exclude the train split
+
+    Returns:
+        a tuple (dataset_name, split_name)
+    """
+    if default_dataset_name is None:
+        default_dataset_name = next(iter(datasets))
+    else:
+        if default_dataset_name not in datasets:
+            return None, None
+
+    if default_split_name is None:
+        available_splits = datasets[default_dataset_name].keys()
+        for split_name in available_splits:
+            if split_name != train_split_name:
+                default_split_name = split_name
+                break
+    else:
+        if default_split_name not in datasets[default_dataset_name]:
+            return None, None
+
+    return default_dataset_name, default_split_name

@@ -449,6 +449,8 @@ def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epo
     Default callbacks to be performed at the end of each epoch
     """
     callbacks = [
+        #callback_explain_decision.CallbackExplainDecision(),
+
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
@@ -463,7 +465,7 @@ def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epo
     return callbacks
 
 
-def default_post_training_callbacks(embedding_name='embedding', dataset_name=None, split_name='valid', discard_train_error_export=False, export_errors=True, explain_decision=False):
+def default_post_training_callbacks(embedding_name='embedding', dataset_name=None, split_name=None, discard_train_error_export=False, export_errors=True, explain_decision=True):
     """
     Default callbacks to be performed after the model has been trained
     """
