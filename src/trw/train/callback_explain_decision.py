@@ -8,6 +8,7 @@ from trw.train import outputs as outputs_trw
 from trw.train import guided_back_propagation
 from trw.train import grad_cam
 from trw.train import integrated_gradients
+from trw.train import meaningful_perturbation
 from enum import Enum
 import torch
 import torch.nn
@@ -25,6 +26,21 @@ class ExplainableAlgorithm(Enum):
     GradCAM = grad_cam.GradCam
     Gradient = functools.partial(guided_back_propagation.GuidedBackprop, unguided_gradient=True)
     IntegratedGradients = integrated_gradients.IntegratedGradients
+    MeaningfulPerturbations = meaningful_perturbation.MeaningfulPerturbation
+
+
+def default_algorithm_args():
+    """
+    Default algorithm arguments
+    """
+    return {
+        ExplainableAlgorithm.MeaningfulPerturbations: {
+            'mask_reduction_factor': 4,
+            'iterations': 200,
+            'l1_coeff': 0.1,
+            'information_removal_fn': functools.partial(meaningful_perturbation.default_information_removal_smoothing, blurring_sigma=4, blurring_kernel_size=13)
+        }
+    }
 
 
 def run_classification_explanation(
@@ -48,6 +64,7 @@ def run_classification_explanation(
 
     # do sample by sample to simplify the export procedure
     for n in range(nb_samples):
+        logger.info('sample={}'.format(n))
         batch_n = sequence_array.SequenceArray.get(
             batch,
             utils.len_batch(batch),
@@ -60,17 +77,19 @@ def run_classification_explanation(
                 # we want to back-propagate up to the inputs
                 tensor.requires_grad = True
 
-        outputs = model(batch_n)
-        output = outputs.get(output_name)
-        assert output is not None
-        output_np = utils.to_value(output.output)[0]
-        max_class_indices = (-output_np).argsort()[0:nb_explanations]
+        with torch.no_grad():
+            outputs = model(batch_n)
+            output = outputs.get(output_name)
+            assert output is not None
+            output_np = utils.to_value(output.output)[0]
+            max_class_indices = (-output_np).argsort()[0:nb_explanations]
 
         # make sure the model is not contaminated by uncleaned hooks
         r = None
         with utils.CleanAddedHooks(model) as context:
             algorithm_instance = algorithm_fn(model=model, **algorithm_kwargs)
             r = algorithm_instance(inputs=batch_n, target_class_name=output_name, target_class=max_class_indices[0])
+
         if r is None:
             # the algorithm failed, go to the next one
             return
@@ -82,7 +101,7 @@ def run_classification_explanation(
             if g is None:
                 # discard this input!
                 continue
-            assert len(g) == 1, 'BUG: expected a single sample!'
+
             enumerate_i = 0
             c = max_class_indices[enumerate_i]  # the class output
             c_name = fill_class_name(output, c, datasets_infos, dataset_name, split_name)
@@ -91,21 +110,30 @@ def run_classification_explanation(
             filename = utils.safe_filename(filename)
             export_path = os.path.join(root, filename)
 
-            with open(export_path + '.txt', 'w') as f:
+            def format_image(g):
+                if not isinstance(g, (np.ndarray, torch.Tensor)):
+                    return g
                 if average_filters and len(g.shape) >= 3:
-                    batch_n['explanation'] = np.reshape(np.average(np.abs(g), axis=1), [g.shape[0], 1] + list(g.shape[2:]))
+                    return np.reshape(np.average(np.abs(g), axis=1), [g.shape[0], 1] + list(g.shape[2:]))
+                return g
+
+            with open(export_path + '.txt', 'w') as f:
+                if isinstance(g, collections.Mapping):
+                    # handle multiple explanation outputs
+                    for name, value in g.items():
+                        batch_n['explanation_{}'.format(name)] = format_image(value)
                 else:
-                    batch_n['explanation'] = g
+                    # default: single tensor
+                    batch_n['explanation'] = format_image(g)
                 batch_n['output_found'] = str(output_np)
                 batch_n['output_name_found'] = c_name
 
-                positive, negative = guided_back_propagation.GuidedBackprop.get_positive_negative_saliency(g)
-                batch_n['explanation_positive'] = positive
-                batch_n['explanation_negative'] = negative
-
+                #positive, negative = guided_back_propagation.GuidedBackprop.get_positive_negative_saliency(g)
+                #batch_n['explanation_positive'] = positive
+                #batch_n['explanation_negative'] = negative
+                #f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
+                #f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
                 sample_export.export_sample(batch_n, 0, export_path + '-', f)
-                f.write('gradient average positive={}\n'.format(np.average(g[np.where(g > 0)])))
-                f.write('gradient average negative={}\n'.format(np.average(g[np.where(g < 0)])))
 
 
 def fill_class_name(output, class_index, datasets_infos, dataset_name, split_name):
@@ -128,7 +156,7 @@ class CallbackExplainDecision(callback.Callback):
     """
     Explain the decision of a model
     """
-    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name='valid', algorithm=(ExplainableAlgorithm.GuidedBackPropagation, ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.Gradient, ExplainableAlgorithm.IntegratedGradients), output_name=None, nb_explanations=1, algorithms_kwargs=None, average_filters=True):
+    def __init__(self, max_samples=10, dirname='explained', dataset_name=None, split_name=None, algorithm=(ExplainableAlgorithm.MeaningfulPerturbations, ExplainableAlgorithm.GuidedBackPropagation, ExplainableAlgorithm.GradCAM, ExplainableAlgorithm.Gradient, ExplainableAlgorithm.IntegratedGradients), output_name=None, nb_explanations=1, algorithms_kwargs=default_algorithm_args(), average_filters=True):
         """
         Args:
             max_samples: the maximum number of examples to export
@@ -161,13 +189,16 @@ class CallbackExplainDecision(callback.Callback):
         self.output_name = output_name
         self.nb_explanations = nb_explanations
 
-    def first_time(self, datasets):
-        if self.dataset_name is None:
-            self.dataset_name = next(iter(datasets))
+    def first_time(self, datasets, options):
 
-        if datasets[self.dataset_name].get(self.split_name) is None:
+        self.dataset_name, self.split_name = utils.find_default_dataset_and_split_names(
+            datasets,
+            self.dataset_name,
+            self.split_name,
+            train_split_name=options['workflow_options']['train_split'])
+
+        if self.dataset_name is None:
             logger.error('can\'t find split={} for dataset={}'.format(self.split_name, self.dataset_name))
-            self.dataset_name = None
             return
 
         # record a particular batch of data so that we can have the exact same samples over multiple epochs
@@ -190,7 +221,7 @@ class CallbackExplainDecision(callback.Callback):
         model.eval()  # we are in evaluation mode!
 
         if self.batch is None:
-            self.first_time(datasets)
+            self.first_time(datasets, options)
         if self.batch is None:
             return
 
