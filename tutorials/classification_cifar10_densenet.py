@@ -263,14 +263,15 @@ class Net_simple(nn.Module):
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
-    options = trw.train.create_default_options(num_epochs=450)
+    device = torch.device('cuda:1')
+    options = trw.train.create_default_options(num_epochs=200, device=device)
     trainer = trw.train.Trainer(callbacks_post_training_fn=None)
     
     mean = np.asarray([0.4914, 0.4822, 0.4465], dtype=np.float32)
     std = np.asarray([0.2023, 0.1994, 0.2010], dtype=np.float32)
 
     transform_train = [
-        #trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
+        trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
         trw.transforms.TransformRandomCrop(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
         trw.transforms.TransformNormalize(mean=mean, std=std)
@@ -286,9 +287,9 @@ if __name__ == '__main__':
     model, results = trainer.fit(
         options,
         inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transform_train=transform_train, transform_valid=transform_valid, nb_workers=2, batch_size=100, data_processing_batch_size=None),
-        run_prefix='cifar10_darts_search',
+        run_prefix='cifar10_resnet',
         model_fn=lambda options: Net_simple(options),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(
-            datasets=datasets, model=model, learning_rate=0.1, momentum=0.9, weight_decay=5e-4, step_size=150, gamma=0.1))
+            datasets=datasets, model=model, learning_rate=0.05, momentum=0.9, weight_decay=5e-4, step_size=50, gamma=0.1))
 
     print('DONE')
