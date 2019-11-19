@@ -21,7 +21,7 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
     """
 
     if logging_directory is None:
-        logging_directory = os.environ.get('LOGGING_DIRECTORY')
+        logging_directory = os.environ.get('TRW_LOGGING_ROOT')
     if logging_directory is None:
         logging_directory = 'd:/tf/tf2/'
         
