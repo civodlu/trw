@@ -59,7 +59,7 @@ class JobExecutor:
 
         self.channel_worker_to_main, self.channel_main_to_worker = mp.Pipe()
 
-        self.pool = mp.get_context('spawn').Pool(
+        self.pool = mp.Pool(
             processes=nb_workers,
             initializer=JobExecutor.worker,
             initargs=(self.input_queue, self.output_queue, function_to_run, worker_post_process_results_fun, self.job_session_id, self.channel_worker_to_main, self.channel_main_to_worker)
