@@ -115,7 +115,7 @@ def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weigh
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 
-def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0):
+def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0, momentum=0.9):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with step learning rate scheduler
 
@@ -131,4 +131,4 @@ def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, s
             An optimizer with a step scheduler
         """
     scheduler_fn = functools.partial(create_scheduler_step_lr, step_size=step_size, gamma=gamma)
-    return create_sgd_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn)
+    return create_sgd_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn, momentum=momentum)
