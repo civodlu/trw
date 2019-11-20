@@ -44,6 +44,8 @@ class TestJobExecutor(TestCase):
             print(r)
             assert r['message'] == 'done'
             nb_samples += 1
+
+        executor.close()
         assert len(jobs_processes) == 10
 
     def test_job_executor_with_postprocessing(self):
@@ -65,4 +67,5 @@ class TestJobExecutor(TestCase):
         worker_msg = executor.channel_worker_to_main.recv()
         self.assertTrue(worker_msg == 'added test')
 
+        executor.close()
         assert len(keep_ids) == 0  # the set is not shared between children and parent

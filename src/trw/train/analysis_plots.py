@@ -135,9 +135,9 @@ def boxplots(
     ax.grid(which='both', axis='y', linestyle='--')
 
     for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(12)
+        tick.label1.set_fontsize(12)
         if rotate_x is not None:
-            tick.label.set_rotation(rotate_x)
+            tick.label1.set_rotation(rotate_x)
 
     if plot_trials:
         for index, values in enumerate(series):

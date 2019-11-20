@@ -38,7 +38,7 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
     else:
         assert batch_size % data_processing_batch_size == 0
         sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
-        sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 10)
+        sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
         sequence = sequence.batch(batch_size // data_processing_batch_size)
 
     splits['train'] = sequence.collate()

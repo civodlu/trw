@@ -244,3 +244,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
         self.initializer()
         return self
 
+    def close(self):
+        """
+        Finish and join the existing pool processes
+        """
+        if self.job_executer is not None:
+            self.job_executer.close()

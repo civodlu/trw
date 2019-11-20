@@ -77,8 +77,8 @@ class TestSequenceMap(TestCase):
             vs.append(v['volume'].shape)
             print(v['volume'].shape)
         time_end = time.time()
+        split.close()
         print('test_map_async_1.TIME=', time_end - time_start)
-
         self.assertTrue(len(vs) == 20)
 
     def test_map_sync_multiple_items(self):
@@ -91,6 +91,8 @@ class TestSequenceMap(TestCase):
             vs.append(v['volume'].shape)
 
         self.assertTrue(len(vs) == 20 * 5)
+        split.close()
+        print('DONE')
 
     def test_map_async_multiple_items(self):
         # make sure we have iterate through each item of the returned items
@@ -102,6 +104,8 @@ class TestSequenceMap(TestCase):
             vs.append(v['volume'].shape)
 
         self.assertTrue(len(vs) == 20 * 5)
+        split.close()
+        print('DONE')
 
     def test_map_async_20_pytorch(self):
         # large pytorch arrays, this should be much faster to share compare to numpy arrays as
@@ -118,11 +122,15 @@ class TestSequenceMap(TestCase):
         print('test_map_async_1.TIME=', time_end - time_start)
 
         self.assertTrue(len(vs) == 20)
+        split.close()
+        print('DONE')
 
     @staticmethod
     def run_complex_2_map(nb_workers, nb_indices, with_wait):
         # the purpose of this test is to combine 2 maps: one executing slow calls
         # (e.g., IO limited) with another one to do augmentation (e.g., CPU limited)
+
+        print('run_complex_2_map START', datetime.datetime.now().time())
 
         indices = np.asarray(list(range(nb_indices)))
         split = {
@@ -166,6 +174,11 @@ class TestSequenceMap(TestCase):
         assert len(batches) == len(indices) * 10, 'nb={}'.format(len(batches))
         assert len(ids) == len(indices) * 10
 
+        split.close()
+
+        print('run_complex_2_map END', datetime.datetime.now().time())
+
+
     def test_complex_2_map__single_worker(self):
         TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_wait=True)
 
@@ -190,3 +203,4 @@ class TestSequenceMap(TestCase):
         for batch in split:
             break
         split.job_executer.close()
+        print('DONE')

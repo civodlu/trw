@@ -82,7 +82,6 @@ class TestSequenceReservoir(TestCase):
             error_percent = abs(counts - expected_counts) / expected_counts
             self.assertTrue(error_percent < 0.1)
 
-
     def test_subsample_uid(self):
         """
         Make sure we can resample the sequence with UID
@@ -125,7 +124,7 @@ class TestSequenceReservoir(TestCase):
             numpy_sequence, min_reservoir_samples=10, max_reservoir_samples=10, function_to_run=make_list_dicts).batch(5)
 
         for batch in sequence:
-            assert trw.train.len_batch(batch) == 5 * 10, 'found={}, epxected={}'.format(trw.train.len_batch(batch), 5 * 10)
+            assert trw.train.len_batch(batch) == 5 * 10, 'found={}, expected={}'.format(trw.train.len_batch(batch), 5 * 10)
 
     def test_fill_reservoir_every_epoch(self):
         """

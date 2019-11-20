@@ -46,6 +46,9 @@ class JobExecutor:
         :param worker_post_process_results_fun: a function used to post-process the worker results. It takes as input `results, channel_main_to_worker, channel_worker_to_main`
         :param output_queue_size: the output queue size. If `0`, no maximum size. If `None`, same as `max_jobs_at_once`
         """
+
+        #print('JobExecutor | ', os.getpid(), '| created | ', datetime.datetime.now().time())
+
         self.input_queue = mp.Queue(maxsize=max_jobs_at_once)
         if output_queue_size is None:
             self.output_queue = mp.Queue(maxsize=max_jobs_at_once)
@@ -58,11 +61,12 @@ class JobExecutor:
         self.job_session_id = mp.Value('i', 0)
 
         self.channel_worker_to_main, self.channel_main_to_worker = mp.Pipe()
+        self.must_finish_processes = mp.Value('i', 0)
 
         self.pool = mp.Pool(
             processes=nb_workers,
             initializer=JobExecutor.worker,
-            initargs=(self.input_queue, self.output_queue, function_to_run, worker_post_process_results_fun, self.job_session_id, self.channel_worker_to_main, self.channel_main_to_worker)
+            initargs=(self.input_queue, self.output_queue, function_to_run, worker_post_process_results_fun, self.job_session_id, self.channel_worker_to_main, self.channel_main_to_worker, self.must_finish_processes)
         )
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -81,8 +85,14 @@ class JobExecutor:
         """
         Terminate all jobs
         """
-        self.pool.terminate()
+        # first notify all processes that they need to stop
+        #print('POOL NOTIFY STOP-----------------')
+        self.must_finish_processes.value = 1
+
+        self.pool.close()
         self.pool.join()
+
+        #print('JobExecutor | ', os.getpid(), '| closed | ', datetime.datetime.now().time())
 
     def reset(self):
         """
@@ -102,15 +112,28 @@ class JobExecutor:
             self.job_session_id.value += 1
 
     @staticmethod
-    def worker(input_queue, output_queue, func, post_process_results_fun, job_session_id, channel_worker_to_main, channel_main_to_worker):
+    def worker(input_queue, output_queue, func, post_process_results_fun, job_session_id, channel_worker_to_main, channel_main_to_worker, must_finish):
         print('Started worker=', os.getpid(), datetime.datetime.now().time())
         while True:
             # TODO manage exceptions
-            # blocking call to get the next work item
 
             #print('Worker | ', os.getpid(), '| retrieving job | ', datetime.datetime.now().time())
-            item = input_queue.get(True)
-            #print('Worker | ', os.getpid(), '| job retrieved | ', datetime.datetime.now().time())
+            item = None
+            while True:
+                if must_finish.value > 0:
+                    # the process was notified to stop, so exit now
+                    return None
+                try:
+                    # To handle the pool shutdown, we MUST have
+                    # a timeout parameter
+                    item = input_queue.get(True, timeout=default_queue_timeout)
+                except (Empty, KeyboardInterrupt):
+                    # The queue is empty, so we have to wait more.
+                    continue
+
+                # we have a value, exit the loop to proceed
+                break
+            # print('Worker | ', os.getpid(), '| job retrieved | ', datetime.datetime.now().time())
 
             with job_session_id.get_lock():
                 started_session_id = job_session_id.value
@@ -298,7 +321,7 @@ class SequenceMap(sequence.Sequence):
                     # time_blocked_end = time.time()
                     # self.time_spent_in_blocked_state += time_blocked_end - time_blocked_start
                     break
-                except Empty:
+                except (Empty, KeyboardInterrupt):
                     # no job available, make sure the worker of the other pools are not starved
                     self.fill_queue_all_sequences()
                     # self.fill_queue()
@@ -333,4 +356,11 @@ class SequenceMap(sequence.Sequence):
         self.initializer()
         self.iter_source = self.source_split.__iter__()
         return self
+
+    def close(self):
+        """
+        Finish and join the existing pool processes
+        """
+        if self.job_executer is not None:
+            self.job_executer.close()
 
