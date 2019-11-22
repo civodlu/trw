@@ -25,3 +25,9 @@ steps:
     pip install pytest pytest-azurepipelines
     pytest --ignore=performance
   displayName: 'pytest'
+  
+- task: PublishTestResults@2
+  inputs:
+    testResultsFormat: 'JUnit' # Options: JUnit, NUnit, VSTest, xUnit
+    testResultsFiles: '**/TEST-*.xml' 
+  condition: succeededOrFailed()
