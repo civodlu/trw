@@ -23,11 +23,12 @@ steps:
 
 - script: |
     pip install pytest pytest-azurepipelines pytest-cov
-    pytest --ignore=performance --cov-report html
+    pytest --ignore=performance --cov-report html --junitxml=reports/tests.xml --cov trw
   displayName: 'pytest'
   
 - task: PublishTestResults@2
   inputs:
     testResultsFormat: 'JUnit' # Options: JUnit, NUnit, VSTest, xUnit
-    testResultsFiles: '**/TEST-*.xml' 
+    testResultsFiles: 'reports/tests.xml'
+  condition: succeededOrFailed()
   
