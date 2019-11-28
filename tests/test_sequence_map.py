@@ -10,7 +10,7 @@ import copy
 
 
 def load_fake_volumes_npy(item):
-    v = np.ndarray([512, 512, 500], dtype=np.float32)
+    v = np.ndarray([32, 32, 64], dtype=np.float32)
     v.fill(float(item['values']))
 
     r = {
@@ -21,7 +21,7 @@ def load_fake_volumes_npy(item):
 
 def load_fake_volumes_torch(item):
     time_start = time.time()
-    v = torch.ones([512, 512, 500], dtype=torch.float32)
+    v = torch.ones([32, 32, 64], dtype=torch.float32)
     v.fill_(float(item['values']))
     time_end = time.time()
     print('torch_construction_time=', time_end - time_start)
@@ -34,7 +34,7 @@ def load_fake_volumes_torch(item):
 def load_data(item):
     print('job | ', os.getpid(), ' | loading data |', item['indices'], datetime.datetime.now().time())
     item['time_created'] = time.time()
-    time.sleep(2)
+    time.sleep(0.2)
     item['time_loaded'] = time.time()
     return item
 

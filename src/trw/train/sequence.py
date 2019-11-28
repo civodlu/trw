@@ -1,6 +1,6 @@
 import logging
 import collections
-from trw.train import utils
+from trw.train import utilities
 import torch
 import torch.utils.data.dataloader
 from trw.train import sampler
@@ -59,7 +59,7 @@ def remove_nested_list(items):
 
 # one problem with the default pytorch collate is that it is creating a new dimension
 # for the samples instead of concatenating the samples
-default_collate_list_of_dicts = functools.partial(utils.collate_list_of_dicts, device=None)
+default_collate_list_of_dicts = functools.partial(utilities.collate_list_of_dicts, device=None)
 
 
 class Sequence:
@@ -95,7 +95,7 @@ class Sequence:
         """
         raise NotImplementedError()
     
-    def collate(self, collate_fn=utils.default_collate_fn, device=None):
+    def collate(self, collate_fn=utilities.default_collate_fn, device=None):
         """
         Aggregate the input batch as a dictionary of torch.Tensor and move the data to the appropriate device
         

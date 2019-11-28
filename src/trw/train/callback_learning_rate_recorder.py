@@ -3,7 +3,7 @@ import logging
 import collections
 
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import analysis_plots
 
 
@@ -42,7 +42,7 @@ class CallbackLearningRateRecorder(callback.Callback):
         if self.output_path is not None:
             list_of_lr_optimizers = {'optimizer ' + name: [l] for name, l in self.lr_optimizers.items()}
 
-            utils.create_or_recreate_folder(self.output_path)
+            utilities.create_or_recreate_folder(self.output_path)
             analysis_plots.plot_group_histories(
                 self.output_path,
                 history_values=list_of_lr_optimizers,

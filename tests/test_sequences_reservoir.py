@@ -13,14 +13,14 @@ def function_to_run(batch):
 
 def function_to_run2(batch):
     print('JOB starte', batch['path'])
-    time.sleep(0.5)
+    time.sleep(0.1)
     return batch
 
 
 def make_volume_torch(batch):
     print('JOB starte', batch['path'])
-    batch['volume'] = torch.zeros([1, 91, 110, 91], dtype=torch.float)
-    time.sleep(2)
+    batch['volume'] = torch.zeros([1, 10, 11, 12], dtype=torch.float)
+    time.sleep(0.2)
     return batch
 
 

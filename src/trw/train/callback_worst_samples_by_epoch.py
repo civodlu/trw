@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import outputs as trw_outputs
 from trw.train import sample_export
 from trw.train import sequence_array
@@ -62,14 +62,14 @@ def export_samples_v2(dataset_name, split_name, device, split, model, losses, ro
         nonlocal datasets_infos
         
         # merge the outputs with the batch, then export everything
-        classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, split_name)
+        classification_mappings = utilities.get_classification_mappings(datasets_infos, dataset_name, split_name)
         output_and_batch_merged = copy.copy(batch)
         for output_name, output in loss_terms.items():
             for output_value_name, output_value in output.items():
                 output_and_batch_merged[output_name + '_' + output_value_name] = output_value
             
         # finally, export the errors
-        batch_size = utils.len_batch(batch)
+        batch_size = utilities.len_batch(batch)
         for sample_id in range(batch_size):
             sample_output = os.path.join(root, dataset_name + '_' + split_name + '_s' + str(nb_exported_samples))
             txt_file = sample_output + '.txt'
@@ -261,7 +261,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
 
         self.root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
         if not os.path.exists(self.root):
-            utils.create_or_recreate_folder(self.root)
+            utilities.create_or_recreate_folder(self.root)
 
         dataset_output = outputs.get(self.dataset_name)
         if dataset_output is None:
@@ -274,7 +274,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                 output = split_output.get(self.output_name)
                 if output is not None and 'uid' in output:
                     uids = output['uid']
-                    output_losses = utils.to_value(output['losses'])
+                    output_losses = utilities.to_value(output['losses'])
                     assert len(uids) == len(output_losses)
                     for loss, uid in zip(output_losses, uids):
                         # record the epoch: for example if we have resampled dataset,

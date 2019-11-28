@@ -1,5 +1,5 @@
 from trw.train import callback_tensorboard
-from trw.train import utils
+from trw.train import utilities
 from trw.train import trainer
 from trw.train import outputs as O
 import functools
@@ -79,7 +79,7 @@ def add_classification_strings_from_output(dataset_name, split_name, output, dat
     if is_classification:
         # special handling of the classification node: add class names in string too so it is easier
         # to review the results, specially when we have many classes
-        mapping = utils.get_classification_mapping(datasets_infos, dataset_name, split_name, output_ref.classes_name)
+        mapping = utilities.get_classification_mapping(datasets_infos, dataset_name, split_name, output_ref.classes_name)
         if mapping is not None:
             output_values = output.get('output')
             nb_samples = len(output_values)
@@ -87,9 +87,9 @@ def add_classification_strings_from_output(dataset_name, split_name, output, dat
             output_strs = []
             output_truth_strs = []
             for n in range(nb_samples):
-                output_str = utils.get_class_name(mapping, output_values[n])
+                output_str = utilities.get_class_name(mapping, output_values[n])
                 output_truth_values = output.get('output_truth')
-                output_truth_str = utils.get_class_name(mapping, output_truth_values[n])
+                output_truth_str = utilities.get_class_name(mapping, output_truth_values[n])
                 output_strs.append(output_str)
                 output_truth_strs.append(output_truth_str)
 
@@ -125,7 +125,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
         self.features_to_discard = ['output_ref']
 
     def first_time(self, datasets, options):
-        self.dataset_name, self.split_name = utils.find_default_dataset_and_split_names(
+        self.dataset_name, self.split_name = utilities.find_default_dataset_and_split_names(
             datasets,
             default_dataset_name=self.dataset_name,
             default_split_name=self.split_name,
@@ -198,14 +198,14 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
                 # else a global feature (e.g., learning rate, dropout rate...)
                 full_name = prefix + feature_name
                 if is_batch_vector(feature_values, batch_size):
-                    embedding[full_name].append(utils.to_value(feature_values))
+                    embedding[full_name].append(utilities.to_value(feature_values))
 
         def collect_embedding(dataset_name, split_name, batch, loss_terms, embedding, embedding_name, image_name):
-            batch_size = utils.len_batch(batch)
+            batch_size = utilities.len_batch(batch)
 
             embedding_values = loss_terms.get(embedding_name)
             if embedding_values is not None:
-                embedding['output'].append(utils.to_value(embedding_values['output']))
+                embedding['output'].append(utilities.to_value(embedding_values['output']))
 
             for output_name, output in loss_terms.items():
                 if output_name == embedding_name:
@@ -216,7 +216,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
             images = batch.get(image_name)
             if images is not None:
                 images = get_as_image(images)
-                embedding['images'].append(utils.to_value(images))
+                embedding['images'].append(utilities.to_value(images))
 
             fill_embedding(batch_size, batch)
 

@@ -1,13 +1,13 @@
 from .options import create_default_options
+from .utilities import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
+    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device, transfer_batch_to_device, find_default_dataset_and_split_names
+from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name
+
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, default_sum_all_losses
 
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, create_scheduler_step_lr, \
     create_adam_optimizers_fn, create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn
-
-from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, OutputSegmentation, default_sample_uid_name
-from .utils import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
-    default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, get_device, transfer_batch_to_device, find_default_dataset_and_split_names
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
 from .callback import Callback

@@ -3,7 +3,7 @@ import functools
 import logging
 from trw.train import callback
 from trw.train import trainer
-from trw.train import utils
+from trw.train import utilities
 from trw.train import sample_export
 
 
@@ -42,7 +42,7 @@ def callbacks_per_loss_term(
             del batch[feature_exclusion]
             
     # calculate how many samples to export
-    nb_batch_samples = utils.len_batch(batch)
+    nb_batch_samples = utilities.len_batch(batch)
     nb_samples_exported = len(exported_cases)
     nb_samples_to_export = min(max_samples - nb_samples_exported, nb_batch_samples)
     if nb_samples_to_export <= 0:
@@ -54,7 +54,7 @@ def callbacks_per_loss_term(
         exported_cases.append(id)
         sample_output = os.path.join(root, dataset_name + '_' + split_name + '_s' + str(id) + '_e' + str(epoch))
         txt_file = sample_output + '.txt'
-        classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, split_name)
+        classification_mappings = utilities.get_classification_mappings(datasets_infos, dataset_name, split_name)
         with open(txt_file, 'w') as f:
             sample_export.export_sample(
                 batch,
@@ -109,7 +109,7 @@ class CallbackExportSamples(callback.Callback):
         for dataset_name, dataset in datasets.items():
             root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname, dataset_name)
             if not os.path.exists(root):
-                utils.create_or_recreate_folder(root)
+                utilities.create_or_recreate_folder(root)
     
             for split_name, split in dataset.items():
                 exported_cases = []

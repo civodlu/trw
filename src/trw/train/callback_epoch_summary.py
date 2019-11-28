@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 
 
 def update_best_so_far(epoch, best_so_far, dataset_name, split_name, output_name, category_name, category_value):
@@ -35,7 +35,7 @@ class CallbackEpochSummary(callback.Callback):
     """
     Summarizes the last epoch and display useful information such as metric per dataset/split
     """
-    def __init__(self, logger=utils.log_and_print, track_best_so_far=True):
+    def __init__(self, logger=utilities.log_and_print, track_best_so_far=True):
         self.logger = logger
         self.track_best_so_far = track_best_so_far
         self.best_so_far = {}

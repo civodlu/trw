@@ -1,7 +1,7 @@
 import os
 from trw.train import callback
 from trw.train import trainer
-from trw.train import utils
+from trw.train import utilities
 from trw.train import sample_export
 from trw.train import sequence_array
 from trw.train import outputs as outputs_trw
@@ -67,7 +67,7 @@ def run_classification_explanation(
         logger.info('sample={}'.format(n))
         batch_n = sequence_array.SequenceArray.get(
             batch,
-            utils.len_batch(batch),
+            utilities.len_batch(batch),
             np.asarray([n]),
             transforms=None,
             use_advanced_indexing=True)
@@ -81,12 +81,12 @@ def run_classification_explanation(
             outputs = model(batch_n)
             output = outputs.get(output_name)
             assert output is not None
-            output_np = utils.to_value(output.output)[0]
+            output_np = utilities.to_value(output.output)[0]
             max_class_indices = (-output_np).argsort()[0:nb_explanations]
 
         # make sure the model is not contaminated by uncleaned hooks
         r = None
-        with utils.CleanAddedHooks(model) as context:
+        with utilities.CleanAddedHooks(model) as context:
             algorithm_instance = algorithm_fn(model=model, **algorithm_kwargs)
             r = algorithm_instance(inputs=batch_n, target_class_name=output_name, target_class=max_class_indices[0])
 
@@ -107,7 +107,7 @@ def run_classification_explanation(
             c_name = fill_class_name(output, c, datasets_infos, dataset_name, split_name)
 
             filename = 'sample-{}-output-{}-epoch-{}-rank-{}-alg-{}-explanation_for-{}'.format(n, input_name, epoch, enumerate_i, algorithm_name, c_name)
-            filename = utils.safe_filename(filename)
+            filename = utilities.safe_filename(filename)
             export_path = os.path.join(root, filename)
 
             def format_image(g):
@@ -143,7 +143,7 @@ def fill_class_name(output, class_index, datasets_infos, dataset_name, split_nam
 
     c_name = None
     if isinstance(output, outputs_trw.OutputClassification):
-        c_names = utils.get_classification_mapping(datasets_infos, dataset_name, split_name, output.classes_name)
+        c_names = utilities.get_classification_mapping(datasets_infos, dataset_name, split_name, output.classes_name)
         if c_names is not None:
             c_names = c_names['mappinginv']
             c_name = c_names.get(class_index)
@@ -191,7 +191,7 @@ class CallbackExplainDecision(callback.Callback):
 
     def first_time(self, datasets, options):
 
-        self.dataset_name, self.split_name = utils.find_default_dataset_and_split_names(
+        self.dataset_name, self.split_name = utilities.find_default_dataset_and_split_names(
             datasets,
             self.dataset_name,
             self.split_name,
@@ -227,9 +227,9 @@ class CallbackExplainDecision(callback.Callback):
 
         root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
         if not os.path.exists(root):
-            utils.create_or_recreate_folder(root)
+            utilities.create_or_recreate_folder(root)
 
-        batch = utils.transfer_batch_to_device(self.batch, device=device)
+        batch = utilities.transfer_batch_to_device(self.batch, device=device)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         outputs = model(batch)
@@ -238,7 +238,7 @@ class CallbackExplainDecision(callback.Callback):
             logger.error('can\'t find a classification output')
             return
 
-        nb_samples = min(self.max_samples, utils.len_batch(batch))
+        nb_samples = min(self.max_samples, utilities.len_batch(batch))
         for algorithm in self.algorithms:
             algorithm_kwargs = {}
             if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:

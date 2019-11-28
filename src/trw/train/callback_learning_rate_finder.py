@@ -9,7 +9,7 @@ import collections
 
 from trw.train import callback
 from trw.train import trainer
-from trw.train import utils
+from trw.train import utilities
 from trw.train import analysis_plots
 
 
@@ -30,7 +30,7 @@ class CallbackStopEpoch:
     def __call__(self, dataset_name, split_name, batch):
         if self.current_samples >= self.nb_samples:
             raise StopIteration()
-        nb_batch_samples = utils.len_batch(batch)
+        nb_batch_samples = utilities.len_batch(batch)
         self.current_samples += nb_batch_samples
 
 
@@ -217,7 +217,7 @@ class CallbackLearningRateFinder(callback.Callback):
         device = options['workflow_options']['device']
 
         output_path = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
-        utils.create_or_recreate_folder(output_path)
+        utilities.create_or_recreate_folder(output_path)
 
         if self.dataset_name is None:
             self.dataset_name = next(iter(datasets))
@@ -253,7 +253,7 @@ class CallbackLearningRateFinder(callback.Callback):
             optimizers, _ = optimizers_fn(datasets, model_copy)
             optimizer = optimizers.get(self.dataset_name)
             assert optimizer is not None, 'optimizer can\'t be found for dataset={}'.format(self.dataset_name)
-            utils.set_optimizer_learning_rate(optimizer, learning_rate)
+            utilities.set_optimizer_learning_rate(optimizer, learning_rate)
 
             callback_stop_epoch.reset()
             all_loss_terms = trainer.train_loop(
@@ -270,7 +270,7 @@ class CallbackLearningRateFinder(callback.Callback):
 
             loss = 0.0
             for loss_batch in all_loss_terms:
-                current_loss = utils.to_value(loss_batch['overall_loss']['loss'])
+                current_loss = utilities.to_value(loss_batch['overall_loss']['loss'])
                 loss += current_loss
             loss /= len(all_loss_terms)
 
@@ -315,7 +315,7 @@ class CallbackLearningRateFinder(callback.Callback):
             if optimizers is not None:
                 for optimizer_name, optimizer in optimizers.items():
                     logger.info('optimizer={}, changed learning rate={}'.format(optimizer_name, best_learning_rate))
-                    utils.set_optimizer_learning_rate(optimizer, best_learning_rate)
+                    utilities.set_optimizer_learning_rate(optimizer, best_learning_rate)
             else:
                 logger.warning('No optimizers available in `kwargs`')
 

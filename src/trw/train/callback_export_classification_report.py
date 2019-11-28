@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import analysis_plots
 from trw.train import outputs as trf_outputs
 import os
@@ -11,7 +11,7 @@ def get_mappinginv(datasets_infos, dataset_name, split_name, class_name):
     """
     Extract the `mappinginv` from the datasets_infos
     """
-    mapping = utils.get_classification_mapping(datasets_infos, dataset_name, split_name, class_name)
+    mapping = utilities.get_classification_mapping(datasets_infos, dataset_name, split_name, class_name)
     if mapping is not None:
         return mapping.get('mappinginv')
     return None

@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import analysis_plots
 import os
 import collections
@@ -71,7 +71,7 @@ class CallbackExportHistory(callback.Callback):
         logger.info('CallbackExportHistory.__call__ started')
         export_root = options['workflow_options']['current_logging_directory']
         sample_root_dir = os.path.join(export_root, self.export_dirname)
-        utils.create_or_recreate_folder(sample_root_dir)
+        utilities.create_or_recreate_folder(sample_root_dir)
 
         for dataset_name, dataset in outputs.items():
             split_name, outputs = next(iter(dataset.items()))

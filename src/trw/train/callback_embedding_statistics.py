@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import trainer
 import collections
 import numpy as np
@@ -53,12 +53,12 @@ class CollectBatchAndProcessStats:
             output = embedding.get(self.embedding_output_name)
             if output is None:
                 continue
-            output = utils.to_value(output)
+            output = utilities.to_value(output)
             for stat_name, stat_fn in self.statistics_fn.items():
                 value = stat_fn(output)
                 self.statistics[embedding_name][stat_name].append(value)
                 
-        self.nb_samples_evaluated += utils.len_batch(batch)
+        self.nb_samples_evaluated += utilities.len_batch(batch)
         
     def get_stats(self):
         stats_all = collections.OrderedDict()

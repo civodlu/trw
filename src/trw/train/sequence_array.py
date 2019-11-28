@@ -1,6 +1,6 @@
 from trw.train import sequence
 from trw.train import sampler
-from trw.train import utils
+from trw.train import utilities
 import numpy as np
 import copy
 import torch
@@ -36,7 +36,7 @@ class SequenceArray(sequence.Sequence):
 
         # create a unique UID
         if sample_uid_name is not None and sample_uid_name not in split:
-            split[sample_uid_name] = np.asarray(np.arange(utils.len_batch(split)))
+            split[sample_uid_name] = np.asarray(np.arange(utilities.len_batch(split)))
 
     def subsample(self, nb_samples):
         # get random indices
@@ -47,7 +47,7 @@ class SequenceArray(sequence.Sequence):
         indices = next(iter(subsample_sample))
         subsampled_split = SequenceArray.get(
             self.split,
-            utils.len_batch(self.split),
+            utilities.len_batch(self.split),
             indices,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -78,7 +78,7 @@ class SequenceArray(sequence.Sequence):
         # extract the samples
         subsampled_split = SequenceArray.get(
             self.split,
-            utils.len_batch(self.split),
+            utilities.len_batch(self.split),
             indices_to_keep,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -92,7 +92,7 @@ class SequenceArray(sequence.Sequence):
         return SequenceArray(subsampled_split, new_sampler, transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
 
     def initializer(self):
-        self.nb_samples = utils.len_batch(self.split)
+        self.nb_samples = utilities.len_batch(self.split)
         self.sampler.initializer(self.split)
         self.sampler_iterator = iter(self.sampler)
 

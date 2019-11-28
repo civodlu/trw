@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import trainer
 import collections
 import torch.nn as nn
@@ -98,7 +98,7 @@ def model_summary(model, batch, logger):
 
     # assume 4 bytes/number (float on cuda).
     total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
-    total_params_size = abs(utils.to_value(total_params) * 4. / (1024 ** 2.))
+    total_params_size = abs(utilities.to_value(total_params) * 4. / (1024 ** 2.))
 
     logger("================================================================================")
     logger("Total params: {0:,}".format(total_params))
@@ -121,7 +121,7 @@ class CallbackModelSummary(callback.Callback):
     """
     Display important characteristics of the model (e.g., FLOPS, number of parameters, layers, shapes)
     """
-    def __init__(self, logger=utils.log_and_print, dataset_name=None, split_name=None):
+    def __init__(self, logger=utilities.log_and_print, dataset_name=None, split_name=None):
         self.logger = logger
         self.dataset_name = dataset_name
         self.split_name = split_name
@@ -139,7 +139,7 @@ class CallbackModelSummary(callback.Callback):
         
         # make sure the input data is on the same device as the model
         device = options['workflow_options']['device']
-        batch = utils.transfer_batch_to_device(batch, device=device)
+        batch = utilities.transfer_batch_to_device(batch, device=device)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
         
         model_summary(model, batch, logger=self.logger)

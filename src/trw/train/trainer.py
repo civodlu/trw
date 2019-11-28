@@ -10,7 +10,6 @@ import pickle
 import time
 import itertools
 from trw.train import outputs
-from trw.train import utils
 from trw.train import callback_model_summary
 from trw.train import callback_data_summary
 from trw.train import callback_export_classification_errors
@@ -30,6 +29,7 @@ from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
 from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
+from trw.train import utilities
 
 logger = logging.getLogger(__name__)
 
@@ -169,7 +169,7 @@ def loss_term_cleanup(loss_terms):
             ref.loss_term_cleanup(loss_term)
 
 
-@utils.time_it()
+@utilities.time_it()
 def train_loop(
         device,
         dataset_name,
@@ -224,7 +224,7 @@ def train_loop(
             total_batch_processing_time += current_batch_processing
 
             total_collate_and_postprocess_start = time.perf_counter()
-            batch = utils.transfer_batch_to_device(batch, device)
+            batch = utilities.transfer_batch_to_device(batch, device)
             #batch = utils.default_collate_fn(batch, device=device, non_blocking=True)
             
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
@@ -255,7 +255,7 @@ def train_loop(
 
             loss_term_cleanup(loss_terms)
             batch_processing_last = time.perf_counter()
-            nb_samples += utils.len_batch(batch)
+            nb_samples += utilities.len_batch(batch)
 
     except StopIteration:
         pass
@@ -305,7 +305,7 @@ def eval_loop(
     try:
         for i, batch in enumerate(split):
             assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
-            batch = utils.transfer_batch_to_device(batch, device=device)
+            batch = utilities.transfer_batch_to_device(batch, device=device)
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
             with torch.no_grad():  # do not keep track of the gradient as we are just evaluating
                 outputs = model(batch)
@@ -420,7 +420,7 @@ def epoch_train_eval(
     return outputs_by_dataset_epoch, history_by_dataset_epoch
 
 
-default_logger = utils.log_and_print
+default_logger = utilities.log_and_print
 
 
 def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, with_export_augmentations=True):
@@ -661,7 +661,7 @@ class Trainer:
         options['workflow_options']['current_logging_directory'] = log_path
 
         # now clear our log path to remove previous files if needed
-        utils.create_or_recreate_folder(log_path)
+        utilities.create_or_recreate_folder(log_path)
         
         if len(logging.root.handlers) == 0:
             # there is no logger configured, so add a basic one
@@ -674,7 +674,7 @@ class Trainer:
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
         #formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-        formatter = utils.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
 

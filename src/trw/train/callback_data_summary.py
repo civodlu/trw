@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 import collections
 import numpy as np
 import logging
@@ -12,12 +12,12 @@ class CallbackDataSummary(callback.Callback):
     """
     Summarizes the data (min value, max value, number of batches, shapes) for each split of each dataset
     """
-    def __init__(self, logger=utils.log_and_print, collect_stats=True):
+    def __init__(self, logger=utilities.log_and_print, collect_stats=True):
         self.logger = logger
         self.collect_stats = collect_stats
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
-        @utils.time_it(log=self.logger, time_name='CallbackDataSummary')
+        @utilities.time_it(log=self.logger, time_name='CallbackDataSummary')
         def run():
             stats_to_average = ['mean', 'std']
             for dataset_name, dataset in datasets.items():
@@ -27,10 +27,10 @@ class CallbackDataSummary(callback.Callback):
                     batch = None
                     features_stats = collections.defaultdict(collections.OrderedDict)
                     for batch_id, batch in enumerate(split):
-                        nb_samples += utils.len_batch(batch)
+                        nb_samples += utilities.len_batch(batch)
                         if self.collect_stats:
                             for feature_name, feature_value in batch.items():
-                                feature_value = utils.to_value(feature_value)
+                                feature_value = utilities.to_value(feature_value)
                                 stats = features_stats[feature_name]
                                 if isinstance(feature_value, np.ndarray):
                                     if batch_id == 0:

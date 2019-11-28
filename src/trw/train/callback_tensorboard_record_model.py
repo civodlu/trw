@@ -1,5 +1,5 @@
 from trw.train import callback_tensorboard
-from trw.train import utils
+from trw.train import utilities
 from trw.train import trainer
 import os
 import logging
@@ -40,7 +40,7 @@ class CallbackTensorboardRecordModel(callback_tensorboard.CallbackTensorboardBas
         model.eval()
 
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
-        batch = utils.transfer_batch_to_device(batch, device=device)
+        batch = utilities.transfer_batch_to_device(batch, device=device)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         class NoDictModel(torch.nn.Module):
@@ -67,10 +67,10 @@ class CallbackTensorboardRecordModel(callback_tensorboard.CallbackTensorboardBas
         try:
             # option 1)
             root_onnx = os.path.join(root, self.onnx_folder)
-            utils.create_or_recreate_folder(root_onnx)
+            utilities.create_or_recreate_folder(root_onnx)
             onnx_filepath = os.path.join(root_onnx, 'model.onnx')
             logger.info('exporting ONNX model to `{}`'.format(onnx_filepath))
-            with utils.CleanAddedHooks(model):  # make sure no extra hooks are kept
+            with utilities.CleanAddedHooks(model):  # make sure no extra hooks are kept
                 with open(onnx_filepath, 'wb') as f:
                     torch.onnx.export(NoDictModel(model, batch), torch.Tensor(), f)  # fake input. The input is already binded in the wrapper!
                 logger_tb.add_onnx_graph(onnx_filepath)

@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import outputs as trf_outputs
 from trw.train import sample_export
 from trw.train import trainer
@@ -49,7 +49,7 @@ class CallbackExportClassificationErrors(callback.Callback):
                     error_indices = np.where(found != truth)[0]
 
                     # make sure we can link the output class mapping in text
-                    classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, split_name)
+                    classification_mappings = utilities.get_classification_mappings(datasets_infos, dataset_name, split_name)
                     if classification_mappings is not None:
                         classification_mapping = classification_mappings.get(ref.classes_name)
                         if classification_mapping is not None:
@@ -78,7 +78,7 @@ class CallbackExportClassificationErrors(callback.Callback):
         device = options['workflow_options']['device']
         for dataset_name, dataset in datasets.items():
             root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname, dataset_name)
-            utils.create_or_recreate_folder(root)
+            utilities.create_or_recreate_folder(root)
             
             for split_name, split in dataset.items():
                 if self.discard_train:

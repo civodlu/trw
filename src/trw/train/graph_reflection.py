@@ -5,7 +5,7 @@ such as finding layers of specified types in a nn.Module or using the `grad_fn`
 
 import torch
 import torch.nn as nn
-from trw.train import utils
+from trw.train import utilities
 import collections
 import logging
 import traceback
@@ -91,7 +91,7 @@ def find_last_forward_types(model, inputs, types, relative_index=0):
     Returns:
         None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
     """
-    with utils.CleanAddedHooks(model):
+    with utilities.CleanAddedHooks(model):
         try:
             capture_conv = _CaptureLastModuleType(types, relative_index=relative_index)
             for module in model.modules():

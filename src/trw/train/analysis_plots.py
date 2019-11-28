@@ -4,7 +4,7 @@ Defines the main plots and reports used for the analysis of our models
 
 import matplotlib.pyplot as plt
 import numpy as np
-from trw.train import utils
+from trw.train import utilities
 import collections
 from textwrap import wrap
 import itertools
@@ -51,7 +51,7 @@ def export_figure(path, name, maximum_length=259, dpi=300):
     :param maximum_length: the maximum length of the full path of a figure. If the full path name is greater than `maximum_length`, the `name` will be subs-ampled to the maximal allowed length
     :param dpi: Dots Per Inch: the density of the figure
     """
-    figure_name = utils.safe_filename(name) + '.png'
+    figure_name = utilities.safe_filename(name) + '.png'
 
     if len(path) >= maximum_length:
         logger.error('path is too long=', path)
@@ -197,7 +197,7 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
 
     fig = plt.figure()
     if colors is None:
-        colors = utils.make_unique_colors()
+        colors = utilities.make_unique_colors()
         colors = np.asarray(colors) / 255
     assert len(colors) >= len(found_scores_1), 'TODO define more colors!'
     cutoff = None
@@ -347,7 +347,7 @@ def classification_report(
     return d
 
 
-def plot_group_histories(root, history_values, title, xlabel, ylabel, max_nb_plots_per_group=5, colors=utils.make_unique_colors_f()):
+def plot_group_histories(root, history_values, title, xlabel, ylabel, max_nb_plots_per_group=5, colors=utilities.make_unique_colors_f()):
     """
     Plot groups of histories
     :param root: the directory where the plot will be exported

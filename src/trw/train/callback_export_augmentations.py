@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import sequence_array
 from trw.train import sequence
 from trw.train import sample_export
@@ -46,7 +46,7 @@ class CallbackExportAugmentations(callback.Callback):
             logger.info('collecting samples for dataset={}'.format(dataset_name))
             root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname, dataset_name)
             if not os.path.exists(root):
-                utils.create_or_recreate_folder(root)
+                utilities.create_or_recreate_folder(root)
 
             split = dataset.get(self.split_name)
             if split is None:
@@ -63,8 +63,8 @@ class CallbackExportAugmentations(callback.Callback):
             for augmentation_id in range(self.nb_augmentation):
                 nb_samples_recorded = 0
                 for batch in split_subsampled:
-                    batch = {name: utils.to_value(values) for name, values in batch.items()}
-                    uids = utils.to_value(batch.get(self.uid_name))
+                    batch = {name: utilities.to_value(values) for name, values in batch.items()}
+                    uids = utilities.to_value(batch.get(self.uid_name))
                     if uids is None:
                         logger.error('no UID found in the dataset! Can\'t link the augmentations')
                         return
@@ -87,11 +87,11 @@ class CallbackExportAugmentations(callback.Callback):
             logger.info('exporting samples...')
             for uid, samples in samples_by_uid.items():
                 for augmentation_id, sample in enumerate(samples[:self.nb_augmentation]):  # we may end up with more augmentation recorded, so trim them
-                    sample = {name: np.asarray([utils.to_value(value)]) for name, value in sample.items()}  # we must have a numpy data here to be exportable
+                    sample = {name: np.asarray([utilities.to_value(value)]) for name, value in sample.items()}  # we must have a numpy data here to be exportable
 
                     sample_output = os.path.join(root, dataset_name + '_' + self.split_name + '_s' + str(uid) + '_a' + str(augmentation_id))
                     txt_file = sample_output + '.txt'
-                    classification_mappings = utils.get_classification_mappings(datasets_infos, dataset_name, self.split_name)
+                    classification_mappings = utilities.get_classification_mappings(datasets_infos, dataset_name, self.split_name)
                     with open(txt_file, 'w') as f:
                         sample_export.export_sample(
                             sample,

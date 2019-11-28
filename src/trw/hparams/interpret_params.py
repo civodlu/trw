@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import os
 from trw.hparams import params_optimizer_random_search
-from trw.train import utils
+from trw.train import utilities
 from trw.train import analysis_plots
 import math
 import numbers
@@ -308,7 +308,7 @@ def analyse_hyperparameters(hprams_path_pattern,
         if verbose:
             print('output_path=%s' % output_path)
             
-        utils.create_or_recreate_folder(output_path)
+        utilities.create_or_recreate_folder(output_path)
 
         fig = _plot_importance(plot_name='hyper-parameter importance',
                                x_names=sorted_param_names,

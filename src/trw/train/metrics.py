@@ -1,5 +1,5 @@
 import numpy as np
-from trw.train import utils
+from trw.train import utilities
 
 
 class Metric:
@@ -25,7 +25,7 @@ class MetricLoss(Metric):
     def __call__(self, outputs):
         loss = outputs.get('loss')
         if loss is not None:
-            return 'loss', float(utils.to_value(loss))
+            return 'loss', float(utilities.to_value(loss))
         return None
 
 

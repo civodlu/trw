@@ -2,11 +2,10 @@ import torch
 import functools
 import collections
 import torch.nn as nn
-from trw.train import utils
 from trw.train import metrics
 from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
 from trw.train import losses
-
+from trw.train import utilities
 
 class Output:
     """
@@ -79,7 +78,7 @@ class OutputEmbedding(Output):
     def evaluate_batch(self, batch, is_training):
         loss_term = collections.OrderedDict()
 
-        loss_term['output'] = utils.to_value(self.output)
+        loss_term['output'] = utilities.to_value(self.output)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         return loss_term
     
@@ -176,16 +175,16 @@ class OutputSegmentation(Output):
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+        assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
         
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utils.to_value(self.output)
-                loss_term['output'] = utils.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utils.to_value(truth)
+                loss_term['output_raw'] = utilities.to_value(self.output)
+                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
+                loss_term['output_truth'] = utilities.to_value(truth)
 
         # do NOT keep the original output else memory will be an issue
         # (e.g., CUDA device)
@@ -205,7 +204,7 @@ class OutputSegmentation(Output):
             weights = torch.ones_like(losses)
             
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -289,18 +288,18 @@ class OutputClassification(Output):
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert len(losses.shape) == 1, 'loss must be a 1D Tensor'
-        assert utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utils.to_value(self.output)
-                loss_term['output'] = utils.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utils.to_value(truth)
+                loss_term['output_raw'] = utilities.to_value(self.output)
+                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
+                loss_term['output_truth'] = utilities.to_value(truth)
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
 
         # do NOT keep the original output else memory will be an issue
         del self.output
@@ -387,15 +386,15 @@ class OutputRegression(Output):
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utils.to_value(self.output)
-                loss_term['output'] = utils.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utils.to_value(truth)
+                loss_term['output_raw'] = utilities.to_value(self.output)
+                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
+                loss_term['output_truth'] = utilities.to_value(truth)
 
         # do NOT keep the original output else memory will be an issue
         del self.output
@@ -410,7 +409,7 @@ class OutputRegression(Output):
             weights = torch.ones_like(losses)
             
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utils.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -440,12 +439,12 @@ class OutputRecord(Output):
         super().__init__(output=output, criterion_fn=None, collect_output=True)
     
     def evaluate_batch(self, batch, is_training):
-        nb_samples = utils.len_batch(batch)
+        nb_samples = utilities.len_batch(batch)
         
         assert len(self.output) == nb_samples, 'one output for each sample is required'
     
         loss_term = {
-            'output': utils.to_value(self.output),
+            'output': utilities.to_value(self.output),
             'losses': torch.zeros([nb_samples], dtype=torch.float32),
             'loss': 0.0,
             Output.output_ref_tag: self,

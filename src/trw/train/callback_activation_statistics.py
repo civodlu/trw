@@ -1,5 +1,5 @@
 from trw.train import callback
-from trw.train import utils
+from trw.train import utilities
 from trw.train import trainer
 import collections
 import numpy as np
@@ -44,10 +44,10 @@ def model_summary(model, batch, logger):
 
             if not isinstance(output, collections.Mapping):
                 with torch.no_grad():
-                    mean_output = utils.to_value(torch.mean(output))
-                    std_output = utils.to_value(torch.std(output))
-                    min_output = utils.to_value(torch.min(output))
-                    max_output = utils.to_value(torch.max(output))
+                    mean_output = utilities.to_value(torch.mean(output))
+                    std_output = utilities.to_value(torch.std(output))
+                    min_output = utilities.to_value(torch.min(output))
+                    max_output = utilities.to_value(torch.max(output))
 
                     summary[m_key]['mean_output'] = mean_output
                     summary[m_key]['std_output'] = std_output
@@ -94,7 +94,7 @@ class CallbackActivationStatistics(callback.Callback):
     This can be useful to detect connectivity issues within the network, overflow and underflow which may impede
     the training of the network.
     """
-    def __init__(self, dataset_name=None, split_name='train', logger_fn=utils.log_and_print):
+    def __init__(self, dataset_name=None, split_name='train', logger_fn=utilities.log_and_print):
         self.dataset_name = dataset_name
         self.split_name = split_name
         self.initialized = False
@@ -131,7 +131,7 @@ class CallbackActivationStatistics(callback.Callback):
 
         device = options['workflow_options']['device']
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
-        batch = utils.transfer_batch_to_device(batch, device=device)
+        batch = utilities.transfer_batch_to_device(batch, device=device)
         trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         model_summary(model, batch, logger=self.logger_fn)
