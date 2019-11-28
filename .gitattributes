@@ -1,5 +1,5 @@
 # Set default behavior to automatically normalize line endings.
-* text=auto
+* text eol=lf
 
 # Force bash scripts to always use lf line endings so that if a repo is accessed
 # in Unix via a file share from Windows, the scripts will work.
