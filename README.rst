@@ -4,9 +4,15 @@ Torch Research Workflows
 .. image:: https://travis-ci.org/civodlu/trw.svg?branch=master
     :target: https://travis-ci.org/civodlu/trw
    
+
+   
 .. image:: https://readthedocs.org/projects/trw/badge/?version=latest
-   :target: https://trw.readthedocs.io/en/latest/?badge=latest
-   :alt: Documentation Status
+	:target: https://trw.readthedocs.io/en/latest/?badge=latest
+	:alt: Documentation Status
+
+
+.. image:: https://coveralls.io/repos/github/civodlu/trw/badge.svg?branch=master
+	:target: https://coveralls.io/github/civodlu/trw?branch=master
 
 Purpose
 =======
