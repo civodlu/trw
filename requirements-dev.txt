@@ -6,3 +6,4 @@ sphinx_rtd_theme
 twine
 pytest-cov
 pytest
+coveralls
