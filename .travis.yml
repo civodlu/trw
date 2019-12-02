@@ -9,7 +9,7 @@ install:
   - pip install -e .
   
 script:
-  - pytest --ignore=performance --cov-report html --junitxml=reports/tests.xml --cov trw
+  - pytest --ignore=performance --cov-report html --junitxml=reports/tests.xml --cov=trw
 
 after_success:
   - coveralls
