@@ -1,6 +1,7 @@
 import torch.nn as nn
 from trw.layers.flatten import Flatten
 from trw.layers.utils import div_shape
+import numbers
 
 
 def convs_2d(channels, convolution_kernels=(5, 5), strides=(1, 1), pooling_size=(2, 2), convolution_repeats=None, activation=nn.ReLU, with_flatten=False, dropout_probability=None, with_batchnorm=False, with_lrn=False, lrn_size=2, batchnorm_momentum=0.1, padding='same'):
@@ -34,6 +35,8 @@ def convs_2d(channels, convolution_kernels=(5, 5), strides=(1, 1), pooling_size=
         pooling_size = [pooling_size] * nb_convs
     if convolution_repeats is None:
         convolution_repeats = [1] * nb_convs
+    elif isinstance(convolution_repeats, numbers.Number):
+        convolution_repeats = [convolution_repeats] * nb_convs
 
     assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
     assert nb_convs == len(strides), 'must be specified for each convolutional layer'
