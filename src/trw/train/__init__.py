@@ -47,6 +47,7 @@ from .sequence_batch import SequenceBatch
 from .sequence_async_reservoir import SequenceAsyncReservoir
 from .sequence_adaptor import SequenceAdaptorTorch
 from .sequence_collate import SequenceCollate
+from .sequence_rebatch import SequenceReBatch
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 
