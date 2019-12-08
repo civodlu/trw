@@ -241,8 +241,9 @@ class CompiledNet(nn.Module):
                 # is the same as the one calculated
                 predicted_shape = action.shape[1:]
                 actual_shape = list(action_output.shape)[1:]
-                assert predicted_shape == actual_shape, 'shape mismatch between simple_layer predicted ' \
-                                                        'shape ({}) and actual shape ({}). There is a BUG in `action`'.format(predicted_shape, actual_shape)
+                assert predicted_shape == actual_shape, f'shape mismatch between simple_layer predicted ' \
+                                                        f'shape ({predicted_shape}) and actual shape ' \
+                                                        f'({actual_shape}) for module={module}'
                 states[action] = action_output
             elif action_type == RuntimeAction.REMOVE_STATE:
                 #print('del STATE=', action)
