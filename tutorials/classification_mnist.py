@@ -9,7 +9,7 @@ class Net(nn.Module):
     Defines our model for MNIST
     """
     def __init__(self):
-        super(Net, self).__init__()
+        super().__init__()
         self.conv1 = nn.Conv2d(1, 20, 5, 2)
         self.fc1 = nn.Linear(20 * 6 * 6, 500)
         self.fc2 = nn.Linear(500, 10)
