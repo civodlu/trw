@@ -153,6 +153,23 @@ class Sequence:
             collate_fn=collate_fn,
         )
 
+    def rebatch(self, batch_size, discard_batch_not_full=False, collate_fn=default_collate_list_of_dicts):
+        """
+        Normalize a sequence to identical batch size given an input sequence with varying batch size
+
+        Args:
+            batch_size: the size of the batches created by this sequence
+            discard_batch_not_full: if True, the last batch will be discarded if not full
+            collate_fn: function to merge multiple batches
+        """
+        from . import sequence_rebatch
+        return sequence_rebatch.SequenceReBatch(
+            source_split=self,
+            batch_size=batch_size,
+            discard_batch_not_full=discard_batch_not_full,
+            collate_fn=collate_fn,
+        )
+
     def async_reservoir(
             self,
             max_reservoir_samples,
