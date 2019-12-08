@@ -73,6 +73,8 @@ def len_batch(batch):
     if isinstance(batch, (collections.Sequence, torch.Tensor)):
         return len(batch)
 
+    assert isinstance(batch, collections.Mapping), 'Must be a dict-like structure! got={}'.format(type(batch))
+
     for name, values in batch.items():
         if isinstance(values, list):
             return len(values)
@@ -273,21 +275,21 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     """
     tensor = values
     if isinstance(values, list) and isinstance(values[0], torch.Tensor):
-        tensor = torch.stack(values)
+        tensor = torch.cat(values)
     elif isinstance(values, list) and isinstance(values[0], np.ndarray):
-        tensor = torch.as_tensor(np.stack(values))
+        tensor = torch.as_tensor(np.concatenate(values))
     elif isinstance(values, np.ndarray):
         tensor = torch.as_tensor(values)
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], torch.Tensor):
         # this is from a list of dictionary
-        merged = [torch.stack(value) for value in values]
+        merged = [torch.cat(value) for value in values]
         if len(merged) == 1:
             tensor = merged[0].view([1] + list(merged[0].shape))
         else:
             tensor = torch.stack(merged)
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], np.ndarray):
         # this is from a list of dictionary
-        merged = [torch.as_tensor(np.stack(value)) for value in values]
+        merged = [torch.as_tensor(np.concatenate(value)) for value in values]
         if len(merged) == 1:
             tensor = merged[0].view([1] + list(merged[0].shape))
         else:
@@ -352,8 +354,8 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
     for key in batches[0]:
         bs = [b[key] for b in batches]
         bs = collate_tensors(bs, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
-        if not isinstance(bs, list):
-            bs = bs.view([-1] + list(bs.shape)[2:])
+        #if not isinstance(bs, list):
+        #    bs = bs.view([-1] + list(bs.shape)[2:])
         d[key] = bs
 
     return d

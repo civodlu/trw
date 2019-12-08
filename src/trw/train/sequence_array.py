@@ -124,7 +124,7 @@ class SequenceArray(sequence.Sequence):
                 if use_advanced_indexing:
                     split_data = split_data[indices]
                 else:
-                    split_data = [split_data[i] for i in indices]
+                    split_data = [[split_data[i]] for i in indices]
             if isinstance(split_data, list) and len(split_data) == nb_samples:
                 split_data = [split_data[i] for i in indices]
 
