@@ -192,16 +192,19 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
         if self.current_epoch is None or len(self.errors_by_split) == 0:
             return
 
+        logger.info('CallbackWorstSamplesByEpoch.export_stats started')
         color_map = cm.get_cmap('autumn')
         assert color_map is not None, 'can\'t find colormap!'
 
         nb_epochs = self.current_epoch + 1
         for split_name, split_data in self.errors_by_split.items():
+            logger.info(f'split_name={split_name}')
             # create a 2D map (epoch, samples)
             sorted_errors_by_sample, min_loss, max_loss = CallbackWorstSamplesByEpoch.sort_split_data(
                 split_data,
                 self.worst_k_samples
             )
+            logger.info('sorting done!')
 
             nb_samples = len(sorted_errors_by_sample)
             image = np.zeros([nb_epochs, nb_samples, 3], dtype=np.float)
@@ -237,10 +240,13 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                 if split is None:
                     return
                 uids_to_export = [t[0] for t in sorted_errors_by_sample[:self.export_top_k_samples]]
+                logger.info('subsampling sequence...')
                 subsampled_split = split.subsample_uids(uids=uids_to_export, uids_name=self.uids_name, new_sampler=sampler.SamplerSequential())
+                logger.info('subsampled sequence!')
 
                 device = options['workflow_options']['device']
-                
+
+                logger.info('exporting...')
                 export_samples_v2(
                     dataset_name=self.dataset_name,
                     split_name=split_name,
@@ -252,6 +258,8 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                     datasets_infos=datasets_infos,
                     max_samples=self.export_top_k_samples,
                     callbacks_per_batch=callbacks_per_batch)
+                logger.info('exporting done!')
+        logger.info('CallbackWorstSamplesByEpoch.export_stats finished successfully')
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         if self.dataset_name is None and outputs is not None:
