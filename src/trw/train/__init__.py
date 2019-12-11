@@ -39,6 +39,7 @@ from .callback_learning_rate_recorder import CallbackLearningRateRecorder
 from .callback_explain_decision import CallbackExplainDecision,  ExplainableAlgorithm
 from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
 from .callback_activation_statistics import CallbackActivationStatistics
+from .callback_zip_sources import CallbackZipSources
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor

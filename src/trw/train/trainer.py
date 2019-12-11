@@ -29,6 +29,7 @@ from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
 from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
+from trw.train import callback_zip_sources
 from trw.train import utilities
 
 logger = logging.getLogger(__name__)
@@ -432,6 +433,7 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
         callback_model_summary.CallbackModelSummary(logger=logger),
         callback_data_summary.CallbackDataSummary(logger=logger),
         callback_export_samples.CallbackExportSamples(dirname='random_samples'),
+        callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..'))
     ]
     
     if with_export_augmentations:
@@ -590,20 +592,26 @@ class Trainer:
         torch.save(model, path)
 
     @staticmethod
-    def load_model(path, with_result=False):
+    def load_model(path, with_result=False, device=None):
         """
         load a saved model
 
-        :param with_result: if True, the results of the model will be loaded
-        :param path: where to store the model. result's will be loaded from `path + '.result'`
-        :return: a tuple `model, result`
+        Args:
+            path: where to store the model. result's will be loaded from `path + '.result'`
+            with_result: if True, the results of the model will be loaded
+            device: where to load the model. For example, models are typically trained on GPU,
+                but for deployment, CPU might be good enough. If `None`, use the same device as
+                when the model was exported
+
+        Returns:
+            a tuple `model, result`
         """
         result = None
         if with_result:
             result_path = path + '.result'
             with open(result_path, 'wb') as f:
                 result = pickle.load(f)
-        model = torch.load(path)
+        model = torch.load(path, map_location=device)
         return model, result
 
     def fit(self, options, inputs_fn, model_fn, optimizers_fn,
@@ -673,7 +681,6 @@ class Trainer:
         
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
-        #formatter = logging.Formatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
@@ -782,6 +789,8 @@ class Trainer:
                 logger.info('finished training epoch {}'.format(epoch))
 
                 last_epoch = epoch + 1 == num_epochs
+
+                logger.info('callbacks started')
                 for callback in callbacks_per_epoch:
                     callback(options, history, model, losses=losses, outputs=outputs_epoch,
                              datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
@@ -791,7 +800,7 @@ class Trainer:
                     #except Exception as e:
                     #    logger.error('callback={} failed with exception={}'.format(callback, e))
 
-                logger.info('callbacks epoch {}'.format(epoch))
+                logger.info('callbacks epoch {} finished'.format(epoch))
 
         # finally run the post-training callbacks
         outputs_epoch = None
@@ -870,22 +879,28 @@ def run_trainer_repeat(
         loss_creator=create_losses_fn,
         run_prefix='default',
         eval_every_X_epoch=1,
-        number_of_training_runs=10):
+        number_of_training_runs=10,
+        post_init_fn=None):
     """
     Manages multiple run of a trainer for example to repeat the training and have an idea of the variance of a model
 
-    :param trainer:
-    :param options:
-    :param inputs_fn:
-    :param model_fn:
-    :param optimizers_fn:
-    :param losses_fn:
-    :param loss_creator:
-    :param run_prefix:
-    :param eval_every_X_epoch:
-    :param number_of_training_runs:
-    :return: a tuple `model, result` of the last model trained
+    Args:
+        trainer:
+        options:
+        inputs_fn:
+        model_fn:
+        optimizers_fn:
+        losses_fn:
+        loss_creator:
+        run_prefix:
+        eval_every_X_epoch:
+        number_of_training_runs:
+        post_init_fn: if not None, a function to be called before each training repeat
+
+    Returns:
+        a tuple `model, result` of the last model trained
     """
+
     model = None
     result = None
     for n in range(number_of_training_runs):
