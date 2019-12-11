@@ -48,6 +48,8 @@ class JobExecutor:
         """
 
         #print('JobExecutor | ', os.getpid(), '| created | ', datetime.datetime.now().time())
+        logger.info(f'JobExecutor created={self}, nb_workers={nb_workers}, '
+                    f'max_jobs_at_once={max_jobs_at_once}, output_queue_size={output_queue_size}')
 
         self.input_queue = mp.Queue(maxsize=max_jobs_at_once)
         if output_queue_size is None:
@@ -85,12 +87,18 @@ class JobExecutor:
         """
         Terminate all jobs
         """
+        logger.info(f'closing JobExecutor={self}')
         # first notify all processes that they need to stop
         #print('POOL NOTIFY STOP-----------------')
-        self.must_finish_processes.value = 1
 
+        # clear all the queues so that the jobs are started
+        self.reset()  # clear everything
+
+        # then notify the jobs to finish
+        self.must_finish_processes.value = 1
         self.pool.close()
         self.pool.join()
+        logger.info(f'closed JobExecutor={self}!')
 
         #print('JobExecutor | ', os.getpid(), '| closed | ', datetime.datetime.now().time())
 
