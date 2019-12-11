@@ -80,6 +80,7 @@ class TestSequenceReservoir(TestCase):
         expected_counts = nb_epochs / nb_indices * max_reservoir_samples
         for c, counts in samples.items():
             error_percent = abs(counts - expected_counts) / expected_counts
+            print(f'c={c}, counts={counts}, expected_counts={expected_counts}, error={error_percent}')
             self.assertTrue(error_percent < 0.1)
 
     def test_subsample_uid(self):
