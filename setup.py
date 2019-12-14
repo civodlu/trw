@@ -4,7 +4,12 @@ from os import path
 
 from setuptools import find_packages, setup
 
-META_PATH = path.join('src', 'trw', 'metadata.py')
+import setup_utils
+
+# customize library name here
+NAME = setup_utils.get_project_name()
+
+META_PATH = path.join('src', NAME, 'metadata.py')
 
 def find_meta(meta):
     """
