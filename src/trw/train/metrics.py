@@ -1,5 +1,6 @@
 import numpy as np
 from trw.train import utilities
+from sklearn import metrics
 
 
 class Metric:
@@ -41,6 +42,31 @@ class MetricClassificationError(Metric):
         return None
 
 
+class MetricClassificationSensitivitySpecificity(Metric):
+    """
+    Calculate the sensitivity and specificity for a binary classification using the `output_truth` and `output`
+    """
+    def __call__(self, outputs):
+        output_raw = outputs.get('output_raw')
+        if output_raw is None:
+            return None
+        if len(output_raw.shape) != 2 or output_raw.shape[1] != 2:
+            return None
+
+        truth = outputs.get('output_truth')
+        found = outputs.get('output')
+        if truth is not None and found is not None:
+            cm = metrics.confusion_matrix(y_pred=found, y_true=truth)
+            if len(cm) == 2:
+                # special case: binary classification
+                tn, fp, fn, tp = cm.ravel()
+                return {
+                    'sensitivity': tp / (tp + fn),
+                    'specificity': tn / (fp + tn),
+                }
+        return None
+
+
 def default_classification_metrics():
     """"
     Default list of metrics used for classification
@@ -48,6 +74,7 @@ def default_classification_metrics():
     return [
         MetricLoss(),
         MetricClassificationError(),
+        MetricClassificationSensitivitySpecificity(),
     ]
 
 

@@ -55,6 +55,28 @@ class Output:
         return None
 
 
+def extract_history_from_outputs_and_metrics(metrics, outputs):
+    """
+    Extract a history from metrics and an output result
+    Args:
+        metrics: a list of metrics
+        outputs: the result of `Output.evaluate_batch`
+
+    Returns:
+        a dictionary of key, value
+    """
+    history = collections.OrderedDict()
+    for metric in metrics:
+        r = metric(outputs)
+        if r is not None:
+            if isinstance(r, dict):
+                history.update(r)
+            else:
+                metric_name, metric_value = r
+                history[metric_name] = metric_value
+    return history
+
+
 class OutputEmbedding(Output):
     """
     Represent an embedding
@@ -160,13 +182,7 @@ class OutputSegmentation(Output):
         self.collect_output = collect_output
 
     def extract_history(self, outputs):
-        history = collections.OrderedDict()
-        for metric in self.metrics:
-            r = metric(outputs)
-            if r is not None:
-                metric_name, metric_value = r
-                history[metric_name] = metric_value
-        return history
+        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.target_name)
@@ -261,13 +277,7 @@ class OutputClassification(Output):
         self.maybe_optional = maybe_optional
 
     def extract_history(self, outputs):
-        history = collections.OrderedDict()
-        for metric in self.metrics:
-            r = metric(outputs)
-            if r is not None:
-                metric_name, metric_value = r
-                history[metric_name] = metric_value
-        return history
+        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.classes_name)
@@ -371,13 +381,7 @@ class OutputRegression(Output):
         self.loss_scaling = loss_scaling
 
     def extract_history(self, outputs):
-        history = collections.OrderedDict()
-        for metric in self.metrics:
-            r = metric(outputs)
-            if r is not None:
-                metric_name, metric_value = r
-                history[metric_name] = metric_value
-        return history
+        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.target_name)
