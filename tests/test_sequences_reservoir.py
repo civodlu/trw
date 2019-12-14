@@ -16,11 +16,16 @@ def function_to_run2(batch):
     time.sleep(0.1)
     return batch
 
+def worker_with_error(batch):
+    if batch['sample_uid'][0] == 10:
+        raise IndexError('This is an expected exception to test worker recovery from failure!')
+    return batch
+
 
 def make_volume_torch(batch):
     print('JOB starte', batch['path'])
     batch['volume'] = torch.zeros([1, 10, 11, 12], dtype=torch.float)
-    time.sleep(0.2)
+    time.sleep(0.1)
     return batch
 
 
@@ -157,3 +162,24 @@ class TestSequenceReservoir(TestCase):
                 if batch_id == 0 and epoch == 0:
                     assert sequence.reservoir_size() >= min_reservoir_samples and \
                            sequence.reservoir_size() <= min_reservoir_samples + max_jobs_at_once
+
+    def test_worker_error(self):
+        nb_indices = 20
+
+        split = {'path': np.asarray(np.arange(nb_indices))}
+        sampler = trw.train.SamplerSequential(batch_size=1)
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            min_reservoir_samples=5,
+            max_reservoir_samples=10,
+            max_jobs_at_once=1,
+            function_to_run=worker_with_error).collate()
+
+        for n in range(100):
+            batches = []
+            for batch in sequence:
+                assert batch['sample_uid'][0] != 10, 'this job should have failed!'
+                batches.append(batch)
+            assert len(batches) >= 5

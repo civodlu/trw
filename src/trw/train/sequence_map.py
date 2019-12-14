@@ -31,6 +31,8 @@ class JobExecutor:
     Feed jobs using `JobExecutor.input_queue.put(argument)`. `function_to_run` will be called
     with `argument` and the output will be pushed to `JobExecutor.output_queue`
 
+    Jobs that failed will have `None` pushed to the output queue.
+
 
     .. todo:: On windows there are many issues related to shared memory: we would like to let the worker to create large memory arrays
         for example, when the datasets are extremely large, we often want to asynchronously load
@@ -146,13 +148,20 @@ class JobExecutor:
             with job_session_id.get_lock():
                 started_session_id = job_session_id.value
 
-            results = func(item)
-            assert results is not None, '`func`={} must result a result!'.format(func)
+            try:
+                results = func(item)
+                assert results is not None, '`func`={} must result a result!'.format(func)
 
-            if post_process_results_fun is not None:
-                # channels are reversed for the communication worker->main thread
-                post_process_results_fun(results, channel_main_to_worker=channel_worker_to_main, channel_worker_to_main=channel_main_to_worker)
-                #post_process_results_fun(results, channel_main_to_worker=channel_main_to_worker, channel_worker_to_main=channel_worker_to_main)
+                if post_process_results_fun is not None:
+                    # channels are reversed for the communication worker->main thread
+                    post_process_results_fun(results, channel_main_to_worker=channel_worker_to_main, channel_worker_to_main=channel_main_to_worker)
+                    # post_process_results_fun(results, channel_main_to_worker=channel_main_to_worker, channel_worker_to_main=channel_worker_to_main)
+            except Exception as e:
+                print('-------------- ERROR in worker function --------------')
+                print(e)
+                print('-------------- first job will be aborted --------------')
+                results = None
+                #continue  # restart the worker
 
             with job_session_id.get_lock():
                 current_session_id = job_session_id.value
@@ -308,15 +317,24 @@ class SequenceMap(sequence.Sequence):
 
     def next_item(self, blocking):
         def single_process_next():
-            i = self.iter_source.__next__()
-            if self.preprocess_fn is not None:
-                i = self.preprocess_fn(i, source=self)
-            items = self.function_to_run(i)
-            return items
+            while True:
+                i = self.iter_source.__next__()
+                if self.preprocess_fn is not None:
+                    i = self.preprocess_fn(i, source=self)
+
+                try:
+                    items = self.function_to_run(i)
+                except Exception as e:
+                    # case where we have a job that failed: discard
+                    print('-------------- ERROR in worker function --------------')
+                    print(e)
+                    print('-------------- first job will be aborted --------------')
+                    continue
+
+                return items
 
         def multiple_process_next():
             nb_background_jobs = self.has_background_jobs_previous_sequences()
-            # queue_size = self.job_executer.input_queue.qsize() + self.job_executer.output_queue.qsize()
             if nb_background_jobs == 0:
                 # we are only done once all the jobs have been completed!
                 # print('STOP', self, queue_size)
@@ -324,20 +342,19 @@ class SequenceMap(sequence.Sequence):
 
             while True:
                 try:
-                    # time_blocked_start = time.time()
                     items = self.job_executer.output_queue.get(True, timeout=self.queue_timeout)
-                    # time_blocked_end = time.time()
-                    # self.time_spent_in_blocked_state += time_blocked_end - time_blocked_start
+                    self.jobs_processed += 1
+                    if items is None:
+                        continue  # the job has failed, get the next item!
+
+                    # ok, we are nood now!
                     break
                 except (Empty, KeyboardInterrupt):
                     # no job available, make sure the worker of the other pools are not starved
                     self.fill_queue_all_sequences()
-                    # self.fill_queue()
                     if not blocking:
                         raise StopIteration()
 
-            # print('ITEM', os.getpid(), 'BEING_PROCESSED=', self.jobs_queued - self.jobs_processed)
-            self.jobs_processed += 1
             return items
 
         if self.job_executer is None:

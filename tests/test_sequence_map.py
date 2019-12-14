@@ -39,6 +39,18 @@ def load_data(item):
     return item
 
 
+def load_data_or_generate_error(item, error_index=10):
+    print('job | ', os.getpid(), ' | loading data |', item['indices'], datetime.datetime.now().time())
+    item['time_created'] = time.time()
+    time.sleep(0.01)
+
+    if item['indices'] == error_index:
+        raise IndexError('This is an expected exception to test worker recovery from failure!')
+
+    item['time_loaded'] = time.time()
+    return item
+
+
 def run_augmentations(item):
     print('job | ', os.getpid(), ' | augmentation data', item['indices'], datetime.datetime.now().time())
     time.sleep(0.1)
@@ -204,3 +216,37 @@ class TestSequenceMap(TestCase):
             break
         split.job_executer.close()
         print('DONE')
+
+    def test_job_error_0_worker(self):
+        nb_indices = 40
+        indices = np.asarray(list(range(nb_indices)))
+        split = {
+            'indices': indices,
+        }
+
+        indices = []
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data_or_generate_error, nb_workers=0) #.map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        for batch in split:
+            index = batch['indices'][0]
+            indices.append(index)
+
+        assert 10 not in indices, 'index 10 should have failed!'
+        assert len(indices) == nb_indices - 1
+
+    def test_job_error_1_worker(self):
+        nb_indices = 40
+        indices = np.asarray(list(range(nb_indices)))
+        split = {
+            'indices': indices,
+        }
+
+        indices = []
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
+            load_data_or_generate_error,
+            nb_workers=1)  # .map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        for batch in split:
+            index = batch['indices'][0]
+            indices.append(index)
+
+        assert 10 not in indices, 'index 10 should have failed!'
+        assert len(indices) == nb_indices - 1

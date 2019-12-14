@@ -197,6 +197,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
             try:
                 time_blocked_start = time.perf_counter()
                 items = self.job_executer.output_queue.get()
+                if items is None:
+                    # the job failed!
+                    continue
                 time_blocked_end = time.perf_counter()
                 self.perf_receiving.add(time_blocked_end - time_blocked_start)
                 self.reservoir.append(items)
