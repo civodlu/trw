@@ -315,7 +315,7 @@ class TestTransform(TestCase):
         assert abs(np.average(std_normalized) - 1) < 0.1
 
     def test_normalize_torch(self):
-        images = torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.int64)
+        images = torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.float32)
         images[:, 1] *= 2
         images[:, 2] *= 3
 
@@ -323,8 +323,8 @@ class TestTransform(TestCase):
             'images': images,
         }
 
-        mean = np.mean(images.numpy(), axis=(0, 2, 3))
-        std = np.std(images.numpy(), axis=(0, 2, 3))
+        mean = np.mean(images.numpy(), axis=(0, 2, 3), dtype=np.float32)
+        std = np.std(images.numpy(), axis=(0, 2, 3), dtype=np.float32)
 
         transformer = trw.transforms.TransformNormalize(mean=mean, std=std)
         transformed_batch = transformer(batch)
@@ -342,8 +342,8 @@ class TestTransform(TestCase):
         }
 
         transforms = [
-            trw.transforms.TransformNormalize(mean=[10, 10, 10], std=[1, 1, 1]),
-            trw.transforms.TransformNormalize(mean=[100, 100, 100], std=[1, 1, 1]),
+            trw.transforms.TransformNormalize(mean=[np.int64(10), np.int64(10), np.int64(10)], std=[np.int64(1), np.int64(1), np.int64(1)]),
+            trw.transforms.TransformNormalize(mean=[np.int64(100), np.int64(100), np.int64(100)], std=[np.int64(1), np.int64(1), np.int64(1)]),
         ]
 
         transformer = trw.transforms.TransformCompose(transforms)
