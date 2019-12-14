@@ -17,7 +17,6 @@ class TestOutput(TestCase):
         self.assertTrue(len(loss.shape) == 0)
         self.assertTrue(loss == 0.0)
 
-
     def test_regression_error(self):
         input_values = torch.from_numpy(np.asarray([[1, 2], [3, 4]], dtype=float))
         target_values = torch.from_numpy(np.asarray([[0, 0], [0, 0]], dtype=float))

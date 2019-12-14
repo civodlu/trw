@@ -56,15 +56,6 @@ def log_console(msg):
     print(msg)
 
 
-def safe_filename(string):
-    """
-    Return a string good as name for a file by removing all special characters
-    :param string:
-    :return:
-    """
-    return string.replace('\\', '_').replace('/', ' ')
-
-
 def len_batch(batch):
     """
     :param batch: a data split or a `collections.Sequence`
