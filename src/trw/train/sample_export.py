@@ -10,8 +10,8 @@ from trw.train import utilities
 def as_rgb_image(value):
     """
     Try interpreting the value as an image. (e.g., 2D, RGB) and return a RGB image
-    :param value: an array of shape (y, x), (y, x, 1), (y, x, 3)
-    :return: return a (y, x, 3) array
+    :param value: an array of shape (y, x), (1, y, x), (3, y, x)
+    :return: return a (3, y, x) array
     """
     if isinstance(value, np.ndarray):
         if len(value.shape) > 3:
