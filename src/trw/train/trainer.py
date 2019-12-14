@@ -30,6 +30,7 @@ from trw.train import callback_explain_decision
 from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
+from trw.train import callback_export_convolution_kernel
 from trw.train import utilities
 
 logger = logging.getLogger(__name__)
@@ -446,7 +447,11 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
     return callbacks
 
 
-def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epoch=True, with_activation_statistics=False):
+def default_per_epoch_callbacks(
+        logger=default_logger,
+        with_worst_samples_by_epoch=True,
+        with_activation_statistics=False,
+        convolutional_kernel_export_frequency=None):
     """
     Default callbacks to be performed at the end of each epoch
     """
@@ -457,6 +462,10 @@ def default_per_epoch_callbacks(logger=default_logger, with_worst_samples_by_epo
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
     ]
+
+    if convolutional_kernel_export_frequency is not None:
+        callbacks.append(callback_export_convolution_kernel.CallbackExportConvolutionKernel(
+            export_frequency=convolutional_kernel_export_frequency))
 
     if with_worst_samples_by_epoch:
         callbacks.append(callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch())

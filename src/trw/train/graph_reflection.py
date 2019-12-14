@@ -15,6 +15,7 @@ import io
 
 logger = logging.getLogger(__name__)
 
+
 def find_tensor_leaves_with_grad(tensor):
     """
     Find the input leaves of a tensor.
@@ -135,3 +136,31 @@ def find_last_forward_convolution(model, inputs, types=(nn.Conv2d, nn.Conv3d, nn
             None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
         """
     return find_last_forward_types(model, inputs, types=types, relative_index=relative_index)
+
+
+def find_first_forward_convolution(model, inputs=None, types=(nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0):
+    """
+    Perform a forward pass of the model with given inputs and retrieve the last convolutional layer
+
+    Args:
+        inputs: NOT USED
+        model: the model
+        types: the types to be captured. Can be a single type or a tuple of types
+        relative_index (int): indicate which module to return from the last collected module
+
+    Returns:
+        None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
+    """
+    modules_of_interest = []
+    for module in model.modules():
+        if isinstance(module, types):
+            modules_of_interest.append(module)
+    if relative_index >= len(modules_of_interest):
+        return None
+
+    return {
+        'outputs': None,
+        'matched_module': modules_of_interest[relative_index],
+        'matched_module_inputs': None,
+        'matched_module_output': None
+    }
