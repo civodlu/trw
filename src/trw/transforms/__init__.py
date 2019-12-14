@@ -13,6 +13,7 @@ from .cutout_function import cutout
 from .resize import resize
 from .stack import stack
 from .normalize import normalize
+from .renormalize import renormalize
 
 from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_3_or_above
 from .transforms_random_crop import TransformRandomCrop, TransformRandomCropJoint
