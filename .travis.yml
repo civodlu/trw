@@ -16,8 +16,9 @@ matrix:
       # use `python`, there is no `python3` on windows!
       - python -m pip install --upgrade pip
       - pip3 install torch==1.3.1+cpu torchvision==0.4.2+cpu -f https://download.pytorch.org/whl/torch_stable.html
-    env: PATH=/c/Python36:/c/Python36/Scripts:$PATH
-    env: TRW_LOGGING_ROOT=./test_tmp
+    env:
+      - PATH=/c/Python36:/c/Python36/Scripts:$PATH
+      - TRW_LOGGING_ROOT=./test_tmp
     
   - name: "Python 3.6 on macOS"
     os: osx
@@ -25,8 +26,9 @@ matrix:
     language: shell
     before_install:
       - pip3 install torch torchvision
-    env: PATH=/Users/travis/Library/Python/3.6/bin:$PATH
-    env: TRW_LOGGING_ROOT=./test_tmp
+    env: 
+      - PATH=/Users/travis/Library/Python/3.6/bin:$PATH
+      - TRW_LOGGING_ROOT=./test_tmp
     
 install:
   - pip3 install -r requirements.txt
