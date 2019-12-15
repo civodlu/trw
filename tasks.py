@@ -21,10 +21,17 @@ It is assumed that all python packages have already been installed (CI matrix or
 def task_test(args):
     """
     Command to run the unit tests
+
+    args.return_instead_of_exit: if True, do not exit the process but return the code instead
     """
     project_name = setup_utils.get_project_name()
     code = subprocess.call(['pytest', '--ignore=performance', '--cov-report=html', '--junitxml=reports/tests.xml', f'--cov={project_name}'])
+
+    return_instead_of_exit = args.get('return_instead_of_exit')
+    if return_instead_of_exit:
+        return code
     exit(code)
+
 
 def task_make_docs(args):
     code = subprocess.call(['sphinx-build', 'docs/source', 'docs/build'])
@@ -69,6 +76,19 @@ def task_publish_and_bump_minor_version(args):
     os.remove(metadata_path)
     os.rename(metadata_new_path, metadata_path)
 
+    # just ask confirmation again
+    choice = input(f'Are you sure you want to publish version={version}? [Y]es or [N]o')
+    choice = choice.strip().capitalize()
+    if choice != 'Y' and choice !='YES':
+        print('Aborting publication!')
+        exit(1)
+
+    # make sure that at minimum we can pass the UT
+    test_result = task_test({'return_instead_of_exit': True})
+    if test_result != 0:
+        print(f'Can\'t publish, unit test failed with code={test_result}!')
+        exit(1)
+
     # prepare the package
     build_command = ['python', 'setup.py', 'sdist', 'bdist_wheel']
     code = subprocess.call(build_command)
@@ -85,8 +105,6 @@ parser = argparse.ArgumentParser(description=description)
 parser.add_argument('--task', help='the name of the task to be performed')
 parser.add_argument('--task_args', help='the argument of the task, encoded as semi colon separated key value pair '
                                         '(e.g., `key1:value1;key2:value2`)', default='')
-
-
 args = parser.parse_args()
 
 
