@@ -5,6 +5,9 @@ import os
 import sys
 
 
+if sys.version_info[0] < 3:
+    raise Exception('Must be using Python 3. Current=' + str(sys.version_info))
+
 description = """
 This is a simple python script to start the different tasks (e.g., test, publish, linters...).
 
@@ -15,22 +18,15 @@ It is assumed that all python packages have already been installed (CI matrix or
 """
 
 
-if sys.version_info[0] < 3:
-    raise Exception('Must be using Python 3. Current=' + str(sys.version_info))
-
-
 def task_test(args):
     """
     Command to run the unit tests
     """
-    code = subprocess.call(['pytest', '--ignore=performance', '--cov-report=html', '--junitxml=reports/tests.xml', '--cov=src'])
+    project_name = setup_utils.get_project_name()
+    code = subprocess.call(['pytest', '--ignore=performance', '--cov-report=html', '--junitxml=reports/tests.xml', f'--cov={project_name}'])
     exit(code)
 
-
 def task_make_docs(args):
-    """
-    Build the documentation
-    """
     code = subprocess.call(['sphinx-build', 'docs/source', 'docs/build'])
     exit(code)
 

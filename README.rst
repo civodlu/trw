@@ -31,6 +31,13 @@ Some key features of the framework:
 * Architecture learning (DARTS & evolutionary algorithms)
 * Keep track of the results for retrospective analysis and model selection
 
+Requirements
+============
+
+* Linux/Windows
+* Python >= 3.6
+* PyTorch >= 1.0
+
 Installation / Usage
 ====================
 
