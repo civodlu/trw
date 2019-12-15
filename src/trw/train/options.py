@@ -23,7 +23,7 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
     if logging_directory is None:
         logging_directory = os.environ.get('TRW_LOGGING_ROOT')
     if logging_directory is None:
-        logging_directory = 'd:/tf/tf2/'
+        logging_directory = 'c:/trw_logs/'
         
     if device is None:
         if torch.cuda.device_count() > 0:
