@@ -170,7 +170,7 @@ class TestSampler(TestCase):
         nb_indices = 20
         nb_reservoir_samples = 10
         maximum_number_of_samples_per_epoch = 5
-        nb_epochs = 10000
+        nb_epochs = 20000
 
         sampler = trw.train.SamplerRandom()
         split = {'path': np.asarray(np.arange(nb_indices))}

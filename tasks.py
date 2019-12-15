@@ -2,6 +2,7 @@ import argparse
 import subprocess
 import setup_utils
 import os
+import sys
 
 
 description = """
@@ -14,6 +15,10 @@ It is assumed that all python packages have already been installed (CI matrix or
 """
 
 
+if sys.version_info[0] < 3:
+    raise Exception('Must be using Python 3. Current=' + str(sys.version_info))
+
+
 def task_test(args):
     """
     Command to run the unit tests
@@ -21,7 +26,11 @@ def task_test(args):
     code = subprocess.call(['pytest', '--ignore=performance', '--cov-report=html', '--junitxml=reports/tests.xml', '--cov=pte'])
     exit(code)
 
+
 def task_make_docs(args):
+    """
+    Build the documentation
+    """
     code = subprocess.call(['sphinx-build', 'docs/source', 'docs/build'])
     exit(code)
 
