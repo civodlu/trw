@@ -150,7 +150,7 @@ class TestParamsOptimizer(TestCase):
 
 
         prefix = 'hparams'
-        options = trw.train.create_default_options(num_epochs=500)
+        options = trw.train.create_default_options(num_epochs=1000)
         optimizer = trw.hparams.params_optimizer_random_search.HyperParametersOptimizerRandomSearchLocal(
             evaluate_hparams_fn=functools.partial(evaluate_hparams, options),
             log_string=log_nothing,

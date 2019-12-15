@@ -1,3 +1,6 @@
+import matplotlib
+matplotlib.use('Agg')  # change the backend. Issues with CI on windows
+
 from unittest import TestCase
 import trw.hparams
 import trw.train
