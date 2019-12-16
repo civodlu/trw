@@ -20,7 +20,8 @@ def renormalize_torch(data, desired_mean, desired_std, current_mean=None, curren
     """
     # see https://stats.stackexchange.com/questions/46429/transform-data-to-desired-mean-and-standard-deviation
     if current_mean is None and current_std is None:
-        current_std, current_mean = torch.std_mean(data)
+        current_std = torch.std(data)
+        current_mean = torch.mean(data)
 
     if current_mean is None:
         assert current_std is None, 'std amd mean must be ether be None or defined!'

@@ -6,7 +6,8 @@ import numpy as np
 
 class TestRenormalize(TestCase):
     def test_renormalize_torch(self):
-        data = torch.normal(mean=25, std=4, size=[1000, 4, 4])
+        data = np.random.normal(25, 4, size=(1000, 4, 4))
+        data = torch.from_numpy(data)
         data_transformed = trw.transforms.renormalize(data, desired_mean=2, desired_std=3)
 
         mean = torch.mean(data_transformed)
@@ -15,7 +16,7 @@ class TestRenormalize(TestCase):
         assert abs(std - 3) < 1e-5
 
     def test_renormalize_numpy(self):
-        data = np.random.normal(25, 4, size=[1000, 4, 4])
+        data = np.random.normal(25, 4, size=(1000, 4, 4))
         data_transformed = trw.transforms.renormalize(data, desired_mean=2, desired_std=3)
 
         mean = np.mean(data_transformed)
