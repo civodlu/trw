@@ -171,7 +171,6 @@ def loss_term_cleanup(loss_terms):
             ref.loss_term_cleanup(loss_term)
 
 
-@utilities.time_it()
 def train_loop(
         device,
         dataset_name,
@@ -374,6 +373,7 @@ def epoch_train_eval(
         dataset_history = collections.OrderedDict()
         dataset_outputs = collections.OrderedDict()
         for split_name, split in dataset.items():
+            time_start = time.perf_counter()
             if optimizers is not None and split_name == train_split_name:
                 # * only the split `train_split_name` is considered as training, all
                 # other splits are for evaluation only
@@ -406,12 +406,16 @@ def epoch_train_eval(
                     history,
                     callbacks_per_batch=callbacks_per_batch,
                     callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms)
-
+            time_end = time.perf_counter()
             assert isinstance(all_loss_terms, collections.Sequence), '`all_loss_terms` must be a sequence'
 
-            epoch_outputs, epoch_history = generic_aggregate_loss_terms(all_loss_terms)
-            dataset_history[split_name] = epoch_history
-            dataset_outputs[split_name] = epoch_outputs
+            if len(all_loss_terms) != 0:
+                epoch_outputs, epoch_history = generic_aggregate_loss_terms(all_loss_terms)
+                epoch_history['info'] = {
+                    'time': time_end - time_start
+                }
+                dataset_history[split_name] = epoch_history
+                dataset_outputs[split_name] = epoch_outputs
 
         history_by_dataset_epoch[dataset_name] = dataset_history
         outputs_by_dataset_epoch[dataset_name] = dataset_outputs
@@ -888,8 +892,7 @@ def run_trainer_repeat(
         loss_creator=create_losses_fn,
         run_prefix='default',
         eval_every_X_epoch=1,
-        number_of_training_runs=10,
-        post_init_fn=None):
+        number_of_training_runs=10):
     """
     Manages multiple run of a trainer for example to repeat the training and have an idea of the variance of a model
 
@@ -904,7 +907,6 @@ def run_trainer_repeat(
         run_prefix:
         eval_every_X_epoch:
         number_of_training_runs:
-        post_init_fn: if not None, a function to be called before each training repeat
 
     Returns:
         a tuple `model, result` of the last model trained
@@ -914,7 +916,6 @@ def run_trainer_repeat(
     result = None
     for n in range(number_of_training_runs):
         logger.info('training run=%d' % n)
-
         model, result = trainer.fit(
             options,
             inputs_fn,

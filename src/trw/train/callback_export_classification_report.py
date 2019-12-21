@@ -52,6 +52,10 @@ class CallbackExportClassificationReport(callback.Callback):
                     class_name = output['output_ref'].classes_name
                     mapping = get_mappinginv(datasets_infos, dataset_name, split_name, class_name)
 
+                    raw_values = output['output_raw'].squeeze()
+                    output_values = output['output'].squeeze()
+                    trues_values = output['output_truth'].squeeze()
+
                     # we have a classification task, so extract important statistics & figures
                     if self.with_confusion_matrix:
                         logger.info('exporting confusion matrix')
@@ -63,8 +67,8 @@ class CallbackExportClassificationReport(callback.Callback):
 
                         analysis_plots.confusion_matrix(
                             export_path=root,
-                            classes_predictions=output['output'],
-                            classes_trues=output['output_truth'],
+                            classes_predictions=output_values,
+                            classes_trues=trues_values,
                             classes=list_classes,
                             normalize=True,
                             display_numbers=False,
@@ -75,25 +79,25 @@ class CallbackExportClassificationReport(callback.Callback):
                         )
 
                     if self.with_ROC:
-                        if output['output_raw'].shape[1] == 2:
+                        if len(raw_values.shape) == 2 and raw_values.shape[1] == 2:
                             logger.info('exporting ROC curve')
                             # classical ROC is only valid for binary classification
                             title = '{}-{}-{}-ROC'.format(output_name, dataset_name, split_name)
 
                             analysis_plots.plot_roc(
                                 export_path=root,
-                                trues=output['output_truth'],
-                                found_scores_1=output['output_raw'][:, 1],
+                                trues=trues_values,
+                                found_scores_1=raw_values[:, 1],
                                 title=title,
                             )
 
                     if self.with_report:
                         logger.info('exporting classification report')
-                        prediction_scores = output['output_raw']
+                        prediction_scores = raw_values
 
                         report = analysis_plots.classification_report(
                             prediction_scores=prediction_scores,
-                            trues=output['output_truth'],
+                            trues=trues_values,
                             class_mapping=mapping
                         )
                         report_name = '{}-{}-{}-report.txt'.format(output_name, dataset_name, split_name)
