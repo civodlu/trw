@@ -43,11 +43,17 @@ class CallbackEpochSummary(callback.Callback):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         last = history[-1]
         self.logger('epoch={}'.format(len(history) - 1))
+        splits_time = []
         for dataset_name, history_dataset in last.items():
             for split_name, history_split in history_dataset.items():
                 if len(history_split) == 0:
                     continue
+
                 for output_name, outputs in history_split.items():
                     for category_name, category_value in outputs.items():
                         best_epoch, best_value = update_best_so_far(len(history) - 1, self.best_so_far, dataset_name, split_name, output_name, category_name, category_value)
                         self.logger('   {}/{}/{}, {}={} [best={}, epoch={}]'.format(dataset_name, split_name, output_name, category_name, category_value, best_value, best_epoch))
+
+        if len(splits_time) > 0:
+            times = ', '.join(splits_time)
+            self.logger(f'   time: {times}')
