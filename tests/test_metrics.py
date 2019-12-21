@@ -50,8 +50,8 @@ class TestMetrics(TestCase):
         history = o.extract_history(r)
 
         assert abs(history['classification error'] - 1.0 / (4)) < 1e-4
-        assert abs(history['sensitivity'] - 1.0) < 1e-4
-        assert abs(history['specificity'] - 2.0 / 3) < 1e-4
+        assert abs(history['1-sensitivity'] - (1 - 1.0)) < 1e-4
+        assert abs(history['1-specificity'] - (1 - 2.0 / 3)) < 1e-4
 
     def test_classification_sensitivity_0_specificity_1(self):
         #                         Confusion Matrix
@@ -74,5 +74,5 @@ class TestMetrics(TestCase):
         history = o.extract_history(r)
 
         assert abs(history['classification error'] - 1.0 / 4) < 1e-4
-        assert abs(history['specificity'] - 1.0) < 1e-4
-        assert abs(history['sensitivity'] - 1.0 / 2) < 1e-4
+        assert abs(history['1-specificity'] - (1 - 1.0)) < 1e-4
+        assert abs(history['1-sensitivity'] - (1 - 1.0 / 2)) < 1e-4
