@@ -137,7 +137,7 @@ def _conv_3d_shape_fn(node, module_args):
 class Conv3d(simple_layers.SimpleModule):
     def __init__(self, node, out_channels, kernel_size, stride=1, padding='same'):
         module_args = {
-            'in_channels': node.shape_channels(),
+            'in_channels': node.shape[1],
             'out_channels': out_channels,
             'kernel_size': kernel_size,
             'stride': stride
@@ -159,6 +159,12 @@ class MaxPool2d(simple_layers.SimpleModule):
         super().__init__(node=node, module=nn.MaxPool2d(**module_args), shape=node.shape[0:2] + div_shape(node.shape[2:], 2))
 
 
+class MaxPool3d(simple_layers.SimpleModule):
+    def __init__(self, node, kernel_size, stride=None):
+        module_args = {'kernel_size': kernel_size, 'stride': stride}
+        super().__init__(node=node, module=nn.MaxPool3d(**module_args), shape=node.shape[0:2] + div_shape(node.shape[2:], 2))
+
+
 class ConcatChannels(simple_layers.SimpleMergeBase):
     """
     Implement a channel concatenation layer
@@ -166,6 +172,7 @@ class ConcatChannels(simple_layers.SimpleMergeBase):
     def __init__(self, nodes, flatten=False):
         assert isinstance(nodes, collections.Sequence), 'must be a list! Got={}'.format(type(nodes))
         super().__init__(parents=nodes, shape=ConcatChannels.calculate_shape(nodes))
+        assert len(set(nodes)) == len(nodes), 'a node is duplicated! This is not handled!'
         self.flatten = flatten
         self.module = functools.partial(torch.cat, dim=1)
 
