@@ -1,4 +1,5 @@
 pytest
-pytest-cov==2.7.0
+pytest-cov
+coverage < 5.0
 coveralls
 twine
