@@ -8,6 +8,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import utils
+import numpy as np
 
 
 def log_nothing(str):
@@ -47,6 +48,7 @@ class Model_XOR(nn.Module):
 
 class TestParamsOptimizer(TestCase):
     def test_discrete_values(self):
+        np.random.seed(0)
         params = trw.hparams.HyperParameters()
 
         choices = ['choice_1', 'choice_2', 'choice_3']
@@ -89,6 +91,7 @@ class TestParamsOptimizer(TestCase):
 
             return score(x, y, d), {'param_x': x, 'param_y': y, 'param_d': d}
 
+        np.random.seed(0)
         optimizer = trw.hparams.HyperParametersOptimizerRandomSearchLocal(
             evaluate_hparams_fn=evaluate_hparams,
             log_string=log_nothing,
@@ -148,7 +151,7 @@ class TestParamsOptimizer(TestCase):
             loss = output['outputs']['dataset_1']['train']['regression']['loss']
             return trw.train.to_value(loss), 'no report'
 
-
+        np.random.seed(0)
         prefix = 'hparams'
         options = trw.train.create_default_options(num_epochs=1000)
         optimizer = trw.hparams.params_optimizer_random_search.HyperParametersOptimizerRandomSearchLocal(

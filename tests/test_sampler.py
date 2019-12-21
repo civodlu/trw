@@ -67,6 +67,7 @@ class TestSampler(TestCase):
         split = {'values': np.arange(0, 1000)}
         values = set()
 
+        np.random.seed(0)
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerRandom())
         for batch in split_np:
             assert len(batch) == 2
@@ -78,6 +79,7 @@ class TestSampler(TestCase):
         split = {'values': np.arange(0, 1000)}
         values = set()
 
+        np.random.seed(0)
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerRandom(batch_size=10))
         for batch in split_np:
             assert len(batch) == 2
@@ -89,9 +91,10 @@ class TestSampler(TestCase):
 
     def test_split_numpy_random_with_replacement(self):
         nb_classes = 10
-        nb_samples = 10000
+        nb_samples = 20000
         split = {'values': np.arange(0, nb_classes)}
 
+        np.random.seed(0)
         values = []
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerRandom(replacement=True, nb_samples_to_generate=nb_samples))
         for batch in split_np:
@@ -106,9 +109,10 @@ class TestSampler(TestCase):
 
     def test_split_numpy_random_with_replacement_batch(self):
         nb_classes = 10
-        nb_samples = 10000
+        nb_samples = 20000
         split = {'values': np.arange(0, nb_classes)}
 
+        np.random.seed(0)
         values = []
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerRandom(replacement=True, nb_samples_to_generate=nb_samples, batch_size=10))
         for batch in split_np:
@@ -127,6 +131,7 @@ class TestSampler(TestCase):
         nb_samples = 10
         split = {'values': np.arange(0, nb_samples)}
 
+        np.random.seed(0)
         values = set()
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerSubsetRandom(indices=range(5, 10)))
         for batch in split_np:
@@ -144,6 +149,7 @@ class TestSampler(TestCase):
             'indices': np.asarray([0, 1, 2, 3, 4, 5]),
         }
 
+        np.random.seed(0)
         classes = []
         indices = set()
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerClassResampling(class_name='classes', nb_samples_to_generate=nb_samples, batch_size=10))
@@ -167,10 +173,11 @@ class TestSampler(TestCase):
         """
         Make sure we sample uniformly the samples
         """
+        np.random.seed(0)
         nb_indices = 20
         nb_reservoir_samples = 10
         maximum_number_of_samples_per_epoch = 5
-        nb_epochs = 20000
+        nb_epochs = 40000
 
         sampler = trw.train.SamplerRandom()
         split = {'path': np.asarray(np.arange(nb_indices))}
