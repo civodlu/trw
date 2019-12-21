@@ -46,6 +46,8 @@ class CallbackDataSummary(callback.Callback):
                                         stats['std'] += np.std(feature_value)
 
                     nb_batches = batch_id + 1
+                    if nb_batches <= 1:
+                        continue  # no data!
                     self.logger('dataset={}, split={}, nb_samples={}, features={}, nb_batches={}'.
                                 format(dataset_name,
                                        split_name,
