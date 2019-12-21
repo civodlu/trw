@@ -5,6 +5,7 @@ import collections
 from torch import multiprocessing as mp
 from queue import Empty
 import functools
+import traceback
 
 from trw.train import sequence
 
@@ -329,6 +330,8 @@ class SequenceMap(sequence.Sequence):
                     print('-------------- ERROR in worker function --------------')
                     print(e)
                     print('-------------- first job will be aborted --------------')
+                    traceback.print_exc()
+                    print('-------------------------------------------------------')
                     continue
 
                 return items
