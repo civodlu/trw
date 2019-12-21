@@ -61,8 +61,9 @@ class MetricClassificationSensitivitySpecificity(Metric):
                 # special case: binary classification
                 tn, fp, fn, tp = cm.ravel()
                 return {
-                    'sensitivity': tp / (tp + fn),
-                    'specificity': tn / (fp + tn),
+                    # we return the 1.0 - metric, since in the history we always keep the smallest number
+                    '1-sensitivity': 1.0 - tp / (tp + fn),
+                    '1-specificity': 1.0 - tn / (fp + tn),
                 }
         return None
 

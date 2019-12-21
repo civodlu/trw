@@ -53,6 +53,8 @@ from .sequence_adaptor import SequenceAdaptorTorch
 from .sequence_collate import SequenceCollate
 from .sequence_rebatch import SequenceReBatch
 
+from .metrics import Metric, MetricClassificationError, MetricClassificationSensitivitySpecificity, MetricLoss
+
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
 from .losses import LossDiceMulticlass
