@@ -165,8 +165,9 @@ class CompiledNet(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.inputs = None
-        self.outputs = None
+        self.inputs = None  # the inputs of the network
+        self.outputs = None  # the output (`trw.train.Output`) of the networks
+        self.raw_outputs = None  # the torch.Tensor outputs of the network
         self.runtime_actions = []
         self.torch_modules = None
 
@@ -256,6 +257,11 @@ class CompiledNet(nn.Module):
             else:
                 assert 0, 'action_type={} is not handled!'.format(action_type)
 
+        for raw_output in self.raw_outputs:
+            state = states.get(raw_output)
+            assert state is not None, f'error! can\'t find output={raw_output} from the states'
+            outputs[raw_output] = state
+
         return outputs
 
     def __getstate__(self):
@@ -290,13 +296,17 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
     """
     assert isinstance(output_nodes, list), 'must be a list'
 
+    raw_outputs = []
+
     # make sure we don't have outputs with the same name
     outputs_names = set()
     for output in output_nodes:
-        assert isinstance(output, SimpleOutputBase), 'output must be a trw.simple_layers.SimpleOutputBase'
-        name = output.output_name
-        assert name not in outputs_names, 'output with the same name:{}, node={}'.format(name, str(output))
-        outputs_names.add(name)
+        if isinstance(output, SimpleOutputBase):
+            name = output.output_name
+            assert name not in outputs_names, 'output with the same name:{}, node={}'.format(name, str(output))
+            outputs_names.add(name)
+        else:
+            raw_outputs.append(output)
 
     input_nodes = find_layer_type(output_nodes, Input)
 
@@ -385,6 +395,7 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
     compiled_net = CompiledNet()
     compiled_net.inputs = input_nodes
     compiled_net.outputs = output_nodes
+    compiled_net.raw_outputs = raw_outputs
     compiled_net.runtime_actions = actions
     compiled_net.other_outputs_to_keep_alive = other_outputs_to_keep_alive
     compiled_net.collect_parameters()
