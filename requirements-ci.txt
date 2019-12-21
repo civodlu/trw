@@ -1,4 +1,4 @@
 pytest
-pytest-cov
+pytest-cov==2.7.0
 coveralls
 twine
