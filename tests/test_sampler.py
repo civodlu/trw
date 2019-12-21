@@ -101,7 +101,7 @@ class TestSampler(TestCase):
             assert len(batch) == 2
             values.append(batch['values'][0])
 
-        assert len(values) == 10000
+        assert len(values) == 20000
         values_counts = collections.Counter(values)
         for value, count in values_counts.items():
             assert value >= 0 and value <= 9
@@ -121,7 +121,7 @@ class TestSampler(TestCase):
             for v in batch['values']:
                 values.append(v)
 
-        assert len(values) == 10000
+        assert len(values) == 20000
         values_counts = collections.Counter(values)
         for value, count in values_counts.items():
             assert value >= 0 and value <= 9
