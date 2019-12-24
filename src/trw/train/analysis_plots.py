@@ -287,7 +287,7 @@ def classification_report(
     accuracy = float(np.sum(predictions == trues)) / len(trues)
 
     d = collections.OrderedDict()
-    d['accuracty'] = accuracy
+    d['accuracy'] = accuracy
     d['sklearn_report'] = report_str
 
     print_options = np.get_printoptions()
@@ -398,7 +398,7 @@ def confusion_matrix(
         classes: list=None,
         normalize=False,
         title='Confusion matrix',
-        cmap=plt.cm.plasma,
+        cmap=plt.cm.Greens,
         display_numbers=True,
         maximum_chars_per_line=50,
         rotate_x=None,
@@ -408,7 +408,8 @@ def confusion_matrix(
         excludes_classes_with_samples_less_than=None,
         main_font_size=16,
         sub_font_size=8,
-        normalize_unit_percentage=False):
+        normalize_unit_percentage=False,
+        max_size_x_label=10):
     """
     Plot the confusion matrix of a predicted class versus the true class
 
@@ -425,11 +426,13 @@ def confusion_matrix(
     :param rotate_y: if not None, indicates the rotation of the label on y axis
     :param display_names_x: if True, the class name, if specified, will also be displayed on the x axis
     :param sort_by_decreasing_sample_size: if True, the confusion matrix will be sorted by decreasing number of samples. This can
-        be useful to show if the errors may be due to low number of samples
+    be useful to show if the errors may be due to low number of samples
     :param excludes_classes_with_samples_less_than: if not None, the classes with less than `excludes_classes_with_samples_less_than` samples will be excluded
-    :param normalize_unit_percentage: if True, use 100% base as unit instead of 1.0
+    :param normalize_unit_percentage if True, use 100% base as unit instead of 1.0
     :param main_font_size: the font size of the text
     :param sub_font_size: the font size of the sub-elements (e.g., ticks)
+    :param max_size_x_label: the maximum length of a label on the x-axis
+    :return:
     """
     if classes is not None:
         assert max(classes_trues) <= len(classes), 'there are more classes than class names!'
@@ -439,7 +442,8 @@ def confusion_matrix(
             return [mapping[class_id] for class_id in class_ids]
 
         # first, calculate the most classes with the highest number of samples
-        class_samples = collections.Counter(classes_trues)
+        # we need to keep track of the 2 trues & truths: these may be different
+        class_samples = collections.Counter(np.concatenate([np.asarray(classes_trues), np.asarray(classes_predictions)]))
         sorted_classes = sorted(list(class_samples.items()), key=lambda t: t[1], reverse=True)
         new_mappings = {}
         for new_mapping, (old_mapping, nb_samples) in enumerate(sorted_classes):
@@ -479,6 +483,7 @@ def confusion_matrix(
             classes = np.asarray(classes)[classes_to_keep]
 
     cm = sklearn.metrics.confusion_matrix(y_pred=classes_predictions, y_true=classes_trues)
+    cm_orig = cm.copy()
     if normalize:
         unit = 1.0
         if normalize_unit_percentage:
@@ -494,15 +499,19 @@ def confusion_matrix(
     if classes is not None:
         tick_marks = np.arange(len(classes))
         if display_names_x:
-            plt.xticks(tick_marks, classes, rotation=rotate_x, fontsize=sub_font_size)
+            classes_short_names = [c[:max_size_x_label]for c in classes]
+            plt.xticks(tick_marks, classes_short_names, rotation=rotate_x, fontsize=sub_font_size)
+
         plt.yticks(tick_marks, classes, rotation=rotate_y, fontsize=sub_font_size)
 
     if display_numbers:
         thresh = cm.max() / 2.
         for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
-            ax.text(j, i, cm[i, j],
-                    horizontalalignment="center",
-                    color="white" if cm[i, j] > thresh else "black")
+            if cm_orig[i, j] != 0:
+                ax.text(j, i, cm_orig[i, j],
+                        horizontalalignment="center",
+                        color="white" if cm[i, j] > thresh else "black",
+                        fontsize=5)
 
     ax.set_ylabel('Predicted label', fontsize=main_font_size)
     ax.set_xlabel('True label', fontsize=main_font_size)

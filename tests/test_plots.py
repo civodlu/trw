@@ -37,3 +37,81 @@ class TestPlots(TestCase):
         values_2 = np.arange(0, d * 2, dtype=np.float) / (d * 2)
         values = [values_1, values_2]
         trw.train.plot_roc(utils.root_output, trues, values, 'ROC classifier 1 vs classifier 2', label_name=['Random classifier', 'Perfect Classifier'])
+
+    def test_auroc_random(self):
+        np.random.seed(0)
+        d = 10000
+        trues = np.random.randint(0, 1 + 1, d)
+        random = (np.random.rand(d) - 0.5) * 10
+        roc = trw.train.auroc(trues, random)
+        assert abs(roc - 0.5) < 0.05  # random should be at 0.5
+
+    def test_auroc_perfect(self):
+        np.random.seed(0)
+        d = 10000
+        trues = np.random.randint(0, 1 + 1, d)
+        roc = trw.train.auroc(trues, trues)
+        assert abs(roc - 1.0) < 1e-4  # perfect classification -> AUC = 1.0
+
+    def test_confusion_matrix(self):
+        d = 100000
+        trues = np.random.randint(0, 4 + 1, d)
+        found = np.random.randint(0, 4 + 1, d)
+
+        root = utils.root_output
+        trw.train.confusion_matrix(
+            root,
+            found,
+            trues,
+            normalize=True,
+            display_numbers=True,
+            rotate_x=45,
+            rotate_y=45,
+            excludes_classes_with_samples_less_than=5,
+            normalize_unit_percentage=True,
+            title='test_confusion_matrix')
+        assert os.path.exists(os.path.join(root, 'test_confusion_matrix.png'))
+
+    def test_classification_report(self):
+        d = 100
+        trues = np.random.randint(0, 1 + 1, d)
+        found = np.random.randn(d, 2)
+        class_mapping = {
+            0: 'class_0',
+            1: 'class_1',
+        }
+        r = trw.train.classification_report(found, trues, class_mapping)
+
+        found_class = np.argmax(found, axis=1)
+        expected_accuracy = float(np.sum(found_class == trues)) / len(trues)
+        assert abs(r['accuracy'] - expected_accuracy) < 1e-5
+
+        fp = 0
+        tp = 0
+        tn = 0
+        fn = 0
+        for i in range(d):
+            value_true = trues[i]
+            value_found = found_class[i]
+            if value_true == value_found:
+                if value_true == 0:
+                    tn += 1
+                else:
+                    tp += 1
+            else:
+                if value_true == 0:
+                    fp += 1
+                else:
+                    fn += 1
+        specificity = tn / (tn + fp)
+        sensitivity = tp / (tp + fn)
+        assert abs(r['specificity'] - specificity) < 1e-5
+        assert abs(r['sensitivity'] - sensitivity) < 1e-5
+
+        cm_lines = [r['confusion_matrix'].replace('[', '').replace(']', '').split('\n')[n] for n in range(2)]
+        cm_lines = [np.fromstring(line.strip(), sep=' ') for line in cm_lines]
+        cm = np.asarray(cm_lines)
+        assert cm[1, 1] == tp
+        assert cm[0, 0] == tn
+        assert cm[1, 0] == fn
+        assert cm[0, 1] == fp
