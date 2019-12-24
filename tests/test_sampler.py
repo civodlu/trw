@@ -177,7 +177,7 @@ class TestSampler(TestCase):
         nb_indices = 7
         nb_reservoir_samples = 10
         maximum_number_of_samples_per_epoch = 5
-        nb_epochs = 10000
+        nb_epochs = 20000
 
         sampler = trw.train.SamplerRandom()
         split = {'path': np.asarray(np.arange(nb_indices))}
@@ -201,7 +201,7 @@ class TestSampler(TestCase):
                     frequencies[uid] += 1
 
         expected_sampling = nb_samples / nb_indices
-        tolerance = 0.05
+        tolerance = 0.1
         for uid, sampling in frequencies.items():
             error = abs(expected_sampling - sampling) / expected_sampling
             print('error=', error)
