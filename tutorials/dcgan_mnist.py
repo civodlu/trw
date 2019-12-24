@@ -111,11 +111,8 @@ def create_model(options):
 
 def create_input():
     datasets = trw.datasets.create_mnist_datasset(batch_size=batch_size)
-    # datasets = trw.datasets.create_mnist_datasset(batch_size=batch_size, root='D:\data')
-    
-    mnist_train = datasets[0]['mnist']['train']
-    images = datasets[0]['mnist']['train'].split['images'] / 128.0 - 1.0
-    nb_samples = len(mnist_train.split['images'])
+    images = datasets[0]['mnist']['train'].source_split.split['images'] / 128.0 - 1.0
+    nb_samples = len(images)
     
     def random_z(batch):
         return torch.randn(batch_size, latent_size, device=device)
@@ -131,10 +128,13 @@ def create_input():
         'label_fake': torch.ones(nb_samples, dtype=torch.int64),
         'images': images
     }
+
+    sampler_generator = trw.train.SamplerRandom(nb_samples_to_generate=batch_size, batch_size=batch_size, replacement=True)
+    sampler_discriminator = trw.train.SamplerRandom(nb_samples_to_generate=batch_size, batch_size=batch_size, replacement=True)
     
     datasets_gan = collections.OrderedDict([
-        ('generator', {'train': trw.train.BatcherNumpyResampled(generator, batch_size=batch_size, nb_batches=1, shuffle=True)}),
-        ('discriminator', {'train': trw.train.BatcherNumpyResampled(discriminator, batch_size=batch_size, nb_batches=1, shuffle=True)}),
+        ('generator', {'train': trw.train.SequenceArray(generator, sampler=sampler_generator)}),
+        ('discriminator', {'train': trw.train.SequenceArray(discriminator, sampler=sampler_discriminator)}),
     ])
     
     return datasets_gan
@@ -147,13 +147,18 @@ def per_epoch_callbacks():
     ]
     
     return [
-        trw.train.CallbackSkipEpoch(nb_epochs=200, callbacks=callbacks),
+        trw.train.CallbackSkipEpoch(nb_epochs=1000, callbacks=callbacks),
     ]
 
 
 device = torch.device('cuda:0')
-options = trw.train.create_default_options(num_epochs=150000, logging_directory=r'c:\tmp', device=device)
-optimizers_fn = functools.partial(trw.train.create_adam_optimizers_scheduler_step_lr_fn, learning_rate=0.0001, step_size=150000, gamma=0.1)
+options = trw.train.create_default_options(num_epochs=150000, device=device)
+optimizers_fn = functools.partial(
+    trw.train.create_adam_optimizers_scheduler_step_lr_fn,
+    learning_rate=0.0001,
+    step_size=150000,
+    gamma=0.1)
+
 trainer = trw.train.Trainer(callbacks_per_epoch_fn=per_epoch_callbacks)
 model, result = trw.train.run_trainer_repeat(
     trainer,
