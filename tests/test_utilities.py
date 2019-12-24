@@ -93,7 +93,6 @@ class TestUtilities(TestCase):
         class_name = trw.train.get_class_name(mapping, 0)
         assert class_name == 'class_0'
 
-
     def test_classification_mapping_none(self):
         mapping = trw.train.get_classification_mapping(None, 'dataset1', 'split1', 'output_name')
         assert mapping is None
