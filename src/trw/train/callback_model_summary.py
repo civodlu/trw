@@ -33,9 +33,13 @@ def model_summary(model, batch, logger):
                     summary[m_key]["input_shape"] = list(input[0].size())
                 summary[m_key]["input_shape"][0] = batch_size
             if isinstance(output, (list, tuple)):
-                summary[m_key]["output_shape"] = [
-                    [-1] + list(o.size())[1:] for o in output
-                ]
+                if len(output) == 2 and isinstance(output[1], tuple):
+                    # this is an RNN cell
+                    summary[m_key]["output_shape"] = [-1] + list(output[0].shape[1:])
+                else:
+                    summary[m_key]["output_shape"] = [
+                        [-1] + list(o.size())[1:] for o in output
+                    ]
             else:
                 if not isinstance(output, collections.Mapping):
                     summary[m_key]["output_shape"] = list(output.size())

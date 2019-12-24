@@ -46,6 +46,31 @@ class Recorder:
         self.values.append(s)
 
 
+class ModelRNN(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+        super().__init__()
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, num_classes)
+
+    def forward(self, batch):
+        # Set initial hidden and cell states
+        images = batch['images'].reshape((-1, 28, 28))
+
+        h0 = torch.zeros(self.num_layers, len(images), self.hidden_size, requires_grad=False).to(images.device)
+        c0 = torch.zeros(self.num_layers, len(images), self.hidden_size, requires_grad=False).to(images.device)
+
+        # Forward propagate LSTM
+        out, _ = self.lstm(images, (h0, c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)
+
+        # Decode the hidden state of the last time step
+        out = self.fc(out[:, -1, :])
+        return {
+            'softmax': trw.train.OutputClassification(out, classes_name='targets')
+        }
+
+
 class TestCallbackModelSummary(TestCase):
     def test_simple_model(self):
         model = ModelDense()
@@ -102,5 +127,19 @@ class TestCallbackModelSummary(TestCase):
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
+        assert expected_trainables == r['trainable_params']
+        assert r['total_params'] == r['trainable_params']
+
+    def test_rnn_model(self):
+        model = ModelRNN(28, 256, 1, 10)
+        batch = {
+            'images': torch.zeros([32, 1, 28, 28])
+        }
+
+        logger = Recorder()
+        r = trw.train.model_summary(model, batch, logger)
+
+        # 2 denses + 2 biases
+        expected_trainables = 295434
         assert expected_trainables == r['trainable_params']
         assert r['total_params'] == r['trainable_params']
