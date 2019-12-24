@@ -248,11 +248,13 @@ def train_loop(
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
             loss_terms['overall_loss'] = {'loss': loss}
-            optimizer.step()
 
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
                     callback(dataset_name, split_name, batch, loss_terms)
+
+            # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
+            optimizer.step()
 
             loss_term_cleanup(loss_terms)
             batch_processing_last = time.perf_counter()
