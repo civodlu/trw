@@ -1,7 +1,7 @@
 import os
 from trw.train import callback
 from trw.train import graph_reflection
-from trw.train import utils
+from trw.train import utilities
 from trw.train import sample_export
 import logging
 import collections
@@ -72,7 +72,7 @@ class CallbackExportConvolutionKernel(callback.Callback):
     def first_time(self, options, datasets, model):
         # here we only want to collect the kernels a single time per epoch, so fix the dataset/split names
         if self.dataset_name is None or self.split_name is None:
-            self.dataset_name, self.split_name = utils.find_default_dataset_and_split_names(
+            self.dataset_name, self.split_name = utilities.find_default_dataset_and_split_names(
                 datasets,
                 default_dataset_name=self.dataset_name,
                 default_split_name=self.split_name)
@@ -82,7 +82,7 @@ class CallbackExportConvolutionKernel(callback.Callback):
             return
 
         self.kernel_root_path = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
-        utils.create_or_recreate_folder(self.kernel_root_path)
+        utilities.create_or_recreate_folder(self.kernel_root_path)
 
         # find the requested kernels
         kernels = []
@@ -108,7 +108,7 @@ class CallbackExportConvolutionKernel(callback.Callback):
 
 
             for kernel_id, kernel in enumerate(self.kernels):
-                kernel_np = utils.to_value(kernel)
+                kernel_np = utilities.to_value(kernel)
                 for filter in range(kernel_np.shape[0]):
                     path = os.path.join(self.kernel_root_path, f'kernel{kernel_id}_filter{filter}_iter_{epoch}')
                     self.export_filter_fn(kernel_np[filter], path)
