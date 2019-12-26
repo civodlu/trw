@@ -21,7 +21,7 @@ class ModelDense(nn.Module):
 def create_datasets():
     batch = {
         'x': torch.zeros([20, 10], dtype=torch.float32),
-        'y': torch.zeros([20], dtype=torch.float32)
+        'y': torch.zeros([20, 1], dtype=torch.float32)
     }
     sampler = trw.train.SamplerSequential(batch_size=10)
     split = trw.train.SequenceArray(batch, sampler=sampler)
@@ -34,6 +34,7 @@ def create_datasets():
 
 class TestCallbackLearningRateRecorder(TestCase):
     def test_model_fitting_with_lr_scheduler(self):
+
         lr_recorder = trw.train.CallbackLearningRateRecorder()
 
         trainer = trw.train.Trainer(
@@ -63,6 +64,13 @@ class TestCallbackLearningRateRecorder(TestCase):
 
         expected_lr = 1000
         for e, lr in enumerate(lrs):
-            if (e + 1) % 10 == 0 and e > 0:
-                expected_lr /= 10.0
+            if torch.__version__[:3] == '1.0':
+                # this may fail for pytorch 1.0: from 1.1 an above, order of
+                # optimizer.step() and scheduler.step() was reversed
+                if (e + 0) % 10 == 0 and e > 0:
+                    expected_lr /= 10.0
+            else:
+                if (e + 1) % 10 == 0 and e > 0:
+                    expected_lr /= 10.0
+            print(e, lr, expected_lr)
             assert abs(lr - expected_lr) < 1e-5
