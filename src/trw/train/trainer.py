@@ -624,7 +624,7 @@ class Trainer:
         result = None
         if with_result:
             result_path = path + '.result'
-            with open(result_path, 'wb') as f:
+            with open(result_path, 'rb') as f:
                 result = pickle.load(f)
         model = torch.load(path, map_location=device)
         return model, result
