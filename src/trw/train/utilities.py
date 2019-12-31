@@ -280,6 +280,7 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
         tensor = torch.as_tensor(np.concatenate(values))
     elif isinstance(values, np.ndarray):
         tensor = torch.as_tensor(values)
+
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], torch.Tensor):
         # this is from a list of dictionary
         merged = [torch.cat(value) for value in values]
