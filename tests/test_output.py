@@ -2,6 +2,7 @@ from unittest import TestCase
 import trw.train
 import numpy as np
 import torch
+import functools
 
 
 class TestOutput(TestCase):
@@ -81,3 +82,30 @@ class TestOutput(TestCase):
         loss = r['loss'].data.numpy()
         self.assertTrue(len(loss.shape) == 0)
         self.assertTrue(loss < 1e-6)
+
+    def test_output_record(self):
+        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
+        o = trw.train.OutputRecord(input_values)
+
+        batch = {'i': input_values}
+        loss_term = o.evaluate_batch(batch, is_training=False)
+        assert loss_term['loss'] == 0.0
+        assert (loss_term['output'] == input_values.numpy()).all()
+
+    def test_output_segmentation(self):
+        mask_scores = torch.zeros(10, 4, 32, 32, dtype=torch.float32)  # 10 samples, 4 classes, 2D 32x32 grid
+        mask_scores[:, 1, :, :] = 100.0
+        expected_map = torch.ones(10, 32, 32, dtype=torch.int64)
+
+        o = trw.train.OutputSegmentation(
+            output=mask_scores,
+            target_name='target',
+            weight_name='weights',
+            criterion_fn=lambda: functools.partial(trw.train.segmentation_criteria_ce_dice, ce_weight=1.0))
+        batch = {
+            'target': expected_map,
+            'weights': torch.ones(10, dtype=torch.float32)
+        }
+        loss_term = o.evaluate_batch(batch, is_training=False)
+        assert trw.train.to_value(loss_term['loss']) < 1e-5
+        assert (loss_term['output'] == 1).all()

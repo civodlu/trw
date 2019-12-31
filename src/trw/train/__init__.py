@@ -4,7 +4,7 @@ from .utilities import len_batch, create_or_recreate_folder, to_value, set_optim
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
     get_classification_mapping, get_classification_mappings
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, \
-    OutputSegmentation, default_sample_uid_name
+    OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
