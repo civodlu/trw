@@ -30,7 +30,7 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
         super().__init__(criteria_fn=criteria_fn, transform_fn=functools.partial(_transform_random_flip, axis=axis, flip_probability=flip_probability))
 
 
-class TransformRandomFlipJoint(transforms.TransformBatchWithCriteria):
+class TransformRandomFlipJoint(transforms.TransformBatchJointWithCriteria):
     """
     Randomly flip the axis of selected features in a joint fashion (if a feature is selected and a sample is
         flipped, it will be flipped for all selected features)

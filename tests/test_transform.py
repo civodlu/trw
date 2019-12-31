@@ -351,3 +351,36 @@ class TestTransform(TestCase):
 
         max_error = torch.max(torch.abs(batch['images'] - transformed_batch['images'] - 110))
         assert float(max_error) < 1e-5
+
+    def test_transform_random_flip_joint(self):
+        np.random.seed(0)
+
+        batch = {
+            'images': np.asarray([
+                [1, 2, 3],
+                [4, 5, 6],
+            ]),
+            'images2': np.asarray([
+                [1, 2, 3],
+                [4, 5, 6],
+            ])
+        }
+
+        transformer = trw.transforms.TransformRandomFlipJoint(
+            feature_names=['images', 'images2'],
+            axis=1,
+            flip_probability=0.5)
+        transformed_batch = transformer(batch)
+
+        image_fliped = transformed_batch['images']
+        image_fliped2 = transformed_batch['images2']
+        assert len(image_fliped) == 2
+        assert image_fliped.shape == (2, 3)
+
+        assert (image_fliped == image_fliped2).all()
+
+        # make sure the original images are NOT flipped!
+        image = batch['images']
+        assert image[0, 0] == 1
+        assert image[0, 1] == 2
+        assert image[0, 2] == 3
