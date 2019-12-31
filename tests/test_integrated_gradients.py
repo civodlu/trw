@@ -18,7 +18,7 @@ class SimpleNet_1(nn.Module):
         z2 = F.relu(x2)
 
         return {
-            'output_1': trw.train.OutputEmbedding(F.relu(z1 - 1 - z2), 'output')
+            'output_1': trw.train.OutputEmbedding(F.relu(z1 - 1 - z2), clean_loss_term_each_batch=True)
         }
 
 
@@ -34,7 +34,7 @@ class SimpleNet_2(nn.Module):
         z2 = F.relu(x2)
 
         return {
-            'output_1': trw.train.OutputEmbedding(F.relu(z1 - z2), 'output')
+            'output_1': trw.train.OutputEmbedding(F.relu(z1 - z2))
         }
 
 
