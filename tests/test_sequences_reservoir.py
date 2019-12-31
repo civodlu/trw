@@ -183,3 +183,72 @@ class TestSequenceReservoir(TestCase):
                 assert batch['sample_uid'][0] != 10, 'this job should have failed!'
                 batches.append(batch)
             assert len(batches) >= 5
+
+    def test_multiple_iterators_same_sequence(self):
+        # test the statistics of iterating the same sequence using different iterators
+        nb_indices = 10
+        paths = [[i, 42] for i in range(nb_indices)]
+        split = {'path': np.asarray(paths)}
+        max_reservoir_samples = 5
+
+        sampler = trw.train.SamplerRandom()
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            max_reservoir_samples=max_reservoir_samples,
+            min_reservoir_samples=max_reservoir_samples,
+            function_to_run=function_to_run,
+            reservoir_sampler=trw.train.SamplerRandom()
+        ).collate()
+
+        samples_0 = collections.defaultdict(lambda: 0)
+        samples_1 = collections.defaultdict(lambda: 0)
+        nb_epochs = 10000
+        for i in range(1, nb_epochs):
+            it_0 = iter(sequence)
+            it_1 = iter(sequence)
+            for batch in it_0:
+                nb_samples = trw.train.len_batch(batch)
+                self.assertTrue(nb_samples == 1)
+                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                samples_0[value] += 1
+
+            for batch in it_1:
+                nb_samples = trw.train.len_batch(batch)
+                self.assertTrue(nb_samples == 1)
+                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                samples_1[value] += 1
+
+        expected_counts = nb_epochs / nb_indices * max_reservoir_samples
+        for c, counts in samples_0.items():
+            error_percent = abs(counts - expected_counts) / expected_counts
+            print(f'c={c}, counts={counts}, expected_counts={expected_counts}, error={error_percent}')
+            self.assertTrue(error_percent < 0.1)
+
+        for c, counts in samples_1.items():
+            error_percent = abs(counts - expected_counts) / expected_counts
+            print(f'c={c}, counts={counts}, expected_counts={expected_counts}, error={error_percent}')
+            self.assertTrue(error_percent < 0.1)
+
+    def test_subsample(self):
+        nb_indices = 10
+        paths = [[i, 42] for i in range(nb_indices)]
+        split = {'path': np.asarray(paths)}
+        max_reservoir_samples = 5
+
+        sampler = trw.train.SamplerRandom()
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            max_reservoir_samples=max_reservoir_samples,
+            min_reservoir_samples=max_reservoir_samples,
+            function_to_run=function_to_run,
+            reservoir_sampler=trw.train.SamplerRandom()
+        ).collate().subsample(2)
+
+        uids = set()
+        for epoch in range(10):
+            for batch in sequence:
+                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                uids.add(value)
+        assert len(uids) == 2

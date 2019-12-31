@@ -150,24 +150,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
         if len(self.reservoir) < self.min_reservoir_samples:
             # before we can iterate on sample, we must have enough samples in the reservoir!
             self._wait_for_job_completion()
-        self._reset_iter_reservoir()
-        self.number_samples_generated = 0
-
-    def _reset_iter_reservoir(self):
-        """
-        Restart the reservoir iterator
-        """
-
-        # make sure the reservoir is not changed during iteration, so take a copy
-        # when the iterator is created
-        self.reservoir_copy = list(self.reservoir)
-
-        if self.reservoir_sampler is not None:
-            # take into account the sampler. If no sampler, we can make it faster
-            self.reservoir_sampler.initializer(self.reservoir_copy)
-            self.iter_reservoir = iter(self.reservoir_sampler)
-        else:
-            self.iter_reservoir = self.reservoir_copy.__iter__()
 
     def fill_queue(self):
         """
@@ -213,39 +195,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
         while len(self.reservoir) < self.min_reservoir_samples:
             self._retrieve_results_and_fill_queue()
 
-    def _get_next(self):
-        """
-        Returns:
-            the next batch of samples
-        """
-        if self.maximum_number_of_samples_per_epoch is not None and self.number_samples_generated >= self.maximum_number_of_samples_per_epoch:
-            # we have reached the maximum number of samples, stop the sequence
-            raise StopIteration()
-
-        if self.reservoir_sampler is not None:
-            # items are actually a list of indices!
-            indices = self.iter_reservoir.__next__()
-            if isinstance(indices, collections.Iterable):
-                items = [self.reservoir[index] for index in indices]
-                self.number_samples_generated += len(items)
-            else:
-                self.number_samples_generated += 1
-                items = [self.reservoir[indices]]
-        else:
-            self.number_samples_generated += 1
-            items = [self.iter_reservoir.__next__()]
-
-        if self.collate_fn is not None:
-            return self.collate_fn(items)
-
-        return items
-
-    def __next__(self):
-        return self._get_next()
-
     def __iter__(self):
         self.initializer()
-        return self
+        return SequenceAsyncReservoirIterator(self, copy.deepcopy(self.reservoir_sampler))
 
     def close(self):
         """
@@ -253,3 +205,53 @@ class SequenceAsyncReservoir(sequence.Sequence):
         """
         if self.job_executer is not None:
             self.job_executer.close()
+
+
+class SequenceAsyncReservoirIterator(sequence.SequenceIterator):
+    """
+    Iterate through the SequenceAsyncReservoir sequence
+    """
+    def __init__(self, base_sequence, reservoir_sampler):
+        super().__init__()
+        self.base_sequence = base_sequence
+        self.reservoir_sampler = reservoir_sampler
+
+        self._reset_iter_reservoir()
+        self.number_samples_generated = 0
+
+    def _reset_iter_reservoir(self):
+        # make sure the reservoir is not changed during iteration, so take a copy
+        # when the iterator is created
+        self.reservoir_copy = list(self.base_sequence.reservoir)
+
+        # create the reservoir sampler if necessary
+        if self.reservoir_sampler is not None:
+            # If no sampler, we can make it faster
+            self.reservoir_sampler.initializer(self.reservoir_copy)
+            self.iter_reservoir = iter(self.reservoir_sampler)
+        else:
+            self.iter_reservoir = self.reservoir_copy.__iter__()
+
+    def __next__(self):
+        if self.base_sequence.maximum_number_of_samples_per_epoch is not None and \
+                self.number_samples_generated >= self.base_sequence.maximum_number_of_samples_per_epoch:
+            # we have reached the maximum number of samples, stop the sequence
+            raise StopIteration()
+
+        if self.reservoir_sampler is not None:
+            # items are actually a list of indices!
+            indices = self.iter_reservoir.__next__()
+            if isinstance(indices, collections.Iterable):
+                items = [self.reservoir_copy[index] for index in indices]
+                self.number_samples_generated += len(items)
+            else:
+                self.number_samples_generated += 1
+                items = [self.reservoir_copy[indices]]
+        else:
+            self.number_samples_generated += 1
+            items = [self.iter_reservoir.__next__()]
+
+        if self.base_sequence.collate_fn is not None:
+            return self.base_sequence.collate_fn(items)
+
+        return items

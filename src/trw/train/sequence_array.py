@@ -1,10 +1,10 @@
 from trw.train import sequence
-from trw.train import sampler
+from trw.train import sampler as sampler_trw
 from trw.train import utilities
 import numpy as np
-import copy
 import torch
 import collections
+import copy
 
 
 # this the name used for the sample UID
@@ -15,7 +15,7 @@ class SequenceArray(sequence.Sequence):
     """
     Create a sequence of batches from numpy arrays, lists and :class:`torch.Tensor`
     """
-    def __init__(self, split, sampler=sampler.SamplerRandom(), transforms=None, use_advanced_indexing=True, sample_uid_name=sample_uid_name):
+    def __init__(self, split, sampler=sampler_trw.SamplerRandom(), transforms=None, use_advanced_indexing=True, sample_uid_name=sample_uid_name):
         """
 
         Args:
@@ -40,7 +40,7 @@ class SequenceArray(sequence.Sequence):
 
     def subsample(self, nb_samples):
         # get random indices
-        subsample_sample = sampler.SamplerRandom(batch_size=nb_samples)
+        subsample_sample = sampler_trw.SamplerRandom(batch_size=nb_samples)
         subsample_sample.initializer(self.split)
 
         # extract the indices
@@ -91,10 +91,6 @@ class SequenceArray(sequence.Sequence):
 
         return SequenceArray(subsampled_split, new_sampler, transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
 
-    def initializer(self):
-        self.nb_samples = utilities.len_batch(self.split)
-        self.sampler.initializer(self.split)
-        self.sampler_iterator = iter(self.sampler)
 
     @staticmethod
     def get(split, nb_samples, indices, transforms, use_advanced_indexing):
@@ -143,16 +139,36 @@ class SequenceArray(sequence.Sequence):
 
         return data
 
-    def get_next(self):
+    def __iter__(self):
+        # make sure the sampler is copied so that we can have multiple iterators of the
+        # same sequence
+        return SequenceIteratorArray(self, copy.deepcopy(self.sampler))
+
+
+class SequenceIteratorArray(sequence.SequenceIterator):
+    """
+    Iterate the elements of an :class:`trw.train.SequenceArray` sequence
+
+    Asumptions:
+        - underlying `base_sequence` doesn't change sizes while iterating
+    """
+    def __init__(self, base_sequence, sampler):
+        super().__init__()
+        self.base_sequence = base_sequence
+        self.nb_samples = utilities.len_batch(self.base_sequence.split)
+
+        self.sampler = sampler
+        self.sampler.initializer(self.base_sequence.split)
+        self.sampler_iterator = iter(self.sampler)
+
+    def __next__(self):
         indices = self.sampler_iterator.__next__()
         if not isinstance(indices, (np.ndarray, collections.Sequence)):
             indices = [indices]
-        return SequenceArray.get(self.split, self.nb_samples, indices, self.transforms, self.use_advanced_indexing)
 
-    def __next__(self):
-        return self.get_next()
-
-    def __iter__(self):
-        self.initializer()
-        return self
-
+        return SequenceArray.get(
+            self.base_sequence.split,
+            self.nb_samples,
+            indices,
+            self.base_sequence.transforms,
+            self.base_sequence.use_advanced_indexing)

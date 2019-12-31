@@ -6,11 +6,7 @@ import torch.utils.data.dataloader
 from trw.train import sampler
 import functools
 import weakref
-
-
-# specific windows platform debugging
-import platform
-is_windows_platform = platform.system() == 'Windows'
+from collections import abc
 
 logger = logging.getLogger(__name__)
 
@@ -232,25 +228,6 @@ class Sequence:
             #if current.next_split is not None and current.next_split not in sequences_filled:
             #    sequences_to_examine.append(current.next_split)
 
-    def __next__(self):
-        """
-
-        Returns:
-            The next batch of data
-        """
-        raise NotImplemented()
-
-    def next_item(self, blocking):
-        """
-
-        Args:
-            blocking: if True, the next elements will block the current thread if not ready
-
-        Returns:
-            The next batch of data
-        """
-        return self.__next__()
-
     def has_background_jobs(self):
         """
         Returns:
@@ -308,11 +285,28 @@ class Sequence:
         raise NotImplemented()
 
 
+class SequenceIterator(abc.Iterator):
+    def __init__(self):
+        pass
 
+    def __next__(self):
+        """
 
+        Returns:
+            The next batch of data
+        """
+        raise NotImplemented()
 
+    def next_item(self, blocking):
+        """
 
+        Args:
+            blocking: if True, the next elements will block the current thread if not ready
 
+        Returns:
+            The next batch of data
+        """
+        return self.__next__()
 
 
 
