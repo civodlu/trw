@@ -231,4 +231,11 @@ class TestSimplifiedNN(TestCase):
             exception_raised = True
 
         self.assertTrue(exception_raised)  # compile should have failed: 2 outputs with the same name!
-    
+
+    def test_reshape(self):
+        input_1 = trw.simple_layers.Input(shape=[None, 32, 16], feature_name='input_1')
+        o = trw.simple_layers.Reshape(input_1, [None, 32 * 16])
+        net = trw.simple_layers.compile_nn([o])
+
+        r = net({'input_1': torch.zeros((100, 32, 16))})
+        assert r[o].shape == (100, 32 * 16)

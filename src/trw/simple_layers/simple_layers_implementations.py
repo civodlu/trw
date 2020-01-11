@@ -89,6 +89,24 @@ class ReLU(simple_layers.SimpleModule):
         super().__init__(node=node, module=nn.ReLU(), shape=node.shape)
 
 
+class _Reshape(nn.Module):
+    def __init__(self, shape):
+        super().__init__()
+        self.shape = shape
+
+    def forward(self, x):
+        return torch.reshape(x, self.shape)
+
+
+class Reshape(simple_layers.SimpleModule):
+    """
+    Reshape a tensor to another shape
+    """
+    def __init__(self, node, shape):
+        reformated_shape = [s if s is not None else -1 for s in shape]
+        super().__init__(node=node, module=_Reshape(shape=reformated_shape), shape=reformated_shape)
+
+
 class Linear(simple_layers.SimpleModule):
     def __init__(self, node, out_features):
         assert len(node.shape) == 2, 'Linear input shape must be 2D, instead got={}'.format(node.shape)
