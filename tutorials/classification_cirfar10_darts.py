@@ -9,7 +9,7 @@ class Net_simple(nn.Module):
         super().__init__()
 
         dropout_probability = options['training_parameters']['dropout_probability']
-        self.convs = trw.layers.convs_2d([3, 64, 128, 256], with_batchnorm=True, convolution_repeats=[3, 3, 3])
+        self.convs = trw.layers.convs_2d([3, 64, 128, 256], batch_norm_kwargs={}, convolution_repeats=[3, 3, 3])
         self.denses = trw.layers.denses([4096, 256, 10], dropout_probability=None, with_batchnorm=True, last_layer_is_output=True)
 
     def forward(self, batch):
@@ -143,7 +143,7 @@ if __name__ == '__main__':
     model, results = trainer.fit(
         options,
         #inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=20, data_processing_batch_size=10),
-        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
+        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transform_train=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
         run_prefix='cifar10_darts_search',
         #model_fn=lambda options: Net_DARTS(options),
         model_fn=lambda options: Net_simple(options),
