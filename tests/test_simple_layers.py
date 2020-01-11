@@ -17,10 +17,8 @@ class TestSimpleLayers(TestCase):
             convolution_repeats=1,
             with_flatten=True,
             dropout_probability=0.5,
-            with_batchnorm=True,
-            with_lrn=True,
-            lrn_size=2,
-            batchnorm_momentum=0.1,
+            batch_norm_kwargs={},
+            lrn_kwargs={},
             padding='same')
 
         net = trw.simple_layers.compile_nn([o])
@@ -40,10 +38,8 @@ class TestSimpleLayers(TestCase):
             convolution_repeats=1,
             with_flatten=True,
             dropout_probability=0.5,
-            with_batchnorm=True,
-            with_lrn=True,
-            lrn_size=2,
-            batchnorm_momentum=0.1,
+            batch_norm_kwargs={},
+            lrn_kwargs={},
             padding='same')
 
         net = trw.simple_layers.compile_nn([o])

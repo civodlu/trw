@@ -1,76 +1,51 @@
 import torch.nn as nn
-from trw.layers.flatten import Flatten
-from trw.layers.utils import div_shape
-import numbers
+from trw.layers.convs import ConvsBase
 
 
-def convs_3d(channels, convolution_kernels=(5, 5, 5), strides=(1, 1, 1), pooling_size=(2, 2, 2), convolution_repeats=None, activation=nn.ReLU, with_flatten=False, dropout_probability=None, with_batchnorm=False, with_lrn=False, lrn_size=2, batchnorm_momentum=0.1, padding='same'):
+def convs_3d(
+        channels,
+        convolution_kernels=5,
+        strides=1,
+        pooling_size=2,
+        convolution_repeats=1,
+        activation=nn.ReLU,
+        with_flatten=False,
+        dropout_probability=None,
+        batch_norm_kwargs=None,
+        lrn_kwargs=None,
+        padding='same',
+        last_layer_is_output=False):
     """
 
     Args:
-        channels:
-        convolution_kernels:
-        strides:
-        pooling_size:
-        convolution_repeats:
-        activation:
-        with_flatten:
-        dropout_probability:
-        with_batchnorm:
-        with_lrn:
-        lrn_size:
-        batchnorm_momentum:
-        padding (str): if `same`, the convolution will be padded with zeros to keep the output shape the same as the input shape
-
-    Returns:
-
+        channels: the number of channels
+        convolution_kernels: for each convolution group, the kernel of the convolution
+        strides: for each convolution group, the stride of the convolution
+        pooling_size: the pooling size to be inserted after each convolution group
+        convolution_repeats: the number of repeats of a convolution
+        activation: the activation function
+        with_flatten: if True, the last output will be flattened
+        dropout_probability: if None, not dropout. Else the probability of dropout after each convolution
+        batch_norm_kwargs: the batch norm kwargs. See the original torch functions for description. If None,
+            no batch norm
+        lrn_kwargs: the local response normalization kwargs. See the original torch functions for description. If
+            None, not LRN
+        padding: 'same' will add padding so that convolution output as the same size as input
+        last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
     """
-    ops = []
-    nb_convs = len(channels) - 1
-    if not isinstance(convolution_kernels, list):
-        convolution_kernels = [convolution_kernels] * nb_convs
-    if not isinstance(strides, list):
-        strides = [strides] * nb_convs
-    if not isinstance(pooling_size, list) and pooling_size is not None:
-        pooling_size = [pooling_size] * nb_convs
-    if convolution_repeats is None:
-        convolution_repeats = [1] * nb_convs
-    elif isinstance(convolution_repeats, numbers.Number):
-        convolution_repeats = [convolution_repeats] * nb_convs
 
-    assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
-    assert nb_convs == len(strides), 'must be specified for each convolutional layer'
-    assert pooling_size is None or nb_convs == len(pooling_size), 'must be specified for each convolutional layer'
+    return ConvsBase(
+        cnn_dim=3,
+        channels=channels,
+        convolution_kernels=convolution_kernels,
+        strides=strides,
+        pooling_size=pooling_size,
+        convolution_repeats=convolution_repeats,
+        activation=activation,
+        with_flatten=with_flatten,
+        batch_norm_kwargs=batch_norm_kwargs,
+        lrn_kwargs=lrn_kwargs,
+        dropout_probability=dropout_probability,
+        padding=padding,
+        last_layer_is_output=last_layer_is_output)
 
-    for n in range(len(channels) - 1):
-        current = channels[n]
-        next = channels[n + 1]
-
-        p = 0
-        if padding == 'same':
-            p = div_shape(convolution_kernels[n], 2)
-
-        ops.append(nn.Conv3d(current, next, kernel_size=convolution_kernels[n], stride=strides[n], padding=p))
-        ops.append(activation())
-
-        # repeat some convolutions if needed
-        nb_repeats = convolution_repeats[n] - 1
-        for r in range(nb_repeats):
-            ops.append(nn.Conv3d(next, next, kernel_size=convolution_kernels[n], stride=strides[n], padding=p))
-            ops.append(activation())
-
-        if pooling_size is not None:
-            ops.append(nn.MaxPool3d(pooling_size[n])),
-
-        if with_batchnorm:
-            ops.append(nn.BatchNorm3d(next, momentum=batchnorm_momentum))
-            
-        if with_lrn:
-            ops.append(nn.LocalResponseNorm(lrn_size))
-
-        if dropout_probability is not None:
-            ops.append(nn.Dropout3d(p=dropout_probability))
-
-    if with_flatten:
-        ops.append(Flatten())
-    return nn.Sequential(*ops)

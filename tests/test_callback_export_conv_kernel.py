@@ -16,8 +16,8 @@ class TestCallbackExportConvolutionKernel(TestCase):
             convolution_repeats=1,
             with_flatten=True,
             dropout_probability=0.5,
-            with_batchnorm=True,
-            with_lrn=True,
+            batch_norm_kwargs={},
+            lrn_kwargs={},
             channels=[4, 8, 16]
         )
         n = trw.simple_layers.OutputEmbedding(n, 'embedding')
@@ -55,8 +55,8 @@ class TestCallbackExportConvolutionKernel(TestCase):
             convolution_repeats=1,
             with_flatten=True,
             dropout_probability=0.5,
-            with_batchnorm=True,
-            with_lrn=True,
+            batch_norm_kwargs={},
+            lrn_kwargs={},
             channels=[4, 8, 16]
         )
         n = trw.simple_layers.OutputEmbedding(n, 'embedding')
