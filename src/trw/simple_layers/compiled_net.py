@@ -162,7 +162,13 @@ class CompiledNet(nn.Module):
     Encapsulate a `compiled` network so that we can efficiently calculate the outputs
         of the network.
     """
-    def __init__(self):
+    def __init__(self, remove_checks=False):
+        """
+
+        Args:
+            remove_checks:  if True, some runtime checks will be disabled. This can be useful for example FCNN
+                where the output shape will depend on the input shape
+        """
         super().__init__()
 
         self.inputs = None  # the inputs of the network
@@ -179,6 +185,8 @@ class CompiledNet(nn.Module):
         # we NEED to keep this module list for torch:
         # it means torch is aware of the parameters of our sub-modules
         self.module_list = nn.ModuleList()
+
+        self.remove_checks = remove_checks
         
     def collect_parameters(self):
         """
@@ -242,9 +250,11 @@ class CompiledNet(nn.Module):
                 # is the same as the one calculated
                 predicted_shape = action.shape[1:]
                 actual_shape = list(action_output.shape)[1:]
-                assert predicted_shape == actual_shape, f'shape mismatch between simple_layer predicted ' \
-                                                        f'shape ({predicted_shape}) and actual shape ' \
-                                                        f'({actual_shape}) for module={module}'
+
+                if not self.remove_checks:
+                    assert predicted_shape == actual_shape, f'shape mismatch between simple_layer predicted ' \
+                                                            f'shape ({predicted_shape}) and actual shape ' \
+                                                            f'({actual_shape}) for module={module}'
                 states[action] = action_output
             elif action_type == RuntimeAction.REMOVE_STATE:
                 #print('del STATE=', action)
@@ -276,7 +286,7 @@ class CompiledNet(nn.Module):
         create_weak_ref(self.outputs)
 
 
-def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
+def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_checks=False):
     """
     Compile a network to calculate `output_nodes`
 
@@ -290,6 +300,8 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
         output_nodes: the output nodes to calculate. The order of the nodes indicates the order of the calculation
             and impacts the book-keeping of the shared calculation in multiple output networks
         other_outputs_to_keep_alive: keeps alive unused output nodes
+        remove_checks:  if True, some runtime checks will be disabled. This can be useful for example FCNN
+                where the output shape will depend on the input shape
 
     Returns:
         a `CompiledNet`
@@ -392,7 +404,7 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None):
                 if marks is not None and len(marks) > 0:
                     next_nodes.append(child)
 
-    compiled_net = CompiledNet()
+    compiled_net = CompiledNet(remove_checks=remove_checks)
     compiled_net.inputs = input_nodes
     compiled_net.outputs = output_nodes
     compiled_net.raw_outputs = raw_outputs
