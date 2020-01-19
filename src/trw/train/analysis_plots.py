@@ -164,7 +164,7 @@ def boxplots(
     plt.close()
 
 
-def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=None):
+def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=None, cutoff=0.5):
     """
     Calculate the ROC and AUC of a binary classifier
 
@@ -176,6 +176,7 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
     :param title: the title of the ROC
     :param label_name: the name of the ROC curve. Can be a list for multiple ROC curves
     :param colors: if None use default colors. Else, a numpy array of dim (Nx3) where `N` is the number of colors. Must be in [0..1] range
+    :param cutoff: the cutoff value discretize class 0 vs class 1. By default, 0.5
     """
     
     if not isinstance(trues, list):
@@ -200,7 +201,6 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
         colors = utilities.make_unique_colors()
         colors = np.asarray(colors) / 255
     assert len(colors) >= len(found_scores_1), 'TODO define more colors!'
-    cutoff = None
     for curve_n, found_values in enumerate(found_scores_1):
         true_values = trues[curve_n]
 
@@ -213,9 +213,8 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
             j_ordered = sorted(zip(j_scores, thresholds))
             return j_ordered[-1][1]
 
-        cutoff = cutoff_youdens_j(fpr, tpr, thresholds)
-        if cutoff != cutoff_youdens_j(fpr, tpr, thresholds):
-            print('WARNING! manual threshold!')
+        if cutoff is None:
+            cutoff = cutoff_youdens_j(fpr, tpr, thresholds)
 
         y_cutoff = found_values >= cutoff
         accuracy_cutoff = sum(true_values == y_cutoff) / len(true_values)
