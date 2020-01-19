@@ -31,6 +31,7 @@ from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
 from trw.train import callback_export_convolution_kernel
+from trw.train import callback_export_segmentations
 from trw.train import utilities
 
 logger = logging.getLogger(__name__)
@@ -304,7 +305,7 @@ def eval_loop(
 
     # make sure the model is in eval mode so that non essential operations are removed (e.g., batch norm, dropout)
     model.eval()
-    
+
     try:
         for i, batch in enumerate(split):
             assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
@@ -326,6 +327,18 @@ def eval_loop(
     except StopIteration:
         pass
     return all_loss_terms
+
+
+def approximate_batch_size_from_loss_terms(all_loss_terms):
+    """
+    Calculate on approximation of the number of samples from the loss terms. Error can be up to the number of
+    samples within one batch
+    """
+    for name, values in all_loss_terms[0].items():
+        s = utilities.len_batch(values)
+        if s != 0:
+            return s * len(all_loss_terms)
+    return 0
 
 
 def epoch_train_eval(
@@ -414,7 +427,8 @@ def epoch_train_eval(
             if len(all_loss_terms) != 0:
                 epoch_outputs, epoch_history = generic_aggregate_loss_terms(all_loss_terms)
                 epoch_history['info'] = {
-                    'time': time_end - time_start
+                    'time': time_end - time_start,
+                    'nb_samples': approximate_batch_size_from_loss_terms(all_loss_terms)
                 }
                 dataset_history[split_name] = epoch_history
                 dataset_outputs[split_name] = epoch_outputs
@@ -492,6 +506,8 @@ def default_post_training_callbacks(embedding_name='embedding', dataset_name=Non
 
     if export_errors:
         callbacks.append(callback_export_classification_errors.CallbackExportClassificationErrors(discard_train=discard_train_error_export))
+        callbacks.append(callback_export_segmentations.CallbackExportSegmentations())
+
 
     callbacks += [
         callback_export_classification_report.CallbackExportClassificationReport(),
@@ -869,6 +885,8 @@ def strip_unpickable(outputs):
     """
     Remove the objects that cannot be pickled
     """
+    if outputs is None:
+        return None
 
     # TODO not very nice code. Can we generalize this?
     o_d = collections.OrderedDict()
