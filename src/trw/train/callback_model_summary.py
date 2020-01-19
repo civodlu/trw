@@ -1,10 +1,11 @@
 from trw.train import callback
 from trw.train import utilities
 from trw.train import trainer
+from trw.train.data_parallel_extented import DataParallelExtended
 import collections
-import torch.nn as nn
 import numpy as np
 import logging
+import torch
 
 
 logger = logging.getLogger(__name__)
@@ -71,6 +72,11 @@ def model_summary(model, batch, logger):
     parameters_counted = set()
     summary = collections.OrderedDict()
     hooks = []
+
+    if isinstance(model, (torch.nn.DataParallel, DataParallelExtended)):
+        # get the underlying module only. `DataParallel` will replicate the module on the different devices
+        model = model.module
+
     model.apply(register_hook)
     model(batch)
 

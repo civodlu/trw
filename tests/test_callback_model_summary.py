@@ -2,6 +2,7 @@ from unittest import TestCase
 import trw.train
 import torch
 import torch.nn as nn
+import warnings
 
 
 class ModelDense(nn.Module):
@@ -141,5 +142,32 @@ class TestCallbackModelSummary(TestCase):
 
         # 2 denses + 2 biases
         expected_trainables = 295434
+        assert expected_trainables == r['trainable_params']
+        assert r['total_params'] == r['trainable_params']
+
+    def test_multi_gpus(self):
+        """
+        make sure we don't count the models replicated on different GPUs
+        """
+        nb_cuda_devices = torch.cuda.device_count()
+        if nb_cuda_devices < 2:
+            # we do not have enough GPUs, abot the test
+            warnings.warn(f'This test can\'t be run. Requires CUDA devices=2, got={nb_cuda_devices}', ResourceWarning)
+            return
+
+        model = nn.Sequential(
+            nn.Linear(10, 100),
+            nn.Linear(100, 5)
+        )
+
+        device = torch.device('cuda:0')
+        model = trw.train.DataParallelExtended(model).to(device)
+        batch = torch.zeros([11, 10], device=device)
+
+        logger = Recorder()
+        r = trw.train.model_summary(model, batch, logger)
+
+        # 2 denses + 2 biases
+        expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
         assert expected_trainables == r['trainable_params']
         assert r['total_params'] == r['trainable_params']
