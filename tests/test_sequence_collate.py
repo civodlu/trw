@@ -25,8 +25,8 @@ class TestSequenceCollate(TestCase):
         split = {'path': np.asarray(np.arange(nb_indices))}
         sampler = trw.train.SamplerSequential(batch_size=1)
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence, min_reservoir_samples=10, max_reservoir_samples=10, function_to_run=make_list_dicts).collate()
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=10,
+                                                    function_to_run=make_list_dicts, min_reservoir_samples=10).collate()
 
         for batch in sequence:
             assert trw.train.len_batch(batch) == 10

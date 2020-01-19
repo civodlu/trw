@@ -175,22 +175,26 @@ class Sequence:
             max_jobs_at_once=None,
             reservoir_sampler=sampler.SamplerSequential(),
             collate_fn=remove_nested_list,
-            maximum_number_of_samples_per_epoch=None):
+            maximum_number_of_samples_per_epoch=None,
+            max_reservoir_replacement_size=None):
         """
-        Create a sequence created from a reservoir. The purpose of this sequence is to maximize the GPU for batches of data
-        at the expense of recycling previously processed samples.
-
         Args:
             max_reservoir_samples: the maximum number of samples of the reservoir
             function_to_run: the function to run asynchronously
-            min_reservoir_samples: the minimum of samples of the reservoir needed before an output sequence can be created
-            nb_workers: the number of workers that will process `function_to_run`
-            max_jobs_at_once: the maximum number of jobs that can be pushed in the result list at once. If 0, no limit. If None: set to the number of workers
-            reservoir_sampler: a sampler that will be used to sample the reservoir or None if no sampling needed
-            collate_fn: a function to post-process the samples into a single batch. If None, return the items as they were in `source_split`
-            maximum_number_of_samples_per_epoch: the maximum number of samples per epoch to generate.
-                If we reach this maximum, this will not empty the reservoir but simply interrupt the sequence so
-                that we can restart.
+            min_reservoir_samples: the minimum of samples of the reservoir needed before an output sequence
+                can be created
+            nb_workers: the number of workers that will process `function_to_run` to fill the reservoir. Must be >= 1
+            max_jobs_at_once: the maximum number of jobs that can be started and stored by epoch by the workers.
+                If 0, no limit. If None: set to the number of workers
+            reservoir_sampler: a sampler that will be used to sample the reservoir or None for sequential sampling
+                of the reservoir
+            collate_fn: a function to post-process the samples into a single batch, or None if not to be collated
+            maximum_number_of_samples_per_epoch: the maximum number of samples that will be generated per epoch.
+                If we reach this maximum, the sequence will be interrupted
+            max_reservoir_replacement_size: Specify the maximum number of samples replaced in the reservoir by epoch.
+                If `None`, we will use the whole result queue. This can be useful to control explicitly how the
+                reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
+                `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
         """
         from . import sequence_async_reservoir
         return sequence_async_reservoir.SequenceAsyncReservoir(
@@ -198,12 +202,11 @@ class Sequence:
             max_reservoir_samples=max_reservoir_samples,
             function_to_run=function_to_run,
             min_reservoir_samples=min_reservoir_samples,
-            nb_workers=nb_workers,
-            max_jobs_at_once=max_jobs_at_once,
+            nb_workers=nb_workers, max_jobs_at_once=max_jobs_at_once,
             reservoir_sampler=reservoir_sampler,
             collate_fn=collate_fn,
-            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch
-        )
+            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch,
+            max_reservoir_replacement_size=max_reservoir_replacement_size)
 
     def fill_queue(self):
         """

@@ -151,9 +151,9 @@ class JobExecutor:
 
             try:
                 results = func(item)
-                assert results is not None, '`func`={} must result a result!'.format(func)
+                # results may be `None`, in that case we simply fetch the next result
 
-                if post_process_results_fun is not None:
+                if post_process_results_fun is not None and results:
                     # channels are reversed for the communication worker->main thread
                     post_process_results_fun(results, channel_main_to_worker=channel_worker_to_main, channel_worker_to_main=channel_main_to_worker)
                     # post_process_results_fun(results, channel_main_to_worker=channel_main_to_worker, channel_worker_to_main=channel_worker_to_main)
@@ -164,18 +164,23 @@ class JobExecutor:
                 results = None
                 #continue  # restart the worker
 
-            with job_session_id.get_lock():
-                current_session_id = job_session_id.value
+            try:
+                with job_session_id.get_lock():
+                    current_session_id = job_session_id.value
 
-                # if the session ID has changed (before and after running the job), then we want to discard
-                # the result of these jobs
-                if current_session_id == started_session_id:
-                    #print('Worker | ', os.getpid(), '| job finished. Posting | ', datetime.datetime.now().time())
-                    output_queue.put(results)
-                    #print('Worker | ', os.getpid(), '| job finished. Posted | ', datetime.datetime.now().time())
-                else:
-                    #print('Worker | ', os.getpid(), '| job DISCARDED. Posted | ', datetime.datetime.now().time())
-                    pass
+                    # if the session ID has changed (before and after running the job), then we want to discard
+                    # the result of these jobs
+                    if current_session_id == started_session_id:
+                        #print('Worker | ', os.getpid(), '| job finished. Posting | ', datetime.datetime.now().time())
+                        output_queue.put(results)
+                        #print('Worker | ', os.getpid(), '| job finished. Posted | ', datetime.datetime.now().time())
+                    else:
+                        #print('Worker | ', os.getpid(), '| job DISCARDED. Posted | ', datetime.datetime.now().time())
+                        pass
+            except Exception as e:
+                print('-------------- ERROR in worker function: could not push on the queue --------------')
+                print(e)
+                print('-------------- first job will be aborted --------------')
 
 
 class SequenceMap(sequence.Sequence):
@@ -292,7 +297,10 @@ class SequenceMap(sequence.Sequence):
         :param next_fn: return the next elements
         """
         if self.main_thread_list is None:
-            items = next_fn()
+            items = None
+            while items is None:
+                items = next_fn()
+
             is_sequence = isinstance(items, collections.Sequence) and not isinstance(items, collections.Mapping)
             if is_sequence:
                 # sequence: we need to locally store the sequence and iterate it
@@ -303,6 +311,8 @@ class SequenceMap(sequence.Sequence):
                 return items
 
         # manage the iteration of an existing sequence
+        if self.main_thread_index >= len(self.main_thread_list):
+            raise IndexError(f'BUG! list size={len(self.main_thread_list)}, index={self.main_thread_index}')
         item = self.main_thread_list[self.main_thread_index]
         self.main_thread_index += 1
         if self.main_thread_index == len(self.main_thread_list):
@@ -325,6 +335,7 @@ class SequenceMap(sequence.Sequence):
 
                 try:
                     items = self.function_to_run(i)
+
                 except Exception as e:
                     # case where we have a job that failed: discard
                     print('-------------- ERROR in worker function --------------')

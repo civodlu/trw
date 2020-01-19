@@ -35,30 +35,28 @@ class SequenceAsyncReservoir(sequence.Sequence):
     This sequence can be interrupted (e.g., after a certain number of batches have been returned). When the sequence
     is restarted, the reservoir will not be emptied.
     """
-    def __init__(
-            self,
-            source_split,
-            max_reservoir_samples,
-            function_to_run,
-            min_reservoir_samples=1,
-            nb_workers=1,
-            max_jobs_at_once=None,
-            reservoir_sampler=None,
-            collate_fn=sequence.remove_nested_list,
-            maximum_number_of_samples_per_epoch=None):
+    def __init__(self, source_split, max_reservoir_samples, function_to_run, min_reservoir_samples=1, nb_workers=1,
+                 max_jobs_at_once=None, reservoir_sampler=None, collate_fn=sequence.remove_nested_list,
+                 maximum_number_of_samples_per_epoch=None, max_reservoir_replacement_size=None):
         """
         Args:
             source_split: the source split to iterate
             max_reservoir_samples: the maximum number of samples of the reservoir
             function_to_run: the function to run asynchronously
-            min_reservoir_samples: the minimum of samples of the reservoir needed before an output sequence can be created
-            nb_workers: the number of workers that will process `function_to_run`. Must be >= 1
-            max_jobs_at_once: the maximum number of jobs that can be pushed in the result list at once. If 0, no limit. If None: set to the number of workers
-            reservoir_sampler: a sampler that will be used to sample the reservoir or None for sequential sampling of the reservoir
+            min_reservoir_samples: the minimum of samples of the reservoir needed before an output sequence
+                can be created
+            nb_workers: the number of workers that will process `function_to_run` to fill the reservoir. Must be >= 1
+            max_jobs_at_once: the maximum number of jobs that can be started and stored by epoch by the workers.
+                If 0, no limit. If None: set to the number of workers
+            reservoir_sampler: a sampler that will be used to sample the reservoir or None for sequential sampling
+                of the reservoir
             collate_fn: a function to post-process the samples into a single batch, or None if not to be collated
-            maximum_number_of_samples_per_epoch: the maximum number of samples per epoch to generate.
-                If we reach this maximum, this will not empty the reservoir but simply interrupt the sequence so
-                that we can restart.
+            maximum_number_of_samples_per_epoch: the maximum number of samples that will be generated per epoch.
+                If we reach this maximum, the sequence will be interrupted
+            max_reservoir_replacement_size: Specify the maximum number of samples replaced in the reservoir by epoch.
+                If `None`, we will use the whole result queue. This can be useful to control explicitly how the
+                reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
+                `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
         """
         super().__init__(source_split)
         self.max_reservoir_samples = max_reservoir_samples
@@ -78,6 +76,9 @@ class SequenceAsyncReservoir(sequence.Sequence):
         self.iter_source = None
         self.iter_reservoir = None
 
+        self.perf_receiving = Performance()
+        self.perf_sending = Performance()
+
         self.job_executer = None
         assert nb_workers != 0, 'must have background workers'
 
@@ -91,28 +92,20 @@ class SequenceAsyncReservoir(sequence.Sequence):
             function_to_run=self.function_to_run,
             max_jobs_at_once=max_jobs_at_once,
             worker_post_process_results_fun=None,
-            output_queue_size=0)
+            output_queue_size=max_jobs_at_once)
 
         self.maximum_number_of_samples_per_epoch = maximum_number_of_samples_per_epoch
         self.number_samples_generated = 0
-
-        # keep track of average performance of receiving and sending objects to the workers
-        self.perf_receiving = Performance()
-        self.perf_sending = Performance()
+        self.max_reservoir_replacement_size = max_reservoir_replacement_size
 
     def subsample(self, nb_samples):
         subsampled_source = self.source_split.subsample(nb_samples)
-        return SequenceAsyncReservoir(
-            subsampled_source,
-            self.max_reservoir_samples,
-            self.function_to_run,
-            min_reservoir_samples=self.min_reservoir_samples,
-            nb_workers=1,
-            max_jobs_at_once=self.max_jobs_at_once,
-            reservoir_sampler=copy.deepcopy(self.reservoir_sampler),
-            collate_fn=self.collate_fn,
-            maximum_number_of_samples_per_epoch=None
-        )
+        return SequenceAsyncReservoir(subsampled_source, self.max_reservoir_samples, self.function_to_run,
+                                      min_reservoir_samples=self.min_reservoir_samples, nb_workers=1,
+                                      max_jobs_at_once=self.max_jobs_at_once,
+                                      reservoir_sampler=copy.deepcopy(self.reservoir_sampler),
+                                      collate_fn=self.collate_fn, maximum_number_of_samples_per_epoch=None,
+                                      max_reservoir_replacement_size=self.max_reservoir_replacement_size)
 
     def reservoir_size(self):
         """
@@ -129,17 +122,11 @@ class SequenceAsyncReservoir(sequence.Sequence):
 
         subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
         
-        return SequenceAsyncReservoir(
-            subsampled_source,
-            self.max_reservoir_samples,
-            self.function_to_run,
-            min_reservoir_samples=self.min_reservoir_samples,
-            nb_workers=1,
-            max_jobs_at_once=self.max_jobs_at_once,
-            reservoir_sampler=sampler_to_use,
-            collate_fn=self.collate_fn,
-            maximum_number_of_samples_per_epoch=None
-        )
+        return SequenceAsyncReservoir(subsampled_source, self.max_reservoir_samples, self.function_to_run,
+                                      min_reservoir_samples=self.min_reservoir_samples, nb_workers=1,
+                                      max_jobs_at_once=self.max_jobs_at_once, reservoir_sampler=sampler_to_use,
+                                      collate_fn=self.collate_fn, maximum_number_of_samples_per_epoch=None,
+                                      max_reservoir_replacement_size=self.max_reservoir_replacement_size)
 
     def initializer(self):
         if self.iter_source is None:
@@ -155,9 +142,11 @@ class SequenceAsyncReservoir(sequence.Sequence):
         """
         Fill the input queue of jobs to be completed
         """
+        nb_queued = 0
         try:
             while not self.job_executer.input_queue.full():
                 i = self.iter_source.next_item(blocking=False)
+                nb_queued += 1
 
                 time_blocked_start = time.perf_counter()
                 self.job_executer.input_queue.put(i)
@@ -167,12 +156,16 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # we are done! Reset the input iterator
             self.iter_source = self.source_split.__iter__()
 
+        #print('nb_queued=', nb_queued)
+
     def _retrieve_results_and_fill_queue(self):
         """
         Retrieve results from the output queue
         """
         # first make sure we can't be `starved`, so fill the input queue
         self.fill_queue()
+
+        nb_samples_replaced = 0
 
         # retrieve the results from the output queue and fill the reservoir
         while not self.job_executer.output_queue.empty():
@@ -185,8 +178,15 @@ class SequenceAsyncReservoir(sequence.Sequence):
                 time_blocked_end = time.perf_counter()
                 self.perf_receiving.add(time_blocked_end - time_blocked_start)
                 self.reservoir.append(items)
+                nb_samples_replaced += 1
+
+                if self.max_reservoir_replacement_size is not None and nb_samples_replaced >= self.max_reservoir_replacement_size:
+                    # we have reached the maximum replacement, so stop here
+                    break
             except Empty:
                 break
+
+        #print('nb_samples_replaced=', nb_samples_replaced)
 
     def _wait_for_job_completion(self):
         """
@@ -197,7 +197,12 @@ class SequenceAsyncReservoir(sequence.Sequence):
 
     def __iter__(self):
         self.initializer()
-        return SequenceAsyncReservoirIterator(self, copy.deepcopy(self.reservoir_sampler))
+        iterator = SequenceAsyncReservoirIterator(self, copy.deepcopy(self.reservoir_sampler))
+
+        # keep track of average performance of receiving and sending objects to the workers
+        self.perf_receiving = Performance()
+        self.perf_sending = Performance()
+        return iterator
 
     def close(self):
         """
@@ -223,6 +228,10 @@ class SequenceAsyncReservoirIterator(sequence.SequenceIterator):
         # make sure the reservoir is not changed during iteration, so take a copy
         # when the iterator is created
         self.reservoir_copy = list(self.base_sequence.reservoir)
+
+        # print(f'LAST_receiving=', self.base_sequence.perf_receiving.get_average_time())
+        # Note: in case the queue receive stalls the sequence, it is worth trying a different
+        # sharing strategy: torch.multiprocessing.set_sharing_strategy('file_system')
 
         # create the reservoir sampler if necessary
         if self.reservoir_sampler is not None:

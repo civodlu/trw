@@ -11,6 +11,10 @@ def function_to_run(batch):
     return batch
 
 
+def function_to_run_id(batch):
+    return batch
+
+
 def function_to_run2(batch):
     print('JOB starte', batch['path'])
     time.sleep(0.1)
@@ -54,11 +58,9 @@ class TestSequenceReservoir(TestCase):
 
         sampler = trw.train.SamplerRandom()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=function_to_run).collate()
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=function_to_run,
+                                                    min_reservoir_samples=max_reservoir_samples).collate()
 
         time.sleep(2)
 
@@ -99,11 +101,9 @@ class TestSequenceReservoir(TestCase):
 
         sampler = trw.train.SamplerSequential()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=function_to_run).collate().batch(40)
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=function_to_run,
+                                                    min_reservoir_samples=max_reservoir_samples).collate().batch(40)
         
         subsampled_sequence = sequence.subsample_uids(uids=np.arange(200, 300), uids_name=trw.train.default_sample_uid_name)
         
@@ -126,8 +126,8 @@ class TestSequenceReservoir(TestCase):
         split = {'path': np.asarray(np.arange(nb_indices))}
         sampler = trw.train.SamplerSequential(batch_size=1)
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence, min_reservoir_samples=10, max_reservoir_samples=10, function_to_run=make_list_dicts).batch(5)
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=10,
+                                                    function_to_run=make_list_dicts, min_reservoir_samples=10).batch(5)
 
         for batch in sequence:
             assert trw.train.len_batch(batch) == 5 * 10, 'found={}, expected={}'.format(trw.train.len_batch(batch), 5 * 10)
@@ -145,12 +145,10 @@ class TestSequenceReservoir(TestCase):
         split = {'path': np.asarray(np.arange(nb_indices))}
         sampler = trw.train.SamplerSequential(batch_size=1)
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            min_reservoir_samples=min_reservoir_samples,
-            max_reservoir_samples=max_reservoir_samples,
-            max_jobs_at_once=max_jobs_at_once,
-            function_to_run=functools.partial(make_list_dicts, wait_time=0.02))
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=functools.partial(make_list_dicts, wait_time=0.02),
+                                                    min_reservoir_samples=min_reservoir_samples,
+                                                    max_jobs_at_once=max_jobs_at_once)
 
         for epoch in range(nb_epochs):
             time.sleep(0.5)
@@ -170,12 +168,9 @@ class TestSequenceReservoir(TestCase):
         sampler = trw.train.SamplerSequential(batch_size=1)
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
 
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            min_reservoir_samples=5,
-            max_reservoir_samples=10,
-            max_jobs_at_once=1,
-            function_to_run=worker_with_error).collate()
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=10,
+                                                    function_to_run=worker_with_error, min_reservoir_samples=5,
+                                                    max_jobs_at_once=1).collate()
 
         for n in range(100):
             batches = []
@@ -193,13 +188,10 @@ class TestSequenceReservoir(TestCase):
 
         sampler = trw.train.SamplerRandom()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=function_to_run,
-            reservoir_sampler=trw.train.SamplerRandom()
-        ).collate()
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=function_to_run,
+                                                    min_reservoir_samples=max_reservoir_samples,
+                                                    reservoir_sampler=trw.train.SamplerRandom()).collate()
 
         samples_0 = collections.defaultdict(lambda: 0)
         samples_1 = collections.defaultdict(lambda: 0)
@@ -238,13 +230,10 @@ class TestSequenceReservoir(TestCase):
 
         sampler = trw.train.SamplerRandom()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=function_to_run,
-            reservoir_sampler=trw.train.SamplerRandom()
-        ).collate().subsample(2)
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=function_to_run,
+                                                    min_reservoir_samples=max_reservoir_samples,
+                                                    reservoir_sampler=trw.train.SamplerRandom()).collate().subsample(2)
 
         uids = set()
         for epoch in range(10):
@@ -252,3 +241,40 @@ class TestSequenceReservoir(TestCase):
                 value = int(trw.train.to_value(batch['sample_uid'])[0])
                 uids.add(value)
         assert len(uids) == 2
+
+    def test_reservoir_maximum_replacement(self):
+        """
+        Make sure we can control at which rate the content of the reservoir is replaced per epoch
+        """
+        nb_indices = 100
+        paths = [[i, 42] for i in range(nb_indices)]
+        split = {'path': np.asarray(paths)}
+        max_reservoir_samples = 20
+        max_reservoir_replacement_size = 5
+        max_jobs_at_once = 100
+
+        sampler = trw.train.SamplerRandom()
+        numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=function_to_run_id,
+                                                    min_reservoir_samples=max_reservoir_samples,
+                                                    max_jobs_at_once=max_jobs_at_once,
+                                                    max_reservoir_replacement_size=max_reservoir_replacement_size,
+                                                    reservoir_sampler=trw.train.SamplerSequential())
+
+        last_uids = set()
+        for epoch in range(10):
+            time.sleep(0.1)
+            current_uids = set()
+            for batch in sequence:
+                assert len(batch) == 1
+                uid = batch[0]['sample_uid'][0]
+                current_uids.add(uid)
+            if epoch > 0:
+                d = last_uids.difference(current_uids)
+                print(d)
+                assert len(d) == max_reservoir_replacement_size, f'found={len(d)}, expected={max_reservoir_replacement_size}'
+
+            last_uids = current_uids
+
+
