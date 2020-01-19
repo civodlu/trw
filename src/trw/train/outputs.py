@@ -188,6 +188,11 @@ class OutputSegmentation(Output):
         truth = batch.get(self.target_name)
         assert truth is not None, 'classes `{}` is missing in current batch!'.format(self.target_name)
 
+        max_index = int(torch.max(truth).cpu().numpy())
+        min_index = int(torch.min(truth).cpu().numpy())
+        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        assert min_index >= 0, f'incorrect index! got={min_index}'
+
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
@@ -290,9 +295,10 @@ class OutputClassification(Output):
         
         # if exception: THCudaCheck FAIL error=59 : device-side assert triggered, it could be something
         # due to truth not within the expected bound
-        #truth_np = truth.cpu().data.numpy()
-        #import numpy as np
-        #print(np.max(truth_np), np.min(truth_np))
+        #max_index = int(torch.max(truth).cpu().numpy())
+        #min_index = int(torch.min(truth).cpu().numpy())
+        #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}'
+        #assert min_index >= 0, f'incorrect index! got={min_index}'
 
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
