@@ -1,6 +1,8 @@
 import numpy as np
 from trw.train import utilities
 from sklearn import metrics
+from trw.train import losses
+import torch
 
 
 class Metric:
@@ -40,6 +42,22 @@ class MetricClassificationError(Metric):
         if truth is not None and found is not None:
             return 'classification error', 1.0 - np.sum(found == truth) / len(truth)
         return None
+
+
+class MetricSegmentationDice(Metric):
+    """
+    Calculate the average dice score of a segmentation map 'output_truth' and class
+    segmentation probabilities 'output_raw'
+    """
+    def __call__(self, outputs):
+        truth = outputs.get('output_truth')
+        found = outputs.get('output')
+        assert len(found.shape) == len(truth.shape) + 1, f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
+        with torch.no_grad:
+            one_minus_dices = losses.LossDiceMulticlass()(found, truth)
+            mean_dices = utilities.to_value(torch.mean(1.0 - one_minus_dices))
+
+        return '1-dice', mean_dices
 
 
 class MetricClassificationSensitivitySpecificity(Metric):
@@ -94,4 +112,5 @@ def default_segmentation_metrics():
     """
     return [
         MetricLoss(),
+        MetricSegmentationDice(),
     ]
