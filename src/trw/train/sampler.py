@@ -31,19 +31,6 @@ class Sampler(object):
         """
         raise NotImplementedError()
 
-    def __len__(self):
-        """
-        Returns: the number of elements the sampler will return in a single iteration
-        """
-        raise NotImplementedError()
-    
-    def get_batch_size(self):
-        """
-        Returns:
-           the size of the batch
-        """
-        raise NotImplementedError()
-
 
 class _SamplerSequentialIter:
     """
@@ -79,12 +66,6 @@ class SamplerSequential(Sampler):
             return iter(range(utilities.len_batch(self.data_source)))
         else:
             return _SamplerSequentialIter(utilities.len_batch(self.data_source), self.batch_size)
-
-    def __len__(self):
-        return len(self.data_source)
-
-    def get_batch_size(self):
-        return self.batch_size
 
 
 class SamplerRandom(Sampler):
@@ -139,12 +120,6 @@ class SamplerRandom(Sampler):
         self.last_index += self.batch_size
         return next_indices
 
-    def __len__(self):
-        return self.num_samples
-    
-    def get_batch_size(self):
-        return self.batch_size
-
 
 class SamplerSubsetRandom(Sampler):
     """
@@ -163,12 +138,6 @@ class SamplerSubsetRandom(Sampler):
 
     def __iter__(self):
         return (self.indices[i] for i in torch.randperm(len(self.indices)))
-
-    def __len__(self):
-        return len(self.indices)
-    
-    def get_batch_size(self):
-        return 1
 
 
 class SamplerClassResampling(Sampler):
@@ -248,13 +217,3 @@ class SamplerClassResampling(Sampler):
 
     def __iter__(self):
         return self
-
-    def __len__(self):
-        if self.indices is not None:
-            return len(self.indices)
-
-        # this is just an estimate
-        return self.nb_samples_to_generate
-    
-    def get_batch_size(self):
-        return self.batch_size
