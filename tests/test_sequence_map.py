@@ -51,6 +51,18 @@ def load_data_or_generate_error(item, error_index=10):
     return item
 
 
+def load_data_or_return_none(item, error_index=10):
+    print('job | ', os.getpid(), ' | loading data |', item['indices'], datetime.datetime.now().time())
+    item['time_created'] = time.time()
+    time.sleep(0.01)
+
+    if item['indices'] == error_index:
+        return None
+
+    item['time_loaded'] = time.time()
+    return item
+
+
 def run_augmentations(item):
     print('job | ', os.getpid(), ' | augmentation data', item['indices'], datetime.datetime.now().time())
     time.sleep(0.1)
@@ -248,5 +260,53 @@ class TestSequenceMap(TestCase):
             index = batch['indices'][0]
             indices.append(index)
 
+        assert 10 not in indices, 'index 10 should have failed!'
+        assert len(indices) == nb_indices - 1
+
+    def test_single_job_exception(self):
+        nb_indices = 40
+        split = {
+            'indices':  np.asarray(list(range(nb_indices))),
+        }
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
+            load_data_or_generate_error,
+            nb_workers=0)
+
+        indices = []
+        for batch in split:
+            index = batch['indices'][0]
+            indices.append(index)
+        assert 10 not in indices, 'index 10 should have failed!'
+        assert len(indices) == nb_indices - 1
+
+    def test_single_job_result_none(self):
+        nb_indices = 40
+        split = {
+            'indices':  np.asarray(list(range(nb_indices))),
+        }
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
+            load_data_or_return_none,
+            nb_workers=0)
+
+        indices = []
+        for batch in split:
+            index = batch['indices'][0]
+            indices.append(index)
+        assert 10 not in indices, 'index 10 should have failed!'
+        assert len(indices) == nb_indices - 1
+
+    def test_one_worker_job_result_none(self):
+        nb_indices = 40
+        split = {
+            'indices':  np.asarray(list(range(nb_indices))),
+        }
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
+            load_data_or_return_none,
+            nb_workers=1)
+
+        indices = []
+        for batch in split:
+            index = batch['indices'][0]
+            indices.append(index)
         assert 10 not in indices, 'index 10 should have failed!'
         assert len(indices) == nb_indices - 1
