@@ -122,28 +122,28 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
 
             nb_repeats = convolution_repeats[n] - 1
             for r in range(nb_repeats):
-                ops.append(conv_fn(next, next, kernel_size=convolution_kernels[n], stride=strides[n], padding=p))
+                # do NOT apply strides in the repeat convolutions, else we will loose too quickly
+                # the resolution
+                ops.append(conv_fn(next, next, kernel_size=convolution_kernels[n], stride=1, padding=p))
 
                 if last_layer_is_output and currently_last_layer and r + 1 == nb_repeats:
                     # we don't want to add activation if the output is the last layer
                     break
                 ops.append(activation())
 
-            if last_layer_is_output and currently_last_layer:
-                # we are done here: do not add batch norm, LRN, dropout....
-                break
+            if not last_layer_is_output or not currently_last_layer:
+                # if not, we are done here: do not add batch norm, LRN, dropout....
+                if pooling_size is not None:
+                    ops.append(pool_fn(pooling_size[n])),
 
-            if pooling_size is not None:
-                ops.append(pool_fn(pooling_size[n])),
+                if with_batchnorm:
+                    ops.append(bn_fn(next, **batch_norm_kwargs))
 
-            if with_batchnorm:
-                ops.append(bn_fn(next, **batch_norm_kwargs))
+                if with_lrn:
+                    ops.append(lrn_fn(next, **lrn_kwargs))
 
-            if with_lrn:
-                ops.append(lrn_fn(next, **lrn_kwargs))
-
-            if dropout_probability is not None:
-                ops.append(dropout_fn(p=dropout_probability))
+                if dropout_probability is not None:
+                    ops.append(dropout_fn(p=dropout_probability))
 
             layers.append(nn.Sequential(*ops))
         self.layers = layers
