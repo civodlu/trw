@@ -182,12 +182,10 @@ class TestSampler(TestCase):
         sampler = trw.train.SamplerRandom()
         split = {'path': np.asarray(np.arange(nb_indices))}
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=nb_reservoir_samples,
-            min_reservoir_samples=nb_reservoir_samples,
-            function_to_run=function_to_run,
-            maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch).collate()
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=nb_reservoir_samples,
+                                                    function_to_run=function_to_run,
+                                                    min_reservoir_samples=nb_reservoir_samples,
+                                                    maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch).collate()
 
         frequencies = collections.defaultdict(lambda: 0)
         nb_samples = 0

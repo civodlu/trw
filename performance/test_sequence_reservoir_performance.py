@@ -23,11 +23,9 @@ class TestSequenceReservoirPerformance(TestCase):
 
         sampler = trw.train.SamplerRandom()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
-        sequence = trw.train.SequenceAsyncReservoir(
-            numpy_sequence,
-            max_reservoir_samples=max_reservoir_samples,
-            min_reservoir_samples=max_reservoir_samples,
-            function_to_run=make_volume_torch).collate().batch(40)
+        sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
+                                                    function_to_run=make_volume_torch,
+                                                    min_reservoir_samples=max_reservoir_samples).collate().batch(40)
 
         print('Iter start')
         time_start = time.time()
