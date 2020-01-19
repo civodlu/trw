@@ -4,6 +4,18 @@ from trw.layers.convs import ModulelWithIntermediate
 
 
 class FullyConvolutional(nn.Module):
+    """
+    Construct a Fully Convolutional Neural network from a base model. This provides pixel level interpolation
+
+    Example of a 2D network taking 1 input channel with 3 convolutions (16, 32, 64) and 3 deconvolutions (32, 16, 8):
+    >>> import torch
+    >>> import trw
+    >>> convs = trw.layers.ConvsBase(cnn_dim=2, channels=[1, 16, 32, 64])
+    >>> fcnn = trw.layers.FullyConvolutional(cnn_dim=2, base_model=convs, deconv_filters=[64, 32, 16, 8], convolution_kernels=7, strides=[2] * 3, nb_classes=2)
+    >>> i = torch.zeros([5, 1, 32, 32], dtype=torch.float32)
+    >>> o = fcnn(i)
+    """
+
     def __init__(self, cnn_dim, base_model, deconv_filters, convolution_kernels, strides, activation=nn.ReLU, batch_norm_kwargs={}, nb_classes=None, output_paddings=1):
         """
 
@@ -38,9 +50,11 @@ class FullyConvolutional(nn.Module):
         if cnn_dim == 3:
             decon_fn = nn.ConvTranspose3d
             bn_fn = nn.BatchNorm3d
+            conv_fn = nn.Conv3d
         elif cnn_dim == 2:
             decon_fn = nn.ConvTranspose2d
             bn_fn = nn.BatchNorm2d
+            conv_fn = nn.Conv2d
         else:
             raise NotImplemented()
 
@@ -66,11 +80,16 @@ class FullyConvolutional(nn.Module):
         self.deconvolutions = groups_deconv
 
         if nb_classes is not None:
-            self.classifier = nn.Conv2d(deconv_filters[-1], nb_classes, kernel_size=1)
+            self.classifier = conv_fn(deconv_filters[-1], nb_classes, kernel_size=1)
 
     def forward(self, x):
-        intermediates = self.base_model.forward_with_intermediate(x)
-        intermediates = list(reversed(intermediates))  # make sure the intermediate are ordered last->first layer
+        score, _ = self.forward_with_intermediate(x)
+        return score
+
+    def forward_with_intermediate(self, x):
+        intermediates_orig = self.base_model.forward_with_intermediate(x)
+
+        intermediates = list(reversed(intermediates_orig))  # make sure the intermediate are ordered last->first layer
 
         assert len(intermediates) + 1 == len(self.deconv_filters),\
             f'unexpected number of intermediate (N={len(intermediates)} ' \
@@ -78,8 +97,8 @@ class FullyConvolutional(nn.Module):
             f'Expected=number of intermediate + 1 == convolution groups'
 
         assert intermediates[0].shape[1] == self.deconv_filters[0], f'expected output filters=' \
-                                                                    f'{self.cnn_filter_output}, ' \
-                                                                    f'got={intermediates[-1].shape[1]}'
+                                                                    f'{self.deconv_filters[0]}, ' \
+                                                                    f'got={intermediates[0].shape[1]}'
 
         score = None
         for n in range(len(self.deconvolutions)):
@@ -95,4 +114,4 @@ class FullyConvolutional(nn.Module):
         if self.nb_classes is not None:
             score = self.classifier(score)
 
-        return score
+        return score, intermediates_orig
