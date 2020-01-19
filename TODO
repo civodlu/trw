@@ -1,3 +1,7 @@
+Refactor Metrics:
+    for each batch, calculate the metrics, then aggregate the metrics for the full epoch -> for segmentation,
+    we can't store all the segmentations of the epoch!
+
 Accurate, Large Minibatch SGD: Training ImageNet in 1 Hour (https://arxiv.org/abs/1706.02677)
 - learning rate warmup -> only in PyTorch > 1.2 with refactoring of the chainable schedulers (https://github.com/pytorch/pytorch/issues/13022)
 - normalized learning rate
@@ -18,3 +22,12 @@ https://github.com/jacobgil/pytorch-explain-black-box
 
 Models
 https://github.com/kuangliu/pytorch-cifar/tree/master/models
+
+
+use SimpleQueue instead of Queue
+
+
+Debugging Python C/C++ extensions in gdb
+http://droettboom.com/blog/2015/11/20/gdb-python-extensions/
+https://devguide.python.org/gdb/
+https://codewithoutrules.com/2017/08/16/concurrency-python/
