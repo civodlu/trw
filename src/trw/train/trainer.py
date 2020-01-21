@@ -866,9 +866,13 @@ class Trainer:
 
             logger.info('finished post training callbacks...')
 
+            del callbacks_post_training
+            logger.info('deleted post training callbacks!')
+
         # increment the number of runs
         options['workflow_options']['trainer_run'] += 1
 
+        logger.info('removing logging handlers...')
         logging.root.removeHandler(handler)
 
         logger.info('training completed!')

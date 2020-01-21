@@ -33,12 +33,6 @@ class JobExecutor:
     with `argument` and the output will be pushed to `JobExecutor.output_queue`
 
     Jobs that failed will have `None` pushed to the output queue.
-
-
-    .. todo:: On windows there are many issues related to shared memory: we would like to let the worker to create large memory arrays
-        for example, when the datasets are extremely large, we often want to asynchronously load
-        these datasets BUT in python < 3.8 (multiprocessing) and also in pytorch <= 1.1 (torch.multiprocessing), there doesn't seem to have standard
-        and portable memory sharing facilities and will revert to file based sharing
     """
     def __init__(self, nb_workers, function_to_run, max_jobs_at_once=0, worker_post_process_results_fun=None, output_queue_size=0):
         """
@@ -91,19 +85,23 @@ class JobExecutor:
         Terminate all jobs
         """
         logger.info(f'closing JobExecutor={self}')
-        # first notify all processes that they need to stop
-        #print('POOL NOTIFY STOP-----------------')
 
         # clear all the queues so that the jobs are started
         self.reset()  # clear everything
+        logger.info(f'JobExecutor queue emptied!')
 
-        # then notify the jobs to finish
+        # notify all workers that they need to stop
         self.must_finish_processes.value = 1
         self.pool.close()
-        self.pool.join()
-        logger.info(f'closed JobExecutor={self}!')
 
-        #print('JobExecutor | ', os.getpid(), '| closed | ', datetime.datetime.now().time())
+        logger.info(f'JobExecutor pool closed!')
+
+        # using `torch.multiprocessing.set_sharing_strategy('file_system')`, a deadlock could occur
+        # when the workers are terminated. To avoid this, simply terminate the process. At this point
+        # we are not interested in the results anyway.
+        self.pool.terminate()
+        # self.pool.join()
+        logger.info(f'terminated JobExecutor={self}!')
 
     def reset(self):
         """
@@ -133,6 +131,7 @@ class JobExecutor:
             while True:
                 if must_finish.value > 0:
                     # the process was notified to stop, so exit now
+                    print('Finished worker=', os.getpid(), datetime.datetime.now().time())
                     return None
                 try:
                     # To handle the pool shutdown, we MUST have
@@ -255,7 +254,6 @@ class SequenceMap(sequence.Sequence):
             function_to_run=self.function_to_run,
             preprocess_fn=self.preprocess_fn,
             collate_fn=self.collate_fn)
-
 
     def fill_queue(self):
         # print('fill_queue', os.getpid(), 'NOW=', datetime.datetime.now().time(), self.function_to_run)
