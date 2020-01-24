@@ -90,6 +90,45 @@ def create_losses_fn(datasets, generic_loss):
     return losses_fn
 
 
+def aggregate_values(values):
+    if len(values) == 0:
+        return None
+    value = values[0]
+    if isinstance(value, np.ndarray):
+        # concatenate tensors (e.g., softmax output)
+        if len(value.shape) == 0:
+            return np.average(values)
+        else:
+            return np.concatenate(values)
+    elif isinstance(value, numbers.Number):
+        # average numbers (e.g., losses)
+        return np.sum(values) / len(values)
+    elif isinstance(value, torch.Tensor):
+        if len(value.shape) > 0:
+            return torch.cat(values)
+        else:
+            return torch.sum(torch.stack(values)) / len(values)
+    elif isinstance(value, outputs.Output):
+        return values[0]
+    elif isinstance(value, list):
+        return list(itertools.chain.from_iterable(values))
+    else:
+        assert 0, 'this type=`{}` is not handled!'.format(type(value))
+
+
+def aggregate_list_of_dicts(list_of_dicts):
+    if len(list_of_dicts) == 0:
+        return {}
+
+    keys = list_of_dicts[0].keys()
+    aggregated = collections.OrderedDict()
+    for key in keys:
+        values = [dict[key] for dict in list_of_dicts]
+        aggregate_values(values)
+        aggregated[key] = aggregate_values(values)
+    return aggregated
+
+
 def generic_aggregate_loss_terms(loss_terms_history):
     """
     Aggregate the loss terms for all the internal_nodes of an epoch
@@ -105,55 +144,39 @@ def generic_aggregate_loss_terms(loss_terms_history):
     if loss_terms_history is None or len(loss_terms_history) == 0:
         return {}, []
 
-    output_step = collections.OrderedDict()
-    history_step = collections.OrderedDict()
-    first = loss_terms_history[0]
-    for loss_term_name in first.keys():
-        aggregated = collections.OrderedDict()
-        if loss_terms_history is not None and len(loss_terms_history) > 0:
-            # initalization: create a list of 1 element
-            first_term = loss_terms_history[0][loss_term_name]
-            for name, value in first_term.items():
-                aggregated[name] = [value]
+    output_names = loss_terms_history[0].keys()
 
-            # aggregate all the loss terms apart from the first term
-            for loss_terms in loss_terms_history[1:]:
-                loss_term_of_interest = loss_terms.get(loss_term_name)
-                assert loss_term_of_interest is not None, 'we must have the same loss terms for all the internal_nodes of a given iteration. E.g., `{}` is missing!'.format(loss_term_name)
-                if loss_term_of_interest is not None:
-                    for name, value in loss_term_of_interest.items():
-                        aggregated[name].append(value)
+    # aggregate outputs and metrics by output name
+    aggregated_outputs = collections.OrderedDict()
+    aggregated_metrics = collections.OrderedDict()
+    for output_name in output_names:
+        loss_term_outputs = []
+        loss_term_metrics_results = []
+        if output_name == 'overall_loss':
+            continue
+        for loss_term in loss_terms_history:
+            loss_term_output = loss_term[output_name]
+            loss_term_metrics_result = loss_term_output.get('metrics_results')
+            if loss_term_metrics_result is not None:
+                del loss_term_output['metrics_results']
+                loss_term_metrics_results.append(loss_term_metrics_result)
+            loss_term_outputs.append(loss_term_output)
 
-            # finally, depending on the type, do aggregation
-            aggregated_output = collections.OrderedDict()
-            for name, values in aggregated.items():
-                value = values[0]
-                if isinstance(value, np.ndarray):
-                    # concatenate tensors (e.g., softmax output)
-                    aggregated_output[name] = np.concatenate(values)
-                elif isinstance(value, numbers.Number):
-                    # average numbers (e.g., losses)
-                    aggregated_output[name] = np.sum(values) / len(values)
-                elif isinstance(value, torch.Tensor):
-                    if len(value.shape) > 0:
-                        aggregated_output[name] = torch.cat(values)
-                    else:
-                        aggregated_output[name] = torch.sum(torch.stack(values)) / len(values)
-                elif isinstance(value, outputs.Output):
-                    aggregated_output[name] = values[0]
-                elif isinstance(value, list):
-                    aggregated_output[name] = list(itertools.chain.from_iterable(values))
-                else:
-                    assert 0, 'this type=`{}` for name={} is not handled!'.format(type(value), name)
-            output_step[loss_term_name] = aggregated_output
+        aggregated_outputs[output_name] = aggregate_list_of_dicts(loss_term_outputs)
+        aggregated_metrics[output_name] = aggregate_list_of_dicts(loss_term_metrics_results)
 
-            output_ref = aggregated_output.get(outputs.Output.output_ref_tag)
-            if output_ref is not None:
-                h = output_ref.extract_history(aggregated_output)
-                if h is not None:
-                    history_step[loss_term_name] = h
+    # keep the `overall_loss` in the metrics
+    overall_losses = []
+    for loss_terms in loss_terms_history:
+        loss = loss_terms.get('overall_loss')
+        if loss is not None:
+            overall_losses.append(loss['loss'])
 
-    return output_step, history_step
+    if len(overall_losses) > 0:
+        loss = aggregate_values(overall_losses)
+        aggregated_metrics['overall_loss'] = {'loss': loss}
+
+    return aggregated_outputs, aggregated_metrics
 
 
 def loss_term_cleanup(loss_terms):
@@ -204,8 +227,6 @@ def train_loop(
         callbacks_per_batch_loss_terms: the callbacks to be performed on each loss term. if `None`, no callbacks to be run
         apply_backward: if True, the gradient will be back-propagated
     """
-    #assert optimizer is not None, 'optimizer can\'t be None'
-
     # make sure the model is in training mode (e.g., batch norm, dropout)
     model.train()
 
@@ -227,7 +248,6 @@ def train_loop(
 
             total_collate_and_postprocess_start = time.perf_counter()
             batch = utilities.transfer_batch_to_device(batch, device)
-            #batch = utils.default_collate_fn(batch, device=device, non_blocking=True)
             
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
             total_collate_and_postprocess_end = time.perf_counter()
@@ -239,8 +259,8 @@ def train_loop(
             
             assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
             loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
-    
             all_loss_terms.append(loss_terms)
+
             loss = loss_fn(dataset_name, batch, loss_terms)
             if optimizer is not None and apply_backward and isinstance(loss, torch.Tensor):
                 if isinstance(loss, torch.Tensor):
@@ -248,7 +268,7 @@ def train_loop(
                     loss.backward()
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
-            loss_terms['overall_loss'] = {'loss': loss}
+            loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}
 
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
@@ -257,6 +277,8 @@ def train_loop(
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
             optimizer.step()
 
+            # once we are done, we want to perform some cleanup. For example, we do NOT want to keep CUDA based
+            # tensors in the output so we can run clean up to transfer CUDA based memory to numpy
             loss_term_cleanup(loss_terms)
             batch_processing_last = time.perf_counter()
             nb_samples += utilities.len_batch(batch)
@@ -265,7 +287,8 @@ def train_loop(
         pass
     loop_ended = time.perf_counter()
     
-    logger.debug('nb_samples={}, train_loop total_batch_processing_time={}, loop_time={}, collate_and_postprocess={}, dataset_name={}, split_name={}'.format(
+    logger.debug('nb_samples={}, train_loop total_batch_processing_time={}, loop_time={},'
+                 ' collate_and_postprocess={}, dataset_name={}, split_name={}'.format(
         nb_samples,
         total_batch_processing_time,
         loop_ended - loop_started,
@@ -317,6 +340,7 @@ def eval_loop(
                 loss = loss_fn(dataset_name, batch, loss_terms)
                 loss_terms['overall_loss'] = {'loss': loss}
                 all_loss_terms.append(loss_terms)
+
                 if callbacks_per_batch_loss_terms is not None:
                     for callback in callbacks_per_batch_loss_terms:
                         callback(dataset_name, split_name, batch, loss_terms)
@@ -476,8 +500,6 @@ def default_per_epoch_callbacks(
     Default callbacks to be performed at the end of each epoch
     """
     callbacks = [
-        #callback_explain_decision.CallbackExplainDecision(),
-
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
@@ -496,7 +518,13 @@ def default_per_epoch_callbacks(
     return callbacks
 
 
-def default_post_training_callbacks(embedding_name='embedding', dataset_name=None, split_name=None, discard_train_error_export=False, export_errors=True, explain_decision=True):
+def default_post_training_callbacks(
+        embedding_name='embedding',
+        dataset_name=None,
+        split_name=None,
+        discard_train_error_export=False,
+        export_errors=True,
+        explain_decision=True):
     """
     Default callbacks to be performed after the model has been trained
     """
@@ -790,7 +818,8 @@ class Trainer:
             callbacks = self.callbacks_pre_training_fn()
             for callback in callbacks:
                 callback(options, history, model, losses=losses, outputs=None, datasets=datasets,
-                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                         optimizers_fn=optimizers_fn, optimizers=optimizers)
                 #try:
                 #    callback(options, history, model, losses=losses, outputs=None,
                 #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
@@ -824,7 +853,8 @@ class Trainer:
                 logger.info('callbacks started')
                 for callback in callbacks_per_epoch:
                     callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
                     #try:
                     #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
                     #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
@@ -856,7 +886,8 @@ class Trainer:
             callbacks_post_training = self.callbacks_post_training_fn()
             for callback in callbacks_post_training:
                 callback(options, history, model, losses=losses, outputs=outputs_epoch, datasets=datasets,
-                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn)
+                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                         optimizers_fn=optimizers_fn)
                 #try:
                 #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
                 #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn)

@@ -7,14 +7,31 @@ from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
 from trw.train import losses
 from trw.train import utilities
 
+
+def dict_torch_values_to_numpy(d):
+    """
+    Transform all torch.Tensor to numpy arrays of a dictionary like object
+    """
+    if d is None:
+        return
+    assert isinstance(d, collections.Mapping), 'must be a dict like object'
+
+    for name, value in d.items():
+        if isinstance(value, torch.Tensor):
+            d[name] = utilities.to_value(value)
+
+
+
+
 class Output:
     """
     This is a tag name to find the output reference back from `outputs`
     """
     output_ref_tag = 'output_ref'
 
-    def __init__(self, output, criterion_fn, collect_output=False, sample_uid_name=None):
+    def __init__(self, metrics, output, criterion_fn, collect_output=False, sample_uid_name=None):
         """
+        :param metrics: the metrics to be reported for each output
         :param output: a `torch.Tensor` to be recorded
         :param criterion_fn: the criterion function to be used to evaluate the output
         :param collect_output:
@@ -23,10 +40,10 @@ class Output:
         self.output = output
         self.criterion_fn = criterion_fn
         self.collect_output = collect_output
+        self.metrics = metrics
 
-        # this can be used to collect the UIDs of the sample the output was calculated from
+        # this can be used to collect the UIDs of the sample the output was calculated from.
         # this can be particularly useful for various tasks: track data augmentation,
-        #
         self.sample_uid_name = sample_uid_name
 
     def evaluate_batch(self, batch, is_training):
@@ -34,7 +51,7 @@ class Output:
         Evaluate a batch of data and extract important outputs
         :param batch: the batch of data
         :param is_training: if True, this was a training batch
-        :return: a dictionary
+        :return: tuple(a dictionary of values, dictionary of metrics)
         """
         assert 0, 'this needs to be implemented in derived classes!'
         
@@ -42,22 +59,19 @@ class Output:
         """
         This function is called for each batch just before switching to another batch.
 
-        It can be used to clean up large arrays stored
+        It can be used to clean up large arrays stored or release CUDA memory
         """
-        pass
-        
-    def extract_history(self, outputs):
-        """
-        Summarizes epoch statistics from the calculated outputs to populate an history
-        :param outputs: the aggregated `evaluate_batch` output
-        :return: a dictionary
-        """
-        return None
+        dict_torch_values_to_numpy(loss_term)
+        metrics_results = loss_term.get('metrics_results')
+        if metrics_results is not None:
+            dict_torch_values_to_numpy(metrics_results)
 
 
-def extract_history_from_outputs_and_metrics(metrics, outputs):
+
+def extract_metrics(metrics_outputs, outputs):
     """
-    Extract a history from metrics and an output result
+    Extract metrics from an output
+
     Args:
         metrics: a list of metrics
         outputs: the result of `Output.evaluate_batch`
@@ -66,14 +80,11 @@ def extract_history_from_outputs_and_metrics(metrics, outputs):
         a dictionary of key, value
     """
     history = collections.OrderedDict()
-    for metric in metrics:
+    for metric in metrics_outputs:
         r = metric(outputs)
         if r is not None:
-            if isinstance(r, dict):
-                history.update(r)
-            else:
-                metric_name, metric_value = r
-                history[metric_name] = metric_value
+            assert isinstance(r, collections.Mapping), 'must be a dict like structure'
+            history.update(r)
     return history
 
 
@@ -94,7 +105,12 @@ class OutputEmbedding(Output):
                 large embeddings
             sample_uid_name: UID name to be used for collecting the embedding of the samples
         """
-        super().__init__(output=output, criterion_fn=None, collect_output=True, sample_uid_name=sample_uid_name)
+        super().__init__(
+            output=output,
+            criterion_fn=None,
+            collect_output=True,
+            sample_uid_name=sample_uid_name,
+            metrics=None)
         self.clean_loss_term_each_batch = clean_loss_term_each_batch
 
     def evaluate_batch(self, batch, is_training):
@@ -147,14 +163,12 @@ class OutputSegmentation(Output):
             self,
             output,
             target_name,
-            #criterion_fn=losses.LossDiceMulticlass,
             criterion_fn=lambda: segmentation_criteria_ce_dice,
             collect_only_non_training_output=True,
             metrics=metrics.default_segmentation_metrics(),
             loss_reduction=torch.mean,
             weight_name=None,
             loss_scaling=1.0,
-            collect_output=True,
             output_postprocessing=functools.partial(torch.argmax, dim=1),
             sample_uid_name=default_sample_uid_name):
         """
@@ -162,27 +176,26 @@ class OutputSegmentation(Output):
         :param output:
         :param target_name:
         :param criterion_fn:
-        :param collect_only_non_training_output:
         :param metrics:
         :param loss_reduction:
         :param weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
         :param loss_scaling: scale the loss by a scalar
-        :param collect_output: if `True`, the output segmentation found and truth are collected (mandatory if we have to export it)
-        :param collect_only_non_training_output: if `True`, only the non-training data will be collected
         :param output_postprocessing:
+        :param collect_only_non_training_output: if True, only non-training output will be collected
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=False, sample_uid_name=sample_uid_name)
+        super().__init__(
+            output=output,
+            criterion_fn=criterion_fn,
+            collect_output=False,
+            sample_uid_name=sample_uid_name,
+            metrics=metrics)
+
         self.target_name = target_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
-        self.collect_only_non_training_output = collect_only_non_training_output
-        self.metrics = metrics
         self.weight_name = weight_name
         self.loss_scaling = loss_scaling
-        self.collect_output = collect_output
-
-    def extract_history(self, outputs):
-        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
+        self.collect_only_non_training_output = collect_only_non_training_output
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.target_name)
@@ -197,15 +210,12 @@ class OutputSegmentation(Output):
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
-        
-        if self.collect_output:
-            # we may not want to collect any outputs or training outputs to save some time
-            if not self.collect_only_non_training_output or not is_training:
-                # detach the output so as not to calculate gradients. Keep the truth so that we
-                # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utilities.to_value(self.output)
-                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utilities.to_value(truth)
+
+        # keep these as torch variable since metrics may be slow to calculate with numpy (e.g., dice)
+        if (is_training and not self.collect_only_non_training_output) or not is_training:
+            loss_term['output_raw'] = self.output
+            loss_term['output'] = self.output_postprocessing(self.output.data)
+            loss_term['output_truth'] = truth
 
         # do NOT keep the original output else memory will be an issue
         # (e.g., CUDA device)
@@ -233,6 +243,8 @@ class OutputSegmentation(Output):
         loss_term['losses'] = weighted_losses.data
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
+
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term
 
 
@@ -271,18 +283,19 @@ class OutputClassification(Output):
             maybe_optional: if True, the loss term may be considered optional if the ground truth is not part of the batch
             sample_uid_name (str): if not None, collect the sample UID
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output, sample_uid_name=sample_uid_name)
+        super().__init__(
+            output=output,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            sample_uid_name=sample_uid_name,
+            metrics=metrics)
         self.classes_name = classes_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
         self.collect_only_non_training_output = collect_only_non_training_output
-        self.metrics = metrics
         self.loss_scaling = loss_scaling
         self.weight_name = weight_name
         self.maybe_optional = maybe_optional
-
-    def extract_history(self, outputs):
-        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.classes_name)
@@ -293,12 +306,11 @@ class OutputClassification(Output):
         assert isinstance(truth, torch.Tensor), 'feature={} must be a torch.Tensor!'.format(self.classes_name)
         assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature={}'.format(self.classes_name)
         
-        # if exception: THCudaCheck FAIL error=59 : device-side assert triggered, it could be something
-        # due to truth not within the expected bound
-        #max_index = int(torch.max(truth).cpu().numpy())
-        #min_index = int(torch.min(truth).cpu().numpy())
-        #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}'
-        #assert min_index >= 0, f'incorrect index! got={min_index}'
+        # make sure the class is not out of bound. This is a very common mistake!
+        max_index = int(torch.max(truth).cpu().numpy())
+        min_index = int(torch.min(truth).cpu().numpy())
+        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        assert min_index >= 0, f'incorrect index! got={min_index}'
 
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
@@ -310,9 +322,9 @@ class OutputClassification(Output):
             if not self.collect_only_non_training_output or not is_training:
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utilities.to_value(self.output)
-                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utilities.to_value(truth)
+                loss_term['output_raw'] = self.output
+                loss_term['output'] = self.output_postprocessing(self.output.data)
+                loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
             loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
@@ -336,6 +348,7 @@ class OutputClassification(Output):
         loss_term['losses'] = weighted_losses.data
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term
 
 
@@ -377,17 +390,18 @@ class OutputRegression(Output):
         :param loss_scaling: scale the loss by a scalar
         :param output_postprocessing:
         """
-        super().__init__(output=output, criterion_fn=criterion_fn, collect_output=collect_output, sample_uid_name=sample_uid_name)
+        super().__init__(
+            output=output,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            sample_uid_name=sample_uid_name,
+            metrics=metrics)
         self.target_name = target_name
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
         self.collect_only_non_training_output = collect_only_non_training_output
-        self.metrics = metrics
         self.weight_name = weight_name
         self.loss_scaling = loss_scaling
-
-    def extract_history(self, outputs):
-        return extract_history_from_outputs_and_metrics(self.metrics, outputs)
 
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.target_name)
@@ -402,9 +416,9 @@ class OutputRegression(Output):
             if not self.collect_only_non_training_output or not is_training:
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = utilities.to_value(self.output)
-                loss_term['output'] = utilities.to_value(self.output_postprocessing(self.output.data))
-                loss_term['output_truth'] = utilities.to_value(truth)
+                loss_term['output_raw'] = self.output
+                loss_term['output'] = self.output_postprocessing(self.output.data)
+                loss_term['output_truth'] = truth
 
         # do NOT keep the original output else memory will be an issue
         del self.output
@@ -427,6 +441,7 @@ class OutputRegression(Output):
         loss_term['losses'] = weighted_losses.data
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term
     
 
@@ -446,7 +461,7 @@ class OutputRecord(Output):
         Args:
             output: the output value to record. May be of any type.
         """
-        super().__init__(output=output, criterion_fn=None, collect_output=True)
+        super().__init__(output=output, criterion_fn=None, collect_output=True, metrics=None)
     
     def evaluate_batch(self, batch, is_training):
         nb_samples = utilities.len_batch(batch)

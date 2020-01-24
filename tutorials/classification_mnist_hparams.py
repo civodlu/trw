@@ -36,7 +36,7 @@ def evaluate_hparams(hparams):
         model_fn=lambda options: create_net(hparams),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=learning_rate))
     
-    hparam_loss = trw.train.to_value(results['outputs']['mnist']['test']['overall_loss']['loss'])
+    hparam_loss = trw.train.to_value(results['history'][-1]['mnist']['test']['overall_loss']['loss'])
     hparam_infos = results['history']
     return hparam_loss, hparam_infos
     
@@ -56,5 +56,5 @@ random_search.optimize(hparams_root)
 # finally analyse the run
 hparams_report = os.path.join(hparams_root, 'report')
 trw.hparams.analyse_hyperparameters(
-    hprams_path_pattern=hparams_root + '\hparams-*.pkl',
+    hprams_path_pattern=hparams_root + r'/hparams-*.pkl',
     output_path=hparams_report)

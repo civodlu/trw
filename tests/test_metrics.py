@@ -12,7 +12,7 @@ class TestMetrics(TestCase):
         o = trw.train.OutputClassification(input_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
-        history = o.extract_history(r)
+        history = r['metrics_results']
 
         assert history['classification error'] == 0.0
         assert history['loss'] == 0.0
@@ -24,7 +24,7 @@ class TestMetrics(TestCase):
         o = trw.train.OutputClassification(input_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
-        history = o.extract_history(r)
+        history = r['metrics_results']
 
         assert abs(history['classification error'] - 0.33333) < 1e-4
         assert abs(history['loss'] - 0.33333 * 100) < 1e-2
@@ -47,7 +47,7 @@ class TestMetrics(TestCase):
         o = trw.train.OutputClassification(input_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
-        history = o.extract_history(r)
+        history = r['metrics_results']
 
         assert abs(history['classification error'] - 1.0 / (4)) < 1e-4
         assert abs(history['1-sensitivity'] - (1 - 1.0)) < 1e-4
@@ -71,7 +71,7 @@ class TestMetrics(TestCase):
         o = trw.train.OutputClassification(input_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
-        history = o.extract_history(r)
+        history = r['metrics_results']
 
         assert abs(history['classification error'] - 1.0 / 4) < 1e-4
         assert abs(history['1-specificity'] - (1 - 1.0)) < 1e-4

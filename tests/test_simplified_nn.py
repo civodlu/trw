@@ -118,7 +118,7 @@ class TestSimplifiedNN(TestCase):
         Test using an already existing sequential module: this is
         would facilitate migration to this simple declaration model
         """
-        m = trw.layers.convs_2d(channels=[1, 8, 16], with_flatten=False)
+        m = trw.layers.convs_2d(input_channels=1, channels=[8, 16], with_flatten=False)
 
         n = trw.simple_layers.Input([None, 1, 28, 28], 'images')
         n = trw.simple_layers.SimpleModule(n, m)  # the output size will be automatically detected

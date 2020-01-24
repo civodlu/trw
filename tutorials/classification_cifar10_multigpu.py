@@ -1,16 +1,6 @@
 import trw
 import numpy as np
-import torchvision
-import torch
-import torch.nn as nn
 
-
-'''ResNet in PyTorch.
-For Pre-activation ResNet, see 'preact_resnet.py'.
-Reference:
-[1] Kaiming He, Xiangyu Zhang, Shaoqing Ren, Jian Sun
-    Deep Residual Learning for Image Recognition. arXiv:1512.03385
-'''
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -101,7 +91,6 @@ def EfficientNetB0():
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        #self.net = torchvision.models.resnet50(num_classes=10)
         self.net = EfficientNetB0()
 
     def forward(self, batch):

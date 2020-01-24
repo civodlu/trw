@@ -3,6 +3,7 @@ from trw.layers.convs import ConvsBase
 
 
 def convs_3d(
+        input_channels,
         channels,
         convolution_kernels=5,
         strides=1,
@@ -18,6 +19,7 @@ def convs_3d(
     """
 
     Args:
+        input_channels: the number of input channels
         channels: the number of channels
         convolution_kernels: for each convolution group, the kernel of the convolution
         strides: for each convolution group, the stride of the convolution
@@ -36,6 +38,7 @@ def convs_3d(
 
     return ConvsBase(
         cnn_dim=3,
+        input_channels=input_channels,
         channels=channels,
         convolution_kernels=convolution_kernels,
         strides=strides,

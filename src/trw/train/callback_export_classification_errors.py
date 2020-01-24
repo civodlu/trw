@@ -44,8 +44,8 @@ class CallbackExportClassificationErrors(callback.Callback):
                 ref = output.get('output_ref')
                 if ref is not None and isinstance(ref, trf_outputs.OutputClassification):
                     all_outputs_maxedout = False
-                    found = output['output']
-                    truth = output['output_truth']
+                    found = utilities.to_value(output['output'])
+                    truth = utilities.to_value(output['output_truth'])
                     error_indices = np.where(found != truth)[0]
 
                     # make sure we can link the output class mapping in text

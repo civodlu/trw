@@ -68,7 +68,7 @@ class TestOutput(TestCase):
         self.assertTrue(loss < 1e-6)
 
         assert r.get('output') is not None
-        self.assertTrue((r['output'] == [1, 0]).all())
+        self.assertTrue((trw.train.to_value(r['output']) == [1, 0]).all())
 
     def test_classification_weight(self):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
@@ -108,4 +108,4 @@ class TestOutput(TestCase):
         }
         loss_term = o.evaluate_batch(batch, is_training=False)
         assert trw.train.to_value(loss_term['loss']) < 1e-5
-        assert (loss_term['output'] == 1).all()
+        assert (trw.train.to_value(loss_term['output']) == 1).all()

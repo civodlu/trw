@@ -116,8 +116,8 @@ class TestTrainerAdvanced(TestCase):
             optimizers_fn=optimizer_fn)
 
         # first make sure the model was trained perfectly
-        loss_1 = float(trw.train.to_value(results['outputs']['dataset_1']['train']['overall_loss']['loss']))
-        loss_2 = float(trw.train.to_value(results['outputs']['dataset_2']['train']['overall_loss']['loss']))
+        loss_1 = float(trw.train.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
+        loss_2 = float(trw.train.to_value(results['history'][-1]['dataset_2']['train']['overall_loss']['loss']))
         assert loss_1 < 1e-3
         assert loss_2 < 1e-3
 
@@ -175,7 +175,7 @@ class TestTrainerAdvanced(TestCase):
 
         print('Done!')
         # first make sure the model was trained perfectly
-        loss = float(trw.train.to_value(results['outputs']['dataset_1']['train']['overall_loss']['loss']))
+        loss = float(trw.train.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
         assert loss < 1e-3
 
         # we expect `model1` to not be trained (w=0)

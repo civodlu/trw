@@ -2,6 +2,7 @@ import torch.nn as nn
 import numbers
 from trw.layers.utils import div_shape
 from trw.layers.flatten import flatten
+from trw.layers.ops_conversion import OpsConversion
 
 
 class ModulelWithIntermediate:
@@ -34,6 +35,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
     def __init__(
             self,
             cnn_dim,
+            input_channels,
             channels,
             convolution_kernels=5,
             strides=1,
@@ -50,7 +52,8 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
 
         Args:
             cnn_dim: the dimension of the  CNN (2 for 2D or 3 for 3D)
-            channels: the number of channels
+            input_channels: the number of input channels
+            channels: the number of channels for each convolutional layer
             convolution_kernels: for each convolution group, the kernel of the convolution
             strides: for each convolution group, the stride of the convolution
             pooling_size: the pooling size to be inserted after each convolution group
@@ -67,22 +70,11 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
         """
         super().__init__()
 
+        ops_conv = OpsConversion(cnn_dim)
         lrn_fn = nn.LocalResponseNorm
-        if cnn_dim == 3:
-            conv_fn = nn.Conv3d
-            pool_fn = nn.MaxPool3d
-            bn_fn = nn.BatchNorm3d
-            dropout_fn = nn.Dropout3d
-        elif cnn_dim == 2:
-            conv_fn = nn.Conv2d
-            pool_fn = nn.MaxPool2d
-            bn_fn = nn.BatchNorm2d
-            dropout_fn = nn.Dropout2d
-        else:
-            raise NotImplemented()
 
         # normalize the arguments
-        nb_convs = len(channels) - 1
+        nb_convs = len(channels)
         if not isinstance(convolution_kernels, list):
             convolution_kernels = [convolution_kernels] * nb_convs
         if not isinstance(strides, list):
@@ -106,16 +98,16 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
         # pixel level segmentation that can't be achieved using nn.Sequential
         layers = nn.ModuleList()
 
-        for n in range(len(channels) - 1):
+        prev = input_channels
+        for n in range(len(channels)):
             current = channels[n]
-            next = channels[n + 1]
-            currently_last_layer = n + 2 == len(channels)
+            currently_last_layer = n + 1 == len(channels)
 
             p = 0
             if padding == 'same':
                 p = div_shape(convolution_kernels[n], 2)
 
-            ops = [conv_fn(current, next, kernel_size=convolution_kernels[n], stride=strides[n], padding=p)]
+            ops = [ops_conv.conv_fn(prev, current, kernel_size=convolution_kernels[n], stride=strides[n], padding=p)]
             if not last_layer_is_output or not currently_last_layer:
                 # only use the activation if not the last layer
                 ops.append(activation())
@@ -124,7 +116,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             for r in range(nb_repeats):
                 # do NOT apply strides in the repeat convolutions, else we will loose too quickly
                 # the resolution
-                ops.append(conv_fn(next, next, kernel_size=convolution_kernels[n], stride=1, padding=p))
+                ops.append(ops_conv.conv_fn(current, current, kernel_size=convolution_kernels[n], stride=1, padding=p))
 
                 if last_layer_is_output and currently_last_layer and r + 1 == nb_repeats:
                     # we don't want to add activation if the output is the last layer
@@ -134,18 +126,19 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             if not last_layer_is_output or not currently_last_layer:
                 # if not, we are done here: do not add batch norm, LRN, dropout....
                 if pooling_size is not None:
-                    ops.append(pool_fn(pooling_size[n])),
+                    ops.append(ops_conv.pool_fn(pooling_size[n])),
 
                 if with_batchnorm:
-                    ops.append(bn_fn(next, **batch_norm_kwargs))
+                    ops.append(ops_conv.bn_fn(current, **batch_norm_kwargs))
 
                 if with_lrn:
-                    ops.append(lrn_fn(next, **lrn_kwargs))
+                    ops.append(lrn_fn(current, **lrn_kwargs))
 
                 if dropout_probability is not None:
-                    ops.append(dropout_fn(p=dropout_probability))
+                    ops.append(ops_conv.dropout_fn(p=dropout_probability))
 
             layers.append(nn.Sequential(*ops))
+            prev = current
         self.layers = layers
 
     def forward_simple(self, x):

@@ -21,7 +21,7 @@ class Net(nn.Module):
     
     def forward(self, batch):
         # a batch should be a dictionary of features
-        x = batch['images'] / 255.0
+        x = batch['images']
         
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
@@ -42,7 +42,7 @@ def create_data():
     """
     transforms = torchvision.transforms.ToTensor()
     batch_size = 1000
-    num_workers = 0
+    num_workers = 4
     
     # first, check if we have some environment variables configured
     root = os.environ.get('TRW_DATA_ROOT')

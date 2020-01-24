@@ -18,7 +18,9 @@ class Metric:
         :return: a tuple (`metric name`, `metric value`) or `None`
         """
         metric_value = 0
-        return 'metric_name', metric_value
+        return {
+            'metric_name': metric_value
+        }
 
 
 class MetricLoss(Metric):
@@ -26,9 +28,11 @@ class MetricLoss(Metric):
     Extract the loss from the outputs
     """
     def __call__(self, outputs):
-        loss = outputs.get('loss')
+        loss = utilities.to_value(outputs.get('loss'))
         if loss is not None:
-            return 'loss', float(utilities.to_value(loss))
+            return {
+                'loss': float(loss)
+            }
         return None
 
 
@@ -37,10 +41,12 @@ class MetricClassificationError(Metric):
     Calculate the accuracy using the `output_truth` and `output`
     """
     def __call__(self, outputs):
-        truth = outputs.get('output_truth')
-        found = outputs.get('output')
+        truth = utilities.to_value(outputs.get('output_truth'))
+        found = utilities.to_value(outputs.get('output'))
         if truth is not None and found is not None:
-            return 'classification error', 1.0 - np.sum(found == truth) / len(truth)
+            return {
+                'classification error': 1.0 - np.sum(found == truth) / len(truth)
+            }
         return None
 
 
@@ -49,15 +55,26 @@ class MetricSegmentationDice(Metric):
     Calculate the average dice score of a segmentation map 'output_truth' and class
     segmentation probabilities 'output_raw'
     """
-    def __call__(self, outputs):
-        truth = outputs.get('output_truth')
-        found = outputs.get('output')
-        assert len(found.shape) == len(truth.shape) + 1, f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
-        with torch.no_grad:
-            one_minus_dices = losses.LossDiceMulticlass()(found, truth)
-            mean_dices = utilities.to_value(torch.mean(1.0 - one_minus_dices))
+    def __init__(self, dice_fn=losses.LossDiceMulticlass()):
+        self.dice_fn = dice_fn
 
-        return '1-dice', mean_dices
+    def __call__(self, outputs):
+        # keep the torch variable. We want to use GPU if available since it can
+        # be slow use numpy for this
+        truth = outputs.get('output_truth')
+        found = outputs.get('output_raw')
+
+        if found is None or truth is None:
+            return {}
+
+        assert len(found.shape) == len(truth.shape) + 1, f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
+        with torch.no_grad():
+            one_minus_dices = self.dice_fn(found, truth)
+            mean_dices = utilities.to_value(torch.mean(one_minus_dices))
+
+        return {
+            '1-dice': mean_dices
+        }
 
 
 class MetricClassificationSensitivitySpecificity(Metric):
@@ -71,8 +88,8 @@ class MetricClassificationSensitivitySpecificity(Metric):
         if len(output_raw.shape) != 2 or output_raw.shape[1] != 2:
             return None
 
-        truth = outputs.get('output_truth')
-        found = outputs.get('output')
+        truth = utilities.to_value(outputs.get('output_truth'))
+        found = utilities.to_value(outputs.get('output'))
         if truth is not None and found is not None:
             cm = metrics.confusion_matrix(y_pred=found, y_true=truth)
             if len(cm) == 2:
