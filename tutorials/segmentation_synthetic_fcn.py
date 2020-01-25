@@ -6,7 +6,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        convs = trw.layers.ConvsBase(cnn_dim=2, channels=[3, 16, 32, 64])
+        convs = trw.layers.ConvsBase(cnn_dim=2, input_channels=3, channels=[16, 32, 64])
         fcnn = trw.layers.FullyConvolutional(
             cnn_dim=2,
             base_model=convs,
