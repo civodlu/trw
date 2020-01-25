@@ -214,7 +214,7 @@ class OutputSegmentation(Output):
         # keep these as torch variable since metrics may be slow to calculate with numpy (e.g., dice)
         if (is_training and not self.collect_only_non_training_output) or not is_training:
             loss_term['output_raw'] = self.output
-            loss_term['output'] = self.output_postprocessing(self.output.data)
+            loss_term['output'] = self.output_postprocessing(self.output)
             loss_term['output_truth'] = truth
 
         # do NOT keep the original output else memory will be an issue
@@ -240,7 +240,7 @@ class OutputSegmentation(Output):
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
 
-        loss_term['losses'] = weighted_losses.data
+        loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
 
@@ -307,10 +307,10 @@ class OutputClassification(Output):
         assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature={}'.format(self.classes_name)
         
         # make sure the class is not out of bound. This is a very common mistake!
-        max_index = int(torch.max(truth).cpu().numpy())
-        min_index = int(torch.min(truth).cpu().numpy())
-        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
-        assert min_index >= 0, f'incorrect index! got={min_index}'
+        #max_index = int(torch.max(truth).cpu().numpy())
+        #min_index = int(torch.min(truth).cpu().numpy())
+        #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        #assert min_index >= 0, f'incorrect index! got={min_index}'
 
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
@@ -323,7 +323,7 @@ class OutputClassification(Output):
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
                 loss_term['output_raw'] = self.output
-                loss_term['output'] = self.output_postprocessing(self.output.data)
+                loss_term['output'] = self.output_postprocessing(self.output)
                 loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
@@ -345,7 +345,7 @@ class OutputClassification(Output):
         weighted_losses = weights * losses
 
         # TODO label smoothing
-        loss_term['losses'] = weighted_losses.data
+        loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
@@ -417,7 +417,7 @@ class OutputRegression(Output):
                 # detach the output so as not to calculate gradients. Keep the truth so that we
                 # can calculate statistics (e.g., accuracy, FP/FN...)
                 loss_term['output_raw'] = self.output
-                loss_term['output'] = self.output_postprocessing(self.output.data)
+                loss_term['output'] = self.output_postprocessing(self.output)
                 loss_term['output_truth'] = truth
 
         # do NOT keep the original output else memory will be an issue
@@ -438,7 +438,7 @@ class OutputRegression(Output):
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
 
-        loss_term['losses'] = weighted_losses.data
+        loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)

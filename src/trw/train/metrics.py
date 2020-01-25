@@ -95,10 +95,25 @@ class MetricClassificationSensitivitySpecificity(Metric):
             if len(cm) == 2:
                 # special case: binary classification
                 tn, fp, fn, tp = cm.ravel()
+
+                if tp + fn > 0:
+                    one_minus_sensitivity = 1.0 - tp / (tp + fn)
+                    one_minus_specificity = 1.0 - tn / (fp + tn)
+                else:
+                    # invalid! so return the worst stats possible
+                    one_minus_sensitivity = 1.0
+                    one_minus_specificity = 1.0
+
                 return {
                     # we return the 1.0 - metric, since in the history we always keep the smallest number
-                    '1-sensitivity': 1.0 - tp / (tp + fn),
-                    '1-specificity': 1.0 - tn / (fp + tn),
+                    '1-sensitivity': one_minus_sensitivity,
+                    '1-specificity': one_minus_specificity,
+                }
+            else:
+                return {
+                    # we return the 1.0. We can't calculate the stats
+                    '1-sensitivity': 1.0,
+                    '1-specificity': 1.0,
                 }
         return None
 
