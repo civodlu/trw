@@ -56,15 +56,6 @@ def log_console(msg):
     print(msg)
 
 
-def safe_filename(string):
-    """
-    Return a string good as name for a file by removing all special characters
-    :param string:
-    :return:
-    """
-    return string.replace('\\', '_').replace('/', ' ')
-
-
 def len_batch(batch):
     """
     :param batch: a data split or a `collections.Sequence`
@@ -169,6 +160,7 @@ def make_unique_colors():
         (115, 46, 108),  # violet(I)
         (157, 224, 147),  # granny-smith
     ]
+
 
 def make_unique_colors_f():
     """
@@ -536,3 +528,21 @@ def find_default_dataset_and_split_names(datasets, default_dataset_name=None, de
             return None, None
 
     return default_dataset_name, default_split_name
+
+
+def safe_lookup(dictionary, *keys):
+    """
+    Recursively access nested dictionaries
+
+    Args:
+        dictionary: nested dictionary
+        *keys: the keys to access within the nested dictionaries
+
+    Returns:
+        None if we can't access to all the keys, else dictionary[key_0][key_1][...][key_n]
+    """
+    for key in keys:
+        dictionary = dictionary.get(key)
+        if dictionary is None:
+            return
+    return dictionary

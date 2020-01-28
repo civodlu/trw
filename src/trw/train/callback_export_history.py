@@ -4,6 +4,7 @@ from trw.train import analysis_plots
 import os
 import collections
 import logging
+import numbers
 
 
 logger = logging.getLogger(__name__)
@@ -45,15 +46,35 @@ def merge_history_values(history_values_list):
     return d
 
 
-def default_metrics():
-    return [
-        'loss',
-        'classification error',
-        'min',
-        'max',
-        'mean',
-        'std',
-    ]
+def default_dicarded_metrics():
+    return []
+
+
+def extract_metrics_name(history, dataset_name, split_name, output_name, dicarded_metrics):
+    """
+    Collect all possible metric names for a history
+
+    Args:
+        history: a list of history step
+        dataset_name: the dataset name to analyse
+        split_name: the split name to analyse
+        output_name: the output name to analyse
+        dicarded_metrics: a list of metrics name to discard
+
+    Returns:
+        the metrics names
+    """
+    names = set()
+    for h in history:
+        metrics_kvp = utilities.safe_lookup(h, dataset_name, split_name, output_name)
+        if metrics_kvp is not None:
+            for key, value in metrics_kvp.items():
+                if isinstance(value, numbers.Number):
+                    names.add(key)
+    for discarded_name in dicarded_metrics:
+        names.discard(discarded_name)
+
+    return names
 
 
 class CallbackExportHistory(callback.Callback):
@@ -63,9 +84,9 @@ class CallbackExportHistory(callback.Callback):
     - One plot per dataset
     - splits are plotted together
     """
-    def __init__(self, export_dirname='history', metrics_to_report=default_metrics()):
+    def __init__(self, export_dirname='history', dicarded_metrics=default_dicarded_metrics()):
         self.export_dirname = export_dirname
-        self.metrics_to_report = metrics_to_report
+        self.dicarded_metrics = dicarded_metrics
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('CallbackExportHistory.__call__ started')
@@ -76,7 +97,14 @@ class CallbackExportHistory(callback.Callback):
         for dataset_name, dataset in outputs.items():
             split_name, outputs = next(iter(dataset.items()))
             for output_name, output in outputs.items():
-                for metric_name in self.metrics_to_report:
+                metrics_names = extract_metrics_name(
+                    history,
+                    dataset_name,
+                    split_name,
+                    output_name,
+                    self.dicarded_metrics)
+
+                for metric_name in metrics_names:
                     r = extract_from_history(history, dataset_name, output_name, metric_name)
                     if r is None:
                         continue
