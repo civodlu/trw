@@ -8,8 +8,8 @@ import functools
 
 
 def create_simple_regression(factor, nb_samples=100):
-    i = np.random.randn(nb_samples, 1)
-    o = i * factor
+    i = np.random.randn(nb_samples, 1).astype(np.float32)
+    o = i * np.float32(factor)
 
     datasets = collections.OrderedDict()
     sampler = trw.train.SamplerRandom(batch_size=256)
