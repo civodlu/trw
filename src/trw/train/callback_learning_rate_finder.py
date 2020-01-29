@@ -80,9 +80,9 @@ def plot_trend(
     ax.set_title('\n'.join(wrap(title, maximum_chars_per_line)), fontsize=20)
 
     for tick in ax.xaxis.get_major_ticks():
-        tick.label.set_fontsize(12)
+        tick.label1.set_fontsize(12)
         if rotate_x is not None:
-            tick.label.set_rotation(rotate_x)
+            tick.label1.set_rotation(rotate_x)
 
     if name_xy_markers is not None:
         assert isinstance(name_xy_markers, collections.Mapping), 'must be a dictionary of name -> tuple (x, y)'
@@ -171,6 +171,7 @@ class CallbackLearningRateFinder(callback.Callback):
             learning_rate_start=1e-6,
             learning_rate_stop=1e1,
             learning_rate_mul=1.2,
+            learning_rate_final_multiplier=0.8,
             dataset_name=None,
             split_name=None,
             dirname='lr_finder',
@@ -182,8 +183,12 @@ class CallbackLearningRateFinder(callback.Callback):
         Args:
             nb_samples_per_learning_rate: the number of samples used to calculate the loss for each learning rate tried
             learning_rate_start: the learning rate starting value
-            learning_rate_stop: the learning rate stopping value. When the learning rate exceed this value, :class:`trw.train.CallbackLearningRateFinder` will be stopped
+            learning_rate_stop: the learning rate stopping value. When the learning rate exceed this value,
+                :class:`trw.train.CallbackLearningRateFinder` will be stopped
             learning_rate_mul: the learning rate multiplier for the next learning rate to be tested
+            learning_rate_final_multiplier: often the best learning rate is too high for full convergence. If
+                `set_new_learning_rate` is True, the final learning rate will be
+                set to best_learning_rate * learning_rate_final_multiplier
             dataset_name: the dataset name to be used. If `None`, the first dataset will be used
             split_name: the split name to be used. If `None`, the default training split name will be used
             dirname: the directory where the plot will be exported
@@ -201,6 +206,7 @@ class CallbackLearningRateFinder(callback.Callback):
         self.identify_learning_rate_section = identify_learning_rate_section
         self.set_new_learning_rate = set_new_learning_rate
         self.param_maximum_loss_ratio = param_maximum_loss_ratio
+        self.learning_rate_final_multiplier = learning_rate_final_multiplier
 
         assert learning_rate_start < learning_rate_stop
         assert learning_rate_start > 0
@@ -311,6 +317,7 @@ class CallbackLearningRateFinder(callback.Callback):
         print('best_loss=', best_loss)
 
         if self.set_new_learning_rate:
+            best_learning_rate *= self.learning_rate_final_multiplier
             optimizers = kwargs.get('optimizers')
             if optimizers is not None:
                 for optimizer_name, optimizer in optimizers.items():

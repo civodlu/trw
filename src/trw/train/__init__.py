@@ -23,7 +23,7 @@ from .integrated_gradients import IntegratedGradients
 from .callback_epoch_summary import CallbackEpochSummary
 from .callback_export_samples import CallbackExportSamples
 from .callback_skip_epoch import CallbackSkipEpoch
-from .callback_embedding_statistics import CallbackTensorboardEmbedding
+from .callback_embedding_statistics import CallbackEmbeddingStatistics
 from .callback_save_last_model import CallbackSaveLastModel
 from .callback_export_history import CallbackExportHistory
 from .callback_export_classification_report import CallbackExportClassificationReport

@@ -1,6 +1,7 @@
 from trw.train import callback
 from trw.train import utilities
 from trw.train import trainer
+from trw.train.outputs import OutputEmbedding
 import collections
 import numpy as np
 import logging
@@ -10,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 def default_statistics():
-    # TODO for the statistics to be exported, we must update `callback_export_history.default_metrics()` which is clunky. find a better mechanism
     # keep the ordering so that it is easier to read the logs
     embedding_statistics_fn = collections.OrderedDict()
     embedding_statistics_fn['max'] = np.max
@@ -22,7 +22,7 @@ def default_statistics():
         'max': np.max,
         'min': np.min,
         'mean': np.mean,
-        'std': np.mean,
+        'std': np.mean,  # aggregate: mean of std
     }
     
     return embedding_statistics_fn, aggregate_statistics_fn
@@ -45,6 +45,13 @@ class CollectBatchAndProcessStats:
     def __call__(self, dataset_name, split_name, batch, loss_terms):
         if self.nb_samples_evaluated >= self.number_of_samples_to_evaluate:
             raise StopIteration()
+
+        if self.embedding_names is None:
+            self.embedding_names = []
+            for loss_name, loss in loss_terms.items():
+                output_ref = loss.get('output_ref')
+                if output_ref is not None and isinstance(output_ref, OutputEmbedding):
+                    self.embedding_names.append(loss_name)
         
         for embedding_name in self.embedding_names:
             embedding = loss_terms.get(embedding_name)
@@ -71,7 +78,7 @@ class CollectBatchAndProcessStats:
         return stats_all
 
 
-class CallbackTensorboardEmbedding(callback.Callback):
+class CallbackEmbeddingStatistics(callback.Callback):
     """
     This callback records the statistics of specified embeddings
 
@@ -79,6 +86,16 @@ class CallbackTensorboardEmbedding(callback.Callback):
         everything in memory so we need to collect what we need batch by batch)
     """
     def __init__(self, embedding_names, dataset_name=None, split_name='test', number_of_samples=2000, statistics=default_statistics(), embedding_output_name='output'):
+        """
+
+        Args:
+            embedding_names: the names of the embeddings to collect
+            dataset_name: the dataset name to consider. If None, the first available dataset will be used
+            split_name: the split name to consider. If None, the first split of the dataset will be used
+            number_of_samples: the number of samples to collect to calculate the statistics
+            statistics: the statistics to be collected
+            embedding_output_name: the embedding output name. By default, `output` is used.
+        """
         self.embedding_names = embedding_names
         self.dataset_name = dataset_name
         self.split_name = split_name
@@ -92,10 +109,10 @@ class CallbackTensorboardEmbedding(callback.Callback):
         if self.dataset_name is None:
             self.dataset_name = next(iter(datasets))
 
-        if datasets[self.dataset_name].get(self.split_name) is None:
-            logger.error('can\'t find split={} for dataset={}'.format(self.dataset_name, self.split_name))
-            self.dataset_name = None
-            return
+        self.dataset_name, self.split_name = utilities.find_default_dataset_and_split_names(
+            datasets,
+            self.dataset_name,
+            self.split_name)
         
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('nb_samples={}'.format(self.number_of_samples))
