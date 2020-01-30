@@ -59,7 +59,7 @@ class TestCallbackLearningRateFinder(unittest.TestCase):
             run_prefix='LR_finder',
             eval_every_X_epoch=2)
 
-        assert float(results['history'][-1]['simple']['train']['overall_loss']['loss']) < 1e-6
+        assert float(results['history'][-1]['simple']['train']['overall_loss']['loss']) < 1e-4
 
 
 if __name__ == '__main__':

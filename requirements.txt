@@ -1,7 +1,7 @@
 pillow<=6.1
 matplotlib
 numpy
-sklearn
+scikit-learn
 scikit-image
 pandas
 tensorboardX
