@@ -3,6 +3,7 @@ import trw
 import torch.nn as nn
 import torch
 import os
+import numpy as np
 
 
 class Criterion:
@@ -107,6 +108,63 @@ class TestCallbackExportClassificationErrors(unittest.TestCase):
                 lines = f.readlines()
             assert 'x_str=str_' in lines[-2]
             assert 'x_truth_str=str_' in lines[-1]
+
+
+    def test_classification_report(self):
+        output_mappings = {
+            'good': {
+                'mappinginv': {
+                    0: 'str_0',
+                    1: 'str_1',
+                }
+            }
+        }
+
+        datasets_infos = {
+            'dataset1': {
+                'split1': {
+                    'output_mappings': output_mappings
+                }
+            }
+        }
+
+        output_raw = np.random.randn(10, 2)
+        truth = np.random.randint(0, 2, 10)
+        outputs = {
+            'dataset1': {
+                'split1': {
+                    'output1': {
+                        'output_ref': trw.train.OutputClassification(None, 'good'),
+                        'output_raw': output_raw,
+                        'output': np.argmax(output_raw, axis=1),
+                        'output_truth': truth
+                    }
+                }
+            }
+        }
+
+        callback = trw.train.CallbackExportClassificationReport()
+        options = trw.train.create_default_options(device=torch.device('cpu'))
+        options['workflow_options']['current_logging_directory'] = os.path.join(
+            options['workflow_options']['logging_directory'],
+            'test_classification_report')
+        root_output = options['workflow_options']['current_logging_directory']
+        trw.train.create_or_recreate_folder(options['workflow_options']['current_logging_directory'])
+        callback(options, None, None, None, outputs, None, datasets_infos, None)
+
+        path_report = os.path.join(root_output, 'output1-dataset1-split1-report.txt')
+        path_roc = os.path.join(root_output, 'output1-dataset1-split1-ROC.png')
+        path_cm = os.path.join(root_output, 'output1-dataset1-split1-cm.png')
+        assert os.path.exists(path_report)
+        assert os.path.exists(path_roc)
+        assert os.path.exists(path_cm)
+
+        with open(path_report, 'r') as f:
+            lines = ''.join(f.readlines())
+
+        # make sure the class mapping was correct
+        assert 'str_0' in lines
+        assert 'str_1' in lines
 
 
 if __name__ == '__main__':

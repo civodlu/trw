@@ -62,3 +62,4 @@ class CallbackClearTensorboardLog(CallbackTensorboardBased):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         CallbackTensorboardBased.remove_tensorboard_logger()
         logger.debug('CallbackTensorboardBased.remove_tensorboard_logger called!')
+

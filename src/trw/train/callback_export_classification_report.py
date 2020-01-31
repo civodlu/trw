@@ -31,10 +31,16 @@ class CallbackExportClassificationReport(callback.Callback):
     """
     max_class_names = 40
 
-    def __init__(self, with_confusion_matrix=True, with_ROC=True, with_history=True, with_report=True):
+    def __init__(self, with_confusion_matrix=True, with_ROC=True, with_report=True):
+        """
+
+        Args:
+            with_confusion_matrix: if True, the confusion matrix will be exported
+            with_ROC: if True, the ROC curve will be exported
+            with_report: if True, the sklearn report will be exported
+        """
         self.with_confusion_matrix = with_confusion_matrix
         self.with_ROC = with_ROC
-        self.with_history = with_history
         self.with_report = with_report
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
