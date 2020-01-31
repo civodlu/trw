@@ -10,7 +10,7 @@ class Net_simple(nn.Module):
 
         dropout_probability = options['training_parameters']['dropout_probability']
         self.convs = trw.layers.convs_2d(3, [64, 128, 256], batch_norm_kwargs={}, convolution_repeats=[3, 3, 3])
-        self.denses = trw.layers.denses([4096, 256, 10], dropout_probability=None, with_batchnorm=True, last_layer_is_output=True)
+        self.denses = trw.layers.denses([4096, 256, 10], dropout_probability=None, batch_norm_kwargs={}, last_layer_is_output=True)
 
     def forward(self, batch):
         # a batch should be a dictionary of features

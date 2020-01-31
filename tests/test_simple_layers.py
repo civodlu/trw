@@ -53,7 +53,7 @@ class TestSimpleLayers(TestCase):
             i,
             sizes=[16, 32],
             dropout_probability=0.5,
-            with_batchnorm=True,
+            batch_norm_kwargs={},
             activation=torch.nn.ReLU6,
             last_layer_is_output=True)
         net = trw.simple_layers.compile_nn([o])
