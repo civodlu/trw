@@ -190,6 +190,7 @@ class MeaningfulPerturbation:
                     break
         output = MeaningfulPerturbation._get_output(target_class_name, outputs, self.model_output_postprocessing)
         logger.info('original model output={}'.format(utilities.to_value(output)))
+        output_start = utilities.to_value(output)
 
         if target_class is None:
             target_class = torch.argmax(output, dim=1)
@@ -251,6 +252,10 @@ class MeaningfulPerturbation:
                 c = output[:, target_class]
                 loss = l1 + tv + c
 
+                if i == 0:
+                    # must be collected BEFORE backward!
+                    c_start = utilities.to_value(c)
+
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
@@ -258,8 +263,6 @@ class MeaningfulPerturbation:
                 # Optional: clamping seems to give better results
                 mask.data.clamp_(0, 1)
 
-                if i == 0:
-                    c_start = utilities.to_value(c)
 
                 if i % 20 == 0:
                     logger.info('iter={}, total_loss={}, l1_loss={}, tv_loss={}, c_loss={}'.format(
@@ -282,6 +285,7 @@ class MeaningfulPerturbation:
                 'smoothed_input': utilities.to_value(blurred_img),
                 'loss_c_start': c_start,
                 'loss_c_end': utilities.to_value(c),
+                'output_start': output_start,
                 'output_end': utilities.to_value(output),
             }
 
