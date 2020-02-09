@@ -164,7 +164,7 @@ def boxplots(
     plt.close()
 
 
-def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=None, cutoff=0.5):
+def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=None):
     """
     Calculate the ROC and AUC of a binary classifier
 
@@ -176,7 +176,6 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
     :param title: the title of the ROC
     :param label_name: the name of the ROC curve. Can be a list for multiple ROC curves
     :param colors: if None use default colors. Else, a numpy array of dim (Nx3) where `N` is the number of colors. Must be in [0..1] range
-    :param cutoff: the cutoff value discretize class 0 vs class 1. By default, 0.5
     """
     
     if not isinstance(trues, list):
@@ -208,23 +207,6 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
         fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true=true_values, y_score=found_values, pos_label=None)
         roc_auc = sklearn.metrics.auc(fpr, tpr)
 
-        def cutoff_youdens_j(fpr, tpr, thresholds):
-            j_scores = tpr - fpr
-            j_ordered = sorted(zip(j_scores, thresholds))
-            return j_ordered[-1][1]
-
-        if cutoff is None:
-            cutoff = cutoff_youdens_j(fpr, tpr, thresholds)
-
-        y_cutoff = found_values >= cutoff
-        accuracy_cutoff = sum(true_values == y_cutoff) / len(true_values)
-        cm_cutoff = sklearn.metrics.confusion_matrix(true_values, y_cutoff)
-        tn, fp, fn, tp = cm_cutoff.ravel()
-        print('title=%s, accuracy_cutoff=%f, cutoff=%f' % (title, accuracy_cutoff, cutoff))
-        print('Confusion_matrix cutoff:\n', cm_cutoff)
-        print('specificity cutoff:\n', tn / (tn + fp))
-        print('sensitivity cutoff:\n', tp / (tp + fn))
-
         name = label_name[curve_n]
         if name is None:
             name = ''
@@ -241,7 +223,6 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
     fig_tight_layout(fig)
     export_figure(export_path, title)
     plt.close()
-    return cutoff
 
 
 def list_classes_from_mapping(mappinginv: collections.Mapping, default_name='unknown'):
