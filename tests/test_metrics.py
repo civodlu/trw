@@ -76,3 +76,77 @@ class TestMetrics(TestCase):
         assert abs(history['classification error'] - 1.0 / 4) < 1e-4
         assert abs(history['1-specificity'] - (1 - 1.0)) < 1e-4
         assert abs(history['1-sensitivity'] - (1 - 1.0 / 2)) < 1e-4
+
+    def test_metrics_sensitivity_specificity_perfect(self):
+        input_values = torch.from_numpy(np.asarray([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([0, 0, 0, 0], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r = o.evaluate_batch(batch, False)
+        history = r['metrics_results']
+
+        assert abs(history['classification error']) < 1e-4
+        assert abs(history['1-specificity']) < 1e-4
+        assert abs(history['1-sensitivity']) < 1e-4
+
+    def test_metrics_sensitivity_specificity_all_wrong(self):
+        input_values = torch.from_numpy(np.asarray([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([1, 1, 1, 1], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r = o.evaluate_batch(batch, False)
+        history = r['metrics_results']
+
+        assert abs(history['classification error'] - 1.0) < 1e-4
+        assert history['1-specificity'] is None
+        assert abs(history['1-sensitivity'] - 1.0) < 1e-4
+
+    def test_metrics_sensitivity_specificity_all_wrong_specificity_none(self):
+        input_values = torch.from_numpy(np.asarray([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([1, 1, 1, 1], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r = o.evaluate_batch(batch, False)
+        history = r['metrics_results']
+
+        assert abs(history['classification error'] - 1.0) < 1e-4
+        assert history['1-specificity'] is None
+        assert abs(history['1-sensitivity'] - 1.0) < 1e-4
+
+    def test_metrics_sensitivity_specificity_all_wrong_sensitivity_none(self):
+        input_values = torch.from_numpy(np.asarray([[0, 1], [0, 1], [0, 1], [0, 1]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([0, 0, 0, 0], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r = o.evaluate_batch(batch, False)
+        history = r['metrics_results']
+
+        assert abs(history['classification error'] - 1.0) < 1e-4
+        assert history['1-sensitivity'] is None
+        assert abs(history['1-specificity'] - 1.0) < 1e-4
+
+    def test_metrics_with_none_aggregated(self):
+        input_values = torch.from_numpy(np.asarray([[0, 1], [0, 1], [0, 1], [0, 1]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([0, 0, 0, 0], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r1 = o.evaluate_batch(batch, False)
+
+        input_values = torch.from_numpy(np.asarray([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([1, 1, 1, 1], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target')
+        batch = {'target': target_values}
+        r2 = o.evaluate_batch(batch, False)
+
+        r = trw.train.trainer.aggregate_list_of_dicts([r1['metrics_results'], r2['metrics_results']])
+
+        # make sure we can aggregate appropriately the metrics, even if there is a `None` value
+        assert abs(r['classification error'] - 1.0) < 1e-4
+        assert abs(r['1-sensitivity'] - 1.0) < 1e-4
+        assert abs(r['1-specificity'] - 1.0) < 1e-4

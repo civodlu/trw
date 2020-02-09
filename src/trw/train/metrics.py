@@ -98,11 +98,15 @@ class MetricClassificationSensitivitySpecificity(Metric):
 
                 if tp + fn > 0:
                     one_minus_sensitivity = 1.0 - tp / (tp + fn)
+                else:
+                    # invalid! `None` will be discarded
+                    one_minus_sensitivity = None
+
+                if fp + tn > 0:
                     one_minus_specificity = 1.0 - tn / (fp + tn)
                 else:
-                    # invalid! so return the worst stats possible
-                    one_minus_sensitivity = 1.0
-                    one_minus_specificity = 1.0
+                    # invalid! `None` will be discarded
+                    one_minus_specificity = None
 
                 return {
                     # we return the 1.0 - metric, since in the history we always keep the smallest number
@@ -111,9 +115,9 @@ class MetricClassificationSensitivitySpecificity(Metric):
                 }
             else:
                 return {
-                    # we return the 1.0. We can't calculate the stats
-                    '1-sensitivity': 1.0,
-                    '1-specificity': 1.0,
+                    # this is perfect classification
+                    '1-sensitivity': 0.0,
+                    '1-specificity': 0.0,
                 }
         return None
 
