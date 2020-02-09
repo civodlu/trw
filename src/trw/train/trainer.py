@@ -124,6 +124,7 @@ def aggregate_list_of_dicts(list_of_dicts):
     aggregated = collections.OrderedDict()
     for key in keys:
         values = [dict[key] for dict in list_of_dicts]
+        values = [v for v in values if v is not None]
         aggregate_values(values)
         aggregated[key] = aggregate_values(values)
     return aggregated
@@ -338,7 +339,7 @@ def eval_loop(
                 outputs = model(batch)
                 loss_terms = prepare_loss_terms(outputs, batch, is_training=False)
                 loss = loss_fn(dataset_name, batch, loss_terms)
-                loss_terms['overall_loss'] = {'loss': loss}
+                loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}
                 all_loss_terms.append(loss_terms)
 
                 if callbacks_per_batch_loss_terms is not None:
@@ -535,7 +536,6 @@ def default_post_training_callbacks(
     if export_errors:
         callbacks.append(callback_export_classification_errors.CallbackExportClassificationErrors(discard_train=discard_train_error_export))
         callbacks.append(callback_export_segmentations.CallbackExportSegmentations())
-
 
     callbacks += [
         callback_export_classification_report.CallbackExportClassificationReport(),
