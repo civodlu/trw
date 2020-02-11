@@ -14,6 +14,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert history['classification error'] == 0.0
         assert history['loss'] == 0.0
 
@@ -26,6 +27,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 0.33333) < 1e-4
         assert abs(history['loss'] - 0.33333 * 100) < 1e-2
 
@@ -49,6 +51,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 1.0 / (4)) < 1e-4
         assert abs(history['1-sensitivity'] - (1 - 1.0)) < 1e-4
         assert abs(history['1-specificity'] - (1 - 2.0 / 3)) < 1e-4
@@ -73,6 +76,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 1.0 / 4) < 1e-4
         assert abs(history['1-specificity'] - (1 - 1.0)) < 1e-4
         assert abs(history['1-sensitivity'] - (1 - 1.0 / 2)) < 1e-4
@@ -86,9 +90,10 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error']) < 1e-4
         assert abs(history['1-specificity']) < 1e-4
-        assert abs(history['1-sensitivity']) < 1e-4
+        assert history['1-sensitivity'] is None
 
     def test_metrics_sensitivity_specificity_all_wrong(self):
         input_values = torch.from_numpy(np.asarray([[1, 0], [1, 0], [1, 0], [1, 0]], dtype=float))
@@ -99,6 +104,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 1.0) < 1e-4
         assert history['1-specificity'] is None
         assert abs(history['1-sensitivity'] - 1.0) < 1e-4
@@ -112,6 +118,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 1.0) < 1e-4
         assert history['1-specificity'] is None
         assert abs(history['1-sensitivity'] - 1.0) < 1e-4
@@ -125,6 +132,7 @@ class TestMetrics(TestCase):
         r = o.evaluate_batch(batch, False)
         history = r['metrics_results']
 
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
         assert abs(history['classification error'] - 1.0) < 1e-4
         assert history['1-sensitivity'] is None
         assert abs(history['1-specificity'] - 1.0) < 1e-4
@@ -144,7 +152,7 @@ class TestMetrics(TestCase):
         batch = {'target': target_values}
         r2 = o.evaluate_batch(batch, False)
 
-        r = trw.train.trainer.aggregate_list_of_dicts([r1['metrics_results'], r2['metrics_results']])
+        r = trw.train.trainer.aggregate_list_of_metrics([r1['metrics_results'], r2['metrics_results']])
 
         # make sure we can aggregate appropriately the metrics, even if there is a `None` value
         assert abs(r['classification error'] - 1.0) < 1e-4

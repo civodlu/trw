@@ -8,11 +8,12 @@ class LossDiceMulticlass(nn.Module):
     
     If multi-class, compute the loss for each class then average the losses
     """
-    def __init__(self, normalization_fn=nn.Sigmoid, eps=0.0001):
+    def __init__(self, normalization_fn=nn.Sigmoid, eps=0.0001, return_dice_by_class=False):
         super().__init__()
 
         self.eps = eps
         self.normalization = None
+        self.return_dice_by_class = return_dice_by_class
 
         if normalization_fn is not None:
             self.normalization = normalization_fn()
@@ -25,7 +26,8 @@ class LossDiceMulticlass(nn.Module):
             target: must have W x d0 x ... x dn shape
 
         Returns:
-            The dice score
+            if return_dice_by_class is False, return 1 - dice score suitable for optimization.
+            Else, return the average dice score by class
         """
         assert len(output.shape) > 2
         assert len(output.shape) == len(target.shape) + 1, 'output: must have W x C x d0 x ... x dn shape and target: must have W x d0 x ... x dn shape'
@@ -43,6 +45,9 @@ class LossDiceMulticlass(nn.Module):
         numerator = 2 * intersection.sum(indices_to_sum)
         denominator = output + encoded_target
         denominator = denominator.sum(indices_to_sum) + self.eps
-        
-        loss_per_channerl = 1 - numerator / denominator
-        return loss_per_channerl.sum(1) / output.shape[1]
+
+        if not self.return_dice_by_class:
+            loss_per_channerl = 1 - numerator / denominator
+            return loss_per_channerl.sum(1) / output.shape[1]  # average over channels
+        else:
+            return (numerator / denominator).sum(0) / output.shape[0]  # average over samples

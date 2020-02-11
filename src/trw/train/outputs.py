@@ -67,7 +67,6 @@ class Output:
             dict_torch_values_to_numpy(metrics_results)
 
 
-
 def extract_metrics(metrics_outputs, outputs):
     """
     Extract metrics from an output
@@ -81,10 +80,11 @@ def extract_metrics(metrics_outputs, outputs):
     """
     history = collections.OrderedDict()
     for metric in metrics_outputs:
-        r = metric(outputs)
-        if r is not None:
-            assert isinstance(r, collections.Mapping), 'must be a dict like structure'
-            history.update(r)
+        metric_result = metric(outputs)
+        if metric_result is not None:
+            metric_type = type(metric)
+            assert isinstance(metric_result, collections.Mapping), 'must be a dict like structure'
+            history.update({metric_type: metric_result})
     return history
 
 

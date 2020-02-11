@@ -125,8 +125,21 @@ def aggregate_list_of_dicts(list_of_dicts):
     for key in keys:
         values = [dict[key] for dict in list_of_dicts]
         values = [v for v in values if v is not None]
-        aggregate_values(values)
         aggregated[key] = aggregate_values(values)
+    return aggregated
+
+
+def aggregate_list_of_metrics(list_of_metrics):
+    if len(list_of_metrics) == 0:
+        return {}
+
+    keys = list_of_metrics[0].keys()
+    aggregated = collections.OrderedDict()
+    for key in keys:
+        values = [dict[key] for dict in list_of_metrics]
+        aggregated_values = key.aggregate_metrics(values)
+        for name, value in aggregated_values.items():
+            aggregated[name] = value
     return aggregated
 
 
@@ -164,7 +177,7 @@ def generic_aggregate_loss_terms(loss_terms_history):
             loss_term_outputs.append(loss_term_output)
 
         aggregated_outputs[output_name] = aggregate_list_of_dicts(loss_term_outputs)
-        aggregated_metrics[output_name] = aggregate_list_of_dicts(loss_term_metrics_results)
+        aggregated_metrics[output_name] = aggregate_list_of_metrics(loss_term_metrics_results)
 
     # keep the `overall_loss` in the metrics
     overall_losses = []
