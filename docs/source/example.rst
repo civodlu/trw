@@ -9,7 +9,7 @@ of this task is to classify a 28x28 white and black image into one of the ten po
 55,000 training images to train the model parameters, 5,000 images for validation to select the best hyper-parameters
 this task and 10,000 images to assess the model.
 
-.. image:: _images/mnistdigits.png
+.. image:: images/mnistdigits.png
     :align: center
     :alt: MNIST examples
     :height: 300px
