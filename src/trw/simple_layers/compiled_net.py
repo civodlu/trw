@@ -174,36 +174,18 @@ class CompiledNet(nn.Module):
         self.inputs = None  # the inputs of the network
         self.outputs = None  # the output (`trw.train.Output`) of the networks
         self.raw_outputs = None  # the torch.Tensor outputs of the network
-        self.runtime_actions = []
-        self.torch_modules = None
+
+        self.runtime_actions = []  # store the actions to be performed as a list
+        self.modules_by_action_id = None  # each action must have a corresponding nn.Module (even if this module do
+                                          # nothing). the `nn.Module` of the graph are stored in a nn.ModuleList
+                                          # so that PyTorch can replicate the `CompiledNet` on multiple devices
 
         # here we may only want to evaluate a partial network but still keep alive the
         # rest of the network. So here we can store the outputs that are not
         # directly calculated by the compiled net
         self.other_outputs_to_keep_alive = None
 
-        # we NEED to keep this module list for torch:
-        # it means torch is aware of the parameters of our sub-modules
-        self.module_list = nn.ModuleList()
-
         self.remove_checks = remove_checks
-        
-    def collect_parameters(self):
-        """
-        Make the parameters of each node visible to the current module
-        """
-        self.torch_modules = nn.ModuleList()
-        added_modules_or_nodes = OrderedSet()
-        for action_type, node in self.runtime_actions:
-            if node not in added_modules_or_nodes:
-                module = node.get_module()
-                if module is not None and module not in added_modules_or_nodes:
-                    if isinstance(module, nn.Module):
-                        # if the module is not a `nn.Module`, then it should be a functional pytorch module
-                        self.torch_modules.append(module)
-                    added_modules_or_nodes.add(module)
-
-                added_modules_or_nodes.add(node)
 
     def forward(self, batch):
         """
@@ -237,12 +219,13 @@ class CompiledNet(nn.Module):
             states[i] = input_value
 
         # perform the actions
-        for action_type, action in self.runtime_actions:
+        for action_id, (action_type, action) in enumerate(self.runtime_actions):
             if action_type == RuntimeAction.EXECUTE_NODE:
                 #print('EXECUTE=', action, 'state_size=', len(states), 'parents=', len(action.parents))
                 action_inputs = prepare_inputs(action)
-                module = action.get_module()
-                assert module is not None, 'module is not created!'
+                #module = action.get_module()
+                module = self.modules_by_action_id[action_id]
+                assert module is not None and not isinstance(module, EmptyModule), 'module is not created!'
 
                 action_output = module(action_inputs)
 
@@ -286,6 +269,26 @@ class CompiledNet(nn.Module):
         create_weak_ref(self.outputs)
 
 
+class EmptyModule(nn.Module):
+    """
+    Defines an empty module (i.e., equivalent to `None` but for nn.Module so that it can be stored in a
+    nn.ModuleList)
+    """
+    pass
+
+
+class WrapperModule(nn.Module):
+    """
+    nn.ModuleList can only store nn.Module so create a wrapper that can be stored in a nn.ModuleList
+    """
+    def __init__(self, module):
+        super().__init__()
+        self.module = module
+
+    def forward(self, i):
+        return self.module(i)
+
+
 def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_checks=False):
     """
     Compile a network to calculate `output_nodes`
@@ -294,7 +297,7 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_chec
 
         * graph optimizations:
 
-            * transform linear nodes as a single `sequence`!
+        * transform linear nodes as a single `sequence`!
 
     Args:
         output_nodes: the output nodes to calculate. The order of the nodes indicates the order of the calculation
@@ -341,9 +344,17 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_chec
     # a list of actions to be performed to calculate the specified `output_nodes`
     actions = []
 
+    # a module by action store. This is done so that the `CompiledNet` can easily be replicated
+    # on multiple GPUs (we can use the same graph, but the nn.Modules of each action could
+    # be replicated on each GPU
+    modules_by_action_id = nn.ModuleList()
+
+    compiled_net = CompiledNet(remove_checks=remove_checks)
+
     def release_node(node_to_release):
         # free book-keeping
         actions.append((RuntimeAction.REMOVE_STATE, node_to_release))
+        modules_by_action_id.append(EmptyModule())
 
     def visit_nodes(current_node):
         if current_node not in visited_nodes:
@@ -351,8 +362,17 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_chec
             if not isinstance(current_node, Input):
                 if isinstance(current_node, SimpleOutputBase):
                     actions.append((RuntimeAction.EVALUATE_STATE, current_node))
+                    modules_by_action_id.append(EmptyModule())
                 else:
+                    module = current_node.get_module()
+                    assert module is not None, 'action must return a nn.Module!'
                     actions.append((RuntimeAction.EXECUTE_NODE, current_node))
+                    if isinstance(module, nn.Module):
+                        modules_by_action_id.append(module)
+                    else:
+                        # modules_by_action_id is a ModuleList, it can ONLY store nn.Module
+                        # so wrap this. We expect this `module` to be parameterless
+                        modules_by_action_id.append(WrapperModule(module))
 
             for parent in current_node.parents:
                 parent_book_keeping = node_bookkeeping.get(parent)
@@ -404,12 +424,14 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_chec
                 if marks is not None and len(marks) > 0:
                     next_nodes.append(child)
 
-    compiled_net = CompiledNet(remove_checks=remove_checks)
     compiled_net.inputs = input_nodes
     compiled_net.outputs = output_nodes
     compiled_net.raw_outputs = raw_outputs
     compiled_net.runtime_actions = actions
     compiled_net.other_outputs_to_keep_alive = other_outputs_to_keep_alive
-    compiled_net.collect_parameters()
+    compiled_net.modules_by_action_id = modules_by_action_id
+
+    assert len(compiled_net.modules_by_action_id) == len(compiled_net.runtime_actions), \
+        'must have 1 module for 1 action'
 
     return compiled_net

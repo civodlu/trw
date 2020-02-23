@@ -20,6 +20,7 @@ def create_net(hparams):
 
 def evaluate_hparams(hparams):
     learning_rate = hparams.create('learning_rate', trw.hparams.ContinuousUniform(0.1, 1e-5, 1.0))
+    options['model_parameters']['hyperparams'] = hparams
 
     # disable most of the reporting so that we don't end up with
     # thousands of files that are not useful for hyper-parameter

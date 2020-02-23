@@ -75,7 +75,7 @@ class TestMultiGpus(TestCase):
         nb_cuda_devices = torch.cuda.device_count()
         if nb_cuda_devices < 2:
             # we do not have enough GPUs, abot the test
-            warnings.warn(f'This test can\'t be run. Requires CUDA devices=2, got={nb_cuda_devices}', ResourceWarning)
+            warnings.warn(f'This test can\'t be run. Requires CUDA devices>=2, got={nb_cuda_devices}', ResourceWarning)
             return
 
         options = trw.train.create_default_options(num_epochs=5)
@@ -101,7 +101,7 @@ class TestMultiGpus(TestCase):
         nb_cuda_devices = torch.cuda.device_count()
         if nb_cuda_devices < 2:
             # we do not have enough GPUs, abot the test
-            warnings.warn(f'This test can\'t be run. Requires CUDA devices=2, got={nb_cuda_devices}', ResourceWarning)
+            warnings.warn(f'This test can\'t be run. Requires CUDA devices>=2, got={nb_cuda_devices}', ResourceWarning)
             return
 
         options = trw.train.create_default_options(num_epochs=5)
@@ -122,4 +122,29 @@ class TestMultiGpus(TestCase):
 
         assert trw.train.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
 
+    def test_simplified_2(self):
+        nb_cuda_devices = torch.cuda.device_count()
+        if nb_cuda_devices < 2:
+            # we do not have enough GPUs, abot the test
+            warnings.warn(f'This test can\'t be run. Requires CUDA devices>=2, got={nb_cuda_devices}', ResourceWarning)
+            return
 
+        # here we simply make sure the modules are correctly replicated
+        # on the different GPUs and the results correctly gathered
+        i = trw.simple_layers.Input([None, 32], feature_name='input')
+        n = trw.simple_layers.Linear(i, 2)
+        o = trw.simple_layers.OutputClassification(n, 'output', 'classification')
+        net = trw.simple_layers.compile_nn([o])
+
+        device = torch.device('cuda:0')
+
+        net = trw.train.DataParallelExtended(net)
+        net = net.to(device)
+
+        inputs = {
+            'input': torch.zeros([10, 32], dtype=torch.float32, device=device)
+        }
+
+        r = net(inputs)
+        assert len(r) == 1
+        assert r['output'].output.shape == (10, 2)
