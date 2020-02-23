@@ -14,9 +14,19 @@ class CallbackExportBestHistory(callback.Callback):
     This can be useful to accurately get the best value of a metric and in particular
     at which step it occurred.
     """
-    def __init__(self, filename='best_history.txt', metric_to_discard=[]):
+    def __init__(self, filename='best_history.txt', metric_to_discard=None, epoch_start=0):
+        """
+
+        Args:
+            filename: export filename
+            metric_to_discard: None or a list of metrics to discard
+            epoch_start: epoch before this value will not be used
+        """
         self.filename = filename
         self.metric_to_discard = metric_to_discard
+        if self.metric_to_discard is None:
+            self.metric_to_discard = []
+        self.epoch_start = epoch_start
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('CallbackExportHistory.__call__ started')
@@ -36,7 +46,7 @@ class CallbackExportBestHistory(callback.Callback):
                             best_value_step = best_values_step.get(name)
                             if best_value_step is not None:
                                 best_value, best_step = best_value_step
-                                if metric_value < best_value:
+                                if metric_value is not None and metric_value < best_value:
                                     best_values_step[name] = (metric_value, index)
                             else:
                                 best_values_step[name] = (metric_value, index)
