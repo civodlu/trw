@@ -8,7 +8,7 @@ import collections
 import os
 
 
-def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, transform_valid=None, nb_workers=4):
+def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, transform_valid=None, nb_workers=4, target_type='semantic'):
     """
     Load the cityscapes dataset. This requires to register on their website https://www.cityscapes-dataset.com/
     and manually download the dataset.
@@ -36,14 +36,14 @@ def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, tr
         root = './data'
 
     cityscapes_path = os.path.join(root, 'cityscapes')
-    train_dataset = torchvision.datasets.cityscapes.Cityscapes(cityscapes_path, mode='fine', split='train')
-    valid_dataset = torchvision.datasets.cityscapes.Cityscapes(cityscapes_path, mode='fine', split='val')
+    train_dataset = torchvision.datasets.cityscapes.Cityscapes(cityscapes_path, mode='fine', split='train', target_type=target_type)
+    valid_dataset = torchvision.datasets.cityscapes.Cityscapes(cityscapes_path, mode='fine', split='val', target_type=target_type)
 
     def image_to_torch(i):
         return torch.from_numpy(np.array(i).transpose((2, 0, 1))).unsqueeze(0)
 
     def segmentation_to_torch(i):
-        return torch.from_numpy(np.array(i)).unsqueeze(0)
+        return torch.from_numpy(np.array(i)).type(torch.int64).unsqueeze(0)
 
     def load_case(batch, dataset, transform):
         case_ids = batch['case_id']
@@ -58,8 +58,8 @@ def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, tr
 
         data_batch = {
             'case_id': case_ids,
-            'images': torch.cat(images),
-            'segmentations': torch.cat(segmentations)
+            'image': torch.cat(images),
+            'segmentation': torch.cat(segmentations)
         }
 
         if transform is not None:

@@ -197,6 +197,20 @@ class OutputSegmentation(Output):
         self.loss_scaling = loss_scaling
         self.collect_only_non_training_output = collect_only_non_training_output
 
+    def loss_term_cleanup(self, loss_term):
+        """
+        This function is called for each batch just before switching to another batch.
+
+        It can be used to clean up large arrays stored or release CUDA memory
+        """
+        if 'output_raw' in loss_term:
+            # typically too big, so remove them
+            del loss_term['output_raw']
+            del loss_term['output']
+            del loss_term['output_truth']
+
+        super().loss_term_cleanup(loss_term)
+
     def evaluate_batch(self, batch, is_training):
         truth = batch.get(self.target_name)
         assert truth is not None, 'classes `{}` is missing in current batch!'.format(self.target_name)
