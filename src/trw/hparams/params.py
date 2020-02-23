@@ -247,6 +247,9 @@ class HyperParameters:
     def __str__(self):
         return str(self.hparams)
 
+    def __repr__(self):
+        return str(self.hparams)
+
     def __len__(self):
         return len(self.hparams)
 
