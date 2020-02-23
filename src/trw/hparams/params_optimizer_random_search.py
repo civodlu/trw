@@ -33,7 +33,6 @@ def load_loss_params(output_location):
     reload the loss as self contained .pkl file to be analyzed later
     """
     with open(output_location, 'rb') as f:
-
         loss = pickle.load(f)
         infos = pickle.load(f)
         hyper_parameters = pickle.load(f)
@@ -42,7 +41,7 @@ def load_loss_params(output_location):
 
 class HyperParametersOptimizerRandomSearchLocal:
     """
-    Random hyper parameter run on a single machine
+    Random hyper parameter search on a single machine
 
     We need to define the hyper parameter evaluation function::
     
@@ -57,7 +56,7 @@ class HyperParametersOptimizerRandomSearchLocal:
         """
         
         Args:
-            evaluate_hparams_fn: the function to be optimized. It will be valled with `hparams` and expects as result
+            evaluate_hparams_fn: the function to be minimized. It will be called with `hparams` and expects as result
                 a tuple (loss, report)
             repeat: the number of iteration of the search
             log_string: how to log the search
