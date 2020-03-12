@@ -1,5 +1,7 @@
 from unittest import TestCase
 import trw.train
+import collections
+import torch
 
 
 class TestUtilities(TestCase):
@@ -102,3 +104,22 @@ class TestUtilities(TestCase):
 
         mapping = trw.train.get_classification_mapping({'dataset1': {}}, 'dataset1', 'split1', 'output_name')
         assert mapping is None
+
+    def test_flatten_dictionaries(self):
+        d = collections.OrderedDict()
+        d['key1'] = 'v1'
+        d['key2'] = {'key3': 'v2'}
+        d['key4'] = {'key5': {'key6': 'v3'}}
+        flattened_d = trw.train.flatten_nested_dictionaries(d)
+        assert len(flattened_d) == 3
+        assert flattened_d['key1'] == 'v1'
+        assert flattened_d['key2-key3'] == 'v2'
+        assert flattened_d['key4-key5-key6'] == 'v3'
+
+    def test_clamp_n(self):
+        t = torch.LongTensor([[1, 2, 3], [4, 5, 6]])
+        min = torch.LongTensor([3, 2, 4])
+        max = torch.LongTensor([3, 4, 8])
+        clamped_t = trw.train.clamp_n(t, min, max)
+
+        assert (clamped_t == torch.LongTensor([[3, 2, 4], [3, 4, 6]])).all()

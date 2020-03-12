@@ -1,4 +1,5 @@
 from .mnist import create_mnist_datasset
+from .mnist_cluttered import create_mnist_cluttered_datasset
 from .cifar10 import create_cifar10_dataset
 from .voc2012 import create_segmentation_voc2012_dataset
 from .cityscapes import create_cityscapes_dataset

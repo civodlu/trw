@@ -14,11 +14,14 @@ from .resize import resize
 from .stack import stack
 from .normalize import normalize
 from .renormalize import renormalize
+from .affine import affine_transformation_translation, affine_transformation_rotation2d, affine_transformation_scale, \
+    affine_transform, to_voxel_space_transform
 
 from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_3_or_above
-from .transforms_random_crop import TransformRandomCrop, TransformRandomCropJoint
-from .transforms_random_flip import TransformRandomFlip, TransformRandomFlipJoint
+from .transforms_random_crop import TransformRandomCrop
+from .transforms_random_flip import TransformRandomFlip
 from .transforms_random_cutout import TransformRandomCutout
 from .transforms_resize import TransformResize
 from .transforms_normalize import TransformNormalize
 from .transforms_compose import TransformCompose
+from .transforms_affine import TransformAffine

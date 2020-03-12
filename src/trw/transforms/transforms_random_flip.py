@@ -1,16 +1,20 @@
+import collections
+
 import functools
 from trw.transforms import transforms
-from trw.transforms.flip import transform_batch_random_flip_joint, transform_batch_random_flip
+from trw.transforms.flip import transform_batch_random_flip_joint
 
 
-def _transform_random_flip(feature_name, feature_value, axis, flip_probability):
-    is_joint = isinstance(feature_name, list) and isinstance(feature_value, list) and len(feature_name) == len(feature_value)
-    if is_joint:
-        flip_fn = transform_batch_random_flip_joint
-    else:
-        flip_fn = transform_batch_random_flip
+def _transform_random_flip(feature_names, batch, axis, flip_probability):
+    arrays = [batch[name] for name in feature_names]
+    transformed_arrays = transform_batch_random_flip_joint(arrays, axis=axis, flip_probability=flip_probability)
 
-    return flip_fn(feature_value, axis=axis, flip_probability=flip_probability)
+    new_batch = collections.OrderedDict(zip(feature_names, transformed_arrays))
+    for feature_name, feature_value in batch.items():
+        if feature_name not in feature_names:
+            # not in the transformed features, so copy the original value
+            new_batch[feature_name] = feature_value
+    return new_batch
 
 
 class TransformRandomFlip(transforms.TransformBatchWithCriteria):
@@ -27,22 +31,7 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 
-        super().__init__(criteria_fn=criteria_fn, transform_fn=functools.partial(_transform_random_flip, axis=axis, flip_probability=flip_probability))
-
-
-class TransformRandomFlipJoint(transforms.TransformBatchJointWithCriteria):
-    """
-    Randomly flip the axis of selected features in a joint fashion (if a feature is selected and a sample is
-        flipped, it will be flipped for all selected features)
-    """
-    def __init__(self, feature_names, axis, flip_probability=0.5):
-        """
-        Args:
-            axis: the axis to flip
-            flip_probability: the probability that a sample is flipped
-            criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
-        """
         super().__init__(
-            criteria_fn=functools.partial(transforms.criteria_feature_name, feature_names=feature_names),
-            transform_fn=functools.partial(_transform_random_flip, axis=axis, flip_probability=flip_probability)
-        )
+            criteria_fn=criteria_fn,
+            transform_fn=functools.partial(_transform_random_flip, axis=axis, flip_probability=flip_probability))
+

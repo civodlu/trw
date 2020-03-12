@@ -83,14 +83,14 @@ class TestTransform(TestCase):
         self.assertTrue((d_transformed[2] == [7, 8]).all() or (d_transformed[2] == [8, 9]).all())
 
     def test_random_crop_padd_transform_numpy(self):
-        size = [1, 31, 63]
+        size = [1, 46, 63]
         d = np.zeros([60000] + size, dtype=np.float)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1
 
         transform = trw.transforms.TransformRandomCrop(padding=[0, 8, 8])
         batch = transform({'d': d})
 
-        assert batch['d'].shape == (60000, 1, 31, 63)
+        assert batch['d'].shape == (60000, 1, 46, 63)
         d_summed = np.sum(batch['d'], axis=0).squeeze()
         ys, xs = np.where(d_summed > 0)
 
@@ -103,8 +103,10 @@ class TestTransform(TestCase):
         self.assertTrue(max(xs) == size[2] // 2 + 8)
 
     def test_random_crop_padd_transform_torch(self):
-        size = [1, 31, 63]
-        d = np.zeros([60000] + size, dtype=np.float)
+        size = [1, 46, 63]
+        nb = 60000
+
+        d = np.zeros([nb] + size, dtype=np.float)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 
@@ -113,7 +115,7 @@ class TestTransform(TestCase):
 
         d_transformed = batch['d'].data.numpy()
 
-        assert d_transformed.shape == (60000, 1, 31, 63)
+        assert d_transformed.shape == (nb, size[0], size[1], size[2])
         d_summed = np.sum(d_transformed, axis=0).squeeze()
         ys, xs = np.where(d_summed > 0)
 
@@ -146,7 +148,12 @@ class TestTransform(TestCase):
         }
 
         criteria_fn = functools.partial(trw.transforms.criteria_feature_name, feature_names=['test_2'])
-        transform_fn = lambda _1, _2: 43
+
+        def transform_fn(features_to_transform, batch):
+            for name, value in batch.items():
+                if name in features_to_transform:
+                    batch[name] = 43
+            return batch
 
         transformer = trw.transforms.TransformBatchWithCriteria(criteria_fn=criteria_fn, transform_fn=transform_fn)
         transformed_batch = transformer(batch)
@@ -242,13 +249,17 @@ class TestTransform(TestCase):
     def test_random_crop_pad_joint(self):
         batch = {
             'images': torch.zeros([50, 3, 64, 128], dtype=torch.int64),
-            'segmentations': torch.zeros([50, 1, 64, 128], dtype=torch.float32)
+            'segmentations': torch.zeros([50, 1, 64, 128], dtype=torch.float32),
+            'something_else': 42,
         }
 
         batch['images'][:, :, 32, 64] = 42
         batch['segmentations'][:, :, 32, 64] = 42
 
-        transformer =trw.transforms.TransformRandomCropJoint(feature_names=['images', 'segmentations'], padding=[0, 16, 16], mode='constant')
+        transformer = trw.transforms.TransformRandomCrop(
+            criteria_fn=lambda batch, names: ['images', 'segmentations'],
+            padding=[0, 16, 16],
+            mode='constant')
         transformed_batch = transformer(batch)
 
         indices_images_42 = np.where(transformed_batch['images'].numpy()[:, 0, :, :] == 42)
@@ -262,11 +273,12 @@ class TestTransform(TestCase):
         }
         batch['segmentation'] = batch['images'].float()
 
-        transformer = trw.transforms.TransformRandomFlipJoint(feature_names=['images', 'segmentations'], axis=2)
+        transformer = trw.transforms.TransformRandomFlip(criteria_fn=lambda _: ['images', 'segmentation'], axis=2)
         transformed_batch = transformer(batch)
 
-        images = batch['images'].float()
-        assert (transformed_batch['segmentation'].numpy() == images.numpy()).all()
+        images = transformed_batch['images'].float()
+        segmentations = transformed_batch['segmentation'].float()
+        assert (images == segmentations).all()
 
     def test_random_resize_torch(self):
         batch = {
@@ -366,8 +378,8 @@ class TestTransform(TestCase):
             ])
         }
 
-        transformer = trw.transforms.TransformRandomFlipJoint(
-            feature_names=['images', 'images2'],
+        transformer = trw.transforms.TransformRandomFlip(
+            criteria_fn=lambda _: ['images', 'images2'],
             axis=1,
             flip_probability=0.5)
         transformed_batch = transformer(batch)

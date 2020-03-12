@@ -1,10 +1,17 @@
 import functools
 from trw.transforms import transforms
 from trw.transforms.normalize import normalize
+import collections
 
 
-def _transform_normalize(feature_name, feature_value, mean, std):
-    return normalize(feature_value, mean=mean, std=std)
+def _transform_normalize(features_names, batch, mean, std):
+    new_batch = collections.OrderedDict()
+    for feature_name, feature_value in batch.items():
+        if feature_name in features_names:
+            new_batch[feature_name] = normalize(feature_value, mean=mean, std=std)
+        else:
+            new_batch[feature_name] = feature_value
+    return new_batch
 
 
 class TransformNormalize(transforms.TransformBatchWithCriteria):

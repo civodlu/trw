@@ -1,12 +1,22 @@
+import collections
+
 import functools
 
 from trw.transforms import transforms
 from trw.transforms.resize import resize
 
 
-def _transform_resize(feature_name, feature_value, size, mode):
-    assert len(feature_value.shape) == len(size) + 2, 'unexpected shape! `size` should not include samples or filter!'
-    return resize(feature_value, size=size, mode=mode)
+def _transform_resize(feature_names, batch, size, mode):
+    new_batch = collections.OrderedDict()
+    for feature_name, feature_value in batch.items():
+        if feature_name in feature_names:
+            assert len(feature_value.shape) == len(size) + 2, \
+                'unexpected shape! `size` should not include samples or filter!'
+            new_batch[feature_name] = resize(feature_value, size=size, mode=mode)
+        else:
+            new_batch[feature_name] = feature_value
+
+    return new_batch
 
 
 class TransformResize(transforms.TransformBatchWithCriteria):
@@ -25,4 +35,6 @@ class TransformResize(transforms.TransformBatchWithCriteria):
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 
-        super().__init__(criteria_fn=criteria_fn, transform_fn=functools.partial(_transform_resize, size=size, mode=mode))
+        super().__init__(
+            criteria_fn=criteria_fn,
+            transform_fn=functools.partial(_transform_resize, size=size, mode=mode))

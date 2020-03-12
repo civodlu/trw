@@ -101,7 +101,7 @@ class TestOutput(TestCase):
             output=mask_scores,
             target_name='target',
             weight_name='weights',
-            criterion_fn=lambda: functools.partial(trw.train.segmentation_criteria_ce_dice, ce_weight=1.0))
+            criterion_fn=lambda: functools.partial(trw.train.segmentation_criteria_ce_dice, ce_weight=0.9999999))
         batch = {
             'target': expected_map,
             'weights': torch.ones(10, dtype=torch.float32)
@@ -109,3 +109,35 @@ class TestOutput(TestCase):
         loss_term = o.evaluate_batch(batch, is_training=False)
         assert trw.train.to_value(loss_term['loss']) < 1e-5
         assert (trw.train.to_value(loss_term['output']) == 1).all()
+
+    def test_output_segmentation_weight(self):
+        """
+        Make sure the loss can be weighted with a per-voxel mask
+        """
+        torch.manual_seed(0)
+        mask_scores = torch.randn([10, 4, 32, 40], dtype=torch.float32)  # 10 samples, 4 classes, 2D 32x32 grid
+        expected_map = torch.ones(10, 32, 40, dtype=torch.int64)
+
+        mask_weight = torch.zeros_like(expected_map, dtype=torch.float32)
+        mask_weight[:, 4:21, 8:38] = 1
+
+        def loss(found, expected, per_voxel_weight):
+            l = per_voxel_weight.view(10, 1, 32, 40) * found
+            return l.sum([1, 2, 3])
+
+        o = trw.train.OutputSegmentation(
+            output=mask_scores,
+            target_name='target',
+            weight_name='weights',
+            criterion_fn=lambda: loss)
+
+        batch = {
+            'target': expected_map,
+            'weights': mask_weight
+        }
+
+        loss_term = o.evaluate_batch(batch, is_training=False)
+        expected_loss = mask_scores[:, :, 4:21, 8:38].sum([1, 2, 3])
+
+        losses = loss_term['losses']
+        assert torch.max(torch.abs(losses - expected_loss)) < 1e-3

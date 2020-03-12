@@ -157,6 +157,18 @@ class RuntimeAction(Enum):
     EVALUATE_STATE = 3
 
 
+def _prepare_inputs(action, states):
+    action_inputs = []
+    for parent in action.parents:
+        assert parent in states, 'TODO DEBUG, input_not_found=' + str(parent)
+        input_value = states.get(parent)
+        assert input_value is not None, 'TODO bug! The parents were not calculated or their state was released too early!'
+        action_inputs.append(input_value)
+    if len(action_inputs) == 1:
+        action_inputs = action_inputs[0]  # TODO evaluate this! should we keep the list of size 1 or not?
+    return action_inputs
+
+
 class CompiledNet(nn.Module):
     """
     Encapsulate a `compiled` network so that we can efficiently calculate the outputs
@@ -200,17 +212,6 @@ class CompiledNet(nn.Module):
         states = {}
         outputs = collections.OrderedDict()
 
-        def prepare_inputs(action):
-            action_inputs = []
-            for parent in action.parents:
-                assert parent in states, 'TODO DEBUG, input_not_found=' + str(parent)
-                input_value = states.get(parent)
-                assert input_value is not None, 'TODO bug! The parents were not calculated or their state was released too early!'
-                action_inputs.append(input_value)
-            if len(action_inputs) == 1:
-                action_inputs = action_inputs[0]  # TODO evaluate this! should we keep the list of size 1 or not?
-            return action_inputs
-
         # feed the requested inputs
         for i in self.inputs:
             #print('FETCH Input=', i)
@@ -222,7 +223,7 @@ class CompiledNet(nn.Module):
         for action_id, (action_type, action) in enumerate(self.runtime_actions):
             if action_type == RuntimeAction.EXECUTE_NODE:
                 #print('EXECUTE=', action, 'state_size=', len(states), 'parents=', len(action.parents))
-                action_inputs = prepare_inputs(action)
+                action_inputs = _prepare_inputs(action, states)
                 #module = action.get_module()
                 module = self.modules_by_action_id[action_id]
                 assert module is not None and not isinstance(module, EmptyModule), 'module is not created!'
@@ -242,9 +243,10 @@ class CompiledNet(nn.Module):
             elif action_type == RuntimeAction.REMOVE_STATE:
                 #print('del STATE=', action)
                 del states[action]
+                pass
             elif action_type == RuntimeAction.EVALUATE_STATE:
                 #print('EVAL=', action)
-                action_inputs = prepare_inputs(action)
+                action_inputs = _prepare_inputs(action, states)
                 evaluation = action.forward(action_inputs, batch)
                 outputs[action.output_name] = evaluation
             else:

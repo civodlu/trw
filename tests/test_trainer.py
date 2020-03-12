@@ -1,3 +1,5 @@
+import os
+import pickle
 from unittest import TestCase
 import collections
 import numpy as np
@@ -188,3 +190,22 @@ class TestTrainer(TestCase):
 
         for loss_terms in all_loss_terms:
             self.assertTrue('regression' in loss_terms)
+
+    def test_serialize_module(self):
+        # make sure we can serialize and deserialize module with something else than pickle
+        model = ModelSimpleRegression()
+        model.w[:] = 42
+
+        try:
+            import dill
+            pickle_module = dill
+            extension = 'dill'
+        except:
+            pickle_module = pickle
+            extension = 'pickle'
+
+        path = os.path.join(utils.root_output, f'test.{extension}')
+        trw.train.Trainer.save_model(model, None, path, pickle_module=pickle_module)
+
+        model2, results = trw.train.Trainer.load_model(path, pickle_module=pickle_module)
+        assert (model2.w == model.w).all()

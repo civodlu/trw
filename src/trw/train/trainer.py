@@ -642,12 +642,16 @@ class Trainer:
         self.run_epoch_fn = run_epoch_fn
 
     @staticmethod
-    def save_model(model, result, path):
+    def save_model(model, result, path, pickle_module=pickle):
         """
-        Save a model
-        :param model: a PyTorch model
-        :param result: None or the result of the model
-        :param path: where to store the model. The result will be saved at `path + '.result'`
+        Save a model to file
+
+        Args:
+            model: the model to serialize
+            result: an optional result file associated with the model
+            path: the base path to save the model
+            pickle_module: the serialization module that will be used to save the model and results
+
         """
         result_cp = None
         if result is not None:
@@ -660,11 +664,11 @@ class Trainer:
 
         result_cp_path = path + '.result'
         with open(result_cp_path, 'wb') as f:
-            pickle.dump(result_cp, f)
-        torch.save(model, path)
+            pickle_module.dump(result_cp, f)
+        torch.save(model, path, pickle_module=pickle_module)
 
     @staticmethod
-    def load_model(path, with_result=False, device=None):
+    def load_model(path, with_result=False, device=None, pickle_module=pickle):
         """
         load a saved model
 
@@ -674,6 +678,7 @@ class Trainer:
             device: where to load the model. For example, models are typically trained on GPU,
                 but for deployment, CPU might be good enough. If `None`, use the same device as
                 when the model was exported
+            pickle_module: the de-serialization module to be used to load model and results
 
         Returns:
             a tuple `model, result`
@@ -682,8 +687,8 @@ class Trainer:
         if with_result:
             result_path = path + '.result'
             with open(result_path, 'rb') as f:
-                result = pickle.load(f)
-        model = torch.load(path, map_location=device)
+                result = pickle_module.load(f)
+        model = torch.load(path, map_location=device, pickle_module=pickle_module)
         return model, result
 
     def fit(self, options, inputs_fn, model_fn, optimizers_fn,

@@ -21,8 +21,6 @@ def dict_torch_values_to_numpy(d):
             d[name] = utilities.to_value(value)
 
 
-
-
 class Output:
     """
     This is a tag name to find the output reference back from `outputs`
@@ -127,23 +125,42 @@ class OutputEmbedding(Output):
             self.output = None
 
 
-def segmentation_criteria_ce_dice(output, truth, ce_weight=0.5):
+def segmentation_criteria_ce_dice(output, truth, per_voxel_weight=None, ce_weight=0.5, per_class_weight=None):
     """
-    loss combining cross entropy and multiclass dice
+    loss combining cross entropy and multi-class dice
 
     Args:
-        output: the output value
-        truth: the truth
+        output: the output value, with shape [N, C, Dn...D0]
+        truth: the truth, with shape [N, Dn..D0]
         ce_weight: the weight of the cross entropy to use. This controls the importance of the
-            cross entropy loss to the overall segmentation loss
+            cross entropy loss to the overall segmentation loss. Range in [0..1]
+        per_class_weight: the weight per class. A 1D vector of size C indicating the weight of the classes. This
+            will be used for the cross-entropy loss
+        per_voxel_weight: the weight of each truth voxel. Must be of shape [N, Dn..D0]
 
     Returns:
         a torch tensor
     """
-    cross_entropy_loss = nn.CrossEntropyLoss(reduction='none')(output, truth)
-    cross_entropy_loss = cross_entropy_loss.mean(tuple(range(1, len(cross_entropy_loss.shape))))
-    
-    dice_loss = losses.LossDiceMulticlass()(output, truth)
+    assert per_class_weight is None or len(per_class_weight) == output.shape[1], f'per_class_weight must have a' \
+                                                                                 f'weight per class. ' \
+                                                                                 f'Got={len(per_class_weight)}, ' \
+                                                                                 f'expected={output.shape[1]}'
+
+    assert per_voxel_weight is None or per_voxel_weight.shape == truth.shape, 'incorrect per-voxel weight'
+
+    if ce_weight > 0:
+        cross_entropy_loss = nn.CrossEntropyLoss(reduction='none', weight=per_class_weight)(output, truth)
+        if per_voxel_weight is not None:
+            cross_entropy_loss = cross_entropy_loss * per_voxel_weight
+        cross_entropy_loss = cross_entropy_loss.mean(tuple(range(1, len(cross_entropy_loss.shape))))
+    else:
+        cross_entropy_loss = 0
+
+    if ce_weight < 1:
+        dice_loss = losses.LossDiceMulticlass()(output, truth)
+    else:
+        dice_loss = 0
+
     loss = ce_weight * cross_entropy_loss + (1 - ce_weight) * dice_loss
     return loss
 
@@ -217,11 +234,18 @@ class OutputSegmentation(Output):
 
         max_index = int(torch.max(truth).cpu().numpy())
         min_index = int(torch.min(truth).cpu().numpy())
-        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
+                                                 f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
         assert min_index >= 0, f'incorrect index! got={min_index}'
 
+        per_voxel_weight = None
+        if self.weight_name is not None:
+            w = batch.get(self.weight_name)
+            if w.shape == truth.shape:
+                per_voxel_weight = w
+
         loss_term = {}
-        losses = self.criterion_fn()(self.output, truth)
+        losses = self.criterion_fn()(self.output, truth, per_voxel_weight=per_voxel_weight)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
 
@@ -236,7 +260,7 @@ class OutputSegmentation(Output):
         del self.output
         self.output = None
 
-        if self.weight_name is not None:
+        if self.weight_name is not None and per_voxel_weight is None:
             weights = batch.get(self.weight_name)
             assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
             assert len(weights) == len(losses), 'must have a weight per sample'
@@ -244,7 +268,7 @@ class OutputSegmentation(Output):
 
             # expand to same shape size so that we can easily broadcast the weight
             weights = weights.reshape([weights.shape[0]] + [1] * (len(losses.shape) - 1))
-            
+
         else:
             weights = torch.ones_like(losses)
             
@@ -255,7 +279,8 @@ class OutputSegmentation(Output):
         weighted_losses = weights * losses
 
         loss_term['losses'] = weighted_losses
-        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
+        # here we MUST be able to calculate the gradient so don't detach
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
 
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
@@ -277,7 +302,7 @@ class OutputClassification(Output):
             loss_reduction=torch.mean,
             weight_name=None,
             loss_scaling=1.0,
-            output_postprocessing=functools.partial(torch.argmax, dim=1),  # we want to export the class (i.e., the channel component)
+            output_postprocessing=functools.partial(torch.argmax, dim=1),  # =1 as we export the class
             maybe_optional=False,
             sample_uid_name=default_sample_uid_name):
         """
@@ -294,7 +319,8 @@ class OutputClassification(Output):
             loss_scaling: scale the loss by a scalar
             output_postprocessing: the output will be postprocessed by this function. For example,
                 we could extract the final classification instead of the loggit
-            maybe_optional: if True, the loss term may be considered optional if the ground truth is not part of the batch
+            maybe_optional: if True, the loss term may be considered optional if the ground
+                truth is not part of the batch
             sample_uid_name (str): if not None, collect the sample UID
         """
         super().__init__(
@@ -315,15 +341,18 @@ class OutputClassification(Output):
         truth = batch.get(self.classes_name)
         if truth is None and self.maybe_optional:
             return None
-        assert truth is not None, 'classes `{}` is missing in current batch. `maybe_optional` is False'.format(self.classes_name)
-        assert len(truth) == len(self.output), 'expected len output == len truth! found=({}, {})'.format(len(self.output), len(truth))
+        assert truth is not None, 'classes `{}` is missing in current batch. ' \
+                                  '`maybe_optional` is False'.format(self.classes_name)
+        assert len(truth) == len(self.output), 'expected len output == len truth! ' \
+                                               'found=({}, {})'.format(len(self.output), len(truth))
         assert isinstance(truth, torch.Tensor), 'feature={} must be a torch.Tensor!'.format(self.classes_name)
         assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature={}'.format(self.classes_name)
         
         # make sure the class is not out of bound. This is a very common mistake!
-        #max_index = int(torch.max(truth).cpu().numpy())
-        #min_index = int(torch.min(truth).cpu().numpy())
-        #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        max_index = int(torch.max(truth).cpu().numpy())
+        min_index = int(torch.min(truth).cpu().numpy())
+        #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
+        #                                         f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
         #assert min_index >= 0, f'incorrect index! got={min_index}'
 
         loss_term = {}
@@ -360,7 +389,9 @@ class OutputClassification(Output):
 
         # TODO label smoothing
         loss_term['losses'] = weighted_losses
-        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
+
+        # here we MUST be able to calculate the gradient so don't detach
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term
@@ -453,7 +484,8 @@ class OutputRegression(Output):
         weighted_losses = weights * losses
 
         loss_term['losses'] = weighted_losses
-        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)  # here we MUST be able to calculate the gradient so don't detach
+        # here we MUST be able to calculate the gradient so don't detach
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term

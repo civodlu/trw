@@ -4,6 +4,11 @@ import torch
 from unittest import TestCase
 
 
+import torch.nn as nn
+import torch.nn.functional as F
+from torch.autograd import Variable
+
+
 class TestLosses(TestCase):
     def test_losses_dice_single_binary_sample(self):
         found_channel0 = [
@@ -125,7 +130,6 @@ class TestLosses(TestCase):
         assert abs(samples_0_expected_loss - float(l[0])) < 1e-4
         assert abs(samples_1_expected_loss - float(l[1])) < 1e-4
 
-
     def test_losses_dice_single_multichannel_sample(self):
         found_channel0 = [
             [0, 0, 0, 1, 1, 1],
@@ -189,3 +193,130 @@ class TestLosses(TestCase):
         expected_loss = 1.0 - (expected_dice_0 + expected_dice_1 + expected_dice_2) / 3.0
 
         assert abs(expected_loss - float(l)) < 1e-4
+
+    def test_dice_by_class_perfect(self):
+        found_channel0 = [
+            [1, 1, 1],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+        ]
+
+        found_channel1 = [
+            [0, 0, 0],
+            [1, 1, 1],
+            [1, 1, 1],
+            [0, 0, 0],
+        ]
+
+        found_channel2 = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [1, 1, 1],
+        ]
+
+        targets = [
+            [0, 0, 0],
+            [1, 1, 1],
+            [1, 1, 1],
+            [2, 2, 2],
+        ]
+
+        t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 4, 3)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 4, 3)))
+
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
+        l = loss(t1, t2)
+        assert abs(float(l.sum()) - 3) < 1e-3
+
+    def test_dice_by_class_2samples(self):
+        e1_found_channel0 = [
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 0, 0],
+        ]
+
+        e1_found_channel1 = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 1, 1],
+        ]
+
+        e2_found_channel0 = [
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1],
+            [0, 0, 0],
+        ]
+
+        e2_found_channel1 = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [1, 1, 1],
+        ]
+
+        targets = [
+            [0, 0, 0],
+            [0, 0, 0],
+            [0, 0, 0],
+            [1, 1, 1],
+        ]
+
+        t1 = torch.from_numpy(np.asarray([e1_found_channel0, e1_found_channel1, e2_found_channel0, e2_found_channel1], dtype=np.float32).reshape((2, 2, 4, 3)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 4, 3)))
+
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
+        l = loss(t1, t2).numpy()
+
+        expected_dice_class0 = [2 * 9 / (9 + 10), 2 * 9 / (9 + 9)]
+        expected_dice_class1 = [2 * 2 / (2 + 3), 2 * 3 / (3 + 3)]
+        assert abs(l[0] - (sum(expected_dice_class0) / 2)) < 1e-5
+        assert abs(l[1] - (sum(expected_dice_class1) / 2)) < 1e-5
+
+    def test_focal_loss_binary_id(self):
+        # in this configuration, the cross entropy loss and the focal loss MUST be identical
+        targets = torch.from_numpy(np.asarray([0, 1, 1, 0, 1], dtype=np.int64))
+        outputs = torch.from_numpy(np.asarray([[0.5, 0.1], [0.1, 0.9], [0.1, 0.8], [0.6, 0.1], [0.3, 0.6]], dtype=np.float32))
+        alpha = np.asarray([1.0, 1.0], dtype=np.float32)
+
+        loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=0.0)
+        loss_focal = loss_focal_fn(outputs, targets)
+
+        loss_ce_fn = torch.nn.CrossEntropyLoss(reduction='none')
+        loss_ce = loss_ce_fn(outputs, targets)
+
+        # gamma == 0 means we MUST retrun cross entropy
+        assert float((loss_focal - loss_ce).abs().max()) <= 1e-6
+
+    def test_focal_loss_binary_ordering(self):
+        # make sure the more confident classes get less loss weigth
+        targets = torch.from_numpy(np.asarray([0, 0, 0, 1, 1, 1], dtype=np.int64))
+        outputs = torch.from_numpy(np.asarray([[0.9, 0.1], [0.8, 0.2], [0.7, 0.3], [0.3, 0.7], [0.2, 0.8], [0.1, 0.9]], dtype=np.float32))
+        alpha = torch.from_numpy(np.asarray([1.0, 1.0], dtype=np.float32))
+
+        loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=10.0)
+        loss_focal = trw.train.to_value(loss_focal_fn(outputs, targets))
+        assert len(loss_focal) == len(targets)
+
+        ce_loss = trw.train.to_value(torch.nn.CrossEntropyLoss(reduction='none')(outputs, targets))
+
+        # rescale the focal loss to have a similar max range
+        loss_focal_scaled = max(ce_loss) / max(loss_focal) * loss_focal
+
+        assert loss_focal_scaled[0] * 10 < ce_loss[0]
+        assert loss_focal_scaled[5] * 10 < ce_loss[5]
+
+        assert loss_focal_scaled[1] * 3 < ce_loss[1]
+        assert loss_focal_scaled[4] * 3 < ce_loss[4]
+
+    def test_focal_loss_multiclass_2d(self):
+        targets = torch.ones([10, 5, 5], dtype=torch.int64)
+        outputs = torch.ones([10, 3, 5, 5], dtype=torch.float32)
+
+        loss_focal_fn = trw.train.LossFocalMulticlass(gamma=1.0)
+        loss_focal = trw.train.to_value(loss_focal_fn(outputs, targets))
+        assert len(loss_focal) == len(targets)

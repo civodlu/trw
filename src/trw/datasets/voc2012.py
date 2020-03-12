@@ -36,7 +36,7 @@ def default_voc_transforms():
     criteria_images = functools.partial(trw.transforms.criteria_feature_name, feature_names=['images'])
     return trw.transforms.TransformCompose([
         trw.transforms.TransformResize(size=[250, 250]),
-        trw.transforms.TransformRandomCropJoint(feature_names=['images', 'masks'], padding=None, size=[3, 224, 224]),
+        #trw.transforms.TransformRandomCrop(feature_names=['images', 'masks'], padding=None, size=[3, 224, 224]),
         trw.transforms.TransformNormalize(criteria_fn=criteria_images, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
