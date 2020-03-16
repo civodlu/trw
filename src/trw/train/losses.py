@@ -128,3 +128,60 @@ class LossFocalMulticlass(nn.Module):
         # for segmentation maps, make sure we average all values by sample
         nb_samples = len(outputs)
         return focal_loss.view((nb_samples, -1)).mean(dim=1)
+
+
+class LossTriplets(nn.Module):
+    r"""
+    Implement a triplet loss
+
+    The goal of the triplet loss is to make sure that:
+
+    - Two examples with the same label have their embeddings close together in the embedding space
+    - Two examples with different labels have their embeddings far away.
+
+    However, we don’t want to push the train embeddings of each label to collapse into very small clusters.
+    The only requirement is that given two positive examples of the same class and one negative example,
+    the negative should be farther away than the positive by some margin. This is very similar to the
+    margin used in SVMs, and here we want the clusters of each class to be separated by the margin.
+
+    The loss implements the following equation:
+
+    \mathcal{L} = max(d(a, p) - d(a, n) + margin, 0)
+
+    """
+    def __init__(self, margin=1.0, distance=nn.PairwiseDistance(p=2)):
+        """
+
+        Args:
+            margin: the margin to separate the positive from the negative
+            distance: the distance to be used to compare (samples, positive_samples) and (samples, negative_samples)
+        """
+        super().__init__()
+        self.distance = distance
+        self.margin = margin
+
+    def forward(self, samples, positive_samples, negative_samples):
+        """
+        Calulate the triplet loss
+
+        Args:
+            samples: the samples
+            positive_samples: the samples that belong to the same group as `samples`
+            negative_samples: the samples that belong to a different group than `samples`
+
+        Returns:
+
+        """
+        assert samples.shape == positive_samples.shape
+        assert samples.shape == negative_samples.shape
+
+        nb_samples = len(samples)
+
+        # make sure we have a nb_samples x C shape
+        samples = samples.view((nb_samples, -1))
+        positive_samples = positive_samples.view((nb_samples, -1))
+        negative_samples = negative_samples.view((nb_samples, -1))
+
+        d = self.distance(samples, positive_samples) - self.distance(samples, negative_samples) + self.margin
+        d = torch.max(d, torch.zeros_like(d))
+        return d

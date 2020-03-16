@@ -141,3 +141,33 @@ class TestOutput(TestCase):
 
         losses = loss_term['losses']
         assert torch.max(torch.abs(losses - expected_loss)) < 1e-3
+
+    def test_output_triplets(self):
+        samples = torch.tensor(
+            [
+                [[[1, 2]]],  # make sure it works for N-d features
+                [[[1, 3]]],
+                [[[1, 4]]],
+            ])
+
+        samples_p = torch.tensor(
+            [
+                [[[1, 2.1]]],
+                [[[1, 3.1]]],
+                [[[1, 4.1]]],
+            ])
+
+        samples_n = torch.tensor(
+            [
+                [[[1, 20.1]]],  # far from the samples_p and margin, should be 0 loss
+                [[[1, 3.1]]],  # not satisfying the margin
+                [[[1, 40.1]]],  # far from the samples_p and margin, should be 0 loss
+            ])
+
+        weights = torch.tensor([1.0, 3.0, 1.0])
+        o = trw.train.OutputTriplets(samples, samples_p, samples_n, weight_name='weights')
+        loss_term = o.evaluate_batch({'weights': weights}, is_training=False)
+
+        assert loss_term['loss'] == 1.0
+        assert loss_term['output_raw'] is samples
+        assert isinstance(loss_term['output_ref'], trw.train.OutputTriplets)

@@ -320,3 +320,29 @@ class TestLosses(TestCase):
         loss_focal_fn = trw.train.LossFocalMulticlass(gamma=1.0)
         loss_focal = trw.train.to_value(loss_focal_fn(outputs, targets))
         assert len(loss_focal) == len(targets)
+
+    def test_triplet_loss(self):
+        samples = torch.tensor(
+            [
+                [[[1, 2]]],  # make sure it works for N-d features
+                [[[1, 3]]],
+                [[[1, 4]]],
+            ])
+
+        samples_p = torch.tensor(
+            [
+                [[[1, 2.1]]],
+                [[[1, 3.1]]],
+                [[[1, 4.1]]],
+            ])
+
+        samples_n = torch.tensor(
+            [
+                [[[1, 20.1]]],  # far from the samples_p and margin, should be 0 loss
+                [[[1, 3.1]]],   # not satisfying the margin
+                [[[1, 40.1]]],  # far from the samples_p and margin, should be 0 loss
+            ])
+
+        loss = trw.train.LossTriplets(margin=0.5)
+        losses = loss(samples, samples_p, samples_n)
+        assert (losses == torch.tensor([0, 0.5, 0])).all()

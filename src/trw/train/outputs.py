@@ -32,7 +32,7 @@ class Output:
         :param metrics: the metrics to be reported for each output
         :param output: a `torch.Tensor` to be recorded
         :param criterion_fn: the criterion function to be used to evaluate the output
-        :param collect_output:
+        :param collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
         :pram sample_uid_name: collect sample UID along with the output
         """
         self.output = output
@@ -77,12 +77,13 @@ def extract_metrics(metrics_outputs, outputs):
         a dictionary of key, value
     """
     history = collections.OrderedDict()
-    for metric in metrics_outputs:
-        metric_result = metric(outputs)
-        if metric_result is not None:
-            metric_type = type(metric)
-            assert isinstance(metric_result, collections.Mapping), 'must be a dict like structure'
-            history.update({metric_type: metric_result})
+    if metrics_outputs is not None:
+        for metric in metrics_outputs:
+            metric_result = metric(outputs)
+            if metric_result is not None:
+                metric_type = type(metric)
+                assert isinstance(metric_result, collections.Mapping), 'must be a dict like structure'
+                history.update({metric_type: metric_result})
     return history
 
 
@@ -525,4 +526,66 @@ class OutputRecord(Output):
         del self.output
         self.output = None
     
+        return loss_term
+
+
+class OutputTriplets(Output):
+    def __init__(
+            self,
+            samples,
+            positive_samples,
+            negative_samples,
+            criterion_fn=lambda: losses.LossTriplets(),
+            metrics=None,
+            loss_reduction=mean_all,
+            weight_name=None,
+            loss_scaling=1.0,
+            sample_uid_name=default_sample_uid_name
+    ):
+        super().__init__(metrics=metrics, output=samples, criterion_fn=criterion_fn)
+        self.loss_reduction = loss_reduction
+        self.sample_uid_name = sample_uid_name
+        self.loss_scaling = loss_scaling
+        self.weight_name = weight_name
+        self.criterion_fn = criterion_fn
+        self.negative_samples = negative_samples
+        self.positive_samples = positive_samples
+
+    def evaluate_batch(self, batch, is_training):
+        loss_term = collections.OrderedDict()
+        losses = self.criterion_fn()(self.output, self.positive_samples, self.negative_samples)
+        assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
+        assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+
+        loss_term['output_raw'] = self.output
+
+        # do NOT keep the original output else memory will be an issue
+        # (e.g., CUDA device)
+        del self.output
+        self.output = None
+        del self.negative_samples
+        self.negative_samples = None
+        del self.positive_samples
+        self.positive_samples = None
+
+        if self.weight_name is not None:
+            weights = batch.get(self.weight_name)
+            assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
+            assert len(weights) == len(losses), 'must have a weight per sample'
+            assert len(weights.shape) == 1, 'must be a 1D vector'
+            # expand to same shape size so that we can easily broadcast the weight
+            weights = weights.reshape([weights.shape[0]] + [1] * (len(losses.shape) - 1))
+        else:
+            weights = torch.ones_like(losses)
+
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+
+        # weight the loss of each sample by the corresponding weight
+        weighted_losses = weights * losses
+
+        loss_term['losses'] = weighted_losses
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
+        loss_term[Output.output_ref_tag] = self  # keep a back reference
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term

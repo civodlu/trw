@@ -37,7 +37,7 @@ def create_mnist_cluttered_datasset(
         batch_size=1000,
         cluttered_size=(64, 64),
         clutter_window=(6, 6),
-        nb_clutter_windows=10,
+        nb_clutter_windows=16,
         root=None,
         train_transforms=None,
         test_transforms=None,

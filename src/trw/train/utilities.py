@@ -605,3 +605,50 @@ def clamp_n(tensor, min_values, max_values):
         assert min_values.shape[0] == 1, 'must be broadcastable to tensor shape'
         assert max_values.shape[0] == 1, 'must be broadcastable to tensor shape'
     return torch.max(torch.min(tensor, max_values), min_values)
+
+
+def make_triplets(batch, target_name):
+    """
+    Make triplets  of samples (anchor samples, samples_positive, samples_negative) from a batch
+        given a `target_name`
+
+    Args:
+        batch: a dictionary of (name, value)
+        target_name: the name of the batch feature (1D vector) to be used to group the samples
+            into positive and negative
+
+    Returns:
+        a new batch with (samples, samples_positive, samples_negative, target_name)
+    """
+    # group samples by class
+    samples_by_class = collections.defaultdict(list)
+    classes = to_value(batch[target_name])
+    for index, c in enumerate(classes):
+        samples_by_class[c].append(index)
+
+    # create the (sample, sample+, sample-) groups
+    samples_all = []
+    samples_positive_all = []
+    samples_negative_all = []
+    for c, c_indexes in samples_by_class.items():
+        samples = c_indexes.copy()
+        samples_positive = c_indexes
+        np.random.shuffle(c_indexes)
+
+        other = [idx for cc, idx in samples_by_class.items() if cc != c]
+        other = np.concatenate(other)
+        np.random.shuffle(other)
+        samples_negative = other[:len(samples)]
+
+        samples_all.append(samples)
+        samples_positive_all.append(samples_positive)
+        samples_negative_all.append(samples_negative)
+
+    # create the batch
+    new_batch = collections.OrderedDict()
+    sample_indices = np.concatenate(samples_all)
+    new_batch['samples'] = batch['images'][sample_indices]
+    new_batch[target_name] = batch[target_name][sample_indices]
+    new_batch['samples_positive'] = batch['images'][np.concatenate(samples_positive_all)]
+    new_batch['samples_negative'] = batch['images'][np.concatenate(samples_negative_all)]
+    return new_batch

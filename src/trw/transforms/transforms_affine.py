@@ -1,6 +1,5 @@
 import collections
 
-import functools
 import numpy as np
 import torch
 from trw.transforms import transforms
@@ -91,8 +90,3 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
             else:
                 new_batch[name] = value
         return new_batch
-
-
-
-
-
