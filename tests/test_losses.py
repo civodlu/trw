@@ -335,21 +335,21 @@ class TestLosses(TestCase):
                 [[[1, 2]]],  # make sure it works for N-d features
                 [[[1, 3]]],
                 [[[1, 4]]],
-            ])
+            ], dtype=torch.float32)
 
         samples_p = torch.tensor(
             [
                 [[[1, 2.1]]],
                 [[[1, 3.1]]],
                 [[[1, 4.1]]],
-            ])
+            ], dtype=torch.float32)
 
         samples_n = torch.tensor(
             [
                 [[[1, 20.1]]],  # far from the samples_p and margin, should be 0 loss
                 [[[1, 3.1]]],   # not satisfying the margin
                 [[[1, 40.1]]],  # far from the samples_p and margin, should be 0 loss
-            ])
+            ], dtype=torch.float32)
 
         loss = trw.train.LossTriplets(margin=0.5)
         losses = loss(samples, samples_p, samples_n)
@@ -383,7 +383,7 @@ class TestLosses(TestCase):
             [
                 [1, 2.5],
                 [2, 14.5],
-            ]
+            ], dtype=torch.float32
         )
 
         assert (expected_centers - centers).abs().sum() < 1e-3

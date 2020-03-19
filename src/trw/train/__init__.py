@@ -66,3 +66,5 @@ from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing
 from .data_parallel_extented import DataParallelExtended
+
+from .compatibility import grid_sample

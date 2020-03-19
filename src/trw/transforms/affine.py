@@ -1,6 +1,7 @@
 import math
 import torch
 import torch.nn as nn
+import trw.train
 
 
 def affine_transformation_translation(t):
@@ -139,10 +140,11 @@ def affine_transform(images, affine_matrices, interpolation='bilinear', padding_
         raise NotImplementedError(f'dimension not supported! Must be 2 or 3, current={dim}')
 
     grid = nn.functional.affine_grid(affine_matrices, images.shape)
-    resampled_images = torch.nn.functional.grid_sample(
+    resampled_images = trw.train.grid_sample(
         images,
         grid,
         mode=interpolation,
         padding_mode=padding_mode,
         align_corners=align_corners)
+
     return resampled_images
