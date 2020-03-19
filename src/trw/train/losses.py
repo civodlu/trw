@@ -86,15 +86,15 @@ class LossDiceMulticlass(nn.Module):
 
 class LossFocalMulticlass(nn.Module):
     r"""
-        This criterion is a implementation of Focal Loss, which is proposed in
-        Focal Loss for Dense Object Detection, https://arxiv.org/pdf/1708.02002.pdf
+    This criterion is a implementation of Focal Loss, which is proposed in
+    Focal Loss for Dense Object Detection, https://arxiv.org/pdf/1708.02002.pdf
 
-            Loss(x, class) = - \alpha (1-softmax(x)[class])^gamma \log(softmax(x)[class])
+        Loss(x, class) = - \alpha (1-softmax(x)[class])^gamma \log(softmax(x)[class])
 
-        Args:
-            alpha(1D Tensor, Variable) : the scalar factor for this criterion. One weight factor for each class.
-            gamma(float, double) : gamma > 0; reduces the relative loss for well-classiﬁed examples (p > .5),
-                                   putting more focus on hard, misclassiﬁed examples
+    Args:
+        alpha(1D Tensor, Variable) : the scalar factor for this criterion. One weight factor for each class.
+        gamma(float, double) : gamma > 0; reduces the relative loss for well-classiﬁed examples (p > .5),
+                               putting more focus on hard, misclassiﬁed examples
     """
 
     def __init__(self, alpha=None, gamma=2):
@@ -162,7 +162,7 @@ class LossTriplets(nn.Module):
 
     def forward(self, samples, positive_samples, negative_samples):
         """
-        Calulate the triplet loss
+        Calculate the triplet loss
 
         Args:
             samples: the samples
@@ -185,3 +185,51 @@ class LossTriplets(nn.Module):
         d = self.distance(samples, positive_samples) - self.distance(samples, negative_samples) + self.margin
         d = torch.max(d, torch.zeros_like(d))
         return d
+
+
+class LossCenter(nn.Module):
+    """
+    Center loss, penalize the features falling further from the feature class center.
+
+    In most of the available CNNs, the softmax loss function is used as the supervision
+    signal to train the deep model. In order to enhance the discriminative power of the
+    deeply learned features, this loss can be used as a new supervision signal. Specifically,
+    the center loss simultaneously learns a center for deep features of each class and penalizes
+    the distances between the deep features and their corresponding class centers.
+
+    An implementation of center loss: Wen et al. A Discriminative Feature Learning Approach for Deep
+    Face Recognition. ECCV 2016.
+    """
+    def __init__(self, number_of_classes, number_of_features, alpha=1.0):
+        """
+
+        Args:
+            number_of_classes: the (maximum) number of classes
+            number_of_features: the (exact) number of features
+            alpha: the weight of the loss
+        """
+        super().__init__()
+        self.number_of_features = number_of_features
+        self.number_of_classes = number_of_classes
+        self.alpha = alpha
+
+        # me MUST have a randomly initialized center to help with
+        # convergence
+        self.centers = nn.Parameter(torch.randn(number_of_classes, number_of_features))
+
+    def forward(self, x, classes):
+        """
+
+        Args:
+            x: the features, an arbitrary n-d tensor (N * C * ...)
+            classes: a 1D integral tensor (N) representing the class of each ``x``
+
+        Returns:
+            a 1D tensor (N) representing the loss per sample
+        """
+        assert len(classes.shape) == 1, f'must be a 1D tensor. Got={classes.shape}'
+        assert len(classes) == len(x), f'must have the same dim in input ({len(x)}) and classes ({len(classes)})!'
+        flattened_x = x.view(x.shape[0], -1)
+        criterion = torch.nn.MSELoss(reduction='none')
+        losses = criterion(self.centers[classes], flattened_x)
+        return self.alpha * losses.mean(dim=1)

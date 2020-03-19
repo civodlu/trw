@@ -21,10 +21,11 @@ class CallbackTensorboardRecordHistory(callback_tensorboard.CallbackTensorboardB
             for split_name, split in dataset.items():
                 for output_name, output in split.items():
                     for metric_name, metric in output.items():
-                        tag = '{}/{}/{}-{}'.format(output_name, metric_name, dataset_name, split_name)
+                        if metric is not None:
+                            tag = '{}/{}/{}-{}'.format(output_name, metric_name, dataset_name, split_name)
 
-                        # we can't have space in the tag name
-                        tag = tag.replace(' ', '_')
-                        logger_tb.add_scalar(tag, float(metric), global_step=len(history) - 1)
+                            # we can't have space in the tag name
+                            tag = tag.replace(' ', '_')
+                            logger_tb.add_scalar(tag, float(metric), global_step=len(history) - 1)
 
         logger.info('successfully completed CallbackTensorboardRecordHistory.__call__')

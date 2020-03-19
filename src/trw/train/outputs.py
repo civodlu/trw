@@ -589,3 +589,41 @@ class OutputTriplets(Output):
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term
+
+
+class OutputLoss(Output):
+    """
+    Represent a given loss as an output.
+
+    This can be useful to add additional regularizer to the training (e.g., :class:`trw.train.LossCenter`).
+    """
+    def __init__(
+            self,
+            losses,
+            loss_reduction=torch.mean,
+            metrics=metrics.default_regression_metrics(),
+            sample_uid_name=default_sample_uid_name):
+        super().__init__(
+            metrics=metrics,
+            output=losses,
+            criterion_fn=None,
+            collect_output=True,
+            sample_uid_name=sample_uid_name)
+        self.loss_reduction = loss_reduction
+
+    def evaluate_batch(self, batch, is_training):
+        loss_term = {
+            'losses': self.output,
+            'loss': self.loss_reduction(self.output),  # to be optimized, we MUST have a `loss` key
+            Output.output_ref_tag: self,  # keep a back reference
+        }
+
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+
+        # do NOT keep the original output else memory will be an issue
+        del self.output
+        self.output = None
+
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
+        return loss_term

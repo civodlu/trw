@@ -171,3 +171,24 @@ class TestOutput(TestCase):
         assert loss_term['loss'] == 1.0
         assert loss_term['output_raw'] is samples
         assert isinstance(loss_term['output_ref'], trw.train.OutputTriplets)
+
+    def test_output_loss(self):
+        losses = torch.tensor(
+            [
+                [[[1, 2]]],  # make sure it works for N-d features
+                [[[1, 3]]],
+                [[[1, 4]]],
+            ], dtype=torch.float32)
+
+        batch = {
+            'uid': ['s0', 's1', 's2']
+        }
+
+        output = trw.train.OutputLoss(losses, sample_uid_name='uid')
+        loss_term = output.evaluate_batch(batch, False)
+
+        assert loss_term['loss'] == torch.mean(losses)
+        assert loss_term['losses'] is losses
+        assert loss_term['output_ref'] is output
+        assert loss_term['uid'] is batch['uid']
+

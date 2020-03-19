@@ -1,12 +1,20 @@
 import trw
 import numpy as np
 import torch
+import torch.nn as nn
 from unittest import TestCase
 
 
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
+class IdNetCenterLoss(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.center_loss = trw.train.LossCenter(2, 2)
+
+    def forward(self, batch):
+        features = batch['features']
+        classes = batch['classes']
+        center_loss = self.center_loss(features, classes)
+        return trw.train.OutputLoss(center_loss)
 
 
 class TestLosses(TestCase):
@@ -346,3 +354,36 @@ class TestLosses(TestCase):
         loss = trw.train.LossTriplets(margin=0.5)
         losses = loss(samples, samples_p, samples_n)
         assert (losses == torch.tensor([0, 0.5, 0])).all()
+
+    def test_center_loss(self):
+        # make sure the per-class centers are fitted to the data
+        features = torch.tensor(
+            [
+                [[[1, 2]]],  # make sure it works for N-d features
+                [[[1, 3]]],
+                [[[2, 14]]],
+                [[[2, 15]]],
+            ], dtype=torch.float32)
+        classes = torch.tensor([0, 0, 1, 1])
+
+        nb_iter = 1000
+        model = IdNetCenterLoss()
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.05)
+
+        for i in range(nb_iter):
+            batch = {'features': features, 'classes': classes}
+            o = model(batch)
+            optimizer.zero_grad()
+            loss = o.evaluate_batch(batch, True)['loss']
+            loss.backward()
+            optimizer.step()
+
+        centers = model.center_loss.centers
+        expected_centers = torch.tensor(
+            [
+                [1, 2.5],
+                [2, 14.5],
+            ]
+        )
+
+        assert (expected_centers - centers).abs().sum() < 1e-3

@@ -28,7 +28,7 @@ class TestTransformsAffine(unittest.TestCase):
         images = torch.arange(2 * 5 * 10 * 3, dtype=torch.float32).view((2, 1, 5, 10, 3))
 
         images_tfm = trw.transforms.affine_transform(images, matrix)
-        assert torch.max((images - images_tfm).abs()) < 1e-5
+        assert torch.max((images - images_tfm).abs()) < 1e-4
 
     def test_2d_translation_nn(self):
         images = torch.arange(2 * 5 * 10, dtype=torch.float).view((2, 1, 5, 10))
@@ -41,7 +41,7 @@ class TestTransformsAffine(unittest.TestCase):
         m = trw.transforms.to_voxel_space_transform(m, images[0].shape)
 
         images_tfm = trw.transforms.affine_transform(images, torch.cat((m.unsqueeze(0), m.unsqueeze(0))), interpolation='nearest')
-        assert torch.max(torch.abs(images[:, :, 2:, 1:] - images_tfm[:, :, :-2, :-1])) < 1e-5
+        assert torch.max(torch.abs(images[:, :, 2:, 1:] - images_tfm[:, :, :-2, :-1])) < 1e-4
 
     def test_2d_image(self):
         matrix = trw.transforms.affine_transformation_translation([80, 0])

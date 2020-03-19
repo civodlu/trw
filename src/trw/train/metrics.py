@@ -52,7 +52,7 @@ class MetricLoss(Metric):
         loss = 0.0
         for m in metric_by_batch:
             loss += m['loss']
-        return {'loss': loss}
+        return {'loss': loss / len(metric_by_batch)}
 
 
 class MetricClassificationError(Metric):
