@@ -607,23 +607,21 @@ def clamp_n(tensor, min_values, max_values):
     return torch.max(torch.min(tensor, max_values), min_values)
 
 
-def make_triplets(batch, target_name):
+def make_triplet_indices(targets):
     """
-    Make triplets  of samples (anchor samples, samples_positive, samples_negative) from a batch
-        given a `target_name`
+    Make random index triplets (anchor, positive, negative) such that ``anchor`` and ``positive``
+        belong to the same target while ``negative`` belongs to a different target
 
     Args:
-        batch: a dictionary of (name, value)
-        target_name: the name of the batch feature (1D vector) to be used to group the samples
-            into positive and negative
+        targets: a 1D integral tensor in range [0..C]
 
     Returns:
-        a new batch with (samples, samples_positive, samples_negative, target_name)
+        a tuple of indices (samples, samples_positive, samples_negative)
     """
     # group samples by class
     samples_by_class = collections.defaultdict(list)
-    classes = to_value(batch[target_name])
-    for index, c in enumerate(classes):
+    targets = to_value(targets)
+    for index, c in enumerate(targets):
         samples_by_class[c].append(index)
 
     # create the (sample, sample+, sample-) groups
@@ -644,11 +642,54 @@ def make_triplets(batch, target_name):
         samples_positive_all.append(samples_positive)
         samples_negative_all.append(samples_negative)
 
-    # create the batch
-    new_batch = collections.OrderedDict()
-    sample_indices = np.concatenate(samples_all)
-    new_batch['samples'] = batch['images'][sample_indices]
-    new_batch[target_name] = batch[target_name][sample_indices]
-    new_batch['samples_positive'] = batch['images'][np.concatenate(samples_positive_all)]
-    new_batch['samples_negative'] = batch['images'][np.concatenate(samples_negative_all)]
-    return new_batch
+    return np.concatenate(samples_all),\
+           np.concatenate(samples_positive_all),\
+           np.concatenate(samples_negative_all)
+
+
+def make_pair_indices(targets, same_target_ratio=0.5):
+    """
+    Make random indices of pairs of samples that belongs or not to the same target.
+
+    Args:
+        same_target_ratio: specify the ratio of same target to be generated for sample pairs
+        targets: a 1D integral tensor in range [0..C] to be used to group the samples
+            into same or different target
+
+    Returns:
+        a tuple with (samples_0 indices, samples_1 indices, same_target)
+    """
+    # group samples by class
+    samples_by_class = collections.defaultdict(list)
+    classes = to_value(targets)
+    for index, c in enumerate(classes):
+        samples_by_class[c].append(index)
+    samples_by_class = {name: np.asarray(value) for name, value in samples_by_class.items()}
+
+    # create the (sample, sample+, sample-) groups
+    samples_0 = []
+    samples_1 = []
+    same_target = []
+    for c, c_indexes in samples_by_class.items():
+        samples = c_indexes.copy()
+        np.random.shuffle(c_indexes)
+        nb_same_targets = int(same_target_ratio * len(c_indexes))
+
+        other = [idx for cc, idx in samples_by_class.items() if cc != c]
+        other = np.concatenate(other)
+        np.random.shuffle(other)
+
+        samples_0.append(samples)
+        samples_positive = c_indexes[:nb_same_targets]
+        same_target += [1] * len(samples_positive)
+        # expect to have more negative than positive, so for the negative
+        # pick the remaining
+        samples_negative = other[:len(c_indexes) - len(samples_positive)]
+        same_target += [0] * len(samples_negative)
+        samples_1.append(np.concatenate((samples_positive, samples_negative)))
+
+    # in case the assumption was wrong (we, in fact, have more positive than negative)
+    # shorten the batch
+    samples_0 = samples_0[:len(samples_1)]
+
+    return np.concatenate(samples_0), np.concatenate(samples_1), np.asarray(same_target)

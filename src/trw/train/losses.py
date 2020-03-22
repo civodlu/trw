@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
+import torch.nn.functional as F
 
 
 def one_hot(targets, num_classes, dtype=torch.float32):
@@ -170,7 +171,7 @@ class LossTriplets(nn.Module):
             negative_samples: the samples that belong to a different group than `samples`
 
         Returns:
-
+            a 1D tensor (N) representing the loss per sample
         """
         assert samples.shape == positive_samples.shape
         assert samples.shape == negative_samples.shape
@@ -199,6 +200,10 @@ class LossCenter(nn.Module):
 
     An implementation of center loss: Wen et al. A Discriminative Feature Learning Approach for Deep
     Face Recognition. ECCV 2016.
+
+    Note:
+        This loss *must* be part of a `parent` module or explicitly optimized by an optimizer. If not,
+        the centers will not be modified.
     """
     def __init__(self, number_of_classes, number_of_features, alpha=1.0):
         """
@@ -206,11 +211,9 @@ class LossCenter(nn.Module):
         Args:
             number_of_classes: the (maximum) number of classes
             number_of_features: the (exact) number of features
-            alpha: the weight of the loss
+            alpha: the loss will be scaled by ``alpha``
         """
         super().__init__()
-        self.number_of_features = number_of_features
-        self.number_of_classes = number_of_classes
         self.alpha = alpha
 
         # me MUST have a randomly initialized center to help with
@@ -221,7 +224,7 @@ class LossCenter(nn.Module):
         """
 
         Args:
-            x: the features, an arbitrary n-d tensor (N * C * ...)
+            x: the features, an arbitrary n-d tensor (N * C * ...). Features should ideally be in range [0..1]
             classes: a 1D integral tensor (N) representing the class of each ``x``
 
         Returns:
@@ -233,3 +236,43 @@ class LossCenter(nn.Module):
         criterion = torch.nn.MSELoss(reduction='none')
         losses = criterion(self.centers[classes], flattened_x)
         return self.alpha * losses.mean(dim=1)
+
+
+class LossContrastive(torch.nn.Module):
+    """
+    Implementation of the contrastive loss.
+
+    See Dimensionality Reduction by Learning an Invariant Mapping, Raia Hadsell, Sumit Chopra, Yann LeCun, 2006.
+    """
+    def __init__(self, margin=1.0):
+        super().__init__()
+        self.margin = margin
+        self.eps = 1e-9
+
+    def forward(self, x0, x1, same_target):
+        """
+
+        Args:
+            x0: N-D tensor
+            x1: N-D tensor
+            same_target: ``0`` or ``1`` 1D tensor. ``1`` means the ``x0`` and ``x1`` belongs to the same class, while
+                ``0`` means they are from a different class
+
+        Returns:
+            a 1D tensor (N) representing the loss per sample
+        """
+        nb_samples = len(x0)
+        assert nb_samples == len(x1)
+        assert nb_samples == len(same_target)
+        assert len(same_target.shape) == 1
+        assert same_target.shape[0] == nb_samples
+
+        distances = F.pairwise_distance(x1, x0, p=2)
+        distances_sqr = distances.pow(2)
+
+        m_or_p = (1 + -1 * same_target).float()
+
+        losses = 0.5 * (same_target.float() * distances_sqr +
+                        m_or_p *
+                        F.relu(self.margin - distances))
+        return losses

@@ -25,7 +25,7 @@ class NetSpatialTransformer(nn.Module):
         xs = self.localization_convs(x)
         xs = self.localization_regressor(xs)
         theta = xs.view(-1, 2, 3)
-        grid = F.affine_grid(theta, x.size(), align_corners=False)
+        grid = F.affine_grid(theta, x.size())
         x = F.grid_sample(x, grid)
         return x[:, :, 0:24, 0:24]
 

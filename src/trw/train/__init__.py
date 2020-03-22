@@ -3,7 +3,7 @@ from .utilities import len_batch, create_or_recreate_folder, to_value, set_optim
     default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
     get_classification_mapping, get_classification_mappings, safe_lookup, flatten_nested_dictionaries, clamp_n, \
-    make_triplets, make_unique_colors, make_unique_colors_f
+    make_triplet_indices, make_pair_indices, make_unique_colors, make_unique_colors_f
 
 from .outputs import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, \
     OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss
@@ -61,7 +61,7 @@ from .metrics import Metric, MetricClassificationError, MetricClassificationSens
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
-from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter
+from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive
 from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing

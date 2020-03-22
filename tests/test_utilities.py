@@ -2,6 +2,7 @@ from unittest import TestCase
 import trw.train
 import collections
 import torch
+import numpy as np
 
 
 class TestUtilities(TestCase):
@@ -123,3 +124,30 @@ class TestUtilities(TestCase):
         clamped_t = trw.train.clamp_n(t, min, max)
 
         assert (clamped_t == torch.LongTensor([[3, 2, 4], [3, 4, 6]])).all()
+
+    def test_triplets(self):
+        targets = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5]
+
+        anchors, positives, negatives = trw.train.make_triplet_indices(targets)
+
+        assert len(anchors) == len(positives)
+        assert len(anchors) == len(negatives)
+        assert len(anchors) == len(targets)
+
+        targets = np.asarray(targets)
+        assert (targets[anchors] == targets[positives]).all()
+        assert np.max(targets[anchors] == targets[negatives]) == 0
+
+    def test_pairs(self):
+        targets = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5]
+
+        samples_0, samples_1, same_target = trw.train.make_pair_indices(targets)
+
+        assert len(samples_0) == len(samples_1)
+        assert len(samples_0) == len(same_target)
+
+        targets = np.asarray(targets)
+
+        same = targets[samples_0] == targets[samples_1]
+
+        assert (same == same_target).all()

@@ -23,7 +23,8 @@ def callbacks_per_loss_term(
         split_exclusions,
         exported_cases,
         max_samples,
-        epoch):
+        epoch,
+        format):
     
     # process the exclusion
     if dataset_name in dataset_exclusions:
@@ -52,7 +53,8 @@ def callbacks_per_loss_term(
     for n in range(nb_samples_to_export):
         id = n + nb_samples_exported
         exported_cases.append(id)
-        sample_output = os.path.join(root, dataset_name + '_' + split_name + '_s' + str(id) + '_e' + str(epoch))
+        name = format.format(dataset_name=dataset_name, split_name=split_name, id=id, epoch=epoch)
+        sample_output = os.path.join(root, name)
         txt_file = sample_output + '.txt'
         classification_mappings = utilities.get_classification_mappings(datasets_infos, dataset_name, split_name)
         with open(txt_file, 'w') as f:
@@ -66,7 +68,15 @@ def callbacks_per_loss_term(
 
 
 class CallbackExportSamples(callback.Callback):
-    def __init__(self, max_samples=20, dirname='samples', loss_terms_inclusion=None, feature_exclusions=None, dataset_exclusions=None, split_exclusions=None):
+    def __init__(
+            self,
+            max_samples=20,
+            dirname='samples',
+            loss_terms_inclusion=None,
+            feature_exclusions=None,
+            dataset_exclusions=None,
+            split_exclusions=None,
+            format='{dataset_name}_{split_name}_s{id}_e{epoch}'):
         """
         Export random samples from our datasets
         
@@ -79,8 +89,11 @@ class CallbackExportSamples(callback.Callback):
         :param feature_exclusions: specifies what feature should be excluded from the export
         :param split_exclusions: specifies what split should be excluded from the export
         :param dataset_exclusions: specifies what dataset should be excluded from the export
+        :param format: the format of the files exported. Sometimes need evolution by epoch, other time we may want
+            samples by epoch so make this configurable
         """
-        
+
+        self.format = format
         self.max_samples = max_samples
         self.dirname = dirname
         if loss_terms_inclusion is None:
@@ -127,7 +140,8 @@ class CallbackExportSamples(callback.Callback):
                                           split_exclusions=self.split_exclusions,
                                           exported_cases=exported_cases,
                                           max_samples=self.max_samples,
-                                          epoch=len(history)
+                                          epoch=len(history),
+                                          format=self.format,
                                       )])
                 
         logger.info('successfully completed CallbackExportSamples.__call__!')

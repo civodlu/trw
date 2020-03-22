@@ -26,7 +26,7 @@ class NetSpatialTransformer(nn.Module):
         xs = self.localization_convs(x)
         xs = self.localization_regressor(xs)
         theta = xs.view(-1, 2, 3)
-        grid = F.affine_grid(theta, x.size(), align_corners=False)
+        grid = F.affine_grid(theta, x.size())
         x = F.grid_sample(x, grid)
         return x[:, :, 0:32, 0:32]
 
@@ -51,10 +51,13 @@ class Net(nn.Module):
         self.embedding = NetEmbedding()
 
     def forward(self, batch):
-        batch = trw.train.make_triplets(batch, target_name='targets')
-        samples = batch['samples'] / 255.0
-        samples_positive = batch['samples_positive'] / 255.0
-        samples_negative = batch['samples_negative'] / 255.0
+        targets = batch['targets']
+        anchor, positive, negative = trw.train.make_triplet_indices(targets)
+        images = batch['images'] / 255.0
+
+        samples = images[anchor]
+        samples_positive = images[positive]
+        samples_negative = images[negative]
 
         samples_embedding, aligned_samples = self.embedding(samples)
         samples_positive_embedding, aligned_samples_positive = self.embedding(samples_positive)
@@ -101,7 +104,7 @@ trainer = trw.train.Trainer(
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64)),
+    inputs_fn=lambda: trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64), nb_workers=0),
     run_prefix='mnist_cluttered_spatial_transformer_triplets',
     model_fn=lambda options: Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(
