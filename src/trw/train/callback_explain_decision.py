@@ -77,12 +77,16 @@ def run_classification_explanation(
                 # we want to back-propagate up to the inputs
                 tensor.requires_grad = True
 
-        with torch.no_grad():
-            outputs = model(batch_n)
-            output = outputs.get(output_name)
-            assert output is not None
-            output_np = utilities.to_value(output.output)[0]
-            max_class_indices = (-output_np).argsort()[0:nb_explanations]
+        try:
+            with torch.no_grad():
+                outputs = model(batch_n)
+                output = outputs.get(output_name)
+                assert output is not None
+                output_np = utilities.to_value(output.output)[0]
+                max_class_indices = (-output_np).argsort()[0:nb_explanations]
+        except Exception as e:
+            logger.error('exception, aborted `run_classification_explanation`=', e)
+            continue
 
         # make sure the model is not contaminated by uncleaned hooks
         r = None

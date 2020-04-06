@@ -56,24 +56,7 @@ def log_console(msg):
     print(msg)
 
 
-def len_batch(batch):
-    """
-    :param batch: a data split or a `collections.Sequence`
-    :return: the number of elements within a data split
-    """
-    if isinstance(batch, (collections.Sequence, torch.Tensor)):
-        return len(batch)
-
-    assert isinstance(batch, collections.Mapping), 'Must be a dict-like structure! got={}'.format(type(batch))
-
-    for name, values in batch.items():
-        if isinstance(values, list):
-            return len(values)
-        if isinstance(values, torch.Tensor) and len(values.shape) != 0:
-            return values.shape[0]
-        if isinstance(values, np.ndarray) and len(values.shape) != 0:
-            return values.shape[0]
-    return 0
+from trw.reporting import len_batch
 
 
 def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
@@ -131,15 +114,7 @@ class time_it:
         return fn_decorated
 
 
-def to_value(v):
-    """
-    Convert where appropriate from tensors to numpy arrays
-    :param v:
-    :return:
-    """
-    if isinstance(v, torch.Tensor):
-        return v.cpu().data.numpy()
-    return v
+from trw.reporting import to_value
 
 
 def make_unique_colors():
@@ -635,16 +610,20 @@ def make_triplet_indices(targets):
 
         other = [idx for cc, idx in samples_by_class.items() if cc != c]
         other = np.concatenate(other)
-        np.random.shuffle(other)
-        samples_negative = other[:len(samples)]
+
+        # sample with replacement in case the ``negative`` sample are less
+        # than the ``positive`` samples
+        samples_negative = np.random.choice(other, len(samples))
 
         samples_all.append(samples)
         samples_positive_all.append(samples_positive)
         samples_negative_all.append(samples_negative)
 
-    return np.concatenate(samples_all),\
-           np.concatenate(samples_positive_all),\
-           np.concatenate(samples_negative_all)
+    samples_all = np.concatenate(samples_all)
+    samples_positive_all = np.concatenate(samples_positive_all)
+    samples_negative_all = np.concatenate(samples_negative_all)
+    min_samples = min(len(samples_all), len(samples_negative_all))
+    return samples_all[:min_samples], samples_positive_all[:min_samples], samples_negative_all[:min_samples]
 
 
 def make_pair_indices(targets, same_target_ratio=0.5):

@@ -1,3 +1,5 @@
+import sqlite3
+
 import torch
 import torch.optim
 import torch.nn
@@ -662,6 +664,9 @@ class Trainer:
             if 'outputs' in result_cp is not None:
                 result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
 
+            if utilities.safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database') is not None:
+                del result_cp['options']['workflow_options']['sql_database']
+
         result_cp_path = path + '.result'
         with open(result_cp_path, 'wb') as f:
             pickle_module.dump(result_cp, f)
@@ -755,7 +760,12 @@ class Trainer:
                 format='%(asctime)s %(levelname)s %(name)s %(message)s',
                 level=logging.DEBUG,
                 filemode='w')
-        
+
+        # create the reporting SQL database
+        sql_path = os.path.join(options['workflow_options']['current_logging_directory'], 'reporting_sqlite.db')
+        sql = sqlite3.connect(sql_path)
+        options['workflow_options']['sql_database'] = sql
+
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
         formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
@@ -925,6 +935,9 @@ class Trainer:
         logging.root.removeHandler(handler)
 
         logger.info('training completed!')
+
+        sql.commit()
+        sql.close()
 
         return model, {
             'history': history,

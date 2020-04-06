@@ -1,3 +1,5 @@
+import warnings
+
 from trw.train import sequence
 from trw.train import sampler as sampler_trw
 from trw.train import utilities
@@ -91,53 +93,12 @@ class SequenceArray(sequence.Sequence):
 
         return SequenceArray(subsampled_split, new_sampler, transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
 
-
     @staticmethod
     def get(split, nb_samples, indices, transforms, use_advanced_indexing):
-        """
-        Collect the split indices given and apply a series of transformations
+        warnings.warn('deprecated. Use `trw.reporting.get_batch_n`')
 
-        Args:
-            nb_samples: the total number of samples of split
-            split: a mapping of `np.ndarray` or `torch.Tensor`
-            indices: a list of indices as numpy array
-            transforms: a transformation or list of transformations or None
-            use_advanced_indexing: if True, use the advanced indexing mechanism else use a simple list (original data is referenced)
-                advanced indexing is typically faster for small objects, however for large objects (e.g., 3D data)
-                the advanced indexing makes a copy of the data making it very slow.
-
-        Returns:
-            a split with the indices provided
-        """
-        data = {}
-        for split_name, split_data in split.items():
-            if isinstance(split_data, (torch.Tensor, np.ndarray)) and len(split_data) == nb_samples:
-                # here we prefer [split_data[i] for i in indices] over split_data[indices]
-                # this is because split_data[indices] will make a deep copy of the data which may be time consuming
-                # for large data
-
-                # TODO for small data batch: prefer the indexing, for large data, prefer the referencing
-                if use_advanced_indexing:
-                    split_data = split_data[indices]
-                else:
-                    split_data = [[split_data[i]] for i in indices]
-            if isinstance(split_data, list) and len(split_data) == nb_samples:
-                split_data = [split_data[i] for i in indices]
-
-            data[split_name] = split_data
-
-        if transforms is None:
-            # do nothing: there is no transform
-            pass
-        elif isinstance(transforms, collections.Sequence):
-            # we have a list of transforms, apply each one of them
-            for transform in transforms:
-                data = transform(data)
-        else:
-            # anything else should be a functor
-            data = transforms(data)
-
-        return data
+        from trw.reporting import get_batch_n
+        return get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing)
 
     def __iter__(self):
         # make sure the sampler is copied so that we can have multiple iterators of the
@@ -149,7 +110,7 @@ class SequenceIteratorArray(sequence.SequenceIterator):
     """
     Iterate the elements of an :class:`trw.train.SequenceArray` sequence
 
-    Asumptions:
+    Assumptions:
         - underlying `base_sequence` doesn't change sizes while iterating
     """
     def __init__(self, base_sequence, sampler):

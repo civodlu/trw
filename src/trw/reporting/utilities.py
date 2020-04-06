@@ -1,0 +1,90 @@
+import collections
+import torch
+import numpy as np
+
+
+def len_batch(batch):
+    """
+
+    Args:
+        batch: a data split or a `collections.Sequence`
+
+    Returns:
+        the number of elements within a data split
+    """
+    if isinstance(batch, (collections.Sequence, torch.Tensor)):
+        return len(batch)
+
+    assert isinstance(batch, collections.Mapping), 'Must be a dict-like structure! got={}'.format(type(batch))
+
+    for name, values in batch.items():
+        if isinstance(values, (list, tuple)):
+            return len(values)
+        if isinstance(values, torch.Tensor) and len(values.shape) != 0:
+            return values.shape[0]
+        if isinstance(values, np.ndarray) and len(values.shape) != 0:
+            return values.shape[0]
+    return 0
+
+
+def to_value(v):
+    """
+    Convert where appropriate from tensors to numpy arrays
+
+    Args:
+        v: an object. If ``torch.Tensor``, the tensor will be converted to a numpy
+            array. Else returns the original ``v``
+
+    Returns:
+        ``torch.Tensor`` as numpy arrays. Any other type will be left unchanged
+    """
+    if isinstance(v, torch.Tensor):
+        return v.cpu().data.numpy()
+    return v
+
+
+def get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing):
+    """
+    Collect the split indices given and apply a series of transformations
+
+    Args:
+        nb_samples: the total number of samples of split
+        split: a mapping of `np.ndarray` or `torch.Tensor`
+        indices: a list of indices as numpy array
+        transforms: a transformation or list of transformations or None
+        use_advanced_indexing: if True, use the advanced indexing mechanism else use a simple list (original data is referenced)
+            advanced indexing is typically faster for small objects, however for large objects (e.g., 3D data)
+            the advanced indexing makes a copy of the data making it very slow.
+
+    Returns:
+        a split with the indices provided
+    """
+    data = {}
+    for split_name, split_data in split.items():
+        if isinstance(split_data, (torch.Tensor, np.ndarray)) and len(split_data) == nb_samples:
+            # here we prefer [split_data[i] for i in indices] over split_data[indices]
+            # this is because split_data[indices] will make a deep copy of the data which may be time consuming
+            # for large data
+
+            # TODO for small data batch: prefer the indexing, for large data, prefer the referencing
+            if use_advanced_indexing:
+                split_data = split_data[indices]
+            else:
+                split_data = [[split_data[i]] for i in indices]
+        if isinstance(split_data, list) and len(split_data) == nb_samples:
+            split_data = [split_data[i] for i in indices]
+
+        data[split_name] = split_data
+
+    if transforms is None:
+        # do nothing: there is no transform
+        pass
+    elif isinstance(transforms, collections.Sequence):
+        # we have a list of transforms, apply each one of them
+        for transform in transforms:
+            data = transform(data)
+    else:
+        # anything else should be a functor
+        data = transforms(data)
+
+    return data

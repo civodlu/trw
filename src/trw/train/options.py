@@ -44,7 +44,8 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
             'num_epochs': num_epochs,
         },
         'workflow_options': {
-            'device': device,
+            'device': device,                        # the torch device to be used
+            'sql_database': None,                    # the SQL database where the reporting is exported
             'train_split': 'train',                  # this is the split used for training
             'logging_directory': logging_directory,  # this is where all the tensorboard summary are written
             'trainer_run': 0,                        # this is the run number.

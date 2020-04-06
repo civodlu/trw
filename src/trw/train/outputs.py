@@ -536,7 +536,7 @@ class OutputTriplets(Output):
             positive_samples,
             negative_samples,
             criterion_fn=lambda: losses.LossTriplets(),
-            metrics=None,
+            metrics=metrics.default_generic_metrics(),
             loss_reduction=mean_all,
             weight_name=None,
             loss_scaling=1.0,
@@ -601,7 +601,7 @@ class OutputLoss(Output):
             self,
             losses,
             loss_reduction=torch.mean,
-            metrics=metrics.default_regression_metrics(),
+            metrics=metrics.default_generic_metrics(),
             sample_uid_name=default_sample_uid_name):
         super().__init__(
             metrics=metrics,

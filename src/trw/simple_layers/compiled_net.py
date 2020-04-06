@@ -382,7 +382,7 @@ def compile_nn(output_nodes: list, other_outputs_to_keep_alive=None, remove_chec
                     # we visited a child node so we can remove the parent's dependency
                     parent_book_keeping.discard(current_node)
 
-                    if len(parent_book_keeping) == 0:
+                    if len(parent_book_keeping) == 0 and parent not in output_nodes:
                         # all dependencies are gone! free the book_keeping for this node
                         release_node(parent)
 

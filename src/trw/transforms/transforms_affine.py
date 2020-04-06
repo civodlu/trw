@@ -36,10 +36,17 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
 
     Only 2D or 3D supported transformation.
     """
-    def __init__(self, translation_min_max, scaling_min_max, rotation_radian_min_max, criteria_fn=None):
+    def __init__(
+            self,
+            translation_min_max,
+            scaling_min_max,
+            rotation_radian_min_max,
+            criteria_fn=None,
+            padding_mode='zeros'):
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 
+        self.padding_mode = padding_mode
         self.criteria_fn = criteria_fn
         self.rotation_radian_min_max = rotation_radian_min_max
         self.scaling_min_max = scaling_min_max
@@ -86,7 +93,7 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
         new_batch = collections.OrderedDict()
         for name, value in batch.items():
             if name in features_names:
-                new_batch[name] = affine.affine_transform(value, tfms)
+                new_batch[name] = affine.affine_transform(value, tfms, padding_mode=self.padding_mode)
             else:
                 new_batch[name] = value
         return new_batch

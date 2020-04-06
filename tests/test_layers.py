@@ -72,3 +72,17 @@ class TestLayers(TestCase):
         i = torch.zeros([5, 1, 32, 32], dtype=torch.float32)
         o = fcnn(i)
         assert o.shape == (5, 2, 32, 32)
+
+    def test_autoencoder_conv(self):
+        model = trw.layers.AutoencoderConvolutional(2, 1, [4, 8, 16], [8, 4, 1], last_layer_is_output=True)
+
+        i = torch.zeros([5, 1, 32, 32], dtype=torch.float32)
+        intermediates = model.forward_with_intermediate(i)
+        assert len(intermediates) == 2
+        encoding, reconstruction = intermediates
+
+        assert encoding.shape == (5, 16, 4, 4)
+        assert reconstruction.shape == i.shape
+
+        last_stage = model.decoder.layers[-1]
+        assert len(last_stage) == 1

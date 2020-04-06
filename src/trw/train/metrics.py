@@ -215,7 +215,7 @@ def default_classification_metrics():
 
 def default_regression_metrics():
     """"
-    Default list of metrics used for classification
+    Default list of metrics used for regression
     """
     return [
         MetricLoss(),
@@ -224,9 +224,18 @@ def default_regression_metrics():
 
 def default_segmentation_metrics():
     """"
-    Default list of metrics used for classification
+    Default list of metrics used for segmentation
     """
     return [
         MetricLoss(),
         MetricSegmentationDice(),
+    ]
+
+
+def default_generic_metrics():
+    """"
+    Default list of metrics
+    """
+    return [
+        MetricLoss(),
     ]

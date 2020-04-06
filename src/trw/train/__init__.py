@@ -48,6 +48,8 @@ from .callback_zip_sources import CallbackZipSources
 from .callback_export_convolution_kernel import CallbackExportConvolutionKernel
 from .callback_export_segmentations import CallbackExportSegmentations
 
+from .callback_export_samples2 import CallbackExportSamples2
+
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor
 from .sequence_array import SequenceArray
@@ -61,7 +63,8 @@ from .metrics import Metric, MetricClassificationError, MetricClassificationSens
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
-from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive
+from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
+    total_variation_norm
 from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing

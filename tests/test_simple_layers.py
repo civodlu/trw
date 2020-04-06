@@ -165,10 +165,3 @@ class TestSimpleLayers(TestCase):
         r = net({'input': torch.randn([5, 3, 6, 6, 6]).float()})
         assert len(r) == 1
         assert r[o].shape == (5, 16, 3, 3, 3)
-
-    def test_unet_2d(self):
-        unet = trw.layers.UNet_2d(in_channels=2, n_classes=10)
-
-        i = torch.randn([5, 2, 32, 33])
-        o = unet(i)
-        assert o.shape == (5, 10, 32, 32)  # rounded to power of 2

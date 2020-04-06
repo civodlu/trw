@@ -276,3 +276,39 @@ class LossContrastive(torch.nn.Module):
                         m_or_p *
                         F.relu(self.margin - distances))
         return losses
+
+
+def _total_variation_norm_2d(x, beta):
+    assert len(x.shape) == 4, 'expeted N * C * H * W format!'
+    assert x.shape[1] == 1, 'single channel only tested'
+    row_grad = torch.mean(torch.abs((x[:, :, :-1, :] - x[:, :, 1:, :])).pow(beta))
+    col_grad = torch.mean(torch.abs((x[:, :, :, :-1] - x[:, :, :, 1:])).pow(beta))
+    return row_grad + col_grad
+
+
+def _total_variation_norm_3d(x, beta):
+    assert len(x.shape) == 5, 'expeted N * C * D * H * W format!'
+    assert x.shape[1] == 1, 'single channel only tested'
+    depth_grad = torch.mean(torch.abs((x[:, :, :-1, :, :] - x[:, :, 1:, :, :])).pow(beta))
+    row_grad = torch.mean(torch.abs((x[:, :, :, :-1, :] - x[:, :, :, 1:, :])).pow(beta))
+    col_grad = torch.mean(torch.abs((x[:, :, :, :, :-1] - x[:, :, :, :, 1:])).pow(beta))
+    return row_grad + col_grad + depth_grad
+
+
+def total_variation_norm(x, beta):
+    """
+    Calculate the total variation norm
+
+    Args:
+        x: a tensor with format (samples, components, dn, ..., d0)
+        beta: the exponent
+
+    Returns:
+        a scalar
+    """
+    if len(x.shape) == 4:
+        return _total_variation_norm_2d(x, beta)
+    elif len(x.shape) == 5:
+        return _total_variation_norm_3d(x, beta)
+    else:
+        raise NotImplemented()

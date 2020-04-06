@@ -47,6 +47,7 @@ def denses(
         if n + 2 == len(sizes):
             if not last_layer_is_output:
                 ops.append(activation())
+
         else:
             ops.append(activation())
 
