@@ -117,8 +117,6 @@ def export_as_image(batch, feature_name, name, sample_id, export_root, feature_a
                                      f'has a unique pattern!'
     export_image(ui8, path)
 
-    # TODO hmm have to embed the application name for bokeh server. There must be a better way!
-    # TODO this will prevent from renaming the folder
     batch[feature_name][sample_id] = os.path.join('static', name + '.png')
 
     # we need to record the feature type
@@ -141,15 +139,15 @@ def export_as_npy(batch, feature_name, name, sample_id, export_root, feature_att
             # just a number, export as text
             return False, None
 
-        # if 1D, we probably want this exported as text
-        if len(sample_shape) == 1 and sample_shape[0] < 100:
+        # if 0D or 1D, we want this exported as text
+        if len(sample_shape) <= 1 and sample_shape[0] <= 1:
             return False, None
 
         path = os.path.join(export_root, 'static', name + '.npy')
         assert not os.path.exists(path), f'path={path} collided with an existing file! Make sure the ``{name}``' \
                                          f'has a unique pattern!'
         np.save(path, samples[sample_id])
-        batch[feature_name][sample_id] = name + '.npy'
+        batch[feature_name][sample_id] = os.path.join('static', name + '.npy')
 
         # we need to record the feature type
         feature_type_name = feature_name + SQLITE_TYPE_PATTERN
@@ -209,7 +207,10 @@ def export_sample(
             # remove the first numpy dimension and replace it as a list
             # this is done so that we can replace a numpy array (e.g., image, large array) to
             # a named array saved on local drive
-            value = list(value)
+            if len(value.shape) == 0:
+                value = [float(value)] * batch_size
+            else:
+                value = list(value)
         elif isinstance(value, (numbers.Number, str)):
             # make sure we have one value per sample, so expand the 0-d values
             value = [value] * batch_size

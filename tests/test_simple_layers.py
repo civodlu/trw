@@ -165,3 +165,25 @@ class TestSimpleLayers(TestCase):
         r = net({'input': torch.randn([5, 3, 6, 6, 6]).float()})
         assert len(r) == 1
         assert r[o].shape == (5, 16, 3, 3, 3)
+
+    def test_sub_tensor(self):
+        n = trw.simple_layers.Input([None, 1, 32, 32], feature_name='input')
+        n = trw.simple_layers.SubTensor(n, [0, 10, 15], [1, 14, 22])
+        net = trw.simple_layers.compile_nn([n])
+
+        i = torch.randn([5, 1, 32, 32], dtype=torch.float32)
+        o = net({'input': i})
+
+        assert o[n].shape == (5, 1, 4, 7)
+        assert (o[n] == i[:, 0:1, 10:14, 15:22]).all()
+
+    def test_sub_tensor_partial(self):
+        n = trw.simple_layers.Input([None, 3, 32, 32], feature_name='input')
+        n = trw.simple_layers.SubTensor(n, [0], [1])
+        net = trw.simple_layers.compile_nn([n])
+
+        i = torch.randn([5, 3, 32, 32], dtype=torch.float32)
+        o = net({'input': i})
+
+        assert o[n].shape == (5, 1, 32, 32)
+        assert (o[n] == i[:, 0:1]).all()

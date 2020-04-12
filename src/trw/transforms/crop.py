@@ -22,6 +22,35 @@ def _crop_1d(image, min, max):
     return image[min[0]:max[0]]
 
 
+def batch_crop(images, min_index: list, max_index_exclusive: list):
+    """
+    Crop an image
+    Args:
+        images: images with shape [N * ...]
+        min_index: a sequence of size `len(array.shape)-1` indicating cropping start
+        max_index_exclusive: a sequence of size `len(array.shape)-1` indicating cropping end (excluded)
+
+    Returns:
+        a cropped images
+    """
+    nb_dims = len(images.shape)
+
+    if nb_dims == 1:
+        crop_fn = _crop_1d
+    elif nb_dims == 2:
+        crop_fn = _crop_2d
+    elif nb_dims == 3:
+        crop_fn = _crop_3d
+    elif nb_dims == 4:
+        crop_fn = _crop_4d
+    elif nb_dims == 5:
+        crop_fn = _crop_5d
+    else:
+        assert 0, 'TODO implement for generic dimension'
+
+    return crop_fn(images, [0] + min_index, [len(images)] + max_index_exclusive)
+
+
 def transform_batch_random_crop_offset(array, crop_shape):
     """
     Calculate the offsets of array to randomly crop it with shape `crop_shape`

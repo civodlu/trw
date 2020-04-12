@@ -13,3 +13,4 @@ from .convs import convs_3d, convs_2d
 from .global_pooling import global_average_pooling_2d, global_average_pooling_3d, global_max_pooling_2d, \
     global_max_pooling_3d
 from .shift_scale import ShiftScale
+from .sub_tensor import SubTensor

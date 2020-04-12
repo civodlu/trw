@@ -1,5 +1,8 @@
 import collections
 
+
+# this tag is used to specify the type of data stored on the local drive
+# for example BLOB_NUMPY for numpy arrays or BLOB_IMAGE_PNG for PNG images
 SQLITE_TYPE_PATTERN = '_type'
 
 
@@ -119,12 +122,14 @@ def get_data_types_and_clean_data(data):
 
 class TableStream:
     """
-    A SQLite table that can be streamed
+    A SQLite table that can be streamed.
 
-    in ``table_name``:
+    Two tables will be created:
+
+    1) in ``table_name``:
         - feature name with ``*_type`` will have SQLITE type ``type``
 
-    in ``table_name``_metadata:
+    2) in ``table_name``_metadata:
         - ``table_role``: the role of the table
     """
 

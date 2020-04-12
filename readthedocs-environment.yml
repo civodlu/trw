@@ -9,3 +9,4 @@ dependencies:
   - torchvision
   - pip:
     - sphinx-autoapi
+    - bokeh

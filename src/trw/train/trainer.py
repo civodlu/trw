@@ -656,21 +656,28 @@ class Trainer:
 
         """
         result_cp = None
+        sql_database = None
         if result is not None:
             import copy
             # we don't want this function to have side effects so copy
             # the result and strip what can't be pickled
             result_cp = copy.copy(result)
+
             if 'outputs' in result_cp is not None:
                 result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
 
-            if utilities.safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database') is not None:
+            sql_database = utilities.safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database')
+            if sql_database is not None:
                 del result_cp['options']['workflow_options']['sql_database']
 
         result_cp_path = path + '.result'
         with open(result_cp_path, 'wb') as f:
             pickle_module.dump(result_cp, f)
         torch.save(model, path, pickle_module=pickle_module)
+
+        if sql_database is not None:
+            # TODO find a cleaner and generic way of doing this...
+            result_cp['options']['workflow_options']['sql_database'] = sql_database
 
     @staticmethod
     def load_model(path, with_result=False, device=None, pickle_module=pickle):

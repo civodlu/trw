@@ -183,7 +183,7 @@ class TestSimplifiedNN(TestCase):
         assert len(outputs) == 2
         print(outputs['concat'].output)
         assert outputs[intermediate].shape == (1, 3)
-        assert (outputs['concat'].output[:, 3:] == torch.from_numpy(np.asarray([[1, 2]], dtype=np.float))).all()
+        assert (outputs['concat'].output[:, 3:] == torch.from_numpy(np.asarray([[1, 2]], dtype=np.float32))).all()
 
     def test_compiled_multi_inputs_outputs(self):
         """

@@ -582,6 +582,36 @@ def clamp_n(tensor, min_values, max_values):
     return torch.max(torch.min(tensor, max_values), min_values)
 
 
+def sub_tensor(tensor, min_indices, max_indices_exclusive):
+    """
+    Select a region of a tensor (without copy)
+
+    Examples:
+        >>> t = torch.randn([5, 10])
+        >>> sub_t = trw.train.sub_tensor(t, [2, 3], [4, 8])
+        Returns the t[2:4, 3:8]
+
+        >>> t = torch.randn([5, 10])
+        >>> sub_t = trw.train.sub_tensor(t, [2], [4])
+        Returns the t[2:4]
+
+    Args:
+        tensor: a tensor
+        min_indices: the minimum indices to select for each dimension
+        max_indices_exclusive: the maximum indices (excluded) to select for each dimension
+
+    Returns:
+        torch.tensor
+    """
+    assert len(min_indices) == len(max_indices_exclusive)
+    assert len(tensor.shape) >= len(min_indices)
+
+    for dim, (min_index, max_index) in enumerate(zip(min_indices, max_indices_exclusive)):
+        size = max_index - min_index
+        tensor = tensor.narrow(dim, min_index, size)
+    return tensor
+
+
 def make_triplet_indices(targets):
     """
     Make random index triplets (anchor, positive, negative) such that ``anchor`` and ``positive``

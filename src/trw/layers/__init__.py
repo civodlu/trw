@@ -10,3 +10,4 @@ from .fcnn import FullyConvolutional
 from .unet import UNet
 from .convs_transpose import ConvsTransposeBase
 from .autoencoder_convolutional import AutoencoderConvolutional
+from .sub_tensor import SubTensor

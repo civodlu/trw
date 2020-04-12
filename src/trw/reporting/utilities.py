@@ -88,3 +88,27 @@ def get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing):
         data = transforms(data)
 
     return data
+
+
+def safe_lookup(dictionary, *keys, default=None):
+    """
+    Recursively access nested dictionaries
+
+    Args:
+        dictionary: nested dictionary
+        *keys: the keys to access within the nested dictionaries
+        default: the default value if dictionary is ``None`` or it doesn't contain
+            the keys
+
+    Returns:
+        None if we can't access to all the keys, else dictionary[key_0][key_1][...][key_n]
+    """
+    if dictionary is None:
+        return default
+
+    for key in keys:
+        dictionary = dictionary.get(key)
+        if dictionary is None:
+            return default
+
+    return dictionary

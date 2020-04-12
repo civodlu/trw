@@ -2,6 +2,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 from trw.layers import ModulelWithIntermediate, ConvsBase, ConvsTransposeBase
+from trw.transforms import batch_crop
 
 
 class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):
@@ -29,6 +30,25 @@ class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):
             lrn_kwargs=None,
             last_layer_is_output=False,
             force_decoded_size_same_as_input=True):
+        """
+
+        Args:
+            cnn_dim:
+            input_channels:
+            encoder_channels:
+            decoder_channels:
+            convolution_kernels:
+            strides:
+            pooling_size:
+            convolution_repeats:
+            activation:
+            dropout_probability:
+            batch_norm_kwargs:
+            lrn_kwargs:
+            last_layer_is_output:
+            force_decoded_size_same_as_input: this will force
+        """
+
 
         super().__init__()
         self.force_decoded_size_same_as_input = force_decoded_size_same_as_input
@@ -69,21 +89,32 @@ class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):
         decoded_x = self.decoder(encoded_x)
 
         if self.force_decoded_size_same_as_input:
-            shape_difference = np.asarray(x.shape[2:]) - np.asarray(decoded_x.shape[2:])
-            assert (shape_difference >= 0).all(), f'Not implemented. Expected the decoded shape to ' \
-                                                  f'be smaller than x! Shape difference={shape_difference}'
+            shape_x = np.asarray(x.shape[2:])
+            shape_difference = shape_x - np.asarray(decoded_x.shape[2:])
+            assert (shape_difference >= 0).all() or (shape_difference <= 0).all(), \
+                f'Not implemented. Expected the decoded shape to ' \
+                f'be smaller than x! Shape difference={shape_difference}'
 
-            left_padding = shape_difference // 2
-            right_padding = shape_difference - left_padding
+            if shape_difference.max() > 0:
+                # here we need to add padding
+                left_padding = shape_difference // 2
+                right_padding = shape_difference - left_padding
 
-            # padding must remove N, C channels & reversed order
-            padding = []
-            for left, right in zip(left_padding, right_padding):
-                padding += [right, left]
-            padding = list(padding[::-1])
-            padded_decoded_x = F.pad(decoded_x, padding, mode='constant', value=0)
-            assert padded_decoded_x.shape == x.shape
-            return [encoded_x, padded_decoded_x]
+                # padding must remove N, C channels & reversed order
+                padding = []
+                for left, right in zip(left_padding, right_padding):
+                    padding += [right, left]
+                padding = list(padding[::-1])
+                padded_decoded_x = F.pad(decoded_x, padding, mode='constant', value=0)
+                assert padded_decoded_x.shape == x.shape
+                return [encoded_x, padded_decoded_x]
+            else:
+                # we need to crop the image
+                shape_difference = - shape_difference
+                left_crop = shape_difference // 2
+                right_crop = left_crop + shape_x
+                cropped_decoded_x = batch_crop(decoded_x, [0] + list(left_crop), [x.shape[1]] + list(right_crop))
+                return [encoded_x, cropped_decoded_x]
 
         return [encoded_x, decoded_x]
 

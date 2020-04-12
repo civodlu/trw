@@ -2,13 +2,39 @@ import collections
 import trw.train
 import os
 import torchvision
+import numpy as np
 
 
 def identity(batch):
     return batch
 
 
-def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_workers=5, data_processing_batch_size=200, normalize_0_1=False):
+def create_mnist_datasset(
+        batch_size=1000,
+        root=None,
+        transforms=None,
+        nb_workers=5,
+        data_processing_batch_size=200,
+        normalize_0_1=False,
+        select_classes_train=None,
+        select_classes_test=None):
+    """
+
+    Args:
+        batch_size:
+        root:
+        transforms:
+        nb_workers:
+        data_processing_batch_size:
+        normalize_0_1:
+        select_classes_train: a subset of classes to be selected for the
+            training split
+        select_classes_test: a subset of classes to be selected for the
+            test split
+
+    Returns:
+
+    """
     if root is None:
         # first, check if we have some environment variables configured
         root = os.environ.get('TRW_DATA_ROOT')
@@ -32,6 +58,9 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
     if normalize_0_1:
         normalization_factor = 255.0
     ds = {'images': train_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': train_dataset.targets}
+    if select_classes_train is not None:
+        indices = np.where(np.in1d(train_dataset.targets, np.asarray(select_classes_train)))
+        ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}
 
     if transforms is None:
         sequence = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size))
@@ -43,9 +72,12 @@ def create_mnist_datasset(batch_size=1000, root=None, transforms=None, nb_worker
 
     splits['train'] = sequence.collate()
 
-    splits['test'] = trw.train.SequenceArray(
-        {'images': test_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': test_dataset.targets},
-        trw.train.SamplerRandom(batch_size=batch_size)).collate()
+    ds = {'images': test_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': test_dataset.targets}
+    if select_classes_test is not None:
+        indices = np.where(np.in1d(test_dataset.targets, np.asarray(select_classes_test)))
+        ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}
+
+    splits['test'] = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size)).collate()
 
     # generate the class mapping
     mapping = dict()

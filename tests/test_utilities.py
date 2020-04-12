@@ -151,3 +151,14 @@ class TestUtilities(TestCase):
         same = targets[samples_0] == targets[samples_1]
 
         assert (same == same_target).all()
+
+    def test_sub_tensor(self):
+        t = torch.randn([5, 10])
+        sub_t = trw.train.sub_tensor(t, [2, 3], [4, 8])
+        sub_t2 = t[2:4, 3:8]
+        assert sub_t.shape == sub_t2.shape
+        assert (sub_t == sub_t2).all()
+
+        # make sure we reference the same underlying tensor
+        sub_t[0, 0] = 42
+        assert sub_t2[0, 0] == 42

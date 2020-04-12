@@ -396,3 +396,10 @@ class TestTransform(TestCase):
         assert image[0, 0] == 1
         assert image[0, 1] == 2
         assert image[0, 2] == 3
+
+    def test_batch_crop(self):
+        i = np.random.randint(0, 100, [16, 20, 24, 28])
+
+        c = trw.transforms.batch_crop(i, [10, 11, 12], [12, 15, 20])
+        assert c.shape == (16, 2, 4, 8)
+        assert (c == i[:, 10:12, 11:15, 12:20]).all()

@@ -5,7 +5,7 @@ implementation for each augmentation so that we could if perform it on GPU
 Transforms are designed to work for n-dimensional data.
 """
 
-from .crop import transform_batch_random_crop
+from .crop import transform_batch_random_crop, batch_crop
 from .pad import transform_batch_pad_numpy, transform_batch_pad_torch, transform_batch_pad
 from .flip import flip
 from .copy import copy

@@ -36,7 +36,7 @@ def callbacks_per_loss_term(
     for loss_term_name, loss_term in loss_terms.items():
         for loss_term_inclusion in loss_terms_inclusion:
             if loss_term_inclusion in loss_term:
-                batch['term_{}_{}'.format(loss_term_name, loss_term_inclusion)] = loss_term[loss_term_inclusion]
+                batch[f'term_{loss_term_name}_{loss_term_inclusion}'] = loss_term[loss_term_inclusion]
 
     for feature_exclusion in feature_exclusions:
         if feature_exclusion in batch:
@@ -95,7 +95,7 @@ class CallbackExportSamples2(callback.Callback):
         self.max_samples = max_samples
         self.table_name = table_name
         if loss_terms_inclusion is None:
-            self.loss_terms_inclusion = ['output']
+            self.loss_terms_inclusion = ['output', 'output_raw', 'loss']
         else:
             self.loss_terms_inclusion = loss_terms_inclusion
 
