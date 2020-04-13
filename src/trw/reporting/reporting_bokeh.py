@@ -6,10 +6,9 @@ import functools
 import collections
 from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
-from bokeh.core.property.dataspec import DistanceSpec
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
-    CategoricalColorMapper, HoverTool, Range1d, LinearColorMapper, ColorBar, BasicTicker, FixedTicker, NumberFormatter
+    CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter
 from bokeh.models.widgets import Panel, Tabs, Div
 from bokeh.io import output_file, show, curdoc
 from bokeh.plotting import figure, Figure
@@ -142,10 +141,9 @@ def process_data_samples__tabular(options, data, data_types, type_categories):
     filtered_data = filter_large_data(options, data)
     data_source = ColumnDataSource(filtered_data)
 
-    # vertical-align: bottom;
-    # overflow: visible;
-    # line-height: 200;
-    # TODO TRANSPARENT BACKGROUND
+    # custom CSS to slightly rotate the column header
+    # and draw text outside their respective columns
+    # to improve readability. TODO That could be improved
     div = Div(text="""
     <style>
     .trw_reporting_table .slick-header-column {
@@ -163,19 +161,16 @@ def process_data_samples__tabular(options, data, data_types, type_categories):
     }
     </style>
     """)
-
-    # slick-header-column
     div.visible = False  # hide the div to avoid position issues
 
-    # TODO rotate header. Maybe similar to
-    #   https://stackoverflow.com/questions/56762827/how-to-align-headers-in-bokeh-tablecolumn
-    #   and use CSS
-    #   https://css-tricks.com/rotated-table-column-headers/
-    #   Bokeh styling https://medium.com/y-data-stories/python-and-bokeh-part-iii-tutorial-116aa2e873eb
     row_height = options.font_size
     if with_images:
         row_height = options.image_size
-    data_table = DataTable(source=data_source, columns=columns, row_height=row_height, css_classes=["trw_reporting_table"])   #
+    data_table = DataTable(
+        source=data_source,
+        columns=columns,
+        row_height=row_height,
+        css_classes=["trw_reporting_table"])
     return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title='Tabular')
 
 
@@ -751,6 +746,7 @@ def normalize_data(options, data, table_name):
         'subsampling_factor',
         default='1.0')
     subsampling_factor = float(subsampling_factor)
+    assert subsampling_factor <= 1.0, 'sub-sampling factor must be <= 1.0'
     if subsampling_factor != 1.0:
         nb_samples = int(len_batch(d) * subsampling_factor)
         d = {
@@ -765,7 +761,7 @@ def normalize_data(options, data, table_name):
                 d[n] = list(np.core.defchararray.add(np.asarray([f'{appname}/']), d[n]))
 
             if 'BLOB_IMAGE' in t:
-                type_categories[n] = DataCategory.DiscreteUnordered
+                type_categories[n] = DataCategory.Other
 
     # load the numpy arrays
     for name, t in list(types.items()):
@@ -821,18 +817,18 @@ def normalize_data(options, data, table_name):
     return d, types, type_categories
 
 
-def process_data_samples(options, connexion, name):
+def process_data_samples(options, connection, name):
     """
 
     Args:
         options:
-        connexion:
+        connection:
         name:
 
     Returns:
 
     """
-    data, types, type_categories = normalize_data(options, get_table_data(connexion, name), table_name=name)
+    data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
 
     tabs = []
     if options.data_samples.display_tabular:
