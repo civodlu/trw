@@ -316,41 +316,85 @@ def filter_large_data(options, data):
     return filtered_data
 
 
-def render_data(options, data, data_types, type_categories, scatter_x, scatter_y, color_by, color_scheme, icon, label_with, layout):
-    print('render command STARTED')
-
-    # keep track of a previously drawn figure
+def render_data(
+        options, data, data_types, type_categories, scatter_x, scatter_y, binning_x_axis,
+        color_by, color_scheme, icon, label_with, layout):
     previous_figure = None
-    if len(layout.children) >= 2 and isinstance(layout.children[1], Figure):
-        previous_figure = layout.children[1]
 
-    # remove the "color by" legend panel & other figures
     while len(layout.children) >= 2:
         layout.children.pop()
+
+    if len(binning_x_axis.value) > 0 and binning_x_axis.value != 'None':
+        scatter_values = data[binning_x_axis.value]
+        unique_values = set(list(scatter_values))
+        unique_values = list(sorted(unique_values))
+
+        groups = []
+        for value in unique_values:
+            group = np.where(np.asarray(scatter_values) == value)
+            groups.append(group)
+    else:
+        nb_data = utilities.len_batch(data)
+        groups = [[np.arange(nb_data)]]
 
     # remove very large data, this will be communicated to the client and this is
     # very slow!
     data = filter_large_data(options, data)
 
+    x_range = None
+    y_range = None
+    for group_n, group in enumerate(groups):
+        # copy the data: there were some display issues if not
+        subdata = {name: list(np.asarray(value)[group[0]]) for name, value in data.items()}
+        data_source = ColumnDataSource(subdata)
+        nb_data = len(group[0])
+        group = [np.arange(nb_data)]
+
+        layout_children = render_data_frame(
+            f'fig{group_n}', options, data_source,
+            subdata,
+            group, data_types, type_categories, scatter_x,
+            scatter_y, color_by, color_scheme, icon, label_with, previous_figure)
+
+        if x_range is None:
+            x_range = layout_children[0].children[0].x_range
+            y_range = layout_children[0].children[0].y_range
+        else:
+            layout_children[0].children[0].x_range = x_range
+            layout_children[0].children[0].y_range = y_range
+
+        for c in layout_children:
+            layout.children.append(c)
+
+
+def render_data_frame(fig_name, options, data_source, data, groups, data_types, type_categories, scatter_x, scatter_y, color_by, color_scheme, icon, label_with, previous_figure):
+    print('render command STARTED, nb_samples=', len(groups[0]))
     # re-create a new figure each time... there are too many bugs currently in bokeh
     # to support dynamic update of the data
-    fig = prepare_new_figure(data, data_types)
+    fig = prepare_new_figure(options, data, data_types)
+
+    # TODO for non-modifying changes, reuse the previous locations (e.g colormap changes)
+    """
     if previous_figure is not None:
+        print('REUSING RANGE!!')
         # make sure the range of the previous and new picture are sync
         fig.x_range = previous_figure.x_range
         fig.y_range = previous_figure.y_range
-    layout_children = [row(fig, sizing_mode='scale_height')]
+        """
+    layout_children = [row(fig, sizing_mode='scale_both')] #[fig] #[row(fig, sizing_mode='scale_height')]
 
     nb_data = utilities.len_batch(data)
-    fig.title.text = f'Samples selected: {nb_data}'
+    fig.title.text = f'Samples selected: {len(groups[0])}'
     fig.renderers.clear()
     fig.yaxis.visible = False
     fig.xaxis.visible = False
 
-    data_source = ColumnDataSource(data)
-    if 'data_x' not in data_source.column_names:
-        data_source.add(np.zeros(nb_data, np.float32), 'data_x')
-        data_source.add(np.zeros(nb_data, np.float32), 'data_y')
+    data_x_name = f'{fig_name}_data_x'
+    data_y_name = f'{fig_name}_data_y'
+
+    if data_x_name not in data_source.column_names:
+        data_source.add(np.zeros(nb_data, np.float32), data_x_name)
+        data_source.add(np.zeros(nb_data, np.float32), data_y_name)
         data_source.add([None] * nb_data, 'color_by')
 
     fig.xaxis.axis_label = scatter_x.value
@@ -371,13 +415,12 @@ def render_data(options, data, data_types, type_categories, scatter_x, scatter_y
     if scatter_x is not None:
         groups, groups_layout_x = scatter(
             data,
-            [np.arange(nb_data)],
+            groups,
             scatter_x,
             type_category=type_categories[scatter_x])
         groups = groups[0]
     else:
         # consider all the points as x
-        groups = [np.arange(nb_data)]
         groups_layout_x = [{'value': '', 'type': 'discrete'}]
 
     if scatter_y is not None:
@@ -424,8 +467,8 @@ def render_data(options, data, data_types, type_categories, scatter_x, scatter_y
 
     sync_groups_coordinates(options, data_x, data_y, groups, groups_layout_y, groups_layout_x)
 
-    data_source.data['data_x'] = data_x
-    data_source.data['data_y'] = data_y
+    data_source.data[data_x_name] = data_x
+    data_source.data[data_y_name] = data_y
 
     if color_by is not None:
         # prepare the colors
@@ -493,17 +536,17 @@ def render_data(options, data, data_types, type_categories, scatter_x, scatter_y
             # many points close by, we can zoom in to isolate the samples
             units = 'screen'
 
-        fig.image_url(url=icon.value, x='data_x', y='data_y',
+        fig.image_url(url=icon.value, x=data_x_name, y=data_y_name,
                       h=options.image_size, h_units=units,
                       w=options.image_size, w_units=units,
                       anchor="center", source=data_source)
-        fig.rect(x='data_x', y='data_y', width=options.image_size, height=options.image_size, width_units=units, height_units=units, source=data_source, fill_alpha=0, line_alpha=0)
+        fig.rect(x=data_x_name, y=data_y_name, width=options.image_size, height=options.image_size, width_units=units, height_units=units, source=data_source, fill_alpha=0, line_alpha=0)
     
         if color_by is not None:
             fig.rect(
                 source=data_source,
-                x='data_x',
-                y='data_y',
+                x=data_x_name,
+                y=data_y_name,
                 width=options.image_size - options.style.color_by_line_width,  # TODO data space mixed with screen space
                 height=options.image_size - options.style.color_by_line_width,
                 line_color=fill_color,
@@ -513,9 +556,9 @@ def render_data(options, data, data_types, type_categories, scatter_x, scatter_y
             )
 
     elif icon.value == 'Icon':
-        fig.oval(x='data_x', y='data_y', width=options.image_size, height=options.image_size, width_units='data', height_units='data', source=data_source, fill_color=fill_color)
+        fig.oval(x=data_x_name, y=data_y_name, width=options.image_size, height=options.image_size, width_units='data', height_units='data', source=data_source, fill_color=fill_color)
     elif icon.value == 'Dot':
-        fig.circle(x='data_x', y='data_y', size=5, source=data_source, line_color='black', fill_color=fill_color)
+        fig.circle(x=data_x_name, y=data_y_name, size=5, source=data_source, line_color='black', fill_color=fill_color)
     else:
         raise NotImplementedError()
 
@@ -571,9 +614,8 @@ def render_data(options, data, data_types, type_categories, scatter_x, scatter_y
     else:
         fig.yaxis.visible = False
 
-    for c in layout_children:
-        layout.children.append(c)
     print('render command DONE')
+    return layout_children
 
 
 def make_custom_tooltip(options, data, data_types):
@@ -606,7 +648,7 @@ def make_custom_tooltip(options, data, data_types):
     return '<div>' + div_style + '\n'.join(tips) + '</div>'
 
 
-def prepare_new_figure(data, data_types):
+def prepare_new_figure(options, data, data_types):
     tools = 'pan,wheel_zoom,reset'
     f = figure(
         title='',
@@ -640,8 +682,6 @@ def process_data_samples__scatter(options, name, data, data_types, type_categori
     color_scheme = Select(title='Color scheme', options=['Viridis256', 'Magma256', 'Greys256', 'Turbo256'], value=default_color_scheme)
     default_binning_x_axis = safe_lookup(options.config, name, 'default', 'Binning X Axis', default='None')
     binning_x_axis = Select(title='Binning X Axis', options=values, value=default_binning_x_axis)
-    default_binning_y_axis = safe_lookup(options.config, name, 'default', 'Binning Y Axis', default='None')
-    binning_y_axis = Select(title='Binning Y Axis', options=values, value=default_binning_y_axis)
     default_label_with = safe_lookup(options.config, name, 'default', 'Label with', default='None')
     label_with = Select(title='Label with', options=values, value=default_label_with)
 
@@ -659,7 +699,6 @@ def process_data_samples__scatter(options, name, data, data_types, type_categori
         color_by,
         color_scheme,
         binning_x_axis,
-        binning_y_axis,
         icon,
         label_with
     ]
@@ -676,6 +715,7 @@ def process_data_samples__scatter(options, name, data, data_types, type_categori
         type_categories=type_categories,
         scatter_x=scatter_x_axis,
         scatter_y=scatter_y_axis,
+        binning_x_axis=binning_x_axis,
         color_by=color_by,
         color_scheme=color_scheme,
         icon=icon,
@@ -953,4 +993,7 @@ if __name__ == '__main__':
 
     options = create_default_reporting_options(config=config)
     options.image_size = 64
-    run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
+    run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)F
+
+    # run a static HTML page (i.e., the more complicated views requiring python v=callbacks will be disabled)
+    # report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))

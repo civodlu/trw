@@ -9,5 +9,7 @@ from .shift_scale import ShiftScale
 from .fcnn import FullyConvolutional
 from .unet import UNet
 from .convs_transpose import ConvsTransposeBase
+from .crop_or_pad import crop_or_pad_fun
 from .autoencoder_convolutional import AutoencoderConvolutional
+from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
 from .sub_tensor import SubTensor

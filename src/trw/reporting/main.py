@@ -8,6 +8,5 @@ import os
 #       bokeh serve mnist_cnn_r0 --show
 #
 trw.reporting.report(
-    #os.path.join(os.path.dirname(os.path.realpath(__file__)), 'reporting_sqlite.db'),
-    '/path/reporting_sqlite.db',
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), 'reporting_sqlite.db'),
     options=trw.reporting.create_default_reporting_options())

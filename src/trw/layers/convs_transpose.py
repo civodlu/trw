@@ -19,7 +19,8 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             dropout_probability=None,
             batch_norm_kwargs=None,
             lrn_kwargs=None,
-            last_layer_is_output=False):
+            last_layer_is_output=False,
+            squash_function=None):
         """
 
         Args:
@@ -34,6 +35,8 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             lrn_kwargs: the local response normalization kwargs. See the original torch functions for description. If
                 None, not LRN
             last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
+            squash_function: a function to be applied on the reconstuction. It is common to apply
+                for example ``torch.sigmoid``. If ``None``, no function applied
         """
         super().__init__()
 
@@ -87,6 +90,7 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             layers.append(nn.Sequential(*ops))
             prev = current
         self.layers = layers
+        self.squash_function = squash_function
 
     def forward_with_intermediate(self, x):
         r = []
@@ -94,12 +98,16 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             x = layer(x)
             r.append(x)
 
+        if self.squash_function is not None:
+            r[-1] = self.squash_function(r[-1])
         return r
 
     def forward_simple(self, x):
         for layer in self.layers:
             x = layer(x)
 
+        if self.squash_function is not None:
+            return self.squash_function(x)
         return x
 
     def forward(self, x):

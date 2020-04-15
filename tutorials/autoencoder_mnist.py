@@ -48,5 +48,5 @@ model, results = trainer.fit(
     run_prefix='mnist_autoencoder',
     model_fn=lambda options: Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
-        datasets=datasets, model=model, learning_rate=0.5))
+        datasets=datasets, model=model, learning_rate=0.25))
 

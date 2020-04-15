@@ -2,6 +2,8 @@ import trw
 import torch
 from unittest import TestCase
 
+from trw.layers import AutoencoderConvolutionalVariational
+
 
 class TestLayers(TestCase):
     def test_convs_base(self):
@@ -107,3 +109,50 @@ class TestLayers(TestCase):
         layer = trw.layers.SubTensor([0, 10, 15], [1, 14, 22])
         o = layer(i)
         assert o.shape == (5, 1, 4, 7)
+
+    def test_crop_or_pad__pad_only(self):
+        i = torch.randn([5, 1, 32, 32], dtype=torch.float32)
+        i_shaped = trw.layers.crop_or_pad_fun(i, (38, 40))
+        assert i_shaped.shape == (5, 1, 38, 40)
+        assert (i_shaped[:, :, 3:35, 4:36] == i).all()
+
+    def test_crop_or_pad__crop_only(self):
+        i = torch.randn([5, 1, 32, 32], dtype=torch.float32)
+        i_shaped = trw.layers.crop_or_pad_fun(i, (16, 20))
+        assert i_shaped.shape == (5, 1, 16, 20)
+        assert (i[:, :, 8:24, 6:26] == i_shaped).all()
+
+    def test_autoencoder_conv_var(self):
+        z_filters_in = 32
+        z_filters_out = 4
+
+        encoder = trw.layers.ConvsBase(
+            cnn_dim=2,
+            input_channels=1,
+            channels=[8, 16, z_filters_in],
+            convolution_kernels=3,
+            batch_norm_kwargs=None,
+        )
+
+        decoder = trw.layers.ConvsTransposeBase(
+            cnn_dim=2,
+            input_channels=z_filters_out,
+            channels=[32, 16, 8, 1],
+            strides=[2, 2, 2, 2],
+            convolution_kernels=3,
+            last_layer_is_output=True,
+            squash_function=torch.sigmoid
+        )
+
+        x = torch.randn([10, 1, 28, 28], dtype=torch.float32)
+        model = AutoencoderConvolutionalVariational(2, encoder, decoder, z_filters_in, z_filters_out)
+        recon, mu, logvar = model(x)
+
+        assert recon.shape == (10, 1, 28, 28)
+        assert mu.shape == (10, 4, 3, 3)
+        assert mu.shape == logvar.shape
+
+        loss_bce = AutoencoderConvolutionalVariational.loss_function(recon, x, mu, logvar, recon_loss_name='BCE')
+        assert loss_bce.shape == (10,)
+        loss_mse = AutoencoderConvolutionalVariational.loss_function(recon, x, mu, logvar, recon_loss_name='MSE')
+        assert loss_mse.shape == (10,)
