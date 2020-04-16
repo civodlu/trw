@@ -7,6 +7,10 @@ from trw.layers import flatten, OpsConversion, crop_or_pad_fun
 class AutoencoderConvolutionalVariational(nn.Module):
     """
     Variational convolutional autoencoder implementation
+
+    See good reference:
+        https://wiseodd.github.io/techblog/2016/12/10/variational-autoencoder/
+
     """
     def __init__(self, cnn_dim, encoder, decoder, z_input_filters, z_output_filters):
         """
@@ -30,20 +34,28 @@ class AutoencoderConvolutionalVariational(nn.Module):
         ops_conv = OpsConversion(cnn_dim)
 
         # keep the mu & logvar spatial dimensions
-        self.mu = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
-        self.logvar = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
+        self.z_mu = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
+
+        # in the original paper (Kingma & Welling 2015, we
+        # have a z_mean and z_var, but the problem is that
+        # the z_var can be negative, which would cause issues
+        # in the log later. Hence we assume that latent vector
+        # has a z_mean and z_log_var component, and when we need
+        # the regular variance or std_dev, we simply use
+        # an exponential function
+        self.z_logvar = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
 
     def encode(self, x):
         n = self.encoder(x)
         assert n.shape[1] == self.z_input_filters, f'expecting {self.z_input_filters} filters ' \
                                                    f'for the encoder, got={n.shape[1]}'
-        mu = self.mu(n)
-        logvar = self.logvar(n)
+        mu = self.z_mu(n)
+        logvar = self.z_logvar(n)
         return mu, logvar
 
     def forward(self, x):
         mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
+        z = self.reparameterize(self.training, mu, logvar)
         recon = self.decoder(z)
 
         # make the recon exactly the same size!
@@ -52,19 +64,24 @@ class AutoencoderConvolutionalVariational(nn.Module):
                                        f'problem with the decoded!'
         return recon, mu, logvar
 
-    def reparameterize(self, mu, logvar):
+    @staticmethod
+    def reparameterize(training, z_mu, z_logvar):
         """
         Use the reparameterization ``trick``: we need to generate a
         random normal *without* interrupting the gradient propagation.
 
         We only sample during training.
         """
-        if self.training:
-            std = torch.exp(0.5 * logvar)
+        if training:
+            # note that log(x^2) = 2*log(x); hence divide by 2 to get std_dev
+            # i.e., std_dev = exp(log(std_dev^2)/2) = exp(log(var)/2)
+            std = torch.exp(0.5 * z_logvar)
             eps = torch.randn_like(std)
-            return mu + eps * std
+            z = z_mu + eps * std
         else:
-            return mu
+            z = z_mu
+
+        return z
 
     @staticmethod
     def loss_function(recon_x, x, mu, logvar, recon_loss_name='BCE', kullback_leibler_weight=0.2):

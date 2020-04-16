@@ -7,6 +7,7 @@ from unittest import TestCase
 import sqlite3
 import numpy as np
 from trw.reporting import TableStream, export_sample
+from trw.reporting.table_sqlite import get_tables_name_and_role
 
 
 def get_table_values(connection, table_name):
@@ -53,6 +54,11 @@ class TestReportingTableSqlite(TestCase):
 
         values = get_table_values(connection, 'table_test')
         assert len(values) == 6
+
+        data_roles = get_tables_name_and_role(connection)
+        assert len(data_roles) == 1
+        assert len(data_roles[0]) == 2
+        assert data_roles[0] == ('table_test', 'role_test')
 
     def test_export_batch(self):
         tmp_folder = tempfile.mkdtemp()

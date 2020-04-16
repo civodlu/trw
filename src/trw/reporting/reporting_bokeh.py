@@ -993,7 +993,8 @@ if __name__ == '__main__':
 
     options = create_default_reporting_options(config=config)
     options.image_size = 64
-    run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
+    #run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
+
 
     # run a static HTML page (i.e., the more complicated views requiring python v=callbacks will be disabled)
     # report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))
