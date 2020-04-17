@@ -84,7 +84,7 @@ class MetricSegmentationDice(Metric):
     Calculate the average dice score of a segmentation map 'output_truth' and class
     segmentation probabilities 'output_raw'
     """
-    def __init__(self, dice_fn=losses.LossDiceMulticlass(return_dice_by_class=True)):
+    def __init__(self, dice_fn=losses.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)):
         self.dice_fn = dice_fn
 
     def __call__(self, outputs):
@@ -106,7 +106,7 @@ class MetricSegmentationDice(Metric):
 
     @staticmethod
     def aggregate_metrics(metric_by_batch):
-        sum_dices = metric_by_batch[0]['dice_by_class']
+        sum_dices = metric_by_batch[0]['dice_by_class'].copy()
         for m in metric_by_batch[1:]:
             sum_dices += m['dice_by_class']
 

@@ -2,7 +2,8 @@ import trw
 import torch
 from unittest import TestCase
 
-from trw.layers import AutoencoderConvolutionalVariational
+from trw.layers import AutoencoderConvolutionalVariational, AutoencoderConvolutionalVariationalConditional
+from trw.train.losses import one_hot
 
 
 class TestLayers(TestCase):
@@ -123,36 +124,68 @@ class TestLayers(TestCase):
         assert (i[:, :, 8:24, 6:26] == i_shaped).all()
 
     def test_autoencoder_conv_var(self):
-        z_filters_in = 32
-        z_filters_out = 4
+        z_size = 20
 
         encoder = trw.layers.ConvsBase(
             cnn_dim=2,
             input_channels=1,
-            channels=[8, 16, z_filters_in],
+            channels=[8, 16, 32],
             convolution_kernels=3,
             batch_norm_kwargs=None,
         )
 
         decoder = trw.layers.ConvsTransposeBase(
             cnn_dim=2,
-            input_channels=z_filters_out,
+            input_channels=z_size,
             channels=[32, 16, 8, 1],
             strides=[2, 2, 2, 2],
             convolution_kernels=3,
             last_layer_is_output=True,
-            squash_function=torch.sigmoid
+            squash_function=torch.sigmoid,
+            paddings=0
         )
 
         x = torch.randn([10, 1, 28, 28], dtype=torch.float32)
-        model = AutoencoderConvolutionalVariational(2, encoder, decoder, z_filters_in, z_filters_out)
+        model = AutoencoderConvolutionalVariational([1, 1, 28, 28], encoder, decoder, z_size)
         recon, mu, logvar = model(x)
 
         assert recon.shape == (10, 1, 28, 28)
-        assert mu.shape == (10, 4, 3, 3)
+        assert mu.shape == (10, 20)
         assert mu.shape == logvar.shape
 
         loss_bce = AutoencoderConvolutionalVariational.loss_function(recon, x, mu, logvar, recon_loss_name='BCE')
         assert loss_bce.shape == (10,)
         loss_mse = AutoencoderConvolutionalVariational.loss_function(recon, x, mu, logvar, recon_loss_name='MSE')
         assert loss_mse.shape == (10,)
+
+    def test_autoencoder_conv_var_conditional(self):
+        z_size = 20
+        y_size = 5
+
+        encoder = trw.layers.ConvsBase(
+            cnn_dim=2,
+            input_channels=1,
+            channels=[8, 16, 32],
+            convolution_kernels=3,
+            batch_norm_kwargs=None,
+        )
+
+        decoder = trw.layers.ConvsTransposeBase(
+            cnn_dim=2,
+            input_channels=z_size + y_size,
+            channels=[32, 16, 8, 1],
+            strides=[2, 2, 2, 2],
+            convolution_kernels=3,
+            last_layer_is_output=True,
+            squash_function=torch.sigmoid,
+            paddings=0
+        )
+
+        y = one_hot(torch.tensor([0] * 10, dtype=torch.long), y_size)
+        x = torch.randn([10, 1, 28, 28], dtype=torch.float32)
+        model = AutoencoderConvolutionalVariationalConditional([1, 1, 28, 28], encoder, decoder, z_size, y_size=y_size)
+        recon, mu, logvar = model(x, y)
+
+        assert recon.shape == (10, 1, 28, 28)
+        assert mu.shape == (10, z_size)
+        assert mu.shape == logvar.shape

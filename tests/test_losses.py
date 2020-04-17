@@ -4,6 +4,9 @@ import torch
 import torch.nn as nn
 from unittest import TestCase
 
+from trw.train import LossContrastive
+from trw.train.metrics import MetricSegmentationDice
+
 
 class IdNetCenterLoss(nn.Module):
     def __init__(self):
@@ -275,7 +278,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([e1_found_channel0, e1_found_channel1, e2_found_channel0, e2_found_channel1], dtype=np.float32).reshape((2, 2, 4, 3)))
-        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 4, 3)))
+        t2 = torch.from_numpy(np.asarray([targets, targets], dtype=np.int64))
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
         l = loss(t1, t2).numpy()
@@ -284,6 +287,23 @@ class TestLosses(TestCase):
         expected_dice_class1 = [2 * 2 / (2 + 3), 2 * 3 / (3 + 3)]
         assert abs(l[0] - (sum(expected_dice_class0) / 2)) < 1e-5
         assert abs(l[1] - (sum(expected_dice_class1) / 2)) < 1e-5
+
+        # test jointly the metric
+        output = {
+            'output_truth': t2,
+            'output_raw': t1
+        }
+        metric = MetricSegmentationDice()
+        metric_values = metric(output)
+        assert np.abs(metric_values['dice_by_class'] - l).max() < 1e-4
+
+        # test aggregated batches
+        aggregated_metric_values = metric.aggregate_metrics([metric_values, metric_values])
+
+        average_dice = (1 - l).mean()
+        assert abs(average_dice - aggregated_metric_values['1-dice']) < 1e-5
+        assert abs((1 - l)[0] - aggregated_metric_values['1-dice[class=0]']) < 1e-5
+        assert abs((1 - l)[1] - aggregated_metric_values['1-dice[class=1]']) < 1e-5
 
     def test_focal_loss_binary_id(self):
         # in this configuration, the cross entropy loss and the focal loss MUST be identical
@@ -387,3 +407,32 @@ class TestLosses(TestCase):
         )
 
         assert (expected_centers - centers).abs().sum() < 1e-3
+
+    def test_contrastive_loss(self):
+        # dissimilar pairs outside radius contributes to 0 loss
+        x0 = torch.tensor([[0], [-1]])
+        x1 = torch.tensor([[5], [-5]])
+        losses = LossContrastive(margin=3)(x0, x1, torch.zeros([2]))
+        assert len(losses) == 2
+        assert (losses <= 0).all()
+
+        # for similar pairs, loss is the distance between the samples
+        x0 = torch.tensor([[1], [2]])
+        x1 = torch.tensor([[2], [4]])
+        losses = LossContrastive(margin=1)(x0, x1, torch.ones([2]))
+        assert len(losses) == 2
+
+        expected_loss = (x0 - x1) * (x0 - x1) * 0.5
+        assert (expected_loss.squeeze() - losses).abs().max() <= 1e-3
+
+    def test_total_variation_2d(self):
+        x = torch.tensor([[1, 3, 0], [0, 0, 0]], dtype=torch.float32).unsqueeze(0).unsqueeze(0)  # must be in NCHW
+        tv = trw.train.total_variation_norm(x, 2)
+        expected = ((1 - 0) ** 2 + (3 - 0) ** 2) / 3 + ((1 - 3) ** 2 + (3 - 0) ** 2) / (2 * (3 - 1))
+        assert abs(tv - expected) < 1e-5
+
+    def test_total_variation_3d(self):
+        x = torch.ones([10, 1, 5, 6, 7])
+        tv = trw.train.total_variation_norm(x, 2)
+        # no variation, so expect a 0 loss
+        assert abs(tv - 0) < 1e-5

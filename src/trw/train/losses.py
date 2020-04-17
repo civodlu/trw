@@ -63,7 +63,8 @@ class LossDiceMulticlass(nn.Module):
         assert len(output.shape) > 2
         assert len(output.shape) == len(target.shape) + 1, 'output: must have W x C x d0 x ... x dn shape and ' \
                                                            'target: must have W x d0 x ... x dn shape'
-        
+        assert output.shape[0] == target.shape[0]
+
         if self.normalization is not None:
             output = self.normalization(output)
 
@@ -241,6 +242,12 @@ class LossCenter(nn.Module):
 class LossContrastive(torch.nn.Module):
     """
     Implementation of the contrastive loss.
+    
+    L(x0, x1, y) = 0.5 * (1 - y) * d(x0, x1)^2 + 0.5 * y * max(0, m - d(x0, x1))^2
+
+    with y = 0 for samples x0 and x1 deemed dissimilar while y = 1 for similar samples. Dissimilar pairs
+    contribute to the loss function only if their distance is within this radius ``m`` and minimize d(x0, x1)
+    over the set of all similar pairs.
 
     See Dimensionality Reduction by Learning an Invariant Mapping, Raia Hadsell, Sumit Chopra, Yann LeCun, 2006.
     """

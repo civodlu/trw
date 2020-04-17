@@ -1,3 +1,6 @@
+import collections
+import numbers
+
 import torch.nn as nn
 from trw.layers import OpsConversion, div_shape, ModulelWithIntermediate
 
@@ -15,6 +18,7 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             channels,
             convolution_kernels=5,
             strides=1,
+            paddings=None,
             activation=nn.ReLU,
             dropout_probability=None,
             batch_norm_kwargs=None,
@@ -37,6 +41,7 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
             squash_function: a function to be applied on the reconstuction. It is common to apply
                 for example ``torch.sigmoid``. If ``None``, no function applied
+            paddings: the paddings added. If ``None``, half the convolution kernel will be used.
         """
         super().__init__()
 
@@ -49,6 +54,12 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             convolution_kernels = [convolution_kernels] * nb_convs
         if not isinstance(strides, list):
             strides = [strides] * nb_convs
+        if paddings is None:
+            paddings = [div_shape(kernel, 2) for kernel in convolution_kernels]
+        elif isinstance(paddings, numbers.Integral):
+            paddings = [paddings] * nb_convs
+        else:
+            assert isinstance(paddings, collections.Sequence) and len(paddings) == nb_convs
 
         assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
@@ -62,8 +73,7 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             current = channels[n]
             currently_last_layer = n + 1 == len(channels)
 
-            p = div_shape(convolution_kernels[n], 2)
-
+            p = paddings[n]
             ops = [ops_conv.decon_fn(
                 prev,
                 current,

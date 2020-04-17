@@ -46,7 +46,6 @@ from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
 from .callback_activation_statistics import CallbackActivationStatistics
 from .callback_zip_sources import CallbackZipSources
 from .callback_export_convolution_kernel import CallbackExportConvolutionKernel
-from .callback_export_segmentations import CallbackExportSegmentations
 
 from .callback_export_samples2 import CallbackExportSamples2
 

@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
-from trw.layers import flatten, OpsConversion, crop_or_pad_fun
+from trw.layers import flatten, crop_or_pad_fun
+import numpy as np
 
 
 class AutoencoderConvolutionalVariational(nn.Module):
@@ -12,29 +13,29 @@ class AutoencoderConvolutionalVariational(nn.Module):
         https://wiseodd.github.io/techblog/2016/12/10/variational-autoencoder/
 
     """
-    def __init__(self, cnn_dim, encoder, decoder, z_input_filters, z_output_filters):
+    def __init__(self, input_shape, encoder, decoder, z_size, input_type=torch.float32):
         """
 
         Args:
-            cnn_dim: the dimension of the input space. For example, 2 for 2D images or 3 for 3D image.
-            encoder: the encoder, taking input X and mapping to intermediate feature space Y
-            decoder: the decoder, taking input Z and mapping back to input space X. If the decoder output
-                is not X shaped, it will be padded or cropped to the right shape
-            z_input_filters: the number of filters of the last layer of the encoder. The bottleneck
-                is implemented as a N-d convolution
-            z_output_filters: the number of filters to be used for the bottleneck. The bottleneck
-                is implemented as a N-d convolution
+            input_shape: the shape, including the ``N`` and ``C`` components (e.g., [N, C, H, W...]) of
+                the encoder
+            encoder: the encoder taking ``x`` and returning an encoding to be mapped to a latent space
+            decoder: the decoder, taking input ``z`` and mapping back to input space ``x``. If the decoder output
+                is not ``x`` shaped, it will be padded or cropped to the right shape
+            z_size: the size of the latent variable
+            input_type: the type of ``x`` variable
         """
         super().__init__()
         self.decoder = decoder
         self.encoder = encoder
-        self.z_input_filters = z_input_filters
-        self.z_output_filters = z_output_filters
+        self.z_size = z_size
 
-        ops_conv = OpsConversion(cnn_dim)
-
-        # keep the mu & logvar spatial dimensions
-        self.z_mu = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
+        # calculate the encoding size
+        with torch.no_grad():
+            encoding = encoder(torch.zeros(input_shape, dtype=input_type))
+            # remove the N component, then multiply the rest
+            self.encoder_output_size = np.asarray(encoding.shape[1:]).prod()
+        self.cnn_dim = len(input_shape) - 2  # remove the N, C components
 
         # in the original paper (Kingma & Welling 2015, we
         # have a z_mean and z_var, but the problem is that
@@ -43,12 +44,13 @@ class AutoencoderConvolutionalVariational(nn.Module):
         # has a z_mean and z_log_var component, and when we need
         # the regular variance or std_dev, we simply use
         # an exponential function
-        self.z_logvar = ops_conv.conv_fn(z_input_filters, z_output_filters, kernel_size=1)
+        self.z_logvar = nn.Linear(self.encoder_output_size, z_size)
+        self.z_mu = nn.Linear(self.encoder_output_size, z_size)
 
     def encode(self, x):
         n = self.encoder(x)
-        assert n.shape[1] == self.z_input_filters, f'expecting {self.z_input_filters} filters ' \
-                                                   f'for the encoder, got={n.shape[1]}'
+        n = flatten(n)
+
         mu = self.z_mu(n)
         logvar = self.z_logvar(n)
         return mu, logvar
@@ -56,7 +58,10 @@ class AutoencoderConvolutionalVariational(nn.Module):
     def forward(self, x):
         mu, logvar = self.encode(x)
         z = self.reparameterize(self.training, mu, logvar)
-        recon = self.decoder(z)
+
+        shape = [z.shape[0], z.shape[1]] + [1] * self.cnn_dim
+        nd_z = z.view(shape)
+        recon = self.decoder(nd_z)
 
         # make the recon exactly the same size!
         recon = crop_or_pad_fun(recon, x.shape[2:])

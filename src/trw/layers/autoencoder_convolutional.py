@@ -1,8 +1,5 @@
 import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 from trw.layers import ModulelWithIntermediate, ConvsBase, ConvsTransposeBase, crop_or_pad_fun
-from trw.transforms import batch_crop
 
 
 class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):

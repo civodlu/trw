@@ -1,8 +1,10 @@
+import torch.nn as nn
 import torch
 import trw
-from torch import nn
-from trw.layers import AutoencoderConvolutionalVariational, crop_or_pad_fun
+from trw.layers import crop_or_pad_fun, AutoencoderConvolutionalVariational, \
+    AutoencoderConvolutionalVariationalConditional
 import matplotlib.pyplot as plt
+from trw.train.losses import one_hot
 
 
 class Net(nn.Module):
@@ -10,14 +12,18 @@ class Net(nn.Module):
         super().__init__()
         batch_norm_kwargs = {}
 
-        z_size = 50
+        z_filters_in = 128
+
+        self.latent_size = 40
+        self.y_size = 10
+
         activation = nn.LeakyReLU
 
         encoder = trw.layers.ConvsBase(
             cnn_dim=2,
             input_channels=1,
-            channels=[16, 32, 64],
-            convolution_kernels=[5, 5, 5],
+            channels=[16, 32, 64, z_filters_in],
+            convolution_kernels=[5, 5, 5, 5],
             strides=2,
             pooling_size=None,
             batch_norm_kwargs=batch_norm_kwargs,
@@ -26,9 +32,9 @@ class Net(nn.Module):
 
         decoder = trw.layers.ConvsTransposeBase(
             cnn_dim=2,
-            input_channels=z_size,
-            channels=[32, 16, 8, 1],
-            strides=[3, 2, 2, 2],
+            input_channels=self.latent_size + self.y_size,
+            channels=[64, 32, 16, 1],
+            strides=[1, 1, 1, 2],
             convolution_kernels=[5, 5, 5, 5],
             last_layer_is_output=True,
             # make sure the decoded image is within [0..1], required for
@@ -38,13 +44,16 @@ class Net(nn.Module):
             paddings=0
         )
 
-        self.autoencoder = AutoencoderConvolutionalVariational([1, 1, 28, 28], encoder, decoder, z_size)
+        self.autoencoder = AutoencoderConvolutionalVariationalConditional([1, 1, 28, 28], encoder, decoder, self.latent_size, self.y_size)
 
     def forward(self, batch):
         images = batch['images']
-        recon, mu, logvar = self.autoencoder.forward(images)
+        y = batch['targets']
+        device = trw.train.get_device(self)
+        y_one_hot = one_hot(y, 10).to(device)
+        recon, mu, logvar = self.autoencoder.forward(images, y_one_hot)
 
-        loss = self.autoencoder.loss_function(recon, images, mu, logvar, kullback_leibler_weight=0.1)
+        loss = AutoencoderConvolutionalVariational.loss_function(recon, images, mu, logvar, kullback_leibler_weight=0.1)
         return {
             'loss': trw.train.OutputLoss(loss),
             'recon': trw.train.OutputEmbedding(recon),
@@ -79,7 +88,7 @@ trainer = trw.train.Trainer(
 model, results = trainer.fit(
     options,
     inputs_fn=lambda: trw.datasets.create_mnist_datasset(normalize_0_1=1, batch_size=1024),
-    run_prefix='mnist_autoencoder_variational',
+    run_prefix='mnist_autoencoder_variational_conditional',
     model_fn=lambda options: Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(
         datasets=datasets, model=model, learning_rate=0.001, step_size=120, gamma=0.1))
@@ -87,7 +96,13 @@ model, results = trainer.fit(
 
 model.training = False
 nb_images = 40
-generated = model.autoencoder.decoder(torch.randn([nb_images, 50, 1, 1], dtype=torch.float32, device=trw.train.get_device(model)))
+
+device = trw.train.get_device(model)
+latent = torch.randn([nb_images, model.latent_size], device=device)
+y = one_hot(torch.ones([nb_images], dtype=torch.long, device=device) * 7, 10)
+latent_y = torch.cat([latent, y], dim=1)
+latent_y = latent_y.view(latent_y.shape[0], latent_y.shape[1], 1, 1)
+generated = model.autoencoder.decoder(latent_y)
 
 fig, axes = plt.subplots(nrows=1, ncols=nb_images, figsize=(nb_images, 2.5), sharey=True)
 decoded_images = crop_or_pad_fun(generated, [28, 28])

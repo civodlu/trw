@@ -12,4 +12,5 @@ from .convs_transpose import ConvsTransposeBase
 from .crop_or_pad import crop_or_pad_fun
 from .autoencoder_convolutional import AutoencoderConvolutional
 from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
+from .autoencoder_convolutional_variational_conditional import AutoencoderConvolutionalVariationalConditional
 from .sub_tensor import SubTensor
