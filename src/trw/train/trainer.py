@@ -33,7 +33,6 @@ from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
 from trw.train import callback_export_convolution_kernel
-from trw.train import callback_export_segmentations
 from trw.train import utilities
 
 logger = logging.getLogger(__name__)
@@ -550,7 +549,6 @@ def default_post_training_callbacks(
 
     if export_errors:
         callbacks.append(callback_export_classification_errors.CallbackExportClassificationErrors(discard_train=discard_train_error_export))
-        callbacks.append(callback_export_segmentations.CallbackExportSegmentations())
 
     callbacks += [
         callback_export_classification_report.CallbackExportClassificationReport(),
