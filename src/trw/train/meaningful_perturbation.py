@@ -13,7 +13,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-def default_optimizer(params, nb_iters, learning_rate=0.1):
+def default_optimizer(params, nb_iters, learning_rate=0.5):
     """
     Create a default optimizer for :class:`trw.train.MeaningfulPerturbation`
 
@@ -48,7 +48,7 @@ def create_inputs(batch, modified_input_name, modified_input):
         raise NotImplemented()
 
 
-def default_information_removal_smoothing(image, blurring_sigma=5, blurring_kernel_size=23):
+def default_information_removal_smoothing(image, blurring_sigma=5, blurring_kernel_size=23, explanation_for=None):
     """
     Default information removal (smoothing).
 
@@ -57,6 +57,7 @@ def default_information_removal_smoothing(image, blurring_sigma=5, blurring_kern
         blurring_sigma: the sigma of the blurring kernel used to "remove" information from the image
         blurring_kernel_size: the size of the kernel to be used. This is an internal parameter to approximate the gaussian kernel. This is exposed since
             in 3D case, the memory consumption may be high and having a truthful gaussian blurring is not crucial.
+        explanation_for: the class to explain
 
     Returns:
         a smoothed image
@@ -82,7 +83,7 @@ class MeaningfulPerturbation:
             self,
             model,
             iterations=150,
-            l1_coeff=0.01,
+            l1_coeff=0.1,
             tv_coeff=0.2,
             tv_beta=3,
             noise=0.2,
@@ -167,6 +168,7 @@ class MeaningfulPerturbation:
         # construct our gradient target
         model_device = utilities.get_device(self.model, batch=inputs)
         nb_samples = utilities.len_batch(inputs)
+        assert nb_samples == 1, 'only a single sample is handled at once! (TODO fix this!)'
 
         masks_by_feature = {}
         for input_name, input_value in inputs_with_gradient.items():
@@ -181,10 +183,13 @@ class MeaningfulPerturbation:
             # must have a SINGLE channel and decreased dim for all others
             mask_shape = [nb_samples, 1] + [d // self.mask_reduction_factor for d in img.shape[2:]]
             logging.info('mask size={}'.format(mask_shape))
-            mask = torch.ones(mask_shape, requires_grad=True, dtype=torch.float32, device=model_device)
+
+            # do not follow the paper (non-masked = 1) so that we can use tricks on the mask
+            # optimization (e.g., weight decay)
+            mask = torch.zeros(mask_shape, requires_grad=True, dtype=torch.float32, device=model_device)
 
             # https://discuss.pytorch.org/t/is-there-anyway-to-do-gaussian-filtering-for-an-image-2d-3d-in-pytorch/12351
-            blurred_img = self.information_removal_fn(img)
+            blurred_img = self.information_removal_fn(img, explanation_for=target_class)
             optimizer, scheduler = self.optimizer_fn([mask], self.iterations)
 
             assert self.iterations > 0
@@ -196,11 +201,12 @@ class MeaningfulPerturbation:
                 # make the same number of channels for the mask as there is in the image
                 upsampled_mask = upsampled_mask.expand([upsampled_mask.shape[0], img.shape[1]] + list(img.shape[2:]))
 
-                # Use the mask to perturbated the input image.
-                perturbated_input = img.mul(upsampled_mask) + blurred_img.mul(1 - upsampled_mask)
+                # Use the mask to perturbate the input image.
+                perturbated_input = img.mul(1 - upsampled_mask) + blurred_img.mul(upsampled_mask)
 
                 noise = torch.zeros(img.shape, device=model_device)
-                noise.normal_(mean=0, std=self.noise)
+                if self.noise > 0:
+                    noise.normal_(mean=0, std=self.noise)
 
                 perturbated_input = perturbated_input + noise
                 batch = create_inputs(inputs, input_name, perturbated_input)
@@ -213,9 +219,10 @@ class MeaningfulPerturbation:
                 # we want to minimize the number of mak voxels with 0 (l1 loss), keep the
                 # mask smooth (tv + mask upsampling), finally, we want to decrease the
                 # probability of `target_class`
-                l1 = self.l1_coeff * torch.mean(torch.abs(1 - mask))
+                l1 = self.l1_coeff * torch.mean(torch.abs(mask))
                 tv = self.tv_coeff * total_variation_norm(mask, self.tv_beta)
                 c = output[:, target_class]
+
                 loss = l1 + tv + c
 
                 if i == 0:
@@ -228,7 +235,6 @@ class MeaningfulPerturbation:
 
                 # Optional: clamping seems to give better results
                 mask.data.clamp_(0, 1)
-
 
                 if i % 20 == 0:
                     logger.info('iter={}, total_loss={}, l1_loss={}, tv_loss={}, c_loss={}'.format(
@@ -246,7 +252,7 @@ class MeaningfulPerturbation:
             logger.info('final output={}'.format(utilities.to_value(output)))
 
             masks_by_feature[input_name] = {
-                'mask': 1.0 - utilities.to_value(upsampled_mask),
+                'mask': utilities.to_value(upsampled_mask),
                 'perturbated_input': utilities.to_value(perturbated_input),
                 'smoothed_input': utilities.to_value(blurred_img),
                 'loss_c_start': c_start,

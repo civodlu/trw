@@ -86,6 +86,33 @@ class LossDiceMulticlass(nn.Module):
             return (numerator / denominator).mean(dim=0)  # average over samples
 
 
+class LossCrossEntropyCsiMulticlass(nn.Module):
+    """
+    Optimize a metric similar to ``Critical Success Index`` (CSI) on the cross-entropy
+
+    A loss for heavily unbalanced data (order of magnitude more negative than positive)
+    Calculate the cross-entropy and use only the loss using the TP, FP and FN. Loss from
+    TN is simply discarded.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, outputs, targets, important_class=1):
+        """
+        Args:
+            outputs: a N x C tensor with ``N`` the number of samples and ``C`` the number of classes
+            targets: a ``N`` integral tensor
+            important_class: the class to keep the cross-entropy loss even if classification is correct
+
+        Returns:
+            a ``N`` floating tensor representing the loss of each sample
+        """
+        ce = torch.nn.functional.cross_entropy(outputs, targets, reduction='none')
+        classification = outputs.argmax(dim=1)
+        w = ~ (classification == targets) | (classification == important_class)
+        return ce * w
+
+
 class LossFocalMulticlass(nn.Module):
     r"""
     This criterion is a implementation of Focal Loss, which is proposed in

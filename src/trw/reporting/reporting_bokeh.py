@@ -996,3 +996,4 @@ if __name__ == '__main__':
 
     # run a static HTML page (i.e., the more complicated views requiring python v=callbacks will be disabled)
     # report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))
+

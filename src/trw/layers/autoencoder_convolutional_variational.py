@@ -3,6 +3,7 @@ import torch.nn.functional as F
 import torch
 from trw.layers import flatten, crop_or_pad_fun
 import numpy as np
+from trw.train import get_device
 
 
 class AutoencoderConvolutionalVariational(nn.Module):
@@ -102,7 +103,7 @@ class AutoencoderConvolutionalVariational(nn.Module):
             mu: the mu encoding of x
             logvar: the logvar encoding of x
             recon_loss_name: the name of the reconstruction loss. Must be one of ``BCE`` (binary cross-entropy) or
-                ``MSE`` (mean squared error)
+                ``MSE`` (mean squared error) or ``L1``
             kullback_leibler_weight: the weight factor applied on the Kullback–Leibler divergence. This is to
                 balance the importance of the reconstruction loss and the Kullback–Leibler divergence
 
@@ -113,6 +114,8 @@ class AutoencoderConvolutionalVariational(nn.Module):
             recon_loss = F.binary_cross_entropy(recon_x, x, reduction='none')
         elif recon_loss_name == 'MSE':
             recon_loss = F.mse_loss(recon_x,  x)
+        elif recon_loss_name == 'L1':
+            recon_loss = torch.nn.PairwiseDistance(p=1, keepdim=True)(recon_x,  x)
         else:
             raise NotImplementedError(f'loss not implemented={recon_loss_name}')
         recon_loss = flatten(recon_loss).mean(dim=1)
@@ -125,3 +128,20 @@ class AutoencoderConvolutionalVariational(nn.Module):
         kullback_leibler = flatten(kullback_leibler).mean(dim=1)
 
         return recon_loss + kullback_leibler * kullback_leibler_weight
+
+    def sample(self, nb_samples):
+        """
+        Randomly sample from the latent space to generate random samples
+
+        Args:
+            nb_samples: the number of samples to generate
+
+        Notes:
+            the image may need to be cropped or padded to mach the learnt image shape
+        """
+        device = get_device(self)
+        random_z = torch.randn([nb_samples, self.z_size], dtype=torch.float32, device=device)
+        shape = [nb_samples, self.z_size] + [1] * self.cnn_dim
+        random_z = random_z.view(shape)
+        random_samples = self.decoder(random_z)
+        return random_samples

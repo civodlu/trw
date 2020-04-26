@@ -42,7 +42,7 @@ def model_summary(model, batch, logger):
                         [-1] + list(o.size())[1:] for o in output
                     ]
             else:
-                if not isinstance(output, collections.Mapping):
+                if output is not None and not isinstance(output, collections.Mapping):
                     summary[m_key]["output_shape"] = list(output.size())
                     summary[m_key]["output_shape"][0] = batch_size
                 else:

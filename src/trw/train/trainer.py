@@ -267,8 +267,9 @@ def train_loop(
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
             total_collate_and_postprocess_end = time.perf_counter()
             total_collate_and_postprocess += total_collate_and_postprocess_end - total_collate_and_postprocess_start
-            
-            optimizer.zero_grad()
+
+            if optimizer is not None:
+                optimizer.zero_grad()
     
             outputs = model(batch)
             
@@ -290,7 +291,8 @@ def train_loop(
                     callback(dataset_name, split_name, batch, loss_terms)
 
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
-            optimizer.step()
+            if optimizer is not None:
+                optimizer.step()
 
             # once we are done, we want to perform some cleanup. For example, we do NOT want to keep CUDA based
             # tensors in the output so we can run clean up to transfer CUDA based memory to numpy
@@ -428,12 +430,11 @@ def epoch_train_eval(
         dataset_outputs = collections.OrderedDict()
         for split_name, split in dataset.items():
             time_start = time.perf_counter()
-            if optimizers is not None and split_name == train_split_name:
+            if split_name == train_split_name:
                 # * only the split `train_split_name` is considered as training, all
                 # other splits are for evaluation only
-                # * if we don't have optimizers, we do NOT want to accumulate gradients
-                # due to memory constraints, we must use the `torch.no_grad` context manager
-                # so run it with the eval loop
+                # * if we don't have optimizers, we still want to have
+                # gradients (e.g., for model with their own internal optimizers)
                 all_loss_terms = train_loop_fn(
                     device,
                     dataset_name,
@@ -861,40 +862,39 @@ class Trainer:
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
             logger.info('pre-training callbacks completed!')
 
-        if optimizers is not None:
-            for epoch in range(num_epochs):
-                logger.info('started training epoch {}'.format(epoch))
-                run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
+        for epoch in range(num_epochs):
+            logger.info('started training epoch {}'.format(epoch))
+            run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
 
-                outputs_epoch, history_epoch = self.run_epoch_fn(
-                    options,
-                    datasets,
-                    optimizers,
-                    model,
-                    losses,
-                    schedulers,
-                    history,
-                    callbacks_per_batch,
-                    callbacks_per_batch_loss_terms,
-                    run_eval=run_eval)
-                history.append(history_epoch)
+            outputs_epoch, history_epoch = self.run_epoch_fn(
+                options,
+                datasets,
+                optimizers,
+                model,
+                losses,
+                schedulers,
+                history,
+                callbacks_per_batch,
+                callbacks_per_batch_loss_terms,
+                run_eval=run_eval)
+            history.append(history_epoch)
 
-                logger.info('finished training epoch {}'.format(epoch))
+            logger.info('finished training epoch {}'.format(epoch))
 
-                last_epoch = epoch + 1 == num_epochs
+            last_epoch = epoch + 1 == num_epochs
 
-                logger.info('callbacks started')
-                for callback in callbacks_per_epoch:
-                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                    #try:
-                    #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                    #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
-                    #except Exception as e:
-                    #    logger.error('callback={} failed with exception={}'.format(callback, e))
+            logger.info('callbacks started')
+            for callback in callbacks_per_epoch:
+                callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                         optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                #try:
+                #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                #except Exception as e:
+                #    logger.error('callback={} failed with exception={}'.format(callback, e))
 
-                logger.info('callbacks epoch {} finished'.format(epoch))
+            logger.info('callbacks epoch {} finished'.format(epoch))
 
         # finally run the post-training callbacks
         outputs_epoch = None

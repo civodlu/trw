@@ -27,7 +27,7 @@ class AutoencoderConvolutionalVariationalConditional(nn.Module):
             input_type: the type of ``x`` variable
         """
         super().__init__()
-        self.input_shape = input_shape
+        self.input_shape = tuple(input_shape)
         self.decoder = decoder
         self.encoder = encoder
         self.z_size = z_size
@@ -51,6 +51,7 @@ class AutoencoderConvolutionalVariationalConditional(nn.Module):
         self.z_mu = nn.Linear(self.encoder_output_size, z_size)
 
     def encode(self, x):
+        assert x.shape[1:] == self.input_shape[1:], f'expected shape=Nx{self.input_shape[1:]}, got=Nx{x.shape[1:]}'
         n = self.encoder(x)
         n = flatten(n)
 
@@ -58,16 +59,32 @@ class AutoencoderConvolutionalVariationalConditional(nn.Module):
         logvar = self.z_logvar(n)
         return mu, logvar
 
-    def forward(self, x, y):
-        mu, logvar = self.encode(x)
-        z = AutoencoderConvolutionalVariational.reparameterize(self.training, mu, logvar)
-        assert y.shape[0] == x.shape[0]
+    def decode(self, mu, logvar, y, sample_parameters=None):
+        if sample_parameters is None:
+            sample_parameters = self.training
+        z = AutoencoderConvolutionalVariational.reparameterize(sample_parameters, mu, logvar)
+        assert y.shape[0] == mu.shape[0]
         assert y.shape[1] == self.y_size
         z_y = torch.cat((z, y), dim=1)
 
         shape = [z_y.shape[0], z_y.shape[1]] + [1] * self.cnn_dim
         nd_z_y = z_y.view(shape)
         recon = self.decoder(nd_z_y)
+        return recon
+
+    def sample_given_y(self, y):
+        assert y.shape[1:] == (self.y_size,)
+        random_z = torch.randn([len(y), self.z_size], dtype=torch.float32, device=y.device)
+
+        random_encoding = torch.cat([random_z, y], dim=1)
+        shape = [random_encoding.shape[0], random_encoding.shape[1]] + [1] * self.cnn_dim
+        random_encoding = random_encoding.view(shape)
+        random_recon = self.decoder(random_encoding)
+        return random_recon
+
+    def forward(self, x, y):
+        mu, logvar = self.encode(x)
+        recon = self.decode(mu, logvar, y)
 
         # make the recon exactly the same size!
         recon = crop_or_pad_fun(recon, x.shape[2:])

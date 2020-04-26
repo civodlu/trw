@@ -43,11 +43,14 @@ class Net(nn.Module):
     def forward(self, batch):
         images = batch['images']
         recon, mu, logvar = self.autoencoder.forward(images)
+        random_samples = self.autoencoder.sample(len(images))
+        random_samples = crop_or_pad_fun(random_samples, images.shape[2:])
 
         loss = self.autoencoder.loss_function(recon, images, mu, logvar, kullback_leibler_weight=0.1)
         return {
             'loss': trw.train.OutputLoss(loss),
             'recon': trw.train.OutputEmbedding(recon),
+            'random_samples': trw.train.OutputEmbedding(random_samples)
         }
 
 

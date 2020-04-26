@@ -3,12 +3,12 @@ import pickle
 from unittest import TestCase
 import collections
 import numpy as np
-import torch.nn as nn
 import torch
 import torch.utils.data
 import trw.train
 import utils
 import functools
+import torch.nn as nn
 
 
 def create_simple_regression():
@@ -91,12 +91,36 @@ class ModelEmbedding(nn.Module):
         }
 
 
+class ModelEmbeddedOptimizer(nn.Module):
+    """
+    Model with an embedded optimizer
+    """
+    def __init__(self):
+        super().__init__()
+        self.model = ModelSimpleRegression()
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=0.02)
+
+    def forward(self, batch):
+        self.optimizer.zero_grad()
+        outputs = self.model(batch)
+        loss_term = outputs['regression'].evaluate_batch(batch, is_training=self.training)
+
+        mean_loss = loss_term['loss'].mean()
+
+        if mean_loss.requires_grad:
+            mean_loss.backward()
+            self.optimizer.step()
+
+        return {}
+
+
 def create_model(options):
     m = ModelSimpleRegression()
     return m
 
 
 optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.11)
+
 
 def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_batch_loss_terms=[]):
     return trw.train.Trainer(
@@ -105,6 +129,7 @@ def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_ba
         callbacks_post_training_fn=None,
         callbacks_per_batch_fn=lambda  : callback_per_batch
     )
+
 
 class TestTrainer(TestCase):
     def test_simple_regression(self):
@@ -209,3 +234,17 @@ class TestTrainer(TestCase):
 
         model2, results = trw.train.Trainer.load_model(path, pickle_module=pickle_module)
         assert (model2.w == model.w).all()
+
+    def test_embedded_optimizer(self):
+        options = trw.train.create_default_options(num_epochs=200)
+        trainer = create_trainer()
+        model, results = trainer.fit(
+            options,
+            inputs_fn=create_simple_regression,
+            model_fn=lambda options: ModelEmbeddedOptimizer(),
+            optimizers_fn=None,  # no optimizer: it is embedded in the model!
+            eval_every_X_epoch=2)
+
+        coef_found = trw.train.to_value(list(model.model.parameters())[0])
+        print(coef_found)
+        self.assertAlmostEqual(coef_found, 2.0, delta=1e-3)

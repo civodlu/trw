@@ -192,3 +192,14 @@ class TestOutput(TestCase):
         assert loss_term['output_ref'] is output
         assert loss_term['uid'] is batch['uid']
 
+    def test_output_classification_no_criterion(self):
+        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([1, 0], dtype=np.int64))
+
+        o = trw.train.OutputClassification(input_values, classes_name='target', criterion_fn=None)
+        batch = {'target': target_values}
+        r = o.evaluate_batch(batch, False)
+
+        loss = r['loss'].data.numpy()
+        self.assertTrue(loss == 0)
+

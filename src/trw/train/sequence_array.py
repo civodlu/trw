@@ -4,7 +4,6 @@ from trw.train import sequence
 from trw.train import sampler as sampler_trw
 from trw.train import utilities
 import numpy as np
-import torch
 import collections
 import copy
 

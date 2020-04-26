@@ -311,7 +311,8 @@ class OutputClassification(Output):
         Args:
             output: the raw output values
             classes_name: the name of the features to be used as target. Targets must be a 1D vector of integers
-            criterion_fn: the criterion to minimize between the output and the target
+            criterion_fn: the criterion to minimize between the output and the target. If ``None``, the returned
+                loss will be 0
             collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
             collect_only_non_training_output: if True, only the non-training splits will have the outputs collected
             metrics: the metrics to be reported each epoch
@@ -357,7 +358,10 @@ class OutputClassification(Output):
         #assert min_index >= 0, f'incorrect index! got={min_index}'
 
         loss_term = {}
-        losses = self.criterion_fn()(self.output, truth)
+        if self.criterion_fn is not None:
+            losses = self.criterion_fn()(self.output, truth)
+        else:
+            losses = torch.zeros(len(self.output), device=self.output.device)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert len(losses.shape) == 1, 'loss must be a 1D Tensor'
         assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'

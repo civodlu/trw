@@ -5,6 +5,7 @@ import torch.nn as nn
 from unittest import TestCase
 
 from trw.train import LossContrastive
+from trw.train.losses import LossCrossEntropyCsiMulticlass
 from trw.train.metrics import MetricSegmentationDice
 
 
@@ -410,15 +411,15 @@ class TestLosses(TestCase):
 
     def test_contrastive_loss(self):
         # dissimilar pairs outside radius contributes to 0 loss
-        x0 = torch.tensor([[0], [-1]])
-        x1 = torch.tensor([[5], [-5]])
+        x0 = torch.tensor([[0], [-1]], dtype=torch.float32)
+        x1 = torch.tensor([[5], [-5]], dtype=torch.float32)
         losses = LossContrastive(margin=3)(x0, x1, torch.zeros([2]))
         assert len(losses) == 2
         assert (losses <= 0).all()
 
         # for similar pairs, loss is the distance between the samples
-        x0 = torch.tensor([[1], [2]])
-        x1 = torch.tensor([[2], [4]])
+        x0 = torch.tensor([[1], [2]], dtype=torch.float32)
+        x1 = torch.tensor([[2], [4]], dtype=torch.float32)
         losses = LossContrastive(margin=1)(x0, x1, torch.ones([2]))
         assert len(losses) == 2
 
@@ -436,3 +437,21 @@ class TestLosses(TestCase):
         tv = trw.train.total_variation_norm(x, 2)
         # no variation, so expect a 0 loss
         assert abs(tv - 0) < 1e-5
+
+    def test_loss_ce_csi(self):
+        loss_fn = LossCrossEntropyCsiMulticlass()
+        targets = torch.tensor([0, 1, 2, 0, 1])
+        x = torch.tensor([
+            [0.1, 0, 0],  # no loss, TN
+            [0, 0.1, 0],  # keep loss, important class
+            [0, 0, 0.1],  # no loss, TN
+            [0, 0, 0.1],  # loss, error!
+            [0, 0, 0.1],  # loss, error!
+        ], dtype=torch.float32)
+
+        losses = loss_fn(x, targets)
+        assert losses[0] == 0
+        assert losses[1] > 0
+        assert losses[2] == 0
+        assert losses[3] > 0
+        assert losses[4] > 0

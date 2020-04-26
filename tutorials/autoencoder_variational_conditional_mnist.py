@@ -50,13 +50,18 @@ class Net(nn.Module):
         images = batch['images']
         y = batch['targets']
         device = trw.train.get_device(self)
-        y_one_hot = one_hot(y, 10).to(device)
+        y_one_hot = one_hot(y, self.y_size).to(device)
         recon, mu, logvar = self.autoencoder.forward(images, y_one_hot)
+
+        with torch.no_grad():
+            random_recon_y = one_hot(y, self.y_size)  # keep same distribution as data
+            random_recon = self.autoencoder.sample_given_y(random_recon_y)
 
         loss = AutoencoderConvolutionalVariational.loss_function(recon, images, mu, logvar, kullback_leibler_weight=0.1)
         return {
             'loss': trw.train.OutputLoss(loss),
             'recon': trw.train.OutputEmbedding(recon),
+            'random_recon': trw.train.OutputEmbedding(random_recon)
         }
 
 
@@ -73,7 +78,7 @@ def per_epoch_fn():
 
 def pos_training_fn():
     return [
-        trw.train.CallbackExportSamples2(max_samples=500),
+        trw.train.CallbackExportSamples2(max_samples=1000),
         trw.train.CallbackSaveLastModel()
     ]
 

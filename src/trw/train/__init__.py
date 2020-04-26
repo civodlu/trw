@@ -63,7 +63,7 @@ from .metrics import Metric, MetricClassificationError, MetricClassificationSens
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
-    total_variation_norm
+    total_variation_norm, LossCrossEntropyCsiMulticlass
 from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing
