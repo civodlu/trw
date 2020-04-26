@@ -440,7 +440,7 @@ class TestLosses(TestCase):
 
     def test_loss_ce_csi(self):
         loss_fn = LossCrossEntropyCsiMulticlass()
-        targets = torch.tensor([0, 1, 2, 0, 1])
+        targets = torch.tensor([0, 1, 2, 0, 1], dtype=torch.long)
         x = torch.tensor([
             [0.1, 0, 0],  # no loss, TN
             [0, 0.1, 0],  # keep loss, important class

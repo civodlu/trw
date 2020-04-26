@@ -110,7 +110,7 @@ class LossCrossEntropyCsiMulticlass(nn.Module):
         ce = torch.nn.functional.cross_entropy(outputs, targets, reduction='none')
         classification = outputs.argmax(dim=1)
         w = ~ (classification == targets) | (classification == important_class)
-        return ce * w
+        return ce * w.type(ce.dtype)
 
 
 class LossFocalMulticlass(nn.Module):
