@@ -168,7 +168,8 @@ class TestTrainer(TestCase):
         diff = np.abs(truth - found)
         self.assertTrue(np.max(diff) == 0.0)
 
-        # expected same (result is done in in eval mode)
+        # expected same (result is done in in ``eval`` mode for the training loop to remove
+        # dropout and additional training during eval)
         truth = results['outputs']['simple']['train']['regression']['output_truth']
         found = results['outputs']['simple']['train']['regression']['output']
         diff = np.abs(truth - found)

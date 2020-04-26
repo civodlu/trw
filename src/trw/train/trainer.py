@@ -221,7 +221,8 @@ def train_loop(
         history,
         callbacks_per_batch,
         callbacks_per_batch_loss_terms,
-        apply_backward=True):
+        apply_backward=True,
+        force_eval_mode=False):
     """
     Run the train loop (i.e., the model parameters will be updated)
 
@@ -241,9 +242,14 @@ def train_loop(
         callbacks_per_batch: the callbacks to be performed on each batch. if `None`, no callbacks to be run
         callbacks_per_batch_loss_terms: the callbacks to be performed on each loss term. if `None`, no callbacks to be run
         apply_backward: if True, the gradient will be back-propagated
+        force_eval_mode: if True, the model will be in eval mode (e.g., for the model statistics of the
+            final iteration)
     """
     # make sure the model is in training mode (e.g., batch norm, dropout)
-    model.train()
+    if force_eval_mode:
+        model.eval()
+    else:
+        model.train()
 
     all_loss_terms = []
     
@@ -393,6 +399,7 @@ def epoch_train_eval(
         callbacks_per_batch,
         callbacks_per_batch_loss_terms,
         run_eval,
+        force_eval_mode,
         eval_loop_fn=eval_loop,
         train_loop_fn=train_loop):
     """
@@ -411,6 +418,9 @@ def epoch_train_eval(
     :param run_eval: if True, run the evaluation
     :param eval_loop_fn: the eval function to be used
     :param train_loop_fn: the train function to be used
+    :param force_eval_mode: if ``True``, the train will must be performed in ``module.eval()`` mode.
+        This can be used to collect the model statistics of the last iteration without for example
+        dropout layer applied.
     :return:
     """
     device = options['workflow_options']['device']
@@ -445,7 +455,8 @@ def epoch_train_eval(
                     loss_fn,
                     history,
                     callbacks_per_batch=callbacks_per_batch,
-                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms)
+                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms,
+                    force_eval_mode=force_eval_mode)
             else:
                 if not run_eval or eval_loop_fn is None:
                     # we should not run the evaluation. Skip this!
@@ -876,7 +887,8 @@ class Trainer:
                 history,
                 callbacks_per_batch,
                 callbacks_per_batch_loss_terms,
-                run_eval=run_eval)
+                run_eval=run_eval,
+                force_eval_mode=False)
             history.append(history_epoch)
 
             logger.info('finished training epoch {}'.format(epoch))
@@ -910,7 +922,8 @@ class Trainer:
                 history,
                 callbacks_per_batch,
                 callbacks_per_batch_loss_terms,
-                run_eval=True)
+                run_eval=True,
+                force_eval_mode=True)
             logger.info('finished final evaluation...')
             history.append(history_epoch)
 
