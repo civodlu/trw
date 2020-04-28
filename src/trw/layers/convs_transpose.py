@@ -3,6 +3,7 @@ import numbers
 
 import torch.nn as nn
 from trw.layers import OpsConversion, div_shape, ModulelWithIntermediate
+from .crop_or_pad import crop_or_pad_fun
 
 
 class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
@@ -24,7 +25,8 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             batch_norm_kwargs=None,
             lrn_kwargs=None,
             last_layer_is_output=False,
-            squash_function=None):
+            squash_function=None,
+            target_shape=None):
         """
 
         Args:
@@ -42,6 +44,8 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             squash_function: a function to be applied on the reconstuction. It is common to apply
                 for example ``torch.sigmoid``. If ``None``, no function applied
             paddings: the paddings added. If ``None``, half the convolution kernel will be used.
+            target_shape: if not ``None``, the output layer will be cropped or padded to mach the target
+                (N, C components excluded)
         """
         super().__init__()
 
@@ -101,6 +105,7 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             prev = current
         self.layers = layers
         self.squash_function = squash_function
+        self.target_shape = target_shape
 
     def forward_with_intermediate(self, x):
         r = []
@@ -110,6 +115,9 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
 
         if self.squash_function is not None:
             r[-1] = self.squash_function(r[-1])
+
+        if self.target_shape is not None:
+            r[-1] = crop_or_pad_fun(r[-1], self.target_shape)
         return r
 
     def forward_simple(self, x):
@@ -117,7 +125,11 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             x = layer(x)
 
         if self.squash_function is not None:
-            return self.squash_function(x)
+            x = self.squash_function(x)
+
+        if self.target_shape is not None:
+            x = crop_or_pad_fun(x, self.target_shape)
+
         return x
 
     def forward(self, x):

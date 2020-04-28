@@ -260,15 +260,7 @@ def sync_groups_coordinates(options, data_x, data_y, groups, groups_layout_y, gr
                 shift = max(min_value_for_next_group - min_group, 0)
                 data_x[group] += shift
     elif groups_layout_x[0]['type'] == 'continuous':
-        # for continuous axis, we expect a single group in Y and coordinates spread between [0, pixel_y]
-        assert groups.shape[1] == 1, 'only handle shape 1xN'
-        pixel_x = options.style.scatter_continuous_factor * options.image_size
-        factor = pixel_x / (groups_layout_x[0]['value_max'] - groups_layout_x[0]['value_min']) + 1e-6
-        indices = np.concatenate(groups[:, 0])
-        data_x[indices] = (data_x[indices] - groups_layout_x[0]['value_min']) * factor
-
-        groups_layout_x[0]['coord_max'] = pixel_x
-        groups_layout_x[0]['coord_min'] = 0
+        pass
     else:
         raise NotImplementedError()
 
@@ -287,15 +279,7 @@ def sync_groups_coordinates(options, data_x, data_y, groups, groups_layout_y, gr
                 shift = max(min_value_for_next_group - min_group, 0)
                 data_y[group] += shift
     elif groups_layout_y[0]['type'] == 'continuous':
-        # for continuous axis, we expect a single group in Y and coordinates spread between [0, pixel_y]
-        assert groups.shape[0] == 1, 'only handle shape 1xN'
-        pixel_y = options.style.scatter_continuous_factor * options.image_size
-        factor = pixel_y / (groups_layout_y[0]['value_max'] - groups_layout_y[0]['value_min']) + 1e-6
-        indices = np.concatenate(groups[0])
-        data_y[indices] = (data_y[indices] - groups_layout_y[0]['value_min']) * factor
-
-        groups_layout_y[0]['coord_max'] = pixel_y
-        groups_layout_y[0]['coord_min'] = 0
+        pass
     else:
         raise NotImplementedError()
 
@@ -332,10 +316,10 @@ def render_data(
         groups = []
         for value in unique_values:
             group = np.where(np.asarray(scatter_values) == value)
-            groups.append(group)
+            groups.append((f'group={value}, ', group))
     else:
         nb_data = utilities.len_batch(data)
-        groups = [[np.arange(nb_data)]]
+        groups = [('', [np.arange(nb_data)])]
 
     # remove very large data, this will be communicated to the client and this is
     # very slow!
@@ -343,7 +327,8 @@ def render_data(
 
     x_range = None
     y_range = None
-    for group_n, group in enumerate(groups):
+    figs = []
+    for group_n, (group_name, group) in enumerate(groups):
         # copy the data: there were some display issues if not
         subdata = {name: list(np.asarray(value)[group[0]]) for name, value in data.items()}
         data_source = ColumnDataSource(subdata)
@@ -351,7 +336,7 @@ def render_data(
         group = [np.arange(nb_data)]
 
         layout_children = render_data_frame(
-            f'fig{group_n}', options, data_source,
+            group_name, f'fig_{group_n}', options, data_source,
             subdata,
             group, data_types, type_categories, scatter_x,
             scatter_y, color_by, color_scheme, icon, label_with, previous_figure)
@@ -364,10 +349,12 @@ def render_data(
             layout_children[0].children[0].y_range = y_range
 
         for c in layout_children:
-            layout.children.append(c)
+            figs.append(c)
+
+    layout.children.append(row(*figs, sizing_mode='stretch_both'))
 
 
-def render_data_frame(fig_name, options, data_source, data, groups, data_types, type_categories, scatter_x, scatter_y, color_by, color_scheme, icon, label_with, previous_figure):
+def render_data_frame(fig_title, fig_name, options, data_source, data, groups, data_types, type_categories, scatter_x, scatter_y, color_by, color_scheme, icon, label_with, previous_figure):
     print('render command STARTED, nb_samples=', len(groups[0]))
     # re-create a new figure each time... there are too many bugs currently in bokeh
     # to support dynamic update of the data
@@ -381,10 +368,11 @@ def render_data_frame(fig_name, options, data_source, data, groups, data_types, 
         fig.x_range = previous_figure.x_range
         fig.y_range = previous_figure.y_range
         """
-    layout_children = [row(fig, sizing_mode='scale_both')] #[fig] #[row(fig, sizing_mode='scale_height')]
+    #layout_children = [row(fig, sizing_mode='scale_height')] #[fig] #[row(fig, sizing_mode='scale_height')]
+    layout_children = [row(fig, sizing_mode='stretch_both')]
 
     nb_data = utilities.len_batch(data)
-    fig.title.text = f'Samples selected: {len(groups[0])}'
+    fig.title.text = f'{fig_title}Samples selected: {len(groups[0])}'
     fig.renderers.clear()
     fig.yaxis.visible = False
     fig.xaxis.visible = False
@@ -499,6 +487,7 @@ def render_data_frame(fig_name, options, data_source, data, groups, data_types, 
             sub_fig.xgrid.visible = False
             sub_fig.ygrid.visible = False
             sub_fig.text(x=0, y=y_text, text=color_unique_values, x_offset=15, y_offset=6 // 2, text_font_size='6pt')
+            sub_fig.sizing_mode = 'fixed'
             layout_children.append(sub_fig)
 
         elif 'continuous' in type_categories[color_by].value:
@@ -535,11 +524,17 @@ def render_data_frame(fig_name, options, data_source, data, groups, data_types, 
             # make the size of the image fixed so that when we have
             # many points close by, we can zoom in to isolate the samples
             units = 'screen'
+        else:
+            # keep aspect ration ONLY when we display collection of
+            # images. If we have continuous axis, we do NOT want to
+            # constrain the value of the axis by another axis
+            fig.match_aspect = True
 
         fig.image_url(url=icon.value, x=data_x_name, y=data_y_name,
                       h=options.image_size, h_units=units,
                       w=options.image_size, w_units=units,
                       anchor="center", source=data_source)
+
         fig.rect(x=data_x_name, y=data_y_name, width=options.image_size, height=options.image_size, width_units=units, height_units=units, source=data_source, fill_alpha=0, line_alpha=0)
     
         if color_by is not None:
@@ -581,10 +576,6 @@ def render_data_frame(fig_name, options, data_source, data, groups, data_types, 
         fig.xaxis.major_label_orientation = math.pi / 4
     elif scatter_x and groups_layout_x[0]['type'] == 'continuous':
         fig.xaxis.visible = True
-        ticks = [groups_layout_x[0]['coord_min'], groups_layout_x[0]['coord_max']]
-        ticks_label = [groups_layout_x[0]['value_min'], groups_layout_x[0]['value_max']]
-        fig.xaxis.ticker = ticks
-        fig.xaxis.major_label_overrides = {t: str(name) for t, name in zip(ticks, ticks_label)}
     else:
         fig.xaxis.visible = False
 
@@ -607,10 +598,6 @@ def render_data_frame(fig_name, options, data_source, data, groups, data_types, 
         fig.yaxis.major_label_orientation = math.pi / 4
     elif scatter_y and groups_layout_y[0]['type'] == 'continuous':
         fig.yaxis.visible = True
-        ticks = [groups_layout_y[0]['coord_min'], groups_layout_y[0]['coord_max']]
-        ticks_label = [groups_layout_y[0]['value_min'], groups_layout_y[0]['value_max']]
-        fig.yaxis.ticker = ticks
-        fig.yaxis.major_label_overrides = {t: str(name) for t, name in zip(ticks, ticks_label)}
     else:
         fig.yaxis.visible = False
 
@@ -654,10 +641,9 @@ def prepare_new_figure(options, data, data_types):
         title='',
         tools=tools,
         active_scroll='wheel_zoom',
-        match_aspect=True,
-        aspect_ratio=options.style.scatter_aspect_ratio,
-        aspect_scale=1,
         toolbar_location='above',
+        height=900,
+        width=900
     )
 
     hover_tool = HoverTool(tooltips=make_custom_tooltip(options, data, data_types))
@@ -705,7 +691,7 @@ def process_data_samples__scatter(options, name, data, data_types, type_categori
     controls = column(controls_list, width=options.style.tool_window_size_x, height=options.style.tool_window_size_y)
     controls.sizing_mode = "fixed"
 
-    layout = row(controls, sizing_mode='scale_height')
+    layout = row(controls, sizing_mode='stretch_both')
 
     update = functools.partial(
         render_data,
@@ -992,7 +978,7 @@ if __name__ == '__main__':
 
     options = create_default_reporting_options(config=config)
     options.image_size = 64
-    run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
+    # run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
 
     # run a static HTML page (i.e., the more complicated views requiring python v=callbacks will be disabled)
     # report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))

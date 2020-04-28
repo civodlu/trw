@@ -1,3 +1,5 @@
+import functools
+
 import trw
 import torch
 from unittest import TestCase
@@ -189,3 +191,50 @@ class TestLayers(TestCase):
         assert recon.shape == (10, 1, 28, 28)
         assert mu.shape == (10, z_size)
         assert mu.shape == logvar.shape
+
+    def test_gan_dc(self):
+        latent_size = 32
+        activation = functools.partial(torch.nn.LeakyReLU, negative_slope=0.2)
+
+        discriminator = trw.layers.ConvsBase(
+            2,
+            input_channels=1,
+            channels=[32, 64, 128, 2],
+            batch_norm_kwargs={},
+            with_flatten=True,
+            activation=activation,
+            last_layer_is_output=True
+        )
+
+        generator = trw.layers.ConvsTransposeBase(
+            2,
+            input_channels=latent_size,
+            channels=[64, 32, 16, 8, 1],
+            strides=[2, 2, 2, 1, 1],
+            batch_norm_kwargs={},
+            paddings=0,
+            target_shape=[28, 28],
+            activation=activation,
+            squash_function=torch.tanh,
+            last_layer_is_output=True
+        )
+
+        optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
+
+        model = trw.layers.GanDc(
+            discriminator=discriminator,
+            generator=generator,
+            latent_size=latent_size,
+            optimizer_discriminator_fn=optimizer_fn,
+            optimizer_generator_fn=optimizer_fn,
+            image_from_batch_fn=lambda batch: 2 * batch['images'] - 1
+        )
+
+        batch = {
+            'images': torch.zeros([10, 1, 28, 28]),
+            'split_name': 'train'
+        }
+        o = model(batch)
+        assert 'images_fake' in o
+        assert 'classifier_true' in o
+        assert 'classifier_fake' in o

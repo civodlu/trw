@@ -14,3 +14,4 @@ from .autoencoder_convolutional import AutoencoderConvolutional
 from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
 from .autoencoder_convolutional_variational_conditional import AutoencoderConvolutionalVariationalConditional
 from .sub_tensor import SubTensor
+from .gan_dc import GanDc
