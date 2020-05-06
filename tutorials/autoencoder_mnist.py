@@ -39,7 +39,7 @@ def per_epoch_fn():
 options = trw.train.create_default_options(num_epochs=100)
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_fn,
-    callbacks_post_training_fn=lambda: [trw.train.CallbackExportSamples2(max_samples=2000)],
+    callbacks_post_training_fn=lambda: [trw.train.CallbackReportingExportSamples(max_samples=2000)],
 )
 
 model, results = trainer.fit(

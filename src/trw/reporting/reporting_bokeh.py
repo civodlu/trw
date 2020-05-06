@@ -5,10 +5,15 @@ import math
 import functools
 import collections
 from bokeh.application import Application
-from bokeh.application.handlers import FunctionHandler
+from bokeh.application.handlers import FunctionHandler, ServerLifecycleHandler, Handler
+from bokeh.application.handlers.lifecycle import LifecycleHandler
+from bokeh.core.property.bases import Property
+from bokeh.core.property.instance import Instance
+from bokeh.core.property.primitive import String, Int
 from bokeh.layouts import column, row
+from bokeh.model import Model
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
-    CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter
+    CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter, LayoutDOM
 from bokeh.models.widgets import Panel, Tabs, Div
 from bokeh.io import output_file, show, curdoc
 from bokeh.plotting import figure, Figure
@@ -17,7 +22,7 @@ import numpy as np
 from bokeh.transform import transform
 from tornado import web
 from trw.reporting.table_sqlite import get_tables_name_and_role, get_table_data, \
-    get_data_types_and_clean_data
+    get_data_types_and_clean_data, get_table_number_of_rows
 from trw.reporting import utilities, safe_lookup, len_batch
 import sqlite3
 from bokeh.server.server import Server
@@ -52,6 +57,7 @@ def create_default_reporting_options(embedded=True, config={}):
     o.style.scatter_continuous_factor = 10
 
     o.data = Object()
+    o.data.refresh_time = 1.0
     o.data.unpack_numpy_arrays_with_less_than_x_columns = 15
 
     o.config = config
@@ -68,8 +74,9 @@ def create_default_reporting_options(embedded=True, config={}):
     # - for ALL tables:
     #    {
     #       'data' : {
-    #           'remove_columns': ['column_name1']
-    #           'subsampling_factor': 1.0
+    #           'remove_columns': ['column_name1'],
+    #           'subsampling_factor': 1.0,
+    #           'keep_last_n_rows': 1000
     #       }
     #
     # - For role `data_samples`:
@@ -88,6 +95,33 @@ def create_default_reporting_options(embedded=True, config={}):
     #
 
     return o
+
+
+class BokehUi:
+    """
+    Helper class to compose Bokeh UI elements into complex classes.
+
+    Currently it is NOT possible to compose widgets (e.g., via sub-classing). Instead,
+    use regular python with a single method ``get_ui`` that returns the Bokeh element to display
+    of the complex widget.
+    """
+    def __init__(self, ui):
+        self.ui = ui
+        assert ui is not None
+
+    def get_ui(self):
+        return self.ui
+
+
+class PanelDataSamplesTabular(BokehUi):
+    def __init__(self, options, data, data_types, type_categories):
+        ui, self.table = process_data_samples__tabular(options, data, data_types, type_categories)
+        super().__init__(ui)
+
+    def update_data(self, options, name, data, data_types, type_categories):
+        source = self.table.source
+        for key in source.column_names:
+            source.data[key] = data.get(key)
 
 
 def process_data_samples__tabular(options, data, data_types, type_categories):
@@ -171,7 +205,8 @@ def process_data_samples__tabular(options, data, data_types, type_categories):
         columns=columns,
         row_height=row_height,
         css_classes=["trw_reporting_table"])
-    return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title='Tabular')
+
+    return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title='Tabular'), data_table
 
 
 def scatter(all_data, groups, scatter_name, type_category):
@@ -359,16 +394,6 @@ def render_data_frame(fig_title, fig_name, options, data_source, data, groups, d
     # re-create a new figure each time... there are too many bugs currently in bokeh
     # to support dynamic update of the data
     fig = prepare_new_figure(options, data, data_types)
-
-    # TODO for non-modifying changes, reuse the previous locations (e.g colormap changes)
-    """
-    if previous_figure is not None:
-        print('REUSING RANGE!!')
-        # make sure the range of the previous and new picture are sync
-        fig.x_range = previous_figure.x_range
-        fig.y_range = previous_figure.y_range
-        """
-    #layout_children = [row(fig, sizing_mode='scale_height')] #[fig] #[row(fig, sizing_mode='scale_height')]
     layout_children = [row(fig, sizing_mode='stretch_both')]
 
     nb_data = utilities.len_batch(data)
@@ -654,67 +679,102 @@ def prepare_new_figure(options, data, data_types):
     return f
 
 
-def process_data_samples__scatter(options, name, data, data_types, type_categories):
-    print('process_data_samples__scatter')
-    values = ['None'] + list(sorted(data.keys()))
+class PanelDataSamplesScatter(BokehUi):
+    def __init__(self, options, name, data, data_types, type_categories):
+        self.scatter_x_axis = Select(title='Scatter X Axis')
+        self.scatter_y_axis = Select(title='Scatter Y Axis')
+        self.color_by = Select(title='Color by')
+        self.color_scheme = Select(title='Color scheme')
+        self.binning_x_axis = Select(title='Binning X Axis')
+        self.label_with = Select(title='Label with')
+        self.icon = Select(title='Display with')
 
-    default_scatter_x_axis = safe_lookup(options.config, name, 'default', 'Scatter X Axis', default='None')
-    scatter_x_axis = Select(title='Scatter X Axis', options=values, value=default_scatter_x_axis)
-    default_scatter_y_axis = safe_lookup(options.config, name, 'default', 'Scatter Y Axis', default='None')
-    scatter_y_axis = Select(title='Scatter Y Axis', options=values, value=default_scatter_y_axis)
-    default_color_by = safe_lookup(options.config, name, 'default', 'Color by', default='None')
-    color_by = Select(title='Color by', options=values, value=default_color_by)
-    default_color_scheme = safe_lookup(options.config, name, 'default', 'Color scheme', default='Viridis256')
-    color_scheme = Select(title='Color scheme', options=['Viridis256', 'Magma256', 'Greys256', 'Turbo256'], value=default_color_scheme)
-    default_binning_x_axis = safe_lookup(options.config, name, 'default', 'Binning X Axis', default='None')
-    binning_x_axis = Select(title='Binning X Axis', options=values, value=default_binning_x_axis)
-    default_label_with = safe_lookup(options.config, name, 'default', 'Label with', default='None')
-    label_with = Select(title='Label with', options=values, value=default_label_with)
+        controls_list = [
+            self.scatter_x_axis,
+            self.scatter_y_axis,
+            self.color_by,
+            self.color_scheme,
+            self.binning_x_axis,
+            self.label_with,
+            self.icon
+        ]
+        controls = column(controls_list)
+        controls.sizing_mode = "fixed"
 
-    default_icon = safe_lookup(options.config, name, 'default', 'Display with', default='None')
-    icon_values = [v for v, t in data_types.items() if 'BLOB_IMAGE' in t] + ['Icon', 'Dot']
-    if default_icon != 'None':
-        if default_icon in icon_values:
-            del icon_values[icon_values.index(default_icon)]
-            icon_values.insert(0, default_icon)
-    icon = Select(title='Display with', options=icon_values, value=icon_values[0])
+        self.update_controls(options, name, data, data_types, type_categories)
 
-    controls_list = [
-        scatter_x_axis,
-        scatter_y_axis,
-        color_by,
-        color_scheme,
-        binning_x_axis,
-        icon,
-        label_with
-    ]
-    controls = column(controls_list, width=options.style.tool_window_size_x, height=options.style.tool_window_size_y)
-    controls.sizing_mode = "fixed"
+        layout = row(controls, sizing_mode='stretch_both')
 
-    layout = row(controls, sizing_mode='stretch_both')
+        self.last_data = data
+        self.last_data_types = data_types
+        self.last_type_categories = type_categories
 
-    update = functools.partial(
-        render_data,
-        options=options,
-        data=data,
-        data_types=data_types,
-        type_categories=type_categories,
-        scatter_x=scatter_x_axis,
-        scatter_y=scatter_y_axis,
-        binning_x_axis=binning_x_axis,
-        color_by=color_by,
-        color_scheme=color_scheme,
-        icon=icon,
-        label_with=label_with,
-        layout=layout,
-    )
+        update_partial = functools.partial(
+            render_data,
+            options=options,
+            scatter_x=self.scatter_x_axis,
+            scatter_y=self.scatter_y_axis,
+            binning_x_axis=self.binning_x_axis,
+            color_by=self.color_by,
+            color_scheme=self.color_scheme,
+            icon=self.icon,
+            label_with=self.label_with,
+            layout=layout,
+        )
 
-    for control in controls_list:
-       control.on_change('value', lambda attr, old, new: update())
+        for control in controls_list:
+            control.on_change('value', lambda attr, old, new: self._update())
 
-    update()
+        self.refresh_view_fn = update_partial
+        self._update()
 
-    return Panel(child=layout, title='Scatter')
+        super().__init__(ui=Panel(child=layout, title='Scatter'))
+
+    def _update(self):
+        # record the last used values. If we keep
+        # only the last n rows of data, we need to
+        # keep these variables updated!
+
+        self.refresh_view_fn(
+            data=self.last_data,
+            data_types=self.last_data_types,
+            type_categories=self.last_type_categories
+        )
+
+    def update_controls(self, options, name, data, data_types, type_categories):
+        data_names = list(sorted(data.keys()))
+        values = ['None'] + data_names
+        values_integral = ['None'] + [n for n in data_names if type_categories[n] in (DataCategory.DiscreteUnordered, DataCategory.DiscreteOrdered)]
+
+        def populate_default(control, values, control_name, default='None'):
+            control.options = values
+            if control.value == '':
+                default = safe_lookup(options.config, name, 'default', control_name, default=default)
+                control.value = default
+
+        populate_default(self.scatter_x_axis, values, 'Scatter X Axis')
+        populate_default(self.scatter_y_axis, values, 'Scatter Y Axis')
+        populate_default(self.color_by, values, 'Color by')
+        populate_default(self.color_scheme, ['Viridis256', 'Magma256', 'Greys256', 'Turbo256'], 'Color by', default='Viridis256')
+        populate_default(self.binning_x_axis, values_integral, 'Binning X Axis')
+        populate_default(self.label_with, values, 'Label with')
+
+        default_icon = safe_lookup(options.config, name, 'default', 'Display with', default='None')
+        icon_values = [v for v, t in data_types.items() if 'BLOB_IMAGE' in t] + ['Icon', 'Dot']
+        if default_icon != 'None':
+            if default_icon in icon_values:
+                del icon_values[icon_values.index(default_icon)]
+                icon_values.insert(0, default_icon)
+        if self.icon.value == '':
+            self.icon.value = icon_values[0]
+
+        self.icon.options = icon_values
+
+    def update_data(self, options, name, data, data_types, type_categories):
+        self.last_data = data
+        self.last_data_types = data_types
+        self.last_type_categories = type_categories
+        self._update()
 
 
 class DataCategory(Enum):
@@ -843,29 +903,117 @@ def normalize_data(options, data, table_name):
     return d, types, type_categories
 
 
-def process_data_samples(options, connection, name):
+class TabsDynamicData(BokehUi):
     """
-
-    Args:
-        options:
-        connection:
-        name:
-
-    Returns:
-
+    Helper class to manage updates of the underlying SQL data for a given table
     """
-    data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
+    def __init__(self, doc, options, connection, name, role, creator_fn):
+        data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
+        tabs = creator_fn(options, name, role, data, types, type_categories)
+        tabs_ui = []
+        for tab in tabs:
+            assert isinstance(tab, BokehUi), 'must be a ``BokehUi`` based!'
+            tabs_ui.append(tab.get_ui())
 
+        ui = Tabs(tabs=tabs_ui)
+        super().__init__(ui=ui)
+
+        self.last_update_data_size = len_batch(data)
+        doc.add_periodic_callback(functools.partial(self.update,
+                                                    options=options,
+                                                    connection=connection,
+                                                    name=name,
+                                                    tabs=tabs),
+                                  options.data.refresh_time * 1000)
+
+    def update(self, options, connection, name, tabs):
+        number_of_rows = get_table_number_of_rows(connection, name)
+        if number_of_rows != self.last_update_data_size:
+            self.last_update_data_size = number_of_rows
+            data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
+            keep_last_n_rows = safe_lookup(options.config, name, 'data', 'keep_last_n_rows')
+            if keep_last_n_rows is not None:
+                data_trimmed = collections.OrderedDict()
+                for name, values in data.items():
+                    data_trimmed[name] = values[-keep_last_n_rows:]
+                data = data_trimmed
+
+            for tab in tabs:
+                tab.update_data(options, name, data, types, type_categories)
+
+
+class TabsDynamicHeader(BokehUi):
+    """
+    Helper class to manage updates of the underlying SQL tables & JSON configuration
+    """
+    # we have to define all these in order to work on both embedded servers
+    # and ``bokeh serve``
+    def __init__(self, doc, options, connection, creator_fn):
+        self.tabs = Tabs()
+        self.existing_tables = []
+        self.options = options
+        self.connection = connection
+        self.creator_fn = creator_fn
+        self.config_timestamp = None
+
+        super().__init__(ui=self.tabs)
+        doc.add_periodic_callback(self.update, options.data.refresh_time * 1000)
+
+    def update(self):
+        # first, check the config was not modified
+        config_location = self.options.db_root.replace('.db', '.json')
+        if os.path.exists(config_location):
+            time_stamp = os.path.getmtime(config_location)
+            if time_stamp != self.config_timestamp:
+                self.config_timestamp = time_stamp
+                with open(config_location, 'r') as f:
+                    f_str = f.read()
+                new_config = json.loads(f_str)
+                self.options.config = new_config
+
+        all_names = []
+        new_name_roles = []
+        name_roles = get_tables_name_and_role(self.connection)
+        for name, role in name_roles:
+            all_names.append(name)
+            if name not in self.existing_tables:
+                new_name_roles.append((name, role))
+
+        if len(new_name_roles) > 0:
+            self.update_new_tables(new_name_roles, self.creator_fn)
+
+        self.existing_tables = all_names
+
+    def update_new_tables(self, name_roles, creator_fn):
+        for name, role in name_roles:
+            panel = creator_fn(name, role)
+            self.tabs.tabs.append(panel)
+
+
+def process_data_samples(options, name, role, data, types, type_categories):
     tabs = []
     if options.data_samples.display_tabular:
-        tabs.append(process_data_samples__tabular(options, data, types, type_categories))
+        panel = PanelDataSamplesTabular(options, data, types, type_categories)
+        tabs.append(panel)
 
     if options.data_samples.display_scatter and options.embedded:
         # here we require some python logic, so we need to have a bokeh
         # server running to display this view
-        tabs.append(process_data_samples__scatter(options, name, data, types, type_categories))
+        panel = PanelDataSamplesScatter(options, name, data, types, type_categories)
+        tabs.append(panel)
 
-    return Tabs(tabs=tabs)
+    return tabs
+
+
+def create_tables(name, role, doc, options, connection):
+    if role == 'data_samples':
+        print(f'create data_samples={name}')
+        data_table = TabsDynamicData(doc, options, connection, name, role, creator_fn=process_data_samples)
+        panel = Panel(child=data_table.get_ui(), title=name)
+    else:
+        raise NotImplementedError(f'role not implemented={role}')
+
+    return panel
 
 
 def report(sql_database_path, options, doc=None):
@@ -878,8 +1026,7 @@ def report(sql_database_path, options, doc=None):
 
     """
     options.db_root = sql_database_path
-    connexion = sqlite3.connect(sql_database_path)
-    name_roles = get_tables_name_and_role(connexion)
+    connection = sqlite3.connect(sql_database_path)
     root = os.path.dirname(sql_database_path)
 
     if not options.embedded:
@@ -888,25 +1035,26 @@ def report(sql_database_path, options, doc=None):
     if doc is None:
         doc = curdoc()
     doc.title = os.path.basename(root)
+    tabs = TabsDynamicHeader(doc, options, connection, creator_fn=functools.partial(
+        create_tables,
+        doc=doc,
+        options=options,
+        connection=connection))
 
-    panels = []
-    for name, role in name_roles:
-        if role == 'data_samples':
-            data_table = process_data_samples(options, connexion, name)
-            panel = Panel(child=data_table, title=name)
-            panels.append(panel)
-
-    tabs = Tabs(tabs=panels)
     if options.embedded:
-        doc.add_root(tabs)
-
+        doc.add_root(tabs.get_ui())
     else:
         show(tabs)
 
     return doc
 
 
-def run_server(path_to_db, options=create_default_reporting_options(embedded=True)):
+def run_server(
+        path_to_db,
+        options=create_default_reporting_options(embedded=True),
+        show_app=True,
+        handlers=[],
+        port=5100):
     """
     Run a server
 
@@ -917,14 +1065,14 @@ def run_server(path_to_db, options=create_default_reporting_options(embedded=Tru
     Args:
         path_to_db: the path to the SQLite database
         options: configuration options
-
-    Returns:
-
+        show_app: if ``True``, the application will be started in an open browser
+        handlers: additional handlers for the Bokeh application
+        port: the port of the server
     """
     def fn(doc):
         return report(sql_database_path=path_to_db, options=options, doc=doc)
 
-    app_1 = Application(FunctionHandler(fn))
+    app_1 = Application(FunctionHandler(fn), *handlers)
 
     if len(options.config) == 0:
         json_config = path_to_db.replace('.db', '.json')
@@ -938,7 +1086,7 @@ def run_server(path_to_db, options=create_default_reporting_options(embedded=Tru
     app_directory = os.path.dirname(path_to_db)
     app_name = os.path.basename(app_directory)
     apps = {f'/{app_name}': app_1}
-    server = Server(apps, num_procs=1)
+    server = Server(apps, num_procs=1, port=port)
 
     # set up the `static` mapping
     handlers = [
@@ -952,7 +1100,8 @@ def run_server(path_to_db, options=create_default_reporting_options(embedded=Tru
 
     # start the server
     server.start()
-    server.io_loop.add_callback(server.show, "/")
+    if show_app:
+        server.io_loop.add_callback(server.show, "/")
     server.io_loop.start()
 
 
@@ -964,6 +1113,7 @@ if __name__ == '__main__':
                     'sex',
                     # 'images'
                 ],
+                'keep_last_n_rows': 60,
                 'subsampling_factor': 1.0,
             },
             'default': {

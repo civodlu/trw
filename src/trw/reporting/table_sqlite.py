@@ -50,6 +50,17 @@ def table_insert(cursor, table_name, names, values):
     insert_fn(sql_command, values)
 
 
+def get_table_number_of_rows(cursor, table_name):
+    """
+    Return the number of rows of a table
+    """
+    sql_command = f'SELECT COUNT(*) FROM {table_name};'
+    v = cursor.execute(sql_command).fetchall()
+    assert len(v) == 1
+    assert len(v[0]) == 1
+    return v[0][0]
+
+
 def get_tables_name_and_role(cursor):
     """
     Return all the table names and table role
@@ -72,7 +83,7 @@ def get_tables_name_and_role(cursor):
 
         sql_command = f"SELECT table_role FROM {name + '_metadata'};"
         v = cursor.execute(sql_command).fetchall()
-        assert len(v) == 1, f'got={v}'
+        assert len(v) == 1, f'got={v}, name={name}'
         name_roles.append((name, v[0][0]))
 
     return name_roles
@@ -150,9 +161,10 @@ class TableStream:
             content.append(s)
 
         metadata_name = table_name + '_metadata'
-        table_create(self.cursor, table_name, content, primary_key=primary_key)
         table_create(self.cursor, metadata_name, blobs, primary_key=None)
         table_insert(self.cursor, metadata_name, names=metadata_names, values=metadata_values)
+        table_create(self.cursor, table_name, content, primary_key=primary_key)
+
         self.name_type_list = name_type_list
 
     def _insert(self, batch):

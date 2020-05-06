@@ -177,7 +177,7 @@ def export_sample(
         batch,
         sample_ids=None,
         export_fns=[export_as_image, export_as_npy, export_as_text],
-        name_expansions=['epoch', 'batch', 'split', 'dataset']
+        name_expansions=['epoch', 'batch', 'split', 'dataset'],
         ):
     r"""
 

@@ -78,7 +78,7 @@ def per_epoch_fn():
 
 def pos_training_fn():
     return [
-        trw.train.CallbackExportSamples2(max_samples=1000),
+        trw.train.CallbackReportingExportSamples(max_samples=1000),
         trw.train.CallbackSaveLastModel()
     ]
 

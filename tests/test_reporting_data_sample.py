@@ -121,14 +121,12 @@ class TestReporting(TestCase):
         cursor = connection.cursor()
 
         batch = {
-            'constant': 0,
             'value_continuous': [1.1, 2.2, 3.3],
             'value_integers': [1, 2, 3],
             'numpy_arrays': np.random.randn(3, 2000),
             'numpy_arrays_int_1': np.random.randint(0, 10, [3]),
             'images': np.random.randint(0, 255, [3, 3, 128, 128]),
             'strings': ['p1', 'p2', 'p3'],
-            'split': 'train',
             'column_to_be_removed': ['p1', 'p2', 'p3'],
         }
 
@@ -138,19 +136,20 @@ class TestReporting(TestCase):
         options = trw.reporting.create_default_reporting_options()
         options.db_root = os.path.join(tmp_folder, 'test.db')
 
-        tabs = process_data_samples(options, connection, 'table_name')
+        d, types, type_categories = normalize_data(options, batch, table_name)
+        tabs = process_data_samples(options, 'table_name', 'table_role', d, types, type_categories)
 
-        assert len(tabs.tabs) == 2  # must have the `tabular` and `scatter` tabs
+        assert len(tabs) == 2  # must have the `tabular` and `scatter` tabs
 
         #
         # Check the tabular tab
         #
-        assert len(tabs.tabs[0].child.children) == 2  # must have a DataTable, Div
-        table = tabs.tabs[0].child.children[0]
+        assert len(tabs[0].ui.child.children) == 2  # must have a DataTable, Div
+        table = tabs[0].ui.child.children[0]
         assert isinstance(table, DataTable)
-        div = tabs.tabs[0].child.children[1]
-        assert isinstance(tabs.tabs[0].child.children[1], Div)  # DIV to configure extra CSS
-                                                                # for the table (text rotation)
+        div = tabs[0].ui.child.children[1]
+        assert isinstance(tabs[0].ui.child.children[1], Div)  # DIV to configure extra CSS
+                                                           # for the table (text rotation)
         assert div.visible is False
 
         assert len(table.source.column_names) == len(batch)
@@ -158,13 +157,13 @@ class TestReporting(TestCase):
         #
         # Check the scatter tab
         #
-        head = tabs.tabs[1].child.children
+        head = tabs[1].ui.child.children
         assert len(head[0].children) >= 7  # all the tools
 
         figures = head[1].children
         assert len(figures) == 1  # should have a single figure
-        assert isinstance(figures[0], Figure)
-        assert len(figures[0].renderers) > 0  # if not, failure!
+        assert isinstance(figures[0].children[0], Figure)
+        assert len(figures[0].children[0].renderers) > 0  # if not, failure!
 
     def test_table_data_samples__default_config__discrete_discrete(self):
         # make sure we can configure defaults
@@ -172,14 +171,12 @@ class TestReporting(TestCase):
         cursor = connection.cursor()
 
         batch = {
-            'constant': 0,
             'value_continuous': [1.1, 2.2, 3.3],
             'value_integers': [1, 2, 3],
             'numpy_arrays': np.random.randn(3, 2000),
             'numpy_arrays_int_1': np.random.randint(0, 10, [3]),
             'images': np.random.randint(0, 255, [3, 3, 128, 128]),
             'strings': ['p1', 'p2', 'p3'],
-            'split': 'train',
         }
 
         table_name = 'table_name'
@@ -200,20 +197,18 @@ class TestReporting(TestCase):
         options = trw.reporting.create_default_reporting_options(config=config)
         options.db_root = os.path.join(tmp_folder, 'test.db')
 
-        tabs = process_data_samples(options, connection, 'table_name')
+        d, types, type_categories = normalize_data(options, batch, table_name)
+        tabs = process_data_samples(options, 'table_name', 'table_role', d, types, type_categories)
 
         #
         # Check the scatter tab
         #
-        head = tabs.tabs[1].child.children
-        assert len(head) == 4  # Tools, Scatter 1+2+3
+        head = tabs[1].ui.child.children
+        assert len(head) >= 2  # Tools, Scatter 1+2+3
 
         assert head[0].children[0].value == 'value_integers'
         assert head[0].children[1].value == 'strings'
         assert head[0].children[2].value == 'value_continuous'
-        assert head[0].children[3].value == 'Viridis256'
-        assert head[0].children[4].value == 'value_integers'
-        assert head[0].children[5].value == 'Dot'
         print('DONE')
 
     def test_table_data_samples__scatter_and_discrete_configs(self):
@@ -222,14 +217,12 @@ class TestReporting(TestCase):
         cursor = connection.cursor()
 
         batch = {
-            'constant': 0,
             'value_continuous': [1.1, 2.2, 3.3],
             'value_integers': [1, 2, 3],
             'numpy_arrays': np.random.randn(3, 2000),
             'numpy_arrays_int_1': np.random.randint(0, 10, [3]),
             'images': np.random.randint(0, 255, [3, 3, 128, 128]),
             'strings': ['p1', 'p2', 'p3'],
-            'split': 'train',
         }
 
         table_name = 'table_name'
@@ -252,10 +245,12 @@ class TestReporting(TestCase):
         options = trw.reporting.create_default_reporting_options(config=config)
         options.db_root = os.path.join(tmp_folder, 'test.db')
 
-        tabs = process_data_samples(options, connection, 'table_name')
-        head = tabs.tabs[1].child.children
-        assert len(head) == 3  # Tools, Fig, Figure-color-legend
-        assert len(head[1].children[0].renderers) > 0
+        d, types, type_categories = normalize_data(options, batch, table_name)
+        tabs = process_data_samples(options, 'table_name', 'table_role', d, types, type_categories)
+        head = tabs[1].ui.child.children
+        assert len(head) == 2  # Tools, row(Fig, Figure-color-legend)
+        assert len(head[1].children) == 2  # Fig, Figure-color-legend
+        assert len(head[1].children[0].children[0].renderers) > 0
 
         #
         # Y: continuous, X: discrete
@@ -274,10 +269,10 @@ class TestReporting(TestCase):
         options = trw.reporting.create_default_reporting_options(config=config)
         options.db_root = os.path.join(tmp_folder, 'test.db')
 
-        tabs = process_data_samples(options, connection, 'table_name')
-        head = tabs.tabs[1].child.children
-        assert len(head) == 3  # Tools, Fig, Figure-color-legend
-        assert len(head[1].children[0].renderers) > 0
+        tabs = process_data_samples(options, 'table_name', 'table_role', d, types, type_categories)
+        head = tabs[1].ui.child.children
+        assert len(head) == 2  # Tools, row(Fig, Figure-color-legend)
+        assert len(head[1].children[0].children[0].renderers) > 0
 
         #
         # Y: continuous, X: continuous
@@ -296,7 +291,7 @@ class TestReporting(TestCase):
         options = trw.reporting.create_default_reporting_options(config=config)
         options.db_root = os.path.join(tmp_folder, 'test.db')
 
-        tabs = process_data_samples(options, connection, 'table_name')
-        head = tabs.tabs[1].child.children
-        assert len(head) == 3  # Tools, Fig, Figure-color-legend
-        assert len(head[1].children[0].renderers) > 0
+        tabs = process_data_samples(options, 'table_name', 'table_role', d, types, type_categories)
+        head = tabs[1].ui.child.children
+        assert len(head) == 2  # Tools, Fig, Figure-color-legend
+        assert len(head[1].children[0].children[0].renderers) > 0

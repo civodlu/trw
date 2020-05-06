@@ -62,6 +62,14 @@ from trw.reporting import len_batch
 def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
     """
     Check if the path exist. If yes, remove the folder then recreate the folder, else create it
+
+    Args:
+        path: the path to create or recreate
+        nb_tries: the number of tries to be performed before failure
+        wait_time_between_tries: the time to wait before the next try
+
+    Returns:
+        ``True`` if successful or ``False`` if failed.
     """
     assert len(path) > 6, 'short path? just as a precaution...'
     if os.path.exists(path):
@@ -80,8 +88,9 @@ def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
     for i in range(nb_tries):
         is_done = try_create()
         if is_done:
-            return
+            return True
         threading.Event().wait(wait_time_between_tries)  # wait some time for the FS to delete the files
+    return False
 
 
 class time_it:

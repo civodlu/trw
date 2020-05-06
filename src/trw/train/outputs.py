@@ -98,10 +98,11 @@ class OutputEmbedding(Output):
         
         Args:
             output: the output from which the embedding will be created
-            clean_loss_term_each_batch: if True, the loss term output will be removed from the output in
+            clean_loss_term_each_batch: if ``True``, the loss term output will be removed from the output in
                 order to free memory just before the next batch. For example, if we want to collect statistics
                 on the embedding, we do not need to keep track of the output embedding and in particular for
-                large embeddings
+                large embeddings. If ``False``, the output will not be cleaned (and possibly accumulated
+                for the whole epoch)
             sample_uid_name: UID name to be used for collecting the embedding of the samples
         """
         super().__init__(
@@ -115,7 +116,12 @@ class OutputEmbedding(Output):
     def evaluate_batch(self, batch, is_training):
         loss_term = collections.OrderedDict()
 
-        loss_term['output'] = utilities.to_value(self.output)
+        # do not keep track of GPU torch.Tensor, specially for large embeddings.
+        # ``clean_loss_term_each_batch`` may be ``False``, so the output
+        # would never be cleaned up.
+        self.output = utilities.to_value(self.output)
+
+        loss_term['output'] = self.output
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         return loss_term
     

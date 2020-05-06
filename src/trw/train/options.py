@@ -27,7 +27,11 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
         
     if device is None:
         if torch.cuda.device_count() > 0:
-            device = torch.device('cuda:0')
+            env_device = os.environ.get('TRW_DEVICE')
+            if env_device is not None:
+                device = torch.device(env_device)
+            else:
+                device = torch.device('cuda:0')
         else:
             device = torch.device('cpu')
 
@@ -45,10 +49,13 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
         },
         'workflow_options': {
             'device': device,                        # the torch device to be used
-            'sql_database': None,                    # the SQL database where the reporting is exported
             'train_split': 'train',                  # this is the split used for training
             'logging_directory': logging_directory,  # this is where all the tensorboard summary are written
             'trainer_run': 0,                        # this is the run number.
+
+            'sql_database_view_path': None,  # configuration file for the reporting
+            'sql_database_path': None,       # specify where the SQL database for the reporting is stored
+            'sql_database': None,            # the SQL database used by the reporting
         },
         'runtime': {
             # here we can store the runtime configuration parameters

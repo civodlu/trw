@@ -38,7 +38,7 @@ from trw.train import utilities
 logger = logging.getLogger(__name__)
 
 
-def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch):
+def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=None):
     """
     Post process a batch of data (e.g., this can be useful to add additional
     data to the current batch)
@@ -50,12 +50,16 @@ def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch):
         callbacks_per_batch (list): the callbacks to be executed for each batch.
             Each callback must be callable with `(dataset_name, split_name, batch)`.
             if `None`, no callbacks
+        batch_id: indicate the current batch within an epoch. May be ``None``. This can be useful
+            for embedding optimizer within a module (e.g., scheduler support)
     """
 
     # always useful: for example if we do a model composed of multiple sub-models (one per dataset)
     # we would need to know what sub-model to use
     batch['dataset_name'] = dataset_name
     batch['split_name'] = split_name
+    if batch_id is not None:
+        batch['batch_id'] = batch_id
     
     if callbacks_per_batch is not None:
         for callback in callbacks_per_batch:
@@ -220,9 +224,7 @@ def train_loop(
         loss_fn,
         history,
         callbacks_per_batch,
-        callbacks_per_batch_loss_terms,
-        apply_backward=True,
-        force_eval_mode=False):
+        callbacks_per_batch_loss_terms):
     """
     Run the train loop (i.e., the model parameters will be updated)
 
@@ -242,14 +244,12 @@ def train_loop(
         callbacks_per_batch: the callbacks to be performed on each batch. if `None`, no callbacks to be run
         callbacks_per_batch_loss_terms: the callbacks to be performed on each loss term. if `None`, no callbacks to be run
         apply_backward: if True, the gradient will be back-propagated
-        force_eval_mode: if True, the model will be in eval mode (e.g., for the model statistics of the
-            final iteration)
+
+    Notes:
+        if ``optimizer`` is None, there MUST be a ``.backward()`` to free graph and memory.
     """
     # make sure the model is in training mode (e.g., batch norm, dropout)
-    if force_eval_mode:
-        model.eval()
-    else:
-        model.train()
+    model.train()
 
     all_loss_terms = []
     
@@ -276,22 +276,21 @@ def train_loop(
 
             if optimizer is not None:
                 optimizer.zero_grad()
-    
+
             outputs = model(batch)
-            
+
             assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
             loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
-            all_loss_terms.append(loss_terms)
-
             loss = loss_fn(dataset_name, batch, loss_terms)
-            if optimizer is not None and apply_backward and isinstance(loss, torch.Tensor):
+
+            if optimizer is not None and isinstance(loss, torch.Tensor):
                 if isinstance(loss, torch.Tensor):
                     # if there is no optimizer, it means we did not want to change the parameters
                     loss.backward()
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
             loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}
-
+            
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
                     callback(dataset_name, split_name, batch, loss_terms)
@@ -303,6 +302,8 @@ def train_loop(
             # once we are done, we want to perform some cleanup. For example, we do NOT want to keep CUDA based
             # tensors in the output so we can run clean up to transfer CUDA based memory to numpy
             loss_term_cleanup(loss_terms)
+
+            all_loss_terms.append(loss_terms)
             batch_processing_last = time.perf_counter()
             nb_samples += utilities.len_batch(batch)
 
@@ -408,7 +409,7 @@ def epoch_train_eval(
     :param options:
     :param datasets:
     :param optimizers: if None, no optimization will be performed on the train split else a dictionary of
-    optimizers (on for each dataset)
+        optimizers (on for each dataset)
     :param model:
     :param losses:
     :param schedulers:
@@ -418,9 +419,7 @@ def epoch_train_eval(
     :param run_eval: if True, run the evaluation
     :param eval_loop_fn: the eval function to be used
     :param train_loop_fn: the train function to be used
-    :param force_eval_mode: if ``True``, the train will must be performed in ``module.eval()`` mode.
-        This can be used to collect the model statistics of the last iteration without for example
-        dropout layer applied.
+    :param force_eval_mode: if ``True``, the train split will be evaluated using the eval loop instead of train loop.
     :return:
     """
     device = options['workflow_options']['device']
@@ -440,7 +439,7 @@ def epoch_train_eval(
         dataset_outputs = collections.OrderedDict()
         for split_name, split in dataset.items():
             time_start = time.perf_counter()
-            if split_name == train_split_name:
+            if split_name == train_split_name and not force_eval_mode:
                 # * only the split `train_split_name` is considered as training, all
                 # other splits are for evaluation only
                 # * if we don't have optimizers, we still want to have
@@ -455,8 +454,7 @@ def epoch_train_eval(
                     loss_fn,
                     history,
                     callbacks_per_batch=callbacks_per_batch,
-                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms,
-                    force_eval_mode=force_eval_mode)
+                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms)
             else:
                 if not run_eval or eval_loop_fn is None:
                     # we should not run the evaluation. Skip this!
@@ -782,6 +780,8 @@ class Trainer:
         sql_path = os.path.join(options['workflow_options']['current_logging_directory'], 'reporting_sqlite.db')
         sql = sqlite3.connect(sql_path)
         options['workflow_options']['sql_database'] = sql
+        options['workflow_options']['sql_database_path'] = sql_path
+        options['workflow_options']['sql_database_view_path'] = sql_path.replace('.db', '.json')
 
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
