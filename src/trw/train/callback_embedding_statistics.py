@@ -1,7 +1,7 @@
 from trw.train import callback
 from trw.train import utilities
 from trw.train import trainer
-from trw.train.outputs import OutputEmbedding
+from trw.train.outputs_trw import OutputEmbedding
 import collections
 import numpy as np
 import logging

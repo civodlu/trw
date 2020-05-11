@@ -1,6 +1,6 @@
 from trw.train import callback
 from trw.train import utilities
-from trw.train import outputs as trw_outputs
+from trw.train import outputs_trw as trw_outputs
 from trw.train import sample_export
 from trw.train import sequence_array
 from trw.train import sampler

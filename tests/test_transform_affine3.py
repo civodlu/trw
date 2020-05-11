@@ -82,13 +82,39 @@ class TestTransformsAffine(unittest.TestCase):
             'images_joint': images
         }
 
-        tfm = trw.transforms.TransformAffine([(-200, 200), (0, 0)], 1, 0)
-        transformed_batch = tfm(batch)
+        tfm = trw.transforms.TransformAffine([45, 50], [0.7, 1.3], .5, padding_mode='reflection')
+        for n in range(10):
+            transformed_batch = tfm(batch)
 
-        i = np.uint8(transformed_batch['images'].numpy())[0, 0]
-        Image.fromarray(np.stack((i, i, i), axis=2)).save(os.path.join(root, 'affine_transformed_.png'))
+            i = np.uint8(transformed_batch['images'].numpy())[0, 0]
+            Image.fromarray(np.stack((i, i, i), axis=2)).save(os.path.join(root, f'affine_transformed_{n}.png'))
 
         assert (transformed_batch['images'] == transformed_batch['images_joint']).all()
+
+    def test_affine_3d_joint(self):
+        options = trw.train.create_default_options()
+        root = options['workflow_options']['logging_directory']
+
+        shape = [32, 64, 96]
+        shape2 = [32 // 2, 64 // 2, 96 // 2]
+        images = torch.ones(shape, dtype=torch.float32)
+        images[shape2[0]-5:shape2[0]+5, shape2[1]-10:shape2[1]+10, shape2[2]-15:shape2[2]+15] = 3.0
+        images = images.unsqueeze(0).unsqueeze(0)  # add N, C components
+
+        batch = {
+            'images': images,
+            'images_joint': images
+        }
+
+        i = images.numpy()[0, 0]
+        np.save(os.path.join(root, f'affine_transformed_3d_original.png'), i)
+
+        tfm = trw.transforms.TransformAffine(0, 1, 0.9)
+        for n in range(10):
+            transformed_batch = tfm(batch)
+
+            i = transformed_batch['images'].numpy()[0, 0]
+            np.save(os.path.join(root, f'affine_transformed_3d_{n}.png'), i)
 
 
 if __name__ == '__main__':

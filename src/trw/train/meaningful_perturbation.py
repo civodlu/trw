@@ -2,7 +2,7 @@ import logging
 import collections
 import functools
 from trw.train import guided_back_propagation
-from trw.train import outputs as outputs_trw
+from trw.train import outputs_trw as outputs_trw
 from trw.train import utilities
 from torch.nn import functional as F
 from trw.train.filter_gaussian import FilterGaussian

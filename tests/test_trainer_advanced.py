@@ -101,6 +101,7 @@ class TestTrainerAdvanced(TestCase):
         """
         options = trw.train.create_default_options(num_epochs=100)
         trainer = trw.train.Trainer(
+            callbacks_pre_training_fn=None,
             callbacks_per_epoch_fn=None,
             callbacks_per_batch_loss_terms_fn=None,
             callbacks_post_training_fn=None,
@@ -126,7 +127,7 @@ class TestTrainerAdvanced(TestCase):
         # dataset size
         print(len(composed_model.record['dataset_1']))
         print(len(composed_model.record['dataset_2']))
-        r_1 = composed_model.record['dataset_1'][11:-1]  # realign the 2 sequences for easy comparison
+        r_1 = composed_model.record['dataset_1'][10:-1]  # realign the 2 sequences for easy comparison
         r_2 = composed_model.record['dataset_2'][10:-1]
         print(len(r_1))
         print(len(r_2))
@@ -159,6 +160,7 @@ class TestTrainerAdvanced(TestCase):
         """
         options = trw.train.create_default_options(num_epochs=100)
         trainer = trw.train.Trainer(
+            callbacks_pre_training_fn=None,
             callbacks_per_epoch_fn=None,
             callbacks_per_batch_loss_terms_fn=None,
             callbacks_post_training_fn=None,

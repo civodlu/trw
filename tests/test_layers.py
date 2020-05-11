@@ -2,6 +2,7 @@ import functools
 
 import trw
 import torch
+import torch.nn as nn
 from unittest import TestCase
 
 from trw.layers import AutoencoderConvolutionalVariational, AutoencoderConvolutionalVariationalConditional
@@ -9,6 +10,56 @@ from trw.train.losses import one_hot
 
 
 class TestLayers(TestCase):
+    def test_convs_layers(self):
+        """
+        Make sure the sequence is done as expected
+        """
+        convs = trw.layers.ConvsBase(
+            input_channels=1,
+            cnn_dim=2,
+            channels=[2, 4, 8],
+            convolution_repeats=[2, 1, 1],
+            batch_norm_kwargs={},
+            lrn_kwargs={},
+            dropout_probability=0.1,
+            activation=nn.LeakyReLU,
+            last_layer_is_output=True
+        )
+
+        # we have 3 groups (defined by number of ``channels``)
+        assert len(convs.layers) == 3
+
+        group_0 = list(convs.layers[0])
+        assert len(group_0) == 10
+        assert isinstance(group_0[0], nn.Conv2d)
+        assert isinstance(group_0[1], nn.LeakyReLU)
+        assert isinstance(group_0[2], nn.BatchNorm2d)
+        assert isinstance(group_0[3], nn.LocalResponseNorm)
+
+        assert isinstance(group_0[4], nn.Conv2d)
+        assert isinstance(group_0[5], nn.LeakyReLU)
+
+        # Dropout after maxpooling, see ``Towards Principled Design of Deep
+        # Convolutional Networks: Introducing SimpNet``
+        assert isinstance(group_0[6], nn.MaxPool2d)
+        assert isinstance(group_0[7], nn.BatchNorm2d)
+        assert isinstance(group_0[8], nn.LocalResponseNorm)
+        assert isinstance(group_0[9], nn.Dropout2d)
+
+        group_1 = list(convs.layers[1])
+        assert len(group_1) == 6
+        assert isinstance(group_1[0], nn.Conv2d)
+        assert isinstance(group_1[1], nn.LeakyReLU)
+        assert isinstance(group_1[2], nn.MaxPool2d)
+        assert isinstance(group_1[3], nn.BatchNorm2d)
+        assert isinstance(group_1[4], nn.LocalResponseNorm)
+        assert isinstance(group_1[5], nn.Dropout2d)
+
+        # the last group will be used as classification ``last_layer_is_output`` == True
+        # So do not add activation, regularization or maxpool
+        group_2 = list(convs.layers[2])
+        assert isinstance(group_2[0], nn.Conv2d)
+
     def test_convs_base(self):
         convs = trw.layers.ConvsBase(input_channels=1, cnn_dim=2, channels=[2, 4, 8])
 

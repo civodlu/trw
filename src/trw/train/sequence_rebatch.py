@@ -113,7 +113,11 @@ class SequenceReBatch(sequence.Sequence):
 
         if self.collate_fn is not None:
             # finally make a batch
-            return self.collate_fn(batches)
+            #time_start = time.perf_counter()
+            batches = self.collate_fn(batches)
+            #time_end = time.perf_counter()
+            #print('COLLATE=', time_end - time_start)
+
         return batches
 
     def __iter__(self):

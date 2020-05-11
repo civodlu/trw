@@ -4,7 +4,7 @@ from trw.train import trainer
 from trw.train import utilities
 from trw.train import sample_export
 from trw.train import sequence_array
-from trw.train import outputs as outputs_trw
+from trw.train import outputs_trw as outputs_trw
 from trw.train import guided_back_propagation
 from trw.train import grad_cam
 from trw.train import integrated_gradients

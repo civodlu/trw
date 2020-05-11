@@ -1,3 +1,4 @@
+import json
 import time
 import logging
 import torch
@@ -251,7 +252,13 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     """
     tensor = values
     if isinstance(values, list) and isinstance(values[0], torch.Tensor):
-        tensor = torch.cat(values)
+        if len(values) == 1:
+            # no need to concatenate if we have only a single element!
+            # this usecase is quite common with SequenceAsyncReservoir
+            # and taking significant time with large tensors
+            tensor = values[0]
+        else:
+            tensor = torch.cat(values)
     elif isinstance(values, list) and isinstance(values[0], np.ndarray):
         tensor = torch.as_tensor(np.concatenate(values))
     elif isinstance(values, np.ndarray):
@@ -711,3 +718,51 @@ def make_pair_indices(targets, same_target_ratio=0.5):
     samples_0 = samples_0[:len(samples_1)]
 
     return np.concatenate(samples_0), np.concatenate(samples_1), np.asarray(same_target)
+
+
+def recursive_dict_update(dict, dict_update):
+    """
+    This adds any missing element from ``dict_update`` to ``dict``, while keeping any key not
+        present in ``dict_update``
+
+    Args:
+        dict: the dictionary to be updated
+        dict_update: the updated values
+    """
+    for updated_name, updated_values in dict_update.items():
+        if updated_name not in dict:
+            # simply add the missing name
+            dict[updated_name] = updated_values
+        else:
+            values = dict[updated_name]
+            if isinstance(values, collections.Mapping):
+                # it is a dictionary. This needs to be recursively
+                # updated so that we don't remove values in the existing
+                # dictionary ``dict``
+                recursive_dict_update(values, updated_values)
+            else:
+                # the value is not a dictionary, we can update directly its value
+                dict[updated_name] = values
+
+
+def update_json_config(path_to_json, config_update):
+    """
+    Update a JSON document stored on locally.
+
+    Args:
+        path_to_json: the path to the local JSON configuration
+        config_update: a possibly nested dictionary
+
+    """
+    if os.path.exists(path_to_json):
+        with open(path_to_json, 'r') as f:
+            text = f.read()
+        config = json.loads(text)
+    else:
+        config = collections.OrderedDict()
+
+    recursive_dict_update(config, config_update)
+
+    json_str = json.dumps(config, indent=3)
+    with open(path_to_json, 'w') as f:
+        f.write(json_str)

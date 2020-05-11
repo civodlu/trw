@@ -1,6 +1,6 @@
 import torch
 import logging
-from trw.train import outputs as outputs_trw
+from trw.train import outputs_trw as outputs_trw
 from trw.train import utilities
 from trw.train import guided_back_propagation
 import numpy as np

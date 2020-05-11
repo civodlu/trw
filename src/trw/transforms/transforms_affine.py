@@ -30,19 +30,92 @@ def rand_n_2(n_min_max):
     return scaled_r
 
 
+def _random_affine_2d(translation_random_interval, rotation_random_interval, scaling_factors_random_interval):
+    """
+    Random 2D transformation matrix defined as Tfm = T * Rotation * Scaling
+
+    Args:
+        translation_random_interval: 2 x (min, max) array to specify (min, max) of x and y
+        rotation_random_interval: 1 x (min, max) radian angle
+        scaling_factors_random_interval: 2 x (min, max) or 1 x (min, max) scaling factors for x and y. if size
+            ``1 x (min, max)``, the same random scaling will be applied
+
+    Returns:
+        a 3x3 transformation matrix
+    """
+    translation_offset = rand_n_2(translation_random_interval)
+    rotation_angle = rand_n_2(rotation_random_interval)
+    scaling_factors = rand_n_2(scaling_factors_random_interval)
+    if len(scaling_factors) == 1:
+        scaling_factors = np.asarray([float(scaling_factors), float(scaling_factors)])
+
+    matrix_translation = affine.affine_transformation_translation(translation_offset)
+    matrix_scaling = affine.affine_transformation_scale(scaling_factors)
+    matrix_rotation = affine.affine_transformation_rotation2d(rotation_angle)
+
+    return matrix_translation.mm(matrix_rotation.mm(matrix_scaling))
+
+
+def _random_affine_3d(translation_random_interval, rotation_random_interval, scaling_factors_random_interval):
+    """
+    Random 3D transformation matrix defined as Tfm = T * Rotation * Scaling
+
+    Args:
+        translation_random_interval: 3 x (min, max) array to specify (min, max) of x and y
+        rotation_random_interval: 1 x (min, max) radian angle
+        scaling_factors_random_interval: 3 x (min, max) or 1 x (min, max) scaling factors for x and y. if size
+            ``1 x (min, max)``, the same random scaling will be applied
+
+    Returns:
+        a 4x4 transformation matrix
+    """
+    translation_offset = rand_n_2(translation_random_interval)
+    dim_data = len(translation_offset)
+
+    rotation_angle = rand_n_2(rotation_random_interval)
+    scaling_factors = rand_n_2(scaling_factors_random_interval)
+    if len(scaling_factors) == 1:
+        scaling_factors = np.asarray([float(scaling_factors)] * dim_data)
+
+    matrix_translation = affine.affine_transformation_translation(translation_offset)
+    matrix_scaling = affine.affine_transformation_scale(scaling_factors)
+    matrix_rotation_x = affine.affine_transformation_rotation_3d_x(rotation_angle[0])
+    matrix_rotation_y = affine.affine_transformation_rotation_3d_y(rotation_angle[1])
+    matrix_rotation_z = affine.affine_transformation_rotation_3d_z(rotation_angle[2])
+
+    return matrix_translation.mm(matrix_scaling.mm(matrix_rotation_z.mm(matrix_rotation_y.mm(matrix_rotation_x))))
+
+
 class TransformAffine(transforms.TransformBatchWithCriteria):
     """
     Transform an image using a random affine (2D or 3D) transformation.
 
     Only 2D or 3D supported transformation.
+
+    Notes:
+        the scaling and rotational components of the transformation are performed
+        relative to the image.
     """
     def __init__(
             self,
             translation_min_max,
             scaling_min_max,
             rotation_radian_min_max,
+            isotropic=True,
             criteria_fn=None,
             padding_mode='zeros'):
+        """
+
+        Args:
+            translation_min_max: Translation component. can be expressed as number, [min, max] for all axes, or
+                [[min_x, max_x], [min_y, max_y], ...]
+            scaling_min_max: Scaling component. can be expressed as number, [min, max] for all axes, or
+                [[min_x, max_x], [min_y, max_y], ...]
+            rotation_radian_min_max:
+            isotropic: if ``True``, the random scaling will be the same for all axes
+            criteria_fn:
+            padding_mode: one of ``zero``, ``reflexion``, ``border``
+        """
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 
@@ -51,6 +124,7 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
         self.rotation_radian_min_max = rotation_radian_min_max
         self.scaling_min_max = scaling_min_max
         self.translation_min_max = translation_min_max
+        self.isotropic = isotropic
 
         super().__init__(
             criteria_fn=criteria_fn,
@@ -71,20 +145,41 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
             assert feature.shape[0] == data_shape[0]
 
         # normalize the transformation. We want a Dim * 2 matrix
-        translation = np.asarray(self.translation_min_max)
-        if len(translation.shape) == 0:  # single value
-            translation = np.asarray([[-translation, translation]] * data_dim)
-        elif len(translation.shape) == 1:  # min/max
-            assert len(translation) == 2
-            translation = np.repeat([[translation[0], translation[1]]], data_dim, axis=0)
+        def normalize_input(i, dim, no_negative_range=False):
+            i = np.asarray(i)
+            if len(i.shape) == 0:  # single value
+                if no_negative_range:
+                    i = np.asarray([[i, i]] * dim)
+                else:
+                    i = np.asarray([[-i, i]] * dim)
+            elif len(i.shape) == 1:  # min/max
+                assert len(i) == 2
+                i = np.repeat([[i[0], i[1]]], dim, axis=0)
+            else:
+                assert i.shape == (dim, 2), 'expected [(min_x, max_x), (min_y, max_y), ...]'
+            return i
+
+        translation_range = normalize_input(self.translation_min_max, data_dim)
+        if data_dim == 2:
+            rotation_range = normalize_input(self.rotation_radian_min_max, 1)
+        elif data_dim == 3:
+            rotation_range = normalize_input(self.rotation_radian_min_max, 3)
         else:
-            assert translation.shape == (data_dim, 2), 'expected [(min_x, max_x), (min_y, max_y), ...]'
+            raise NotImplementedError()
+
+        if self.isotropic:
+            scaling_range = normalize_input(self.scaling_min_max, 1, no_negative_range=True)
+        else:
+            scaling_range = normalize_input(self.scaling_min_max, data_dim, no_negative_range=True)
 
         tfms = []
         for n in range(data_shape[0]):
-            random_translation_offset = rand_n_2(translation)
-            matrix_translation = affine.affine_transformation_translation(random_translation_offset)
-            matrix_transform = matrix_translation
+            if data_dim == 2:
+                matrix_transform = _random_affine_2d(translation_range, rotation_range, scaling_range)
+            elif data_dim == 3:
+                matrix_transform = _random_affine_3d(translation_range, rotation_range, scaling_range)
+            else:
+                raise NotImplementedError()
             matrix_transform = affine.to_voxel_space_transform(matrix_transform, data_shape[1:])
             tfms.append(matrix_transform)
 

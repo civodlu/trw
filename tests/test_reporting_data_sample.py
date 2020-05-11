@@ -4,22 +4,77 @@ import tempfile
 from unittest import TestCase
 import trw.reporting
 import numpy as np
-from bokeh.models import Div, DataTable
+from bokeh.models import Div, DataTable, Panel, ImageURL, Rect
 from bokeh.plotting import Figure
 
 from trw.reporting import TableStream, export_sample
-from trw.reporting.reporting_bokeh import normalize_data, DataCategory, process_data_samples
-from trw.reporting.table_sqlite import get_table_data
+from trw.reporting.bokeh_ui import BokehUi
+from trw.reporting.normalize_data import normalize_data
+from trw.reporting.reporting_bokeh_samples import process_data_samples
+from trw.reporting.data_category import DataCategory
+from trw.reporting.reporting_bokeh_tabs_dynamic_data import TabsDynamicData, get_data_normalize_and_alias, \
+    create_aliased_table
+from trw.reporting.reporting_bokeh_tabs_dynamic_header import TabsDynamicHeader
+from trw.reporting.table_sqlite import get_table_data, get_tables_name_and_role
 
 
-def make_table(cursor, table_name, table_role, batch):
-    tmp_folder = tempfile.mkdtemp()
+def make_table(cursor, table_name, table_role, batch, db_path=None):
+    if db_path is None:
+        tmp_folder = tempfile.mkdtemp()
+    else:
+        tmp_folder = os.path.dirname(db_path)
     output_dir = os.path.join(tmp_folder, 'static')
     os.makedirs(os.path.join(output_dir, table_name))
 
     table_stream = TableStream(cursor, table_name, table_role)
     export_sample(tmp_folder, table_stream, 'basename', batch)
-    return tmp_folder
+    return tmp_folder, table_stream
+
+
+def find_named(ui, name):
+    """
+    Go through the hierarchy of UI elements and find the elements that have the same name
+    """
+    results = set()
+    if hasattr(ui, 'name'):
+        if ui.name == name:
+            results.add(ui)
+
+    if hasattr(ui, 'children'):
+        for c in ui.children:
+            resuls_children = find_named(c, name)
+            results.update(resuls_children)
+
+    if hasattr(ui, 'tabs'):
+        for c in ui.tabs:
+            resuls_children = find_named(c, name)
+            results.update(resuls_children)
+
+    if hasattr(ui, 'child'):
+        resuls_children = find_named(ui.child, name)
+        results.update(resuls_children)
+
+    return results
+
+
+class PeriodicCallbacks:
+    def __init__(self):
+        self.callback = None
+
+    def add_periodic_callback(self, callback, refresh_time):
+        self.callback = callback
+
+    def execute(self):
+        self.callback()
+
+
+class TabDataUpdate(BokehUi):
+    def __init__(self):
+        self.updated = False
+        super().__init__(ui=Panel(name='TEST'))
+
+    def update_data(self, options, name, data, types, type_categories):
+        self.updated = True
 
 
 class TestReporting(TestCase):
@@ -34,7 +89,7 @@ class TestReporting(TestCase):
         }
 
         table_name = 'table_name'
-        tmp_folder = make_table(cursor, table_name, 'table_role', batch)
+        tmp_folder , _ = make_table(cursor, table_name, 'table_role', batch)
 
         data = get_table_data(cursor, table_name)
         options = trw.reporting.create_default_reporting_options()
@@ -69,7 +124,7 @@ class TestReporting(TestCase):
         }
 
         table_name = 'table_name'
-        tmp_folder = make_table(cursor, table_name, 'table_role', batch)
+        tmp_folder , _ = make_table(cursor, table_name, 'table_role', batch)
 
         subsampling_factor = 2 / 3
         data = get_table_data(cursor, table_name)
@@ -131,7 +186,7 @@ class TestReporting(TestCase):
         }
 
         table_name = 'table_name'
-        tmp_folder = make_table(cursor, table_name, 'table_role', batch)
+        tmp_folder , _ = make_table(cursor, table_name, 'table_role', batch)
 
         options = trw.reporting.create_default_reporting_options()
         options.db_root = os.path.join(tmp_folder, 'test.db')
@@ -148,8 +203,8 @@ class TestReporting(TestCase):
         table = tabs[0].ui.child.children[0]
         assert isinstance(table, DataTable)
         div = tabs[0].ui.child.children[1]
-        assert isinstance(tabs[0].ui.child.children[1], Div)  # DIV to configure extra CSS
-                                                           # for the table (text rotation)
+        assert isinstance(tabs[0].ui.child.children[1], Div)    # DIV to configure extra CSS
+                                                                # for the table (text rotation)
         assert div.visible is False
 
         assert len(table.source.column_names) == len(batch)
@@ -180,7 +235,7 @@ class TestReporting(TestCase):
         }
 
         table_name = 'table_name'
-        tmp_folder = make_table(cursor, table_name, 'table_role', batch)
+        tmp_folder , _ = make_table(cursor, table_name, 'table_role', batch)
 
         config = {
             'table_name': {
@@ -226,7 +281,7 @@ class TestReporting(TestCase):
         }
 
         table_name = 'table_name'
-        tmp_folder = make_table(cursor, table_name, 'table_role', batch)
+        tmp_folder, _ = make_table(cursor, table_name, 'table_role', batch)
 
         #
         # X: continuous, Y: discrete
@@ -295,3 +350,144 @@ class TestReporting(TestCase):
         head = tabs[1].ui.child.children
         assert len(head) == 2  # Tools, Fig, Figure-color-legend
         assert len(head[1].children[0].children[0].renderers) > 0
+
+    def test_header_update(self):
+        """
+        Test ``TabsDynamicHeader`` responds to adding new tables in the SQL database
+        """
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        options = trw.reporting.create_default_reporting_options()
+        options.db_root = 'NONE'
+
+        doc = PeriodicCallbacks()
+        header_updated = False
+
+        def creator_fn(name, role):
+            nonlocal header_updated
+            header_updated = True
+
+        dynamic_header = TabsDynamicHeader(doc, options, connection, creator_fn)
+        doc.execute()
+
+        # there is not change, should not be updated
+        assert not header_updated
+
+        # create a table, this should trigger the callback
+        table_name = 'table_name'
+        batch = {'value_continuous': [1.1, 2.2, 3.3]}
+        make_table(cursor, table_name, 'table_role', batch)
+        doc.execute()
+        assert header_updated
+
+    def test_data_update(self):
+        """
+        Test ``TabsDynamicData`` responds to update of an underlying SQL table
+        """
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        options = trw.reporting.create_default_reporting_options()
+        options.db_root = 'NONE'
+
+        doc = PeriodicCallbacks()
+        tabs = None
+
+        def creator_fn(options, name, role, data, types, type_categories):
+            # create the dynamic tabs
+            nonlocal tabs
+            tabs = [TabDataUpdate()]
+            return tabs
+
+        table_name = 'table_name'
+        table_role = 'table_role'
+
+        # create a table, this should not trigger the callback
+        batch = {'value_continuous': [1.1, 2.2, 3.3]}
+        table, table_stream = make_table(cursor, table_name, table_role, batch)
+        dynamic_data = TabsDynamicData(doc, options, connection, table_name, table_role, creator_fn)
+        doc.execute()
+        assert len(tabs) == 1
+        assert not tabs[0].updated
+
+        # no data update, should not trigger the callback
+        doc.execute()
+        assert len(tabs) == 1
+        assert not tabs[0].updated
+
+        # update the table, this should trigger the callback
+        table_stream.insert(batch)
+        number_of_rows = trw.reporting.get_table_number_of_rows(cursor, table_name)
+        assert number_of_rows == 6
+
+        # table was modified, expect the callback to be triggered
+        doc.execute()
+        assert len(tabs) == 1
+        assert tabs[0].updated
+
+    def test_table_aliasing(self):
+        """
+        Access data of an aliased table. Aliased table allow us to create
+        table with different configurations (e.g., different view of the data) and
+        not repeating the tables.
+        """
+
+        # set up the real table
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+        batch = {'value_continuous': [1.1, 2.2, 3.3]}
+        table, table_stream = make_table(cursor, 'real_table', 'table_role', batch)
+
+        # create an aliased table
+        aliased_name = 'aliased_table'
+        create_aliased_table(connection, aliased_name, 'real_table')
+
+        # retrieve the data
+        options = trw.reporting.create_default_reporting_options()
+        options.db_root = 'NONE'
+        data, types, type_categories, alias = get_data_normalize_and_alias(options, connection, aliased_name)
+        assert 'value_continuous' in data
+        assert alias == 'real_table'
+
+    def test_scatter_default_view_with_image(self):
+        # set up the real table
+        tmp_folder = tempfile.mkdtemp()
+        db_path = os.path.join(tmp_folder, 'database.db')
+
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+
+        batch = {
+            'value_continuous': np.arange(10),
+            'images': np.ones((10, 1, 32, 32), dtype=np.float32)
+        }
+        tmp_folder, _ = make_table(cursor, 'test_table', 'data_samples', batch, db_path=db_path)
+        connection.commit()
+
+        options = trw.reporting.create_default_reporting_options()
+
+        doc = trw.reporting.report(db_path, options)
+        assert len(doc.roots) == 1
+
+        controls = find_named(doc.roots[0], 'PanelDataSamplesScatter_controls')
+        uis = find_named(doc.roots[0], 'data_samples_fig')
+        icon = find_named(doc.roots[0], 'icon')
+
+        assert len(controls) == 1, 'expected a single control with the scatter plot'
+        assert next(iter(icon)).value == 'images', 'we have an image like array. This should be used as default'
+        assert len(uis) == 1, 'expected a single figure'
+
+        # make sure we are displaying images & caption
+        fig = next(iter(uis))
+        render_images = fig.renderers[0]
+        assert isinstance(render_images.glyph, ImageURL), 'expected Image URL'
+        render_caption = fig.renderers[1]
+        assert isinstance(render_caption.glyph, Rect), 'expected Rect (image caption)'
+
+        # check the image coordinate: no filter, ordered by index
+        xs = render_images.data_source.data['fig_0_data_x']
+        ys = render_images.data_source.data['fig_0_data_y']
+
+        assert (xs == [0, 64, 128, 192, 0, 64, 128, 192, 0, 64]).all()
+        assert (ys == [0, 0, 0, 0, 64, 64, 64, 64, 128, 128]).all()

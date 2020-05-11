@@ -68,6 +68,72 @@ def affine_transformation_rotation2d(angle_radian):
     return rotation
 
 
+def affine_transformation_rotation_3d_x(angle_radian):
+    """
+    Rotation in 3D around the x axis
+
+    See Also:
+        https://en.wikipedia.org/wiki/Rotation_matrix
+
+    Args:
+        angle_radian:
+
+    Returns:
+        4x4 torch.Tensor
+    """
+    rotation = torch.tensor([
+        [1, 0,                      0,                       0],
+        [0, math.cos(angle_radian), -math.sin(angle_radian), 0],
+        [0, math.sin(angle_radian), math.cos(angle_radian),  0],
+        [0, 0,                      0,                       1]
+    ], dtype=torch.float32)
+    return rotation
+
+
+def affine_transformation_rotation_3d_y(angle_radian):
+    """
+    Rotation in 3D around the y axis
+
+    See Also:
+        https://en.wikipedia.org/wiki/Rotation_matrix
+
+    Args:
+        angle_radian:
+
+    Returns:
+        4x4 torch.Tensor
+    """
+    rotation = torch.tensor([
+        [math.cos(angle_radian),  0,     math.sin(angle_radian),     0],
+        [0,                       1,     0,                          0],
+        [-math.sin(angle_radian), 0,     math.cos(angle_radian),     0],
+        [0,                       0,     0,                          1]
+    ], dtype=torch.float32)
+    return rotation
+
+
+def affine_transformation_rotation_3d_z(angle_radian):
+    """
+    Rotation in 3D around the y axis
+
+    See Also:
+        https://en.wikipedia.org/wiki/Rotation_matrix
+
+    Args:
+        angle_radian:
+
+    Returns:
+        4x4 torch.Tensor
+    """
+    rotation = torch.tensor([
+        [math.cos(angle_radian), -math.sin(angle_radian),        0,  0],
+        [math.sin(angle_radian), math.cos(angle_radian),         0,  0],
+        [0,                      0,                              1,  0],
+        [0,                      0,                              0,  1]
+    ], dtype=torch.float32)
+    return rotation
+
+
 def to_voxel_space_transform(matrix, image_shape):
     """
     Express the affine transformation in image space coordinate

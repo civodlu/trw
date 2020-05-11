@@ -6,6 +6,8 @@ import numpy as np
 import torch
 import torch.utils.data
 import trw.train
+from trw.train import default_pre_training_callbacks
+
 import utils
 import functools
 import torch.nn as nn
@@ -124,10 +126,11 @@ optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_ra
 
 def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_batch_loss_terms=[]):
     return trw.train.Trainer(
-        callbacks_per_epoch_fn=lambda : callback_per_epoch,
+        callbacks_per_epoch_fn=lambda: callback_per_epoch,
         callbacks_per_batch_loss_terms_fn=lambda: callback_per_batch_loss_terms,
         callbacks_post_training_fn=None,
-        callbacks_per_batch_fn=lambda  : callback_per_batch
+        callbacks_per_batch_fn=lambda: callback_per_batch,
+        callbacks_pre_training_fn=functools.partial(default_pre_training_callbacks, with_reporting_server=False)
     )
 
 

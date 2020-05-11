@@ -11,7 +11,9 @@ import os
 import pickle
 import time
 import itertools
-from trw.train import outputs
+from trw.train import outputs_trw
+from trw.train import callback_reporting_export_samples
+from trw.train import callback_reporting_start_server
 from trw.train import callback_model_summary
 from trw.train import callback_data_summary
 from trw.train import callback_export_classification_errors
@@ -72,6 +74,8 @@ def prepare_loss_terms(outputs, batch, is_training):
     """
     loss_terms = collections.OrderedDict()
     for output_name, output in outputs.items():
+        assert isinstance(output, outputs_trw.Output), f'output must be a `trw.train.Output`' \
+                                                       f' instance. Got={type(output)}'
         loss_term = output.evaluate_batch(batch, is_training)
         if loss_term is not None:
             loss_terms[output_name] = loss_term
@@ -113,7 +117,7 @@ def aggregate_values(values):
             return torch.cat(values)
         else:
             return torch.sum(torch.stack(values)) / len(values)
-    elif isinstance(value, outputs.Output):
+    elif isinstance(value, outputs_trw.Output):
         return values[0]
     elif isinstance(value, list):
         return list(itertools.chain.from_iterable(values))
@@ -209,7 +213,7 @@ def loss_term_cleanup(loss_terms):
         loss_terms: the loss terms to be cleaned up
     """
     for name, loss_term in loss_terms.items():
-        ref = loss_term.get(outputs.Output.output_ref_tag)
+        ref = loss_term.get(outputs_trw.Output.output_ref_tag)
         if ref is not None:
             ref.loss_term_cleanup(loss_term)
 
@@ -494,7 +498,7 @@ def epoch_train_eval(
 default_logger = utilities.log_and_print
 
 
-def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, with_export_augmentations=True):
+def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, with_export_augmentations=True, with_reporting_server=True):
     """
     Default callbacks to be performed before the fitting of the model
     """
@@ -502,9 +506,12 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
         callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
         callback_model_summary.CallbackModelSummary(logger=logger),
         callback_data_summary.CallbackDataSummary(logger=logger),
-        callback_export_samples.CallbackExportSamples(dirname='random_samples'),
-        callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..'))
+        callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..')),
+        callback_reporting_export_samples.CallbackReportingExportSamples(table_name='random_samples'),
     ]
+
+    if with_reporting_server:
+        callbacks.append(callback_reporting_start_server.CallbackReportingStartServer())
     
     if with_export_augmentations:
         callbacks.append(callback_export_augmentations.CallbackExportAugmentations())

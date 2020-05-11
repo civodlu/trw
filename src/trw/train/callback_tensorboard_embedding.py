@@ -1,7 +1,7 @@
 from trw.train import callback_tensorboard
 from trw.train import utilities
 from trw.train import trainer
-from trw.train import outputs as O
+from trw.train import outputs_trw as O
 import functools
 import collections
 import torch

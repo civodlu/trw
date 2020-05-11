@@ -57,7 +57,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             convolution_kernels: for each convolution group, the kernel of the convolution
             strides: for each convolution group, the stride of the convolution
             pooling_size: the pooling size to be inserted after each convolution group
-            convolution_repeats: the number of repeats of a convolution
+            convolution_repeats: the number of repeats of a convolution. ``1`` means no repeat.
             activation: the activation function
             with_flatten: if True, the last output will be flattened
             dropout_probability: if None, not dropout. Else the probability of dropout after each convolution
@@ -87,6 +87,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
         assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
         assert pooling_size is None or nb_convs == len(pooling_size), 'must be specified for each convolutional layer'
+        assert nb_convs == len(convolution_repeats)
 
         self.with_flatten = with_flatten
         with_batchnorm = batch_norm_kwargs is not None
@@ -116,11 +117,18 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             for r in range(nb_repeats):
                 # do NOT apply strides in the repeat convolutions, else we will loose too quickly
                 # the resolution
+                if with_batchnorm:
+                    ops.append(ops_conv.bn_fn(current, **batch_norm_kwargs))
+
+                if with_lrn:
+                    ops.append(lrn_fn(current, **lrn_kwargs))
+
                 ops.append(ops_conv.conv_fn(current, current, kernel_size=convolution_kernels[n], stride=1, padding=p))
 
                 if last_layer_is_output and currently_last_layer and r + 1 == nb_repeats:
                     # we don't want to add activation if the output is the last layer
                     break
+
                 ops.append(activation())
 
             if not last_layer_is_output or not currently_last_layer:

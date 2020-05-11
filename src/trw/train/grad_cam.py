@@ -1,7 +1,7 @@
 from trw.train import graph_reflection
 from trw.train import utilities
 from trw.train.upsample import upsample
-from trw.train import outputs as outputs_trw
+from trw.train import outputs_trw as outputs_trw
 from trw.train import guided_back_propagation
 import torch
 import numpy as np

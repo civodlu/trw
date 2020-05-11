@@ -1,15 +1,14 @@
-import collections
-import json
 import os
 import functools
 import logging
 from trw import reporting
 from trw.reporting import to_value
+from trw.reporting.table_sqlite import table_drop, table_truncate
 from trw.train import callback
 from trw.train import trainer
 from trw.train import utilities
-from trw.train import sample_export
-from trw.train import outputs as outputs_trw
+from trw.train import outputs_trw as outputs_trw
+from trw.train.utilities import update_json_config, create_or_recreate_folder
 
 logger = logging.getLogger(__name__)
 
@@ -52,6 +51,11 @@ def expand_classification_mapping(batch, loss_term_name, loss_term, classificati
                             batch[target_name_str] = target_values
 
 
+def select_all(batch, loss_terms):
+    nb_samples = utilities.len_batch(batch)
+    return range(nb_samples)
+
+
 def callbacks_per_loss_term(
         dataset_name,
         split_name,
@@ -67,7 +71,8 @@ def callbacks_per_loss_term(
         max_samples,
         epoch,
         sql_table,
-        format):
+        format,
+        select_fn):
     # process the exclusion
     if dataset_name in dataset_exclusions:
         raise StopIteration()
@@ -97,7 +102,9 @@ def callbacks_per_loss_term(
         raise StopIteration()
 
     # export the features
-    for n in range(nb_samples_to_export):
+    samples_to_export = select_fn(batch, loss_terms)
+    samples_to_export = samples_to_export[:nb_samples_to_export]
+    for n in samples_to_export:
         id = n + nb_samples_exported
         exported_cases.append(id)
         name = format.format(dataset_name=dataset_name, split_name=split_name, id=id, epoch=epoch)
@@ -111,84 +118,41 @@ def callbacks_per_loss_term(
         )
 
 
-def recursive_dict_update(dict, dict_update):
-    """
-    This adds any missing element from ``dict_update`` to ``dict``, while keeping any key not
-        present in ``dict_update``
-
-    Args:
-        dict: the dictionary to be updated
-        dict_update: the updated values
-    """
-    for updated_name, updated_values in dict_update.items():
-        if updated_name not in dict:
-            # simply add the missing name
-            dict[updated_name] = updated_values
-        else:
-            values = dict[updated_name]
-            if isinstance(values, collections.Mapping):
-                # it is a dictionary. This needs to be recursively
-                # updated so that we don't remove values in the existing
-                # dictionary ``dict``
-                recusive_dict_update(values, updated_values)
-            else:
-                # the value is not a dictionary, we can update directly its value
-                dict[updated_name] = values
-
-
-def update_json_config(path_to_json, config_update):
-    """
-    Update a JSON document stored on locally.
-
-    Args:
-        path_to_json: the path to the local JSON configuration
-        config_update: a possibly nested dictionary
-
-    """
-    if os.path.exists(path_to_json):
-        with open(path_to_json, 'r') as f:
-            config = json.loads(f)
-    else:
-        config = collections.OrderedDict()
-
-    recursive_dict_update(config, config_update)
-
-    json_str = json.dumps(config, indent=3)
-    with open(path_to_json, 'w') as f:
-        f.write(json_str)
-
-
 class CallbackReportingExportSamples(callback.Callback):
     def __init__(
             self,
-            max_samples=20,
+            max_samples=50,
             table_name='samples',
             loss_terms_inclusion=None,
             feature_exclusions=None,
             dataset_exclusions=None,
             split_exclusions=None,
+            clear_previously_exported_samples=False,
             format='{dataset_name}_{split_name}_s{id}_e{epoch}',
             reporting_config_keep_last_n_rows=None,
-            reporting_config_subsampling_factor=1.0
+            reporting_config_subsampling_factor=1.0,
+            select_sample_to_export=select_all
     ):
         """
-        Export random samples from our datasets
+        Export random samples from our datasets.
 
-        Just for sanity check, it is always a good idea to make sure our data is loaded and processed
-        as expected.
-
-        :param max_samples: the maximum number of samples to be exported
-        :param table_name: the root of the export directory
-        :param loss_terms_inclusion: specifies what output name from each loss term will be exported. if None, defaults to ['output']
-        :param feature_exclusions: specifies what feature should be excluded from the export
-        :param split_exclusions: specifies what split should be excluded from the export
-        :param dataset_exclusions: specifies what dataset should be excluded from the export
-        :param format: the format of the files exported. Sometimes need evolution by epoch, other time we may want
-            samples by epoch so make this configurable
-        :param reporting_config_keep_last_n_rows: Only visualize the last ``reporting_config_keep_last_n_rows``
-            samples. Prior samples are discarded. This parameter will be added to the reporting configuration.
-        :param reporting_config_subsampling_factor: Specifies how the data is sub-sampled. Must be in range [0..1]
-            or ``None``. This parameter will be added to the reporting configuration.
+        Args:
+            max_samples: the maximum number of samples to be exported (per dataset and per split)
+            table_name: the root of the export directory
+            loss_terms_inclusion: specifies what output name from each loss term will be exported.
+                if None, defaults to ['output']
+            feature_exclusions: specifies what feature should be excluded from the export
+            dataset_exclusions: specifies what dataset should be excluded from the export
+            split_exclusions: specifies what split should be excluded from the export
+            format: the format of the files exported. Sometimes need evolution by epoch, other time we may want
+                samples by epoch so make this configurable
+            reporting_config_keep_last_n_rows: Only visualize the last ``reporting_config_keep_last_n_rows``
+                samples. Prior samples are discarded. This parameter will be added to the reporting configuration.
+            reporting_config_subsampling_factor: Specifies how the data is sub-sampled. Must be in range [0..1]
+                or ``None``. This parameter will be added to the reporting configuration.
+            select_sample_to_export: a function taking a ``(batch, loss_terms)`` and returning a list of indices of the
+                samples to be exported
+            clear_previously_exported_samples: if ``True``, the table will be emptied before each sample export
         """
 
         self.format = format
@@ -219,6 +183,9 @@ class CallbackReportingExportSamples(callback.Callback):
         self.reporting_config_keep_last_n_rows = reporting_config_keep_last_n_rows
         self.reporting_config_subsampling_factor = reporting_config_subsampling_factor
 
+        self.select_sample_to_export = select_sample_to_export
+        self.clear_previously_exported_samples = clear_previously_exported_samples
+
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
 
@@ -239,6 +206,15 @@ class CallbackReportingExportSamples(callback.Callback):
             self.reporting_config_exported = True
 
         sql_database = options['workflow_options']['sql_database']
+        if self.clear_previously_exported_samples:
+            cursor = sql_database.cursor()
+            table_truncate(cursor, self.table_name)
+            sql_database.commit()
+
+            # also remove the binary/image store
+            root = os.path.dirname(options['workflow_options']['sql_database_path'])
+            create_or_recreate_folder(os.path.join(root, 'static', self.table_name))
+
         sql_table = reporting.TableStream(
             cursor=sql_database.cursor(),
             table_name=self.table_name,
@@ -267,7 +243,8 @@ class CallbackReportingExportSamples(callback.Callback):
                                           max_samples=self.max_samples,
                                           epoch=len(history),
                                           sql_table=sql_table,
-                                          format=self.format
+                                          format=self.format,
+                                          select_fn=self.select_sample_to_export
                                       )])
 
         sql_database.commit()

@@ -3,6 +3,8 @@ import collections
 
 # this tag is used to specify the type of data stored on the local drive
 # for example BLOB_NUMPY for numpy arrays or BLOB_IMAGE_PNG for PNG images
+import sqlite3
+
 SQLITE_TYPE_PATTERN = '_type'
 
 
@@ -48,6 +50,38 @@ def table_insert(cursor, table_name, names, values):
     values_str = ','.join(['?'] * len(names))
     sql_command = f'INSERT INTO {table_name} ({names_str}) VALUES ({values_str})'
     insert_fn(sql_command, values)
+
+
+def table_drop(cursor, table_name):
+    """
+    Delete a table
+
+    Returns:
+        ``True`` if table was removed, ``False`` else
+    """
+    sql_command = f'DROP TABLE {table_name};'
+
+    try:
+        cursor.execute(sql_command).fetchall()
+    except sqlite3.OperationalError:
+        return False
+    return True
+
+
+def table_truncate(cursor, table_name):
+    """
+    Clear all the rows of a table
+
+    Returns:
+        ``True`` if table was removed, ``False`` else
+    """
+    sql_command = f'DELETE FROM {table_name};'
+
+    try:
+        cursor.execute(sql_command).fetchall()
+    except sqlite3.OperationalError:
+        return False
+    return True
 
 
 def get_table_number_of_rows(cursor, table_name):
@@ -131,6 +165,13 @@ def get_data_types_and_clean_data(data):
     return types
 
 
+def get_metadata_name(table_name):
+    """
+    Return the name of the table metadata for table ``table_name``
+    """
+    return table_name + '_metadata'
+
+
 class TableStream:
     """
     A SQLite table that can be streamed.
@@ -160,7 +201,7 @@ class TableStream:
             s = f'{name} {value}'
             content.append(s)
 
-        metadata_name = table_name + '_metadata'
+        metadata_name = get_metadata_name(table_name)
         table_create(self.cursor, metadata_name, blobs, primary_key=None)
         table_insert(self.cursor, metadata_name, names=metadata_names, values=metadata_values)
         table_create(self.cursor, table_name, content, primary_key=primary_key)

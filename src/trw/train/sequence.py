@@ -149,6 +149,27 @@ class Sequence:
             collate_fn=collate_fn,
         )
 
+    def sub_batch(self, batch_size, discard_batch_not_full=False):
+        """
+        This sequence will split batches in smaller batches if the underlying sequence batch is too large.
+
+        This sequence can be useful to manage very large tensors. Indeed, this class avoids
+        concatenating tensors (as opposed to in :class:`trw.train.SequenceReBatch`). Since this operation
+        can be costly as the tensors must be reallocated. In this case, it may be faster to
+        work on a smaller batch by avoiding the concatenation cost.
+
+        Args:
+            batch_size: the maximum size of a batch
+            discard_batch_not_full: if ``True``, batch that do have size ``batch_size`` will be
+                discarded
+        """
+        from . import sequence_sub_batch
+        return sequence_sub_batch.SequenceSubBatch(
+            source_split=self,
+            batch_size=batch_size,
+            discard_batch_not_full=discard_batch_not_full,
+        )
+        
     def rebatch(self, batch_size, discard_batch_not_full=False, collate_fn=default_collate_list_of_dicts):
         """
         Normalize a sequence to identical batch size given an input sequence with varying batch size
