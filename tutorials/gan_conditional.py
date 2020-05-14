@@ -7,6 +7,7 @@ import functools
 from trw.layers import Flatten
 from trw.reporting import len_batch
 from trw.train import OutputEmbedding, OutputClassification
+from trw.train.losses import one_hot
 
 
 def normal_init(m, mean, std):
@@ -17,18 +18,20 @@ def normal_init(m, mean, std):
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackExportSamples(),
+        #trw.train.CallbackReportingExportSamples(),
+        #trw.train.CallbackExportSamples(),
         trw.train.CallbackEpochSummary(),
     ]
 
 
 class Generator(nn.Module):
-    def __init__(self, latent_size):
+    def __init__(self, latent_size, nb_digits=10):
         super(Generator, self).__init__()
 
+        self.nb_digits = nb_digits
         self.convs_t = trw.layers.ConvsTransposeBase(
             2,
-            input_channels=latent_size,
+            input_channels=latent_size + nb_digits,
             channels=[1024, 512, 256, 1],
             convolution_kernels=4,
             strides=[1, 2, 2, 2],
@@ -39,17 +42,22 @@ class Generator(nn.Module):
             target_shape=[28, 28]
         )
 
-    def forward(self, input):
-        x = self.convs_t(input)
+    def forward(self, digits, latent):
+        assert len(digits.shape) == 1
+
+        digits_one_hot = one_hot(digits, self.nb_digits).unsqueeze(2).unsqueeze(3)
+        full_latent = torch.cat((digits_one_hot, latent), dim=1)
+        x = self.convs_t(full_latent)
         return x
 
 
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, nb_digits=10):
         super(Discriminator, self).__init__()
 
+        self.nb_digits = nb_digits
         self.convs = trw.layers.convs_2d(
-            1,
+            1 + nb_digits,
             [64, 128, 256, 2],
             convolution_kernels=[4, 4, 4, 3],
             strides=[2, 4, 4, 2],
@@ -60,8 +68,11 @@ class Discriminator(nn.Module):
             last_layer_is_output=True
         )
 
-    def forward(self, input):
-        x = self.convs(input)
+    def forward(self, digits, input):
+        input_class = torch.ones(
+            [digits.shape[0], self.nb_digits, input.shape[2], input.shape[3]],
+            device=input.device) * one_hot(digits, 10).unsqueeze(2).unsqueeze(3)
+        x = self.convs(torch.cat((input, input_class), dim=1))
         return x
 
 
@@ -85,6 +96,7 @@ class GanConditionalDc(nn.Module):
             observed_generator_fn,
             criterion_fn=functools.partial(F.cross_entropy, reduction='none'),
             train_split_name='train',
+            l1_lambda=1,
     ):
         """
 
@@ -103,6 +115,11 @@ class GanConditionalDc(nn.Module):
                 a batch and return an image
             criterion_fn: the classification criterion to be optimized
             train_split_name: only this split will be used for the training
+            observed_discriminator_fn: function taking argument a batch and returning a list of tensors to be used
+                by the discriminator
+            observed_generator_fn: function taking argument a batch and returning a list of tensors to be used
+                by the generator
+            l1_lambda: the weight of the L1 loss to be applied on the generator
         """
         super().__init__()
         self.discriminator = discriminator
@@ -113,10 +130,16 @@ class GanConditionalDc(nn.Module):
         self.latent_size = latent_size
         self.criterion_fn = criterion_fn
         self.train_split_name = train_split_name
+        self.observed_discriminator_fn = observed_discriminator_fn
+        self.observed_generator_fn = observed_generator_fn
+        self.l1_lambda = l1_lambda
 
     def forward(self, batch):
         if batch['split_name'] != self.train_split_name:
             return {}
+
+        observed_discriminator = self.observed_discriminator_fn(batch)
+        observed_generator = self.observed_generator_fn(batch)
 
         nb_samples = len_batch(batch)
         images_real = self.image_from_batch_fn(batch)
@@ -132,18 +155,22 @@ class GanConditionalDc(nn.Module):
             z = torch.randn(nb_samples, self.latent_size, device=images_real.device)
             z = z.view([z.shape[0], z.shape[1]] + [1] * (len(images_real.shape) - 2))
 
-        images_fake = self.generator(z)
+        images_fake = self.generator(observed_generator, z)
+        assert images_fake.shape == images_real.shape, f'generator output must have the same size as discriminator ' \
+                                                       f'input! Generator={images_fake.shape}, ' \
+                                                       f'Input={images_real.shape}'
 
-        output_generator = self.discriminator(images_fake)
+        output_generator = self.discriminator(observed_discriminator, images_fake)
+        generator_l1 = F.l1_loss(images_fake, images_real)
         generator_loss = self.criterion_fn(output_generator, real)
-        generator_loss_mean = generator_loss.mean()
+        generator_loss_mean = generator_loss.mean() + self.l1_lambda * generator_l1
 
         # discriminator: train with all real
-        output_real = self.discriminator(images_real)
+        output_real = self.discriminator(observed_discriminator, images_real)
         loss_real = self.criterion_fn(output_real, real)
 
         # discriminator: train with all fakes
-        output_fake = self.discriminator(images_fake.detach())
+        output_fake = self.discriminator(observed_discriminator, images_fake.detach())
         loss_fake = self.criterion_fn(output_fake, fake)
 
         discriminator_loss_mean = (loss_fake + loss_real).mean() / 2
@@ -171,6 +198,10 @@ def get_image(batch):
     return 2 * batch['images'] - 1
 
 
+def get_target(batch):
+    return batch['targets']
+
+
 def create_model(options):
     latent_size = 64
 
@@ -185,7 +216,9 @@ def create_model(options):
         latent_size=latent_size,
         optimizer_discriminator_fn=optimizer_fn,
         optimizer_generator_fn=optimizer_fn,
-        image_from_batch_fn=get_image
+        image_from_batch_fn=get_image,
+        observed_discriminator_fn=get_target,
+        observed_generator_fn=get_target,
     )
 
     model.apply(functools.partial(normal_init, mean=0.0, std=0.01))

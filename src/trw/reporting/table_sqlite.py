@@ -24,8 +24,13 @@ def table_create(cursor, table_name, name_type_list, primary_key):
         name_type_list[primary_key] = name_type_list[primary_key] + ' PRIMARY KEY'
 
     table_definition = ', '.join(name_type_list)
-    sql_command = f'CREATE TABLE {table_name} ({table_definition});'
-    cursor.execute(sql_command)
+    sql_command = f"CREATE TABLE '{table_name}' ({table_definition});"
+
+    try:
+        cursor.execute(sql_command)
+    except sqlite3.OperationalError as e:
+        print('``table_create`` failed. Exception=', e)
+        print('SQL=\n', sql_command)
 
 
 def table_insert(cursor, table_name, names, values):
@@ -48,7 +53,7 @@ def table_insert(cursor, table_name, names, values):
 
     names_str = ','.join(names)
     values_str = ','.join(['?'] * len(names))
-    sql_command = f'INSERT INTO {table_name} ({names_str}) VALUES ({values_str})'
+    sql_command = f"INSERT INTO '{table_name}' ({names_str}) VALUES ({values_str})"
     insert_fn(sql_command, values)
 
 
@@ -59,7 +64,7 @@ def table_drop(cursor, table_name):
     Returns:
         ``True`` if table was removed, ``False`` else
     """
-    sql_command = f'DROP TABLE {table_name};'
+    sql_command = f"DROP TABLE '{table_name}';"
 
     try:
         cursor.execute(sql_command).fetchall()
@@ -75,7 +80,7 @@ def table_truncate(cursor, table_name):
     Returns:
         ``True`` if table was removed, ``False`` else
     """
-    sql_command = f'DELETE FROM {table_name};'
+    sql_command = f"DELETE FROM '{table_name}';"
 
     try:
         cursor.execute(sql_command).fetchall()
@@ -88,7 +93,7 @@ def get_table_number_of_rows(cursor, table_name):
     """
     Return the number of rows of a table
     """
-    sql_command = f'SELECT COUNT(*) FROM {table_name};'
+    sql_command = f"SELECT COUNT(*) FROM '{table_name}';"
     v = cursor.execute(sql_command).fetchall()
     assert len(v) == 1
     assert len(v[0]) == 1
@@ -115,7 +120,8 @@ def get_tables_name_and_role(cursor):
         if '_metadata' in name:
             continue
 
-        sql_command = f"SELECT table_role FROM {name + '_metadata'};"
+        name_metadata = name + '_metadata'
+        sql_command = f"SELECT table_role FROM '{name_metadata}';"
         v = cursor.execute(sql_command).fetchall()
         assert len(v) == 1, f'got={v}, name={name}'
         name_roles.append((name, v[0][0]))
@@ -134,7 +140,7 @@ def get_table_data(cursor, table_name):
     Returns:
         a dictionary of (name, values)
     """
-    cursor = cursor.execute(f'select * from {table_name}')
+    cursor = cursor.execute(f"select * from '{table_name}'")
     column_names = [column[0] for column in cursor.description]
     rows = cursor.fetchall()
 
@@ -198,7 +204,7 @@ class TableStream:
         blobs = ['table_role TEXT']
         content = []
         for id, (name, value) in enumerate(name_type_list):
-            s = f'{name} {value}'
+            s = f'\'{name}\' {value}'  # we MUST have `'` around name so that names can be SQL keywords
             content.append(s)
 
         metadata_name = get_metadata_name(table_name)
@@ -210,6 +216,7 @@ class TableStream:
 
     def _insert(self, batch):
         names = batch.keys()
+        names = [f"'{name}'" for name in names]
         values = batch.values()
         rotated_values = list(zip(*values))
         table_insert(self.cursor, self.table_name, names, rotated_values)
@@ -245,6 +252,6 @@ class TableStream:
         self._insert(batch)
 
     def get_column_names(self):
-        r = self.cursor.execute(f'select * from {self.table_name}')
+        r = self.cursor.execute(f'select * from \'{self.table_name}\'')
         names = [n[0] for n in r.description]
         return names

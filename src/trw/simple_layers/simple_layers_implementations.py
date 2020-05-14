@@ -89,6 +89,24 @@ class ReLU(simple_layers.SimpleModule):
         super().__init__(node=node, module=nn.ReLU(), shape=node.shape)
 
 
+class BatchNorm2d(simple_layers.SimpleModule):
+    def __init__(self, node, eps=1e-5, momentum=0.1, affine=True):
+        super().__init__(
+            node=node,
+            module=nn.BatchNorm2d(num_features=node.shape[1], eps=eps, momentum=momentum, affine=affine),
+            shape=node.shape
+        )
+
+
+class BatchNorm3d(simple_layers.SimpleModule):
+    def __init__(self, node, eps=1e-5, momentum=0.1, affine=True):
+        super().__init__(
+            node=node,
+            module=nn.BatchNorm3d(num_features=node.shape[1], eps=eps, momentum=momentum, affine=affine),
+            shape=node.shape
+        )
+
+
 class _Reshape(nn.Module):
     def __init__(self, shape):
         super().__init__()

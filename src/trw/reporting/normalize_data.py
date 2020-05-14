@@ -55,7 +55,15 @@ def normalize_data(options, data, table_name):
         for n, t in types.items():
             if 'BLOB_' in t:
                 # it is a blob, meaning that it was saved on the local HD
-                d[n] = list(np.core.defchararray.add(np.asarray([f'{appname}/']), d[n]))
+                column = []
+                for i in d[n]:
+                    if i is not None:
+                        column.append(f'{appname}/' + i)
+                    else:
+                        # the data was not present...
+                        column.append(None)
+                d[n] = column
+                #d[n] = list(np.core.defchararray.add(np.asarray([f'{appname}/']), d[n]))
 
             if 'BLOB_IMAGE' in t:
                 type_categories[n] = DataCategory.Other
@@ -66,8 +74,12 @@ def normalize_data(options, data, table_name):
             loaded_np = []
             root = os.path.join(os.path.dirname(options.db_root), '..')
             for relative_path in d[name]:
-                path = os.path.join(root, relative_path)
-                loaded_np.append(np.load(path))
+                try:
+                    path = os.path.join(root, relative_path)
+                    loaded_np.append(np.load(path))
+                except:
+                    # loading failed
+                    loaded_np.append(None)
 
             # expand the array if satisfying the criteria
             array = np.asarray(loaded_np)
@@ -87,25 +99,36 @@ def normalize_data(options, data, table_name):
     # revert back the type from the column values
     for name in list(d.keys()):
         t = d[name]
+
         if name not in type_categories:
+            # do not take into account the `None`
+            # so create a list of indices with non `None` row
+            t = np.asarray(t)
+            indices_not_none = np.asarray([i for i, v in enumerate(t) if v is not None])  # consider only full row
+
             try:
-                t_np = np.asarray(t, dtype=np.int)  # if e have a float, it will raise exception
+                t_np = np.asarray(t[indices_not_none], dtype=np.int)  # if e have a float, it will raise exception
                 type_categories[name] = DataCategory.DiscreteOrdered
-                d[name] = list(t_np)
+                full = np.ndarray(len(t), dtype=object)  # handle the ``None`` values
+                full[indices_not_none] = t_np
+                d[name] = list(full)
                 continue  # success, go to next item
             except ValueError:
                 pass
 
             try:
-                t_np = np.asarray(t, dtype=np.float32)
+                t_np = np.asarray(t[indices_not_none], dtype=np.float32)
                 type_categories[name] = DataCategory.Continuous
-                d[name] = list(t_np)
+
+                full = np.ndarray(len(t), dtype=object)  # handle the ``None`` values
+                full[indices_not_none] = t_np
+                d[name] = list(full)
                 continue  # success, go to next item
             except ValueError:
                 type_categories[name] = DataCategory.Other
 
             try:
-                _ = np.asarray(t, dtype=np.str)  # test data conversion
+                _ = np.asarray(t[indices_not_none], dtype=np.str)  # test data conversion
                 type_categories[name] = DataCategory.DiscreteUnordered
                 continue  # success, go to next item
             except ValueError:

@@ -140,6 +140,26 @@ class TestSimpleLayers(TestCase):
         assert len(r) == 1
         assert (r['embedding'].output == i_torch).all()
 
+    def test_batchnorm2d(self):
+        i = trw.simple_layers.Input([None, 3, 32, 32], feature_name='input')
+        o = trw.simple_layers.BatchNorm2d(i)
+        net = trw.simple_layers.compile_nn([o])
+
+        i_torch = torch.randn([5, 3, 32, 32]).float()
+        r = net({'input': i_torch})
+        assert len(r) == 1
+        assert r[o].shape == (5, 3, 32, 32)
+
+    def test_batchnorm3d(self):
+        i = trw.simple_layers.Input([None, 3, 32, 32, 32], feature_name='input')
+        o = trw.simple_layers.BatchNorm3d(i)
+        net = trw.simple_layers.compile_nn([o])
+
+        i_torch = torch.randn([5, 3, 32, 32, 32]).float()
+        r = net({'input': i_torch})
+        assert len(r) == 1
+        assert r[o].shape == (5, 3, 32, 32, 32)
+
     def test_basic_2d(self):
         i = trw.simple_layers.Input([None, 3, 6, 6], feature_name='input')
         i = trw.simple_layers.Conv2d(i, out_channels=16, kernel_size=5, stride=1, padding='same')

@@ -3,7 +3,6 @@ import math
 import functools
 import collections
 
-from bokeh.core.property.wrappers import PropertyValueColumnData
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
     CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter, LayoutDOM
@@ -23,24 +22,17 @@ class PanelDataSamplesTabular(BokehUi):
         super().__init__(ui)
 
     def update_data(self, options, name, data, data_types, type_categories):
-
-        """
         source = self.table.source
-        for key in source.column_names:
 
-            value = data.get(key)
-            if value is None:
-                value = []
-            source.data[key] = value
-        """
-        source = self.table.source
+        # make sure we do not populate very large data to a table. Remove
+        # the large datasets
+        data = filter_large_data(options, data)
+
         for key in source.column_names:
             if key not in data:
                 # some data is missing, just do not update the table yet
                 return
         self.table.source.update(data=data)
-        #PropertyValueColumnData(data)
-        #self.table.source.stream(data, rollover=0)
 
 
 def process_data_samples__tabular(options, data, data_types, type_categories):
@@ -257,21 +249,45 @@ def filter_large_data(options, data):
 
 def render_data(
         options, data, data_types, type_categories, scatter_x, scatter_y, binning_x_axis,
-        color_by, color_scheme, icon, label_with, layout):
+        binning_selection_named, binning_selection_integral, color_by, color_scheme,
+        icon, label_with, layout):
     previous_figure = None
 
     while len(layout.children) >= 2:
         layout.children.pop()
 
+    binning_selection_named.visible = False
+    binning_selection_integral.visible = False
     if len(binning_x_axis.value) > 0 and binning_x_axis.value != 'None':
         scatter_values = data[binning_x_axis.value]
         unique_values = set(list(scatter_values))
         unique_values = list(sorted(unique_values))
 
-        groups = []
-        for value in unique_values:
-            group = np.where(np.asarray(scatter_values) == value)
-            groups.append((f'group={value}, ', group))
+        # update the binning selection tool
+        binning_type = type_categories.get(binning_x_axis.value)
+        selection = 'None'
+        if binning_type == DataCategory.DiscreteUnordered or binning_type == DataCategory.DiscreteOrdered:
+            binning_selection_named.visible = True
+            binning_selection_integral.visible = False
+
+            selection_values = ['None'] + [str(v) for v in unique_values]
+            binning_selection_named.options = selection_values[::-1]  # reversed (e.g., last epoch is first choice)
+            if binning_selection_named.value not in binning_selection_named.options:
+                binning_selection_named.value = binning_selection_named.options[0]
+            selection = binning_selection_named.value
+        elif binning_type == DataCategory.Continuous:
+            raise NotImplementedError()
+
+        if selection == 'None':
+            groups = []
+            for value in unique_values:
+                group = np.where(np.asarray(scatter_values) == value)
+                groups.append((f'group={value}, ', group))
+        else:
+            # need to convert to original data type
+            selection_value = np.asarray(selection, dtype=scatter_values[0].dtype)
+            indices = np.where(np.asarray(scatter_values) == selection_value)
+            groups = [(f'group={selection}, ', indices)]
     else:
         nb_data = utilities.len_batch(data)
         groups = [('', [np.arange(nb_data)])]
@@ -610,6 +626,13 @@ class PanelDataSamplesScatter(BokehUi):
         self.color_by = Select(title='Color by', name='color_by')
         self.color_scheme = Select(title='Color scheme', name='color_scheme')
         self.binning_x_axis = Select(title='Binning X Axis', name='binning_x_axis')
+
+        self.binning_selection_named = Select(title='Binning selection', name='binning_selection_named')
+        self.binning_selection_named.visible = True
+
+        self.binning_selection_integral = Select(title='Binning selection', name='binning_selection_integral')
+        self.binning_selection_integral.visible = False
+
         self.label_with = Select(title='Label with', name='label_with')
         self.icon = Select(title='Display with', name='icon')
 
@@ -619,6 +642,8 @@ class PanelDataSamplesScatter(BokehUi):
             self.color_by,
             self.color_scheme,
             self.binning_x_axis,
+            self.binning_selection_named,
+            self.binning_selection_integral,
             self.label_with,
             self.icon
         ]
@@ -639,6 +664,8 @@ class PanelDataSamplesScatter(BokehUi):
             scatter_x=self.scatter_x_axis,
             scatter_y=self.scatter_y_axis,
             binning_x_axis=self.binning_x_axis,
+            binning_selection_named=self.binning_selection_named,
+            binning_selection_integral=self.binning_selection_integral,
             color_by=self.color_by,
             color_scheme=self.color_scheme,
             icon=self.icon,
@@ -684,6 +711,8 @@ class PanelDataSamplesScatter(BokehUi):
                          default='Viridis256')
         populate_default(self.binning_x_axis, values_integral, 'Binning X Axis')
         populate_default(self.label_with, values, 'Label with')
+        populate_default(self.binning_selection_integral, [], 'Binning selection')
+        populate_default(self.binning_selection_named, [], 'Binning selection')
 
         default_icon = safe_lookup(options.config, name, 'default', 'Display with', default='None')
         icon_values = [v for v, t in data_types.items() if 'BLOB_IMAGE' in t] + ['Icon', 'Dot']

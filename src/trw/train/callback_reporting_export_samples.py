@@ -33,7 +33,7 @@ def expand_classification_mapping(batch, loss_term_name, loss_term, classificati
     output_ref = loss_term.get('output_ref')
     if isinstance(output_ref, outputs_trw.OutputClassification):
         target_name = output_ref.classes_name
-        if target_name is not None:
+        if target_name is not None and classification_mappings is not None:
             mapping = classification_mappings.get(target_name)
             if mapping is not None:
                 output = to_value(loss_term['output'])
@@ -127,10 +127,16 @@ class CallbackReportingExportSamples(callback.Callback):
             feature_exclusions=None,
             dataset_exclusions=None,
             split_exclusions=None,
-            clear_previously_exported_samples=False,
+            clear_previously_exported_samples=True,
             format='{dataset_name}_{split_name}_s{id}_e{epoch}',
             reporting_config_keep_last_n_rows=None,
             reporting_config_subsampling_factor=1.0,
+            reporting_scatter_x=None,
+            reporting_scatter_y=None,
+            reporting_color_by=None,
+            reporting_display_with=None,
+            reporting_binning_x_axis=None,
+            reporting_binning_selection=None,
             select_sample_to_export=select_all
     ):
         """
@@ -182,6 +188,12 @@ class CallbackReportingExportSamples(callback.Callback):
         self.reporting_config_exported = False
         self.reporting_config_keep_last_n_rows = reporting_config_keep_last_n_rows
         self.reporting_config_subsampling_factor = reporting_config_subsampling_factor
+        self.reporting_scatter_x = reporting_scatter_x
+        self.reporting_scatter_y = reporting_scatter_y
+        self.reporting_color_by = reporting_color_by
+        self.reporting_display_with = reporting_display_with
+        self.reporting_binning_x_axis = reporting_binning_x_axis
+        self.reporting_binning_selection = reporting_binning_selection
 
         self.select_sample_to_export = select_sample_to_export
         self.clear_previously_exported_samples = clear_previously_exported_samples
@@ -199,7 +211,16 @@ class CallbackReportingExportSamples(callback.Callback):
                 self.table_name: {
                     'data': {
                         'keep_last_n_rows': self. reporting_config_keep_last_n_rows,
-                        'subsampling_factor': self.reporting_config_subsampling_factor
+                        'subsampling_factor': self.reporting_config_subsampling_factor,
+                    },
+
+                    'default': {
+                        'Scatter X Axis': self.reporting_scatter_x,
+                        'Scatter Y Axis': self.reporting_scatter_y,
+                        'Color by': self.reporting_color_by,
+                        'Display with': self.reporting_display_with,
+                        'Binning X Axis': self.reporting_binning_x_axis,
+                        'Binning selection': self.reporting_binning_selection,
                     }
                 }
             })
