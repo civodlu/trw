@@ -160,6 +160,9 @@ class JobExecutor:
                 print('-------------- ERROR in worker function --------------')
                 print(e)
                 print('-------------- first job will be aborted --------------')
+                traceback.print_exc()
+                print('-------------------------------------------------------')
+
                 results = None
                 #continue  # restart the worker
 

@@ -4,6 +4,8 @@ from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.table_sqlite import get_tables_name_and_role
 import json
 
+from trw.reporting.utilities import recursive_dict_update
+
 
 class TabsDynamicHeader(BokehUi):
     """
@@ -36,7 +38,10 @@ class TabsDynamicHeader(BokehUi):
                 with open(config_location, 'r') as f:
                     f_str = f.read()
                 new_config = json.loads(f_str)
-                self.options.config = new_config
+
+                # make sure we keep the original config and only update
+                # changed or new elements
+                recursive_dict_update(self.options.config, new_config)
 
         all_names = []
         new_name_roles = []

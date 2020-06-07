@@ -4,6 +4,8 @@ import torch
 import torch.nn as nn
 import warnings
 
+from trw.train.callback_model_summary import model_summary_base
+
 
 class ModelDense(nn.Module):
     def __init__(self, n_output=5):
@@ -14,6 +16,37 @@ class ModelDense(nn.Module):
 
     def forward(self, batch):
         return self.d2(self.d1(batch['input']))
+
+
+class ModelDense_2_inputs(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.d1 = nn.Linear(10, 100)
+        self.d2 = nn.Linear(10, 100)
+
+    def forward(self, x1, x2):
+        return self.d1(x1) + self.d2(x2)
+
+
+class ModelDense_2_outputs(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.d1 = nn.Linear(10, 100)
+
+    def forward(self, x1):
+        return self.d1(x1), self.d1(x1)
+
+
+class ModelDense_2_inputs_head(nn.Module):
+    def __init__(self):
+        super().__init__()
+
+        self.model = ModelDense_2_inputs()
+
+    def forward(self, batch):
+        return self.model(batch['input'], batch['input'])
 
 
 class ModelDenseSequential(nn.Module):
@@ -37,14 +70,6 @@ class ModelNested(nn.Module):
 
     def forward(self, batch):
         return self.d1(batch)
-
-
-class Recorder:
-    def __init__(self):
-        self.values = []
-
-    def __call__(self, s):
-        self.values.append(s)
 
 
 class ModelRNN(nn.Module):
@@ -79,13 +104,12 @@ class TestCallbackModelSummary(TestCase):
             'input': torch.zeros([11, 10])
         }
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
 
     def test_simple_model_internal_sequential(self):
         model = ModelDenseSequential()
@@ -93,13 +117,12 @@ class TestCallbackModelSummary(TestCase):
             'input': torch.zeros([11, 10])
         }
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
 
     def test_simple_model_sequential(self):
         model = nn.Sequential(
@@ -109,13 +132,12 @@ class TestCallbackModelSummary(TestCase):
 
         batch = torch.zeros([11, 10])
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
 
     def test_simple_model_nested(self):
         model = ModelNested()
@@ -123,13 +145,38 @@ class TestCallbackModelSummary(TestCase):
             'input': torch.zeros([11, 10])
         }
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
+
+    def test_simple_model_2_outputs(self):
+        model = ModelDense_2_outputs()
+        batch = {
+            'input': torch.zeros([11, 10])
+        }
+
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch['input'])
+
+        # 2 denses + 2 biases
+        expected_trainables = 10 * 100 + 100
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
+
+    def test_simple_model_nested_2heads(self):
+        model = ModelDense_2_inputs_head()
+        batch = {
+            'input': torch.zeros([11, 10])
+        }
+
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
+
+        # 2 denses + 2 biases
+        expected_trainables = 2 * 10 * 100 + 2 * 100
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
 
     def test_rnn_model(self):
         model = ModelRNN(28, 256, 1, 10)
@@ -137,13 +184,15 @@ class TestCallbackModelSummary(TestCase):
             'images': torch.zeros([32, 1, 28, 28])
         }
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
+        assert len(list(summary.values())[0]['input_shape']) == 3
+        assert len(list(summary.values())[0]['output_shape']) == 3
+
         expected_trainables = 295434
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params
 
     def test_multi_gpus(self):
         """
@@ -164,10 +213,9 @@ class TestCallbackModelSummary(TestCase):
         model = trw.train.DataParallelExtended(model).to(device)
         batch = torch.zeros([11, 10], device=device)
 
-        logger = Recorder()
-        r = trw.train.model_summary(model, batch, logger)
+        summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
 
         # 2 denses + 2 biases
         expected_trainables = 10 * 100 + 100 * 5 + 100 + 5
-        assert expected_trainables == r['trainable_params']
-        assert r['total_params'] == r['trainable_params']
+        assert expected_trainables == trainable_params
+        assert total_params == trainable_params

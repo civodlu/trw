@@ -14,11 +14,12 @@ from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.data_category import DataCategory
 from trw.reporting.reporting_bokeh_tabs_dynamic_data import TabsDynamicData
 from trw.reporting import utilities, safe_lookup
+from trw.reporting.table_sqlite import get_table_data, get_metadata_name
 
 
 class PanelDataSamplesTabular(BokehUi):
-    def __init__(self, options, data, data_types, type_categories):
-        ui, self.table = process_data_samples__tabular(options, data, data_types, type_categories)
+    def __init__(self, options, data, data_types, type_categories, title='Tabular'):
+        ui, self.table = process_data_samples__tabular(options, data, data_types, type_categories, title=title)
         super().__init__(ui)
 
     def update_data(self, options, name, data, data_types, type_categories):
@@ -35,7 +36,7 @@ class PanelDataSamplesTabular(BokehUi):
         self.table.source.update(data=data)
 
 
-def process_data_samples__tabular(options, data, data_types, type_categories):
+def process_data_samples__tabular(options, data, data_types, type_categories, title):
     """
     Create a tabular panel of the data & types
 
@@ -43,6 +44,7 @@ def process_data_samples__tabular(options, data, data_types, type_categories):
         options:
         data: a dictionary of (key, values)
         data_types: a dictionary of (key, type) indicating special type of ``key``
+        title: the title of the panel to be displayed
 
     Returns:
         a panel
@@ -117,7 +119,7 @@ def process_data_samples__tabular(options, data, data_types, type_categories):
         row_height=row_height,
         css_classes=["trw_reporting_table"])
 
-    return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title='Tabular'), data_table
+    return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title=title), data_table
 
 
 def scatter(all_data, groups, scatter_name, type_category):
@@ -285,7 +287,10 @@ def render_data(
                 groups.append((f'group={value}, ', group))
         else:
             # need to convert to original data type
-            selection_value = np.asarray(selection, dtype=scatter_values[0].dtype)
+            value = scatter_values[0]
+            if not isinstance(value, np.ndarray):
+                value = np.asarray(value)
+            selection_value = np.asarray(selection, dtype=value.dtype)
             indices = np.where(np.asarray(scatter_values) == selection_value)
             groups = [(f'group={selection}, ', indices)]
     else:
@@ -740,19 +745,16 @@ def process_data_samples(options, name, role, data, types, type_categories):
 
     if options.data_samples.display_scatter and options.embedded:
         # here we require some python logic, so we need to have a bokeh
-        # server running to display this view
+        # server running to y_axis this view
         panel = PanelDataSamplesScatter(options, name, data, types, type_categories)
         tabs.append(panel)
 
     return tabs
 
 
-def create_tables(name, role, doc, options, connection):
-    if role == 'data_samples':
-        print(f'create data_samples={name}')
-        data_table = TabsDynamicData(doc, options, connection, name, role, creator_fn=process_data_samples)
-        panel = Panel(child=data_table.get_ui(), title=name, name=f'data_samples_{name}_main_panel')
-    else:
-        raise NotImplementedError(f'role not implemented={role}')
+def process_data_tabular(options, name, role, data, types, type_categories):
+    tabs = []
+    panel = PanelDataSamplesTabular(options, data, types, type_categories, title=name)
+    tabs.append(panel)
+    return tabs
 
-    return panel

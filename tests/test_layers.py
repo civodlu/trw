@@ -9,6 +9,58 @@ from trw.layers import AutoencoderConvolutionalVariational, AutoencoderConvoluti
 from trw.train.losses import one_hot
 
 
+class ConditionalGenerator(nn.Module):
+    def __init__(self, latent_size, nb_digits=10):
+        super(ConditionalGenerator, self).__init__()
+
+        self.nb_digits = nb_digits
+        self.convs_t = trw.layers.ConvsTransposeBase(
+            2,
+            input_channels=latent_size + nb_digits,
+            channels=[1024, 512, 256, 1],
+            convolution_kernels=4,
+            strides=[1, 2, 2, 2],
+            batch_norm_kwargs={},
+            paddings=[0, 1, 1, 1],
+            activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
+            squash_function=torch.tanh,
+            target_shape=[28, 28]
+        )
+
+    def forward(self, latent, digits):
+        assert len(digits.shape) == 1
+
+        digits_one_hot = one_hot(digits, self.nb_digits).unsqueeze(2).unsqueeze(3)
+        full_latent = torch.cat((digits_one_hot, latent), dim=1)
+        x = self.convs_t(full_latent)
+        return x
+
+
+class ConditionalDiscriminator(nn.Module):
+    def __init__(self, nb_digits=10):
+        super(ConditionalDiscriminator, self).__init__()
+
+        self.nb_digits = nb_digits
+        self.convs = trw.layers.convs_2d(
+            1 + nb_digits,
+            [64, 128, 256, 2],
+            convolution_kernels=[4, 4, 4, 3],
+            strides=[2, 4, 4, 2],
+            batch_norm_kwargs={},
+            pooling_size=None,
+            with_flatten=True,
+            activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
+            last_layer_is_output=True
+        )
+
+    def forward(self, input, digits):
+        input_class = torch.ones(
+            [digits.shape[0], self.nb_digits, input.shape[2], input.shape[3]],
+            device=input.device) * one_hot(digits, 10).unsqueeze(2).unsqueeze(3)
+        x = self.convs(torch.cat((input, input_class), dim=1))
+        return x
+
+
 class TestLayers(TestCase):
     def test_convs_layers(self):
         """
@@ -272,7 +324,7 @@ class TestLayers(TestCase):
 
         optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
 
-        model = trw.layers.GanDc(
+        model = trw.layers.Gan(
             discriminator=discriminator,
             generator=generator,
             latent_size=latent_size,
@@ -285,6 +337,35 @@ class TestLayers(TestCase):
             'images': torch.zeros([10, 1, 28, 28]),
             'split_name': 'train'
         }
+        o = model(batch)
+        assert 'images_fake' in o
+        assert 'classifier_true' in o
+        assert 'classifier_fake' in o
+
+    def test_gan_conditional(self):
+        optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
+
+        latent_size = 32
+        discriminator = ConditionalDiscriminator()
+        generator = ConditionalGenerator(latent_size)
+
+        model = trw.layers.GanConditional(
+            discriminator=discriminator,
+            generator=generator,
+            latent_size=latent_size,
+            optimizer_discriminator_fn=optimizer_fn,
+            optimizer_generator_fn=optimizer_fn,
+            image_from_batch_fn=lambda batch: batch['images'],
+            observed_discriminator_fn=lambda batch: batch['targets'],
+            observed_generator_fn=lambda batch: batch['targets'],
+        )
+
+        batch = {
+            'images': torch.zeros([10, 1, 28, 28]),
+            'targets': torch.arange(10, dtype=torch.long),
+            'split_name': 'train'
+        }
+
         o = model(batch)
         assert 'images_fake' in o
         assert 'classifier_true' in o

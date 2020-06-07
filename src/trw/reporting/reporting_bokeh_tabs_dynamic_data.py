@@ -58,7 +58,11 @@ class TabsDynamicData(BokehUi):
             assert isinstance(tab, BokehUi), 'must be a ``BokehUi`` based!'
             tabs_ui.append(tab.get_ui())
 
-        ui = Tabs(tabs=tabs_ui)
+        if len(tabs_ui) > 1:
+            ui = Tabs(tabs=tabs_ui)
+        else:
+            assert len(tabs_ui) > 0
+            ui = tabs_ui[0]
         super().__init__(ui=ui)
 
         self.last_update_data_size = len_batch(data)
@@ -71,15 +75,18 @@ class TabsDynamicData(BokehUi):
 
     def update(self, options, connection, name, tabs):
         number_of_rows = get_table_number_of_rows(connection, name)
-        if number_of_rows != self.last_update_data_size:
+        if number_of_rows != self.last_update_data_size:  # different number of rows, data was changed!
             self.last_update_data_size = number_of_rows
-            data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
-            keep_last_n_rows = safe_lookup(options.config, name, 'data', 'keep_last_n_rows')
-            if keep_last_n_rows is not None:
-                data_trimmed = collections.OrderedDict()
-                for name, values in data.items():
-                    data_trimmed[name] = values[-keep_last_n_rows:]
-                data = data_trimmed
+            # discard `0`, the table creation is not part of a
+            # transaction, the table is being populated
+            if number_of_rows > 0:
+                data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
+                keep_last_n_rows = safe_lookup(options.config, name, 'data', 'keep_last_n_rows')
+                if keep_last_n_rows is not None:
+                    data_trimmed = collections.OrderedDict()
+                    for name, values in data.items():
+                        data_trimmed[name] = values[-keep_last_n_rows:]
+                    data = data_trimmed
 
-            for tab in tabs:
-                tab.update_data(options, name, data, types, type_categories)
+                for tab in tabs:
+                    tab.update_data(options, name, data, types, type_categories)

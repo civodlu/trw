@@ -13,7 +13,7 @@ import trw
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.unet = trw.layers.UNet(dim=2, input_channels=3, n_classes=35, base_filters=32)
+        self.unet = trw.layers.UNet(dim=2, input_channels=3, n_outputs=35, base_filters=32)
 
     def forward(self, batch):
         x = batch['image']

@@ -5,18 +5,26 @@ import torch.nn as nn
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.unet = trw.layers.UNet(2, input_channels=3, n_classes=5)
+        self.unet = trw.layers.UNet(2, input_channels=3, n_outputs=2)
 
     def forward(self, batch):
         x = batch['image']
         x = self.unet(x)
 
         return {
-            'segmentation': trw.train.OutputSegmentation(x, target_name='mask')
+            'segmentation': trw.train.OutputSegmentation(x, target_name='mask'),
+            'segmentation_output': trw.train.OutputEmbedding(x.argmax(dim=1).unsqueeze(1))
         }
 
 
-trainer = trw.train.Trainer()
+def per_epoch_callbacks():
+    return [
+        trw.train.CallbackReportingExportSamples(),
+        trw.train.CallbackEpochSummary(),
+    ]
+
+
+trainer = trw.train.Trainer(callbacks_per_epoch_fn=per_epoch_callbacks)
 
 model, results = trainer.fit(
     trw.train.create_default_options(num_epochs=15),

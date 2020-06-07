@@ -92,7 +92,7 @@ trainer = trw.train.Trainer(
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_datasset(normalize_0_1=1, batch_size=1024),
+    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=1, batch_size=1024),
     run_prefix='mnist_autoencoder_variational_conditional',
     model_fn=lambda options: Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(

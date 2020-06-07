@@ -242,10 +242,7 @@ def export_sample(
         for feature_name in batch_keys:
             feature_attributes = features_attributes[feature_name]
             sample_name = f'{table_stream.table_name}/{base_name}{name_expansion}_{feature_name}_{id}'
-            #root_folder = os.path.join(export_root, os.path.dirname(sample_name))
-            #if not os.path.exists(root_folder):
-            #    # here handle the ``base_name`` with sub-folders too
-            #    os.makedirs(root_folder)
+
             for export_fn in export_fns:
                 exported, feature_attributes = export_fn(
                     batch_list,

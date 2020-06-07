@@ -1,3 +1,4 @@
+from trw.reporting import len_batch
 from trw.train import callback
 from trw.train import utilities
 from trw.train import trainer
@@ -11,11 +12,33 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-def model_summary(model, batch, logger):
-    # this code is based on https://github.com/sksq96/pytorch-summary
-    # and adapted to accept dictionary as input
+def input_shape(i, root=True):
+    if isinstance(i, collections.Mapping):
+        return 'Dict'
+    elif isinstance(i, torch.Tensor):
+        shape = tuple(i.shape)
+
+        if root:
+            # we want to have all outputs/inputs in a consistent format (list of shapes)
+            return [shape]
+        return shape
+
+    if isinstance(i, (list, tuple)):
+        shapes = []
+        for n in i:
+            # make sure the shapes are flattened
+            sub_shapes = input_shape(n, root=False)
+            if isinstance(sub_shapes, list):
+                shapes += sub_shapes
+            else:
+                shapes.append(sub_shapes)
+        return shapes
+    raise NotImplementedError()
+
+
+def model_summary_base(model, batch):
     def register_hook(module):
-        def hook(module, input, output, batch_size=-1):
+        def hook(module, input, output):
             nonlocal parameters_counted
 
             class_name = str(module.__class__).split(".")[-1].split("'")[0]
@@ -23,33 +46,10 @@ def model_summary(model, batch, logger):
 
             m_key = "%s-%i" % (class_name, module_idx + 1)
             summary[m_key] = collections.OrderedDict()
+            summary[m_key]['input_shape'] = input_shape(input)
+            summary[m_key]['output_shape'] = input_shape(output)
 
-            if isinstance(input[0], collections.Mapping):
-                summary[m_key]["input_shape"] = (-1)
-            else:
-                if isinstance(input[0], list):
-                    input_shapes = [list(i.shape) for i in input[0]]
-                    summary[m_key]["input_shape"] = input_shapes
-                else:
-                    summary[m_key]["input_shape"] = list(input[0].size())
-                summary[m_key]["input_shape"][0] = batch_size
-            if isinstance(output, (list, tuple)):
-                if len(output) == 2 and isinstance(output[1], tuple):
-                    # this is an RNN cell
-                    summary[m_key]["output_shape"] = [-1] + list(output[0].shape[1:])
-                else:
-                    summary[m_key]["output_shape"] = [
-                        [-1] + list(o.size())[1:] for o in output
-                    ]
-            else:
-                if output is not None and not isinstance(output, collections.Mapping):
-                    summary[m_key]["output_shape"] = list(output.size())
-                    summary[m_key]["output_shape"][0] = batch_size
-                else:
-                    # the module has multiple outputs. Don't display
-                    summary[m_key]["output_shape"] = -1
-
-            total_trainable_params = 0  # ALL parameters of the layer (i.e., in case of recursion, counts all sub-module parameters)
+            total_trainable_params = 0  # ALL parameters of the layer (including sub-module parameters)
             params = 0  # if we have recursion, these are the unique parameters
             trainable = False
             for p in module.parameters():
@@ -83,13 +83,32 @@ def model_summary(model, batch, logger):
     for h in hooks:
         h.remove()
 
+    total_params = 0
+    total_output = 0
+    trainable_params = 0
+    for layer in summary:
+        total_params += summary[layer]["nb_params"]
+        outputs = summary[layer]["output_shape"]
+        if not isinstance(outputs, str):
+            for output in outputs:
+                total_output += np.prod(output[1:])  # remove the batch size
+        if "trainable" in summary[layer]:
+            if summary[layer]["trainable"]:
+                trainable_params += summary[layer]["nb_params"]
+
+    # assume 4 bytes/number (float on cuda)
+    total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
+    total_params_size = abs(utilities.to_value(total_params) * 4. / (1024 ** 2.))
+    return summary, total_output_size, total_params_size, total_params, trainable_params
+
+
+def model_summary(model, batch, logger):
     logger("---------------------------------------------------------------------------------------------------------")
     line_new = "{:>20}  {:>25} {:>25} {:>15} {:>15}".format("Layer (type)", "Input Shape", "Output Shape", "Param #", "Total Param #")
     logger(line_new)
     logger("=========================================================================================================")
-    total_params = 0
-    total_output = 0
-    trainable_params = 0
+
+    summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
     for layer in summary:
         # input_shape, output_shape, trainable, nb_params
         line_new = "{:>20} {:>25} {:>25} {:>15} {:>15}".format(
@@ -99,16 +118,8 @@ def model_summary(model, batch, logger):
             "{0:,}".format(summary[layer]["nb_params"]),
             "{0:,}".format(summary[layer]["total_trainable_params"]),
         )
-        total_params += summary[layer]["nb_params"]
-        total_output += np.prod(summary[layer]["output_shape"])
-        if "trainable" in summary[layer]:
-            if summary[layer]["trainable"] == True:
-                trainable_params += summary[layer]["nb_params"]
-        logger(line_new)
 
-    # assume 4 bytes/number (float on cuda).
-    total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
-    total_params_size = abs(utilities.to_value(total_params) * 4. / (1024 ** 2.))
+        logger(line_new)
 
     logger("================================================================================")
     logger("Total params: {0:,}".format(total_params))

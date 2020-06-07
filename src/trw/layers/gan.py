@@ -6,7 +6,7 @@ import torch.nn.functional as F
 import functools
 
 
-class GanDc(nn.Module):
+class Gan(nn.Module):
     """
     Implementation of ``Unsupervised Representation Learning with Deep Convolutional Generative Adversarial Networks``,
         https://arxiv.org/abs/1511.06434

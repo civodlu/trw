@@ -43,7 +43,7 @@ if __name__ == '__main__':
     
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_mnist_datasset(
+        inputs_fn=lambda: trw.datasets.create_mnist_dataset(
             transforms=transforms),
         run_prefix='mnist_cnn_augmentation',
         model_fn=lambda options: Net(),

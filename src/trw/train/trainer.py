@@ -12,6 +12,7 @@ import pickle
 import time
 import itertools
 from trw.train import outputs_trw
+from trw.train import callback_reporting_epoch_summary
 from trw.train import callback_reporting_export_samples
 from trw.train import callback_reporting_start_server
 from trw.train import callback_model_summary
@@ -35,6 +36,7 @@ from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
 from trw.train import callback_export_convolution_kernel
+from trw.train import callback_reporting_epoch_summary
 from trw.train import utilities
 
 logger = logging.getLogger(__name__)
@@ -535,6 +537,7 @@ def default_per_epoch_callbacks(
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
+        callback_reporting_epoch_summary.CallbackReportingRecordHistory(),
     ]
 
     if convolutional_kernel_export_frequency is not None:

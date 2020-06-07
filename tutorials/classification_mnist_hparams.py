@@ -32,7 +32,7 @@ def evaluate_hparams(hparams):
     
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_mnist_datasset(normalize_0_1=True),
+        inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
         run_prefix='run',
         model_fn=lambda options: create_net(hparams),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=learning_rate))

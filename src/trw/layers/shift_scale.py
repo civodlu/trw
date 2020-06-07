@@ -1,4 +1,12 @@
 import torch.nn as nn
+import torch
+
+
+def transfer_to_device(x, device):
+    if isinstance(x, torch.Tensor):
+        if x.device != device:
+            return x.to(device)
+    return x
 
 
 class ShiftScale(nn.Module):
@@ -28,4 +36,7 @@ class ShiftScale(nn.Module):
 
         Returns: return a flattened tensor
         """
+        self.mean = transfer_to_device(self.mean, x.device)
+        self.standard_deviation = transfer_to_device(self.standard_deviation, x.device)
+
         return (x - self.mean) / self.standard_deviation

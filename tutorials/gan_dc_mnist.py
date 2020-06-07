@@ -52,7 +52,7 @@ def create_model(options):
 
     optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
 
-    model = trw.layers.GanDc(
+    model = trw.layers.Gan(
         discriminator=discriminator,
         generator=generator,
         latent_size=latent_size,
@@ -71,7 +71,7 @@ model, result = trw.train.run_trainer_repeat(
     trainer,
     options,
     number_of_training_runs=1,
-    inputs_fn=lambda: trw.datasets.create_mnist_datasset(batch_size=32, normalize_0_1=True),
+    inputs_fn=lambda: trw.datasets.create_mnist_dataset(batch_size=32, normalize_0_1=True),
     eval_every_X_epoch=1,
     model_fn=create_model,
     run_prefix='mnist_dcgan2',

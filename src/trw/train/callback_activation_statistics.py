@@ -39,7 +39,7 @@ def model_summary(model, batch, logger):
                     summary[m_key]['output_shape'] = list(output.size())
                     summary[m_key]['output_shape'][0] = batch_size
                 else:
-                    # the module has multiple outputs. Don't display
+                    # the module has multiple outputs. Don't y_axis
                     summary[m_key]['output_shape'] = -1
 
             if not isinstance(output, collections.Mapping):

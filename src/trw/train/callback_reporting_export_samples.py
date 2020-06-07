@@ -1,7 +1,10 @@
 import os
 import functools
 import logging
+
+import torch
 from trw import reporting
+from trw.layers import flatten
 from trw.reporting import to_value
 from trw.reporting.table_sqlite import table_drop, table_truncate
 from trw.train import callback
@@ -84,7 +87,14 @@ def callbacks_per_loss_term(
     for loss_term_name, loss_term in loss_terms.items():
         for loss_term_inclusion in loss_terms_inclusion:
             if loss_term_inclusion in loss_term:
-                batch[f'term_{loss_term_name}_{loss_term_inclusion}'] = loss_term[loss_term_inclusion]
+                name = f'term_{loss_term_name}_{loss_term_inclusion}'
+                value = loss_term[loss_term_inclusion]
+                batch[name] = to_value(value)
+
+                # special handling of `losses`: in 2D regression, the output will be a 2D error maps
+                # but it could be useful to have the average error instead (e.g., to plot the worst samples).
+                if loss_term_inclusion == 'losses' and len(value.shape) > 2:
+                    batch[name + '_avg'] = to_value(torch.mean(flatten(value), dim=1))
                 expand_classification_mapping(batch, loss_term_name, loss_term, classification_mappings)
 
     for feature_exclusion in feature_exclusions:
@@ -165,7 +175,7 @@ class CallbackReportingExportSamples(callback.Callback):
         self.max_samples = max_samples
         self.table_name = table_name
         if loss_terms_inclusion is None:
-            self.loss_terms_inclusion = ['output', 'output_raw', 'loss']
+            self.loss_terms_inclusion = ['output', 'output_raw', 'losses']
         else:
             self.loss_terms_inclusion = loss_terms_inclusion
 
@@ -241,6 +251,7 @@ class CallbackReportingExportSamples(callback.Callback):
             table_name=self.table_name,
             table_role='data_samples')
 
+        logger.info('export started...')
         for dataset_name, dataset in datasets.items():
             root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', self.table_name)
             if not os.path.exists(root):

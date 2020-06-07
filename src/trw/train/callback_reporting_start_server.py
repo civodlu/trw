@@ -1,7 +1,6 @@
 import logging
 
 from bokeh.application.handlers.lifecycle import LifecycleHandler
-from trw import reporting
 import multiprocessing as mp
 from trw.reporting import create_default_reporting_options
 from trw.reporting.reporting_bokeh import run_server
@@ -22,12 +21,12 @@ class ReportingLifeCycleHandler(LifecycleHandler):
 
     async def on_session_created(self, server_context):
         self.active_sessions += 1
-        print('SESSION__________CREATED!', self.active_sessions)
+        logger.info(f'session created. Current active sessions={self.active_sessions}')
         return ReportingLifeCycleHandler._do_nothing
 
     async def on_session_destroyed(self, server_context):
         self.active_sessions -= 1
-        print('SESSION__________DESTROYED!', self.active_sessions)
+        logger.info(f'session destroyed. Current active sessions={self.active_sessions}')
         if self.active_sessions == 0:
             exit(0)
         return ReportingLifeCycleHandler._do_nothing
@@ -38,7 +37,7 @@ class CallbackReportingStartServer(callback.Callback):
             self,
             reporting_options=create_default_reporting_options(embedded=True, config={}),
             show_app=True,
-            port=5100,
+            port=None,
             keep_alive_until_client_disconnect=True):
         self.server_process = None
         self.reporting_options = reporting_options
@@ -60,16 +59,17 @@ class CallbackReportingStartServer(callback.Callback):
                                  args=(options['workflow_options']['sql_database_path'],
                                        self.reporting_options,
                                        self.show_app,
-                                       handlers))
+                                       handlers,
+                                       self.port))
             self.server_process = process
             self.server_process.start()
             logger.info(f'creating reporting server Done! PID={process.pid}')
 
     def __del__(self):
         if self.server_process is not None and not self.keep_alive_until_client_disconnect:
-            print('TEST-------------------------------- STARTED !!!!!!!')
+            logger.info(f'terminating server...')
             process = self.server_process
             self.server_process = None
             process.terminate()
             process.join()
-            print('TEST-------------------------------- DONE!!!!!!!')
+            logger.info(f'terminating server, success!')

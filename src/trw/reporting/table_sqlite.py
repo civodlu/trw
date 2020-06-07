@@ -178,6 +178,13 @@ def get_metadata_name(table_name):
     return table_name + '_metadata'
 
 
+def table_add_columns(cursor, table_name, column_names):
+    column_names_p = [f"'{n}'" for n in column_names]
+    columns = ', '.join(column_names_p)
+    sql_command = f"ALTER TABLE '{table_name}' ADD {columns};"
+    cursor.execute(sql_command)
+
+
 class TableStream:
     """
     A SQLite table that can be streamed.
@@ -189,23 +196,33 @@ class TableStream:
 
     2) in ``table_name``_metadata:
         - ``table_role``: the role of the table
+        - ``table_preamble``: an explanation or complementary info of the table
     """
 
-    def __init__(self, cursor, table_name, table_role, primary_key=None):
+    def __init__(self, cursor, table_name, table_role, primary_key=None, table_preamble=''):
         self.name_type_list = None
         self.table_name = table_name
         self.cursor = cursor
         self.table_role = table_role
         self.primary_key = primary_key
+        self.table_preamble = table_preamble
+
+        try:
+            # load the column names if the table already exists
+            self.column_names = set(self.get_column_names())
+        except sqlite3.OperationalError:
+            # the table doesn't exist!
+            self.column_names = set()
 
     def _create(self, table_name, name_type_list, table_role, primary_key=0):
-        metadata_names = ['table_role']
-        metadata_values = [table_role]
-        blobs = ['table_role TEXT']
+        metadata_names = ['table_role', 'table_preamble']
+        metadata_values = [table_role, self.table_preamble]
+        blobs = ['table_role TEXT', 'table_preamble TEXT']
         content = []
         for id, (name, value) in enumerate(name_type_list):
             s = f'\'{name}\' {value}'  # we MUST have `'` around name so that names can be SQL keywords
             content.append(s)
+            self.column_names.add(name)
 
         metadata_name = get_metadata_name(table_name)
         table_create(self.cursor, metadata_name, blobs, primary_key=None)
@@ -248,6 +265,11 @@ class TableStream:
                     value_type = 'TEXT'
                 name_type_list.append((name, value_type))
             self._create(self.table_name, name_type_list, self.table_role, self.primary_key)
+        else:
+            # if it exists, make sure all the columns exist!
+            missing_columns = set(batch.keys()) - self.column_names
+            if len(missing_columns) > 0:
+                table_add_columns(self.cursor, self.table_name, list(missing_columns))
 
         self._insert(batch)
 

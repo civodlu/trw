@@ -37,7 +37,7 @@ trainer = trw.train.Trainer(
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_datasset(normalize_0_1=True),
+    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
     run_prefix='mnist_rnn',
     model_fn=lambda options: RNN(28, 256, 2, 10),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(

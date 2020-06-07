@@ -3,22 +3,32 @@ from bokeh.application import Application
 from bokeh.application.handlers import FunctionHandler
 from bokeh.io import output_file, show, curdoc
 import os
+
+from bokeh.layouts import column
+from bokeh.models import Div, Panel
 from tornado import web
-from trw.reporting.reporting_bokeh_samples import create_tables
+from trw.reporting.reporting_bokeh_graph import process_data_graph
+from trw.reporting.reporting_bokeh_samples import process_data_samples, process_data_tabular
+from trw.reporting.reporting_bokeh_tabs_dynamic_data import TabsDynamicData
 from trw.reporting.reporting_bokeh_tabs_dynamic_header import TabsDynamicHeader
 import sqlite3
 from bokeh.server.server import Server
 import json
 
+from trw.reporting.table_sqlite import get_metadata_name, get_table_data
+
 """
 table roles:
     - ``data_samples``: extract of data with possibly model output. Data exploration + model output correlations
+    - ``data_tabular``: present the SQL table as tabular data
+    - ``data_graph``: draw graphs (e.g., trend, histogram)
     - ``alias##alias_name``: specify this table should be treated as an alias for another table (``alias_name``
 """
 
 #
 # TODO:
-#   - handle incomplete data with ``None`` for some samples
+#   - better detection of table update: if export 50 samples each epoch and erase all previous, detection fails
+#   - improve the custom JS to give an angle on tabular headers. Problem when we have small number of columns
 #
 #
 
@@ -38,7 +48,9 @@ def create_default_reporting_options(embedded=True, config={}):
     The different options will depend on the table role.
 
     - for ALL tables:
-        {
+        {n
+
+
           'data' : {
               'remove_columns': ['column_name1'],
               'subsampling_factor': 1.0,
@@ -77,11 +89,43 @@ def create_default_reporting_options(embedded=True, config={}):
     o.style.scatter_continuous_factor = 10
 
     o.data = Object()
-    o.data.refresh_time = 1.0
+    o.data.refresh_time = 5.0
     o.data.unpack_numpy_arrays_with_less_than_x_columns = 15
 
     o.config = config
     return o
+
+
+def create_tables(name, role, doc, options, connection):
+    """
+    Create a UI from a SQL table and return a ``Panel``
+    """
+    if role == 'data_samples':
+        print(f'create data_samples={name}')
+        data_table = TabsDynamicData(doc, options, connection, name, role, creator_fn=process_data_samples)
+        panel = Panel(child=data_table.get_ui(), title=name, name=f'data_samples_{name}_main_panel')
+    elif role == 'data_tabular':
+        print(f'create data_tabular={name}')
+        data_table = TabsDynamicData(doc, options, connection, name, role, creator_fn=process_data_tabular)
+        panel = data_table.get_ui()
+    elif role == 'data_graph':
+        print(f'create data_graph={name}')
+        data_table = TabsDynamicData(doc, options, connection, name, role, creator_fn=process_data_graph)
+        panel = data_table.get_ui()
+    else:
+        raise NotImplementedError(f'role not implemented={role}')
+    assert isinstance(panel, Panel)
+
+    # handle the table preamble here
+    metadata_name = get_metadata_name(name)
+    metadata = get_table_data(connection, metadata_name)
+    preamble = metadata.get('table_preamble')
+    if preamble is not None and len(preamble[0]) > 0:
+        # we have a preamble for our table. Add a ``Div`` widget to y_axis the preamble
+        child = column(Div(text=preamble[0]), panel.child, sizing_mode='stretch_both')
+        panel.update(child=child)
+
+    return panel
 
 
 def report(sql_database_path, options, doc=None):
@@ -156,6 +200,7 @@ def run_server(
     app_directory = os.path.dirname(path_to_db)
     app_name = os.path.basename(app_directory)
     apps = {f'/{app_name}': app_1}
+    print('Starting reporting server:', apps, ' port=', port)
     server = Server(apps, num_procs=1, port=port)
 
     # set up the `static` mapping
@@ -177,6 +222,13 @@ def run_server(
 
 if __name__ == '__main__':
     config = {
+        'history': {
+            'default': {
+                #'Group by': 'dataset;output;not here',
+                'X Axis': 'epoch',
+                'Y Axis': 'value',
+            }
+        },
         'samples': {
             'data': {
                 'remove_columns': [
@@ -198,7 +250,7 @@ if __name__ == '__main__':
 
     options = create_default_reporting_options(config=config)
     options.image_size = 64
-    # run_server('C:/trw_logs/mnist_cnn_r0/reporting_sqlite.db', options=options)
+
     # run a static HTML page (i.e., the more complicated views requiring python v=callbacks will be disabled)
-    # report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))
+    report('/path/reporting_sqlite.db', options=create_default_reporting_options(embedded=False))
 

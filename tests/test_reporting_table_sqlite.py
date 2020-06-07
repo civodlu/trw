@@ -6,8 +6,8 @@ import trw
 from unittest import TestCase
 import sqlite3
 import numpy as np
-from trw.reporting import TableStream, export_sample
-from trw.reporting.table_sqlite import get_tables_name_and_role
+from trw.reporting import TableStream, export_sample, len_batch
+from trw.reporting.table_sqlite import get_tables_name_and_role, get_metadata_name, get_table_data
 
 
 def get_table_values(connection, table_name):
@@ -30,8 +30,9 @@ class TestReportingTableSqlite(TestCase):
             'strings': ['p1', 'p2', 'p3']
         }
 
-        table = trw.reporting.TableStream(cursor, 'table_test', 'role_test')
-        # this will acutally create the table
+        table = trw.reporting.TableStream(cursor, 'table_test', 'role_test', table_preamble='table_preamble_value')
+
+        # this will actually create the table
         table.insert(batch)
 
         # insert without table creation
@@ -59,6 +60,11 @@ class TestReportingTableSqlite(TestCase):
         assert len(data_roles) == 1
         assert len(data_roles[0]) == 2
         assert data_roles[0] == ('table_test', 'role_test')
+
+        # check the preamble was recorded
+        metadata_name = get_metadata_name('table_test')
+        metadata = get_table_data(cursor, metadata_name)
+        assert metadata['table_preamble'][0] == 'table_preamble_value'
 
     def test_export_batch(self):
         tmp_folder = tempfile.mkdtemp()
@@ -155,3 +161,43 @@ class TestReportingTableSqlite(TestCase):
         files = os.listdir(output_dir)
         assert len(files) == 2
         assert 'image_1.png' in files
+
+    def test_table_with_missing(self):
+        """
+        Make sure we add data with columns not present in the table.
+
+        If we add data without all columns, missing columns are populated with `None`
+        """
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        table = trw.reporting.TableStream(cursor, 'table_test', 'role_test', table_preamble='table_preamble_value')
+
+        # create a single column
+        batch = {
+            'split': ['train'] * 3,
+        }
+
+        table.insert(batch)
+
+        # insert a batch with new column. We expect the
+        # existing rows with missing values will be set to None
+        batch = {
+            'split': ['test'] * 2,
+            'epoch': [0, 1],
+        }
+
+        table.insert(batch)
+
+        # insert a batch with missing column. We expect the
+        # existing rows with missing values will be set to None
+        batch = {
+            'split': ['valid'] * 5,
+        }
+
+        table.insert(batch)
+
+        data = get_table_data(cursor, 'table_test')
+        assert len_batch(data) == 10
+        assert len(data) == 2
+        assert data['epoch'] == (None, None, None, 0, 1, None, None, None, None, None)

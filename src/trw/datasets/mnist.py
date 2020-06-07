@@ -9,7 +9,7 @@ def identity(batch):
     return batch
 
 
-def create_mnist_datasset(
+def create_mnist_dataset(
         batch_size=1000,
         root=None,
         transforms=None,

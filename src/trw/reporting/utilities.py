@@ -112,3 +112,28 @@ def safe_lookup(dictionary, *keys, default=None):
             return default
 
     return dictionary
+
+
+def recursive_dict_update(dict, dict_update):
+    """
+    This adds any missing element from ``dict_update`` to ``dict``, while keeping any key not
+        present in ``dict_update``
+
+    Args:
+        dict: the dictionary to be updated
+        dict_update: the updated values
+    """
+    for updated_name, updated_values in dict_update.items():
+        if updated_name not in dict:
+            # simply add the missing name
+            dict[updated_name] = updated_values
+        else:
+            values = dict[updated_name]
+            if isinstance(values, collections.Mapping):
+                # it is a dictionary. This needs to be recursively
+                # updated so that we don't remove values in the existing
+                # dictionary ``dict``
+                recursive_dict_update(values, updated_values)
+            else:
+                # the value is not a dictionary, we can update directly its value
+                dict[updated_name] = values

@@ -102,16 +102,16 @@ def create_dataset_from_archive_url(
 
     dataset = collections.OrderedDict()
     assert split_train_name in split_names, 'no training split!'
-    for split in split_names:
-        if split == split_train_name:
+    for split_name in split_names:
+        if split_name == split_train_name:
             sampler = SamplerRandom(batch_size=batch_size)
         else:
             sampler = SamplerSequential(batch_size=batch_size)
 
-        root_split = os.path.join(path, dataset_name, split)
-        split = split_loader(sampler, root_split, uid_prefix=split)
-        dataset[split] = split
+        root_split = os.path.join(path, dataset_name, split_name)
+        split = split_loader(sampler, root_split, uid_prefix=split_name)
+        dataset[split_name] = split
 
     return collections.OrderedDict([
-        ('dataset_name', dataset)
+        (dataset_name, dataset)
     ])

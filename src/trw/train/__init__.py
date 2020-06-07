@@ -50,6 +50,8 @@ from .callback_export_convolution_kernel import CallbackExportConvolutionKernel
 from .callback_reporting_export_samples import CallbackReportingExportSamples
 from .callback_reporting_start_server import CallbackReportingStartServer
 from .callback_reporting_classification_errors import CallbackReportingClassificationErrors
+from .callback_reporting_model_summary import CallbackReportingModelSummary
+from .callback_reporting_epoch_summary import CallbackReportingRecordHistory
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor
