@@ -52,6 +52,7 @@ from .callback_reporting_start_server import CallbackReportingStartServer
 from .callback_reporting_classification_errors import CallbackReportingClassificationErrors
 from .callback_reporting_model_summary import CallbackReportingModelSummary
 from .callback_reporting_epoch_summary import CallbackReportingRecordHistory
+from .callback_reporting_model_statistics import CallbackReportingModelStatistics
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap, JobExecutor

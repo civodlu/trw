@@ -27,10 +27,10 @@ table roles:
 
 #
 # TODO:
-#   - better detection of table update: if export 50 samples each epoch and erase all previous, detection fails
 #   - improve the custom JS to give an angle on tabular headers. Problem when we have small number of columns
 #
 #
+
 
 class Object:
     pass
@@ -71,8 +71,11 @@ def create_default_reporting_options(embedded=True, config={}):
        }
     """
     o = Object()
-    o.image_size = 64
+    o.image_size = 80
     o.font_size = 19
+    o.frame_size_x = None
+    o.frame_size_y = 768
+
     o.data_samples = Object()
     o.data_samples.display_tabular = True
     o.data_samples.display_scatter = True

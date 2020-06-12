@@ -1,15 +1,15 @@
 import collections
-import functools
 import time
 
 from bokeh.layouts import column, row, gridplot
-from bokeh.models import Select, Panel, CheckboxGroup, Paragraph, Text, PreText, RadioGroup
-from bokeh.palettes import Spectral4, Category20c, Category20
+from bokeh.models import Panel, CheckboxGroup, PreText, RadioGroup, ColumnDataSource, HoverTool
+from bokeh.palettes import Category20
 from bokeh.plotting import figure
 from trw.reporting import safe_lookup, len_batch, get_batch_n
 from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.data_category import DataCategory
 import numpy as np
+from trw.reporting.reporting_bokeh_samples import make_custom_tooltip
 
 
 def process_data_graph(options, name, role, data, types, type_categories):
@@ -19,25 +19,22 @@ def process_data_graph(options, name, role, data, types, type_categories):
     return tabs
 
 
-def prepare_new_figure(options, xaxis_name, yaxis_name):
+def prepare_new_figure(options, data, data_types, xaxis_name, yaxis_name):
     tools = 'pan,wheel_zoom,reset'
     f = figure(
         tools=tools,
         active_scroll='wheel_zoom',
         toolbar_location='above',
-        height=900,
-        width=900,
+        height=300,
+        width=200,
         name='data_samples_fig'
     )
 
+    hover_tool = HoverTool(tooltips=make_custom_tooltip(options, data, data_types))
+    f.add_tools(hover_tool)
+
     f.xaxis.axis_label = xaxis_name
     f.yaxis.axis_label = yaxis_name
-
-    #hover_tool = HoverTool(tooltips=make_custom_tooltip(options, data, data_types))
-    #f.add_tools(hover_tool)
-
-    #f.xgrid.visible = False
-    #f.ygrid.visible = False
     return f
 
 
@@ -128,7 +125,9 @@ class PanelDataGraph(BokehUi):
             - default/discard_axis_x: name1;name2;...;nameN
             - default/discard_axis_y: name1;name2;...;nameN
             - default/discard_group_by: name1;name2;...;nameN
-            - default/discard_exclude_max_values: number
+            - default/discard_exclude_max_values: number. the maximum number of excluded values for a category to be shown. If an
+                exclusion category has more values, no values added for this category
+            - default/number_of_columns: int
 
         Args:
             options:
@@ -136,12 +135,6 @@ class PanelDataGraph(BokehUi):
             data:
             data_types:
             type_categories:
-            discard_group_by:
-            discard_axis_x:
-            discard_axis_y:
-            discard_exclude:
-            discard_exclude_max_values: the maximum number of excluded values for a category to be shown. If an
-                exclusion category has more values, no values added for this category
         """
         self.discard_group_by = safe_lookup(options.config, name, 'default', 'discard_group_by', default='').split(';')
         self.discard_axis_x = safe_lookup(options.config, name, 'default', 'discard_axis_x', default='').split(';')
@@ -173,16 +166,19 @@ class PanelDataGraph(BokehUi):
         self.last_data = data
         self.last_data_types = data_types
         self.last_type_categories = type_categories
+        self.last_figs_by_group = {}
+        self.number_of_columns = int(safe_lookup(options.config, name, 'default', 'number_of_columns', default='2'))
 
         for control in controls_list:
             if hasattr(control, 'active'):
-                control.on_change('active', lambda attr, old, new: self._update())
+                control.on_change('active', lambda attr, old, new: self._update_and_clear_plots())
 
         self._update()
 
         super().__init__(ui=Panel(child=self.layout, title=name))
 
     def clear_graphs(self):
+        self.last_figs_by_group = {}
         while len(self.layout.children) >= 2:
             # remove the previous graphs
             self.layout.children.pop()
@@ -207,31 +203,69 @@ class PanelDataGraph(BokehUi):
         # extract the groups
         unique_groups = set(groups)
         figs = []
+
+        figs_by_group = {}
         for y_axis_active in self.y_axis.active:
             axis_y = self.y_axis.labels[y_axis_active]
             for g in unique_groups:
                 indices = np.where(groups == g)
-
                 axis_x = self.x_axis.labels[self.x_axis.active]
-
                 data_subset = get_batch_n(data_np, data_size, indices, transforms=None, use_advanced_indexing=True)
-                fig = PanelDataGraph.create_graph(options, data_subset, group_by, axis_x, axis_y, self.discard_group_by)
-                figs.append(fig)
 
-        # clear the graph only at the end to minimize flickering
-        self.clear_graphs()
-        layout.children.append(gridplot(figs, ncols=2, sizing_mode='stretch_both'))
+                # try to reuse the previous figure, instead of recreating a new one so as to
+                # minimize the flickering and keep track of the zoom/pan
+                fig = self.last_figs_by_group.get(g)
+                if fig is None:
+                    fig = prepare_new_figure(options, data, data_types, axis_x, axis_y)
+                else:
+                    # here we reuse a previous figure (with same hash)
+                    pass
+
+                fig = PanelDataGraph.create_graph(fig, options, data_subset, group_by, axis_x, axis_y, self.discard_group_by)
+                figs.append(fig)
+                figs_by_group[g] = fig
+
+        if len(self.last_figs_by_group) != len(figs_by_group):
+            # clear the graph only at the end to minimize flickering
+            self.clear_graphs()
+
+            # different groups, refresh the display in full
+            self.last_figs_by_group = figs_by_group
+            layout.children.append(gridplot(figs, ncols=self.number_of_columns, sizing_mode='stretch_width'))
+        else:
+            # reuse the figures to minimize flickering
+            pass
 
         time_end = time.perf_counter()
         print('RENDER, time=', time_end - time_start)
 
     @staticmethod
-    def create_graph(options, data, group_by, axis_x, axis_y, discard_group_by):
+    def update_figure_data(fig, data, color, group_index, line_options):
+        """
+        Purpose here is to directly refresh the figure as much as possible instead
+        of creating new ones. Unfortunately, ``fig.renderers.clear()`` does not
+        work in bokeh 2.0
+
+        Instead, find the corresponding renderers and update its internal data.
+        """
+        if group_index < len(fig.renderers):
+            # update existing glyphs
+            fig.renderers[group_index].data_source.data.update(data)
+        else:
+            # create new glyphs
+            fig.line(
+                x='__x_values',
+                y='__y_values',
+                color=color,
+                line_width=2,
+                source=ColumnDataSource(data),
+                **line_options)
+
+    @staticmethod
+    def create_graph(fig, options, data, group_by, axis_x, axis_y, discard_group_by):
         group_keys = set(data.keys()) - set(list(discard_group_by) + [axis_x, axis_y])
         groups = hash_data_attributes(data, group_keys)
         unique_groups = set(groups)
-
-        fig = prepare_new_figure(options, axis_x, axis_y)
 
         indices_groups = []
         name_groups = []
@@ -256,12 +290,25 @@ class PanelDataGraph(BokehUi):
 
         factorized, variables = factorize_names(name_groups)
         colors = list(Category20[20][::2]) + list(Category20[20][1::2])  # split the light and dark colors
-        for (y_values, x_values), name, color in zip(line_groups, variables, colors):
-            if len(line_groups) == 1:
+        for index, ((y_values, x_values), name, color, indices) in enumerate(zip(line_groups, variables, colors, indices_groups)):
+            line_options = {}
+            if len(line_groups) != 1:
                 # we do NOT need a legend: single group can always be factorized in the figure title
-                fig.line(x_values, y_values, color=color)
-            else:
-                fig.line(x_values, y_values, legend_label='/'.join(name), color=color)
+                line_options['legend_label'] = '/'.join(name)
+
+            # copy the data to avoid modifying the original data
+            data_cpy = collections.OrderedDict()
+            for name, value in data.items():
+                data_cpy[name] = value[indices]
+            data_cpy['__x_values'] = x_values
+            data_cpy['__y_values'] = y_values
+            PanelDataGraph.update_figure_data(fig, data_cpy, color, index, line_options)
+
+        if len(variables) <= 4:
+            fig.legend.orientation = 'horizontal'
+            fig.legend.spacing = 10  # add spacing, else the labels are too close!
+        fig.legend.border_line_color = 'black'
+        fig.legend.padding = 4
 
         fig.title.text = '/'.join(factorized)
         return fig
@@ -274,6 +321,13 @@ class PanelDataGraph(BokehUi):
             data_types=self.last_data_types,
             type_categories=self.last_type_categories
         )
+
+    def _update_and_clear_plots(self):
+        """
+        If we have large changes (e.g., new groups), clear all previous figures
+        """
+        self.clear_graphs()
+        self._update()
 
     def update_controls(self, options, name, data, data_types, type_categories):
         data_names = list(sorted(data.keys()))

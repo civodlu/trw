@@ -1,3 +1,4 @@
+from bokeh.layouts import row
 from bokeh.models.widgets import Tabs
 import os
 from trw.reporting.bokeh_ui import BokehUi
@@ -15,7 +16,7 @@ class TabsDynamicHeader(BokehUi):
     so, a callback will be executed (e.g., to update the UI).
     """
     def __init__(self, doc, options, connection, creator_fn):
-        self.tabs = Tabs()
+        self.tabs = Tabs(max_height=options.frame_size_y, max_width=options.frame_size_x)
         self.existing_tables = []
         self.options = options
         self.connection = connection

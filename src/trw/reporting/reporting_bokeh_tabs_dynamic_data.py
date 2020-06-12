@@ -1,11 +1,16 @@
 import functools
 import collections
+import sqlite3
+import logging
+
 from bokeh.models.widgets import Tabs
 from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.normalize_data import normalize_data
 from trw.reporting.table_sqlite import get_table_data, get_table_number_of_rows, get_tables_name_and_role, table_create, \
     get_metadata_name, table_insert
-from trw.reporting import safe_lookup, len_batch
+from trw.reporting import safe_lookup
+
+logger = logging.getLogger(__name__)
 
 
 def create_aliased_table(connection, name, aliased_table_name):
@@ -46,11 +51,50 @@ def get_data_normalize_and_alias(options, connection, name):
     return data, types, type_categories, alias
 
 
+class TableChangedDectector:
+    """
+    Detect when a table has been updated by watching at the number of rows, columns and content of specific
+    rows (first).
+    """
+    def __init__(self, connection, table_name):
+        self.table_name = table_name
+        self.connection = connection
+        self.last_number_of_rows = None
+        self.first_row = {}
+
+    def __call__(self):
+        number_of_rows = get_table_number_of_rows(self.connection.cursor(), self.table_name)
+        if number_of_rows != self.last_number_of_rows:
+            #print(f'Table={self.table_name} Reason=different rows({number_of_rows}/{self.last_number_of_rows})')
+            self.last_number_of_rows = number_of_rows
+            self.first_row = get_table_data(self.connection.cursor(), self.table_name, single_row=True)
+            return True
+
+        rows = get_table_data(self.connection.cursor(), self.table_name, single_row=True)
+        if number_of_rows > 0:
+            if len(rows) != len(self.first_row):
+                # different number of columns
+                #print(f'Table={self.table_name} Reason=different columns ({self.first_row}/{rows})')
+                self.first_row = rows
+                return True
+            for name, value in rows.items():
+                # value is different!
+                value_last = self.first_row.get(name)
+                if value_last is None or value_last != value:
+                    #print(f'Table={self.table_name} Reason=different value.\nprevious={self.first_row}\ngot={rows})')
+                    self.first_row = rows
+                    return True
+
+        # can't find differences, return no changes
+        return False
+
+
 class TabsDynamicData(BokehUi):
     """
     Helper class to manage updates of the underlying SQL data for a given table
     """
     def __init__(self, doc, options, connection, name, role, creator_fn):
+        self.table_changed = TableChangedDectector(connection, name)
         data, types, type_categories, alias = get_data_normalize_and_alias(options, connection, name)
         tabs = creator_fn(options, name, role, data, types, type_categories)
         tabs_ui = []
@@ -65,7 +109,6 @@ class TabsDynamicData(BokehUi):
             ui = tabs_ui[0]
         super().__init__(ui=ui)
 
-        self.last_update_data_size = len_batch(data)
         doc.add_periodic_callback(functools.partial(self.update,
                                                     options=options,
                                                     connection=connection,
@@ -73,20 +116,28 @@ class TabsDynamicData(BokehUi):
                                                     tabs=tabs),
                                   options.data.refresh_time * 1000)
 
-    def update(self, options, connection, name, tabs):
-        number_of_rows = get_table_number_of_rows(connection, name)
-        if number_of_rows != self.last_update_data_size:  # different number of rows, data was changed!
-            self.last_update_data_size = number_of_rows
-            # discard `0`, the table creation is not part of a
-            # transaction, the table is being populated
-            if number_of_rows > 0:
-                data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
-                keep_last_n_rows = safe_lookup(options.config, name, 'data', 'keep_last_n_rows')
-                if keep_last_n_rows is not None:
-                    data_trimmed = collections.OrderedDict()
-                    for name, values in data.items():
-                        data_trimmed[name] = values[-keep_last_n_rows:]
-                    data = data_trimmed
+        # at this point the UI is up to date so make sure we are with the detector too
+        self.table_changed()
 
-                for tab in tabs:
-                    tab.update_data(options, name, data, types, type_categories)
+    def update(self, options, connection, name, tabs):
+        try:
+            table_changed = self.table_changed()
+            if table_changed:  # different number of rows, data was changed!
+                # discard `0`, the table creation is not part of a
+                # transaction, the table is being populated
+                number_of_rows = get_table_number_of_rows(connection, name)
+                if number_of_rows > 0:
+                    data, types, type_categories = normalize_data(options, get_table_data(connection, name), table_name=name)
+                    keep_last_n_rows = safe_lookup(options.config, name, 'data', 'keep_last_n_rows')
+                    if keep_last_n_rows is not None:
+                        data_trimmed = collections.OrderedDict()
+                        for name, values in data.items():
+                            data_trimmed[name] = values[-keep_last_n_rows:]
+                        data = data_trimmed
+
+                    for tab in tabs:
+                        tab.update_data(options, name, data, types, type_categories)
+        except sqlite3.OperationalError as e:
+            logger.warning(f'TabsDynamicData={self} could not be updated. Excpetion={e}. '
+                           f'``database is locked`` can be ignored if another process is '
+                           f'currently populating the database')

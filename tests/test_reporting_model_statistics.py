@@ -49,18 +49,21 @@ class TestReportingModelStatistics(TestCase):
         #       = d/dw ((y+b)**2 - 2 * w * b * (y + b) + (x * w) ** 2)
         #       = 0 - 2 * b * (y + b) + 2 * w * x ** 2
         # and substitute the data in the equation, we can calculate exactly the gradient relative to w
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/weight']['min'] == 0
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/weight']['max'] == 9
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/weight']['mean'] == (9 + 4 + 1 + 0) / 4
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/weight']['norm2'] == 3.5
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/weight']['nb_items'] == 4
+        parameters = dict(model.w.w.named_parameters())
+        p_w = parameters['weight']
+        assert gradient_stats[p_w]['min'] == 0
+        assert gradient_stats[p_w]['max'] == 9
+        assert gradient_stats[p_w]['mean'] == (9 + 4 + 1 + 0) / 4
+        assert gradient_stats[p_w]['norm2'] == 3.5
+        assert gradient_stats[p_w]['nb_items'] == 4
 
         # we can do the same for the bias
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/bias']['min'] == 0
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/bias']['max'] == 3
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/bias']['mean'] == 1.5
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/bias']['norm2'] == 1.5
-        assert gradient_stats['ModelLinearRegressionShell/ModelLinearRegression/Linear/bias']['nb_items'] == 4
+        p_b = parameters['bias']
+        assert gradient_stats[p_b]['min'] == 0
+        assert gradient_stats[p_b]['max'] == 3
+        assert gradient_stats[p_b]['mean'] == 1.5
+        assert gradient_stats[p_b]['norm2'] == 1.5
+        assert gradient_stats[p_b]['nb_items'] == 4
 
         # for the activation:
         # we expect mean activations = (0 + 1.5 + 3 + 4.5) / 4 == 2.25

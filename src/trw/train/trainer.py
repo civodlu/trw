@@ -912,7 +912,8 @@ class Trainer:
                          optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
                 #try:
                 #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                #             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
                 #except Exception as e:
                 #    logger.error('callback={} failed with exception={}'.format(callback, e))
 

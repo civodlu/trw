@@ -466,7 +466,7 @@ class TestReporting(TestCase):
         connection.commit()
 
         options = trw.reporting.create_default_reporting_options()
-
+        options.image_size = 64
         doc = trw.reporting.report(db_path, options)
         assert len(doc.roots) == 1
 

@@ -1,3 +1,4 @@
+import collections
 import logging
 import warnings
 from collections import OrderedDict
@@ -7,8 +8,11 @@ import torch.nn as nn
 import numpy as np
 
 from trw.reporting import len_batch, to_value
+from trw.reporting.utilities import collect_hierarchical_module_name, collect_hierarchical_parameter_name
 from trw.train import Callback, find_default_dataset_and_split_names, CleanAddedHooks
+from trw.train.callback_reporting_model_summary import export_table
 from trw.train.trainer import prepare_loss_terms, default_sum_all_losses
+from trw.train.utilities import update_json_config, get_device, transfer_batch_to_device
 
 logger = logging.getLogger(__name__)
 
@@ -28,24 +32,19 @@ def generic_tracing():
     ]
 
 
-def collect_gradient_recursively(base_name, model, gradient_store):
+def collect_gradient(model, gradient_store):
     """
-    Recursively collect the gradient with meaningful name
-
+    Collect the gradient of each parameter of a given model
     Args:
-        base_name: the name of the model
         model: the model
-        gradient_store: where to store the collected gradients
+        gradient_store: where to store the parameter gradients
+
+    Returns:
 
     """
-    for child in model.children():
-        child_name = base_name + '/' + type(child).__name__
-        for name, parameter in child.named_parameters(recurse=False):
-            if parameter.requires_grad:
-                parameter_name = child_name + '/' + name
-                gradient_store[parameter_name] = to_value(parameter.grad)  # collect and detach the gradient
-
-        collect_gradient_recursively(child_name, child, gradient_store)
+    for p in model.parameters():
+        if p.requires_grad:
+            gradient_store[p] = to_value(p.grad)
 
 
 def aggregate_stats(all_stats, batch_stat):
@@ -64,7 +63,7 @@ def aggregate_stats(all_stats, batch_stat):
         stat['min'] = min(stat['min'], np.min(value))
         stat['max'] = max(stat['max'], np.max(value))
         stat['mean'] += np.mean(value)
-        stat['norm2'] += np.linalg.norm(value, 2)
+        stat['norm2'] += np.linalg.norm(np.reshape(value, (-1)), ord=2) / value.shape[0]
         stat['nb_items'] += 1
 
 
@@ -111,12 +110,13 @@ def calculate_stats_gradient(
     batch_stats = OrderedDict()
 
     total_samples = 0
-
+    device = get_device(model)
     with CleanAddedHooks(model) as context:
         # must be in `train` mode to collect gradients
         model.train()
         model.apply(register_hooks)
         for batch in sequence:
+            batch = transfer_batch_to_device(batch, device)
             model.zero_grad()
             outputs = model(batch)
             loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
@@ -128,7 +128,7 @@ def calculate_stats_gradient(
 
             # aggregate the module gradients
             gradient_store = OrderedDict()
-            collect_gradient_recursively(type(model).__name__, model, gradient_store)
+            collect_gradient(model, gradient_store)
             aggregate_stats_fn(gradient_stats, gradient_store)
             aggregate_stats_fn(activation_stats, batch_stats)
 
@@ -150,11 +150,23 @@ class CallbackReportingModelStatistics(Callback):
     """
     Report the activation and gradient statistics layer by layer
     """
-    def __init__(self, dataset_name=None, split_name=None):
+    def __init__(self, dataset_name=None, split_name=None, nb_samples=500, table_name='layer_statistics'):
+        """
+
+        Args:
+            dataset_name: Samples from this dataset will be used to collect statistics. If `None`, a
+                dataset will be automatically selected
+            split_name: Samples from this split will be used to collect statistics. If `None`, a split
+                will be automatically selected
+            nb_samples: the number of samples used to calculate the statistics
+            table_name: the name of the SQL table where the results will be stored
+        """
+        self.nb_samples = nb_samples
         self.split_name = split_name
         self.dataset_name = dataset_name
+        self.table_name = table_name
 
-    def first_time(self, datasets):
+    def first_time(self, options, datasets):
         # here we only want to collect the kernels a single time per epoch, so fix the dataset/split names
         if self.dataset_name is None or self.split_name is None:
             self.dataset_name, self.split_name = find_default_dataset_and_split_names(
@@ -162,16 +174,97 @@ class CallbackReportingModelStatistics(Callback):
                 default_dataset_name=self.dataset_name,
                 default_split_name=self.split_name)
 
+            # set the default parameter of the graph
+            config_path = options['workflow_options']['sql_database_view_path']
+            update_json_config(config_path, {
+                self.table_name: {
+                    'default': {
+                        'X Axis': 'epoch',
+                        'Y Axis': 'metric_value',
+                        'Group by': 'layer',
+                        'discard_axis_y': 'epoch',
+                        'discard_axis_x': 'metric_value',
+                        'discard_group_by': 'epoch',
+                        'number_of_columns': 2,
+                    }
+                }
+            })
+
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
 
         if self.dataset_name is None or self.split_name is None:
-            self.first_time(datasets)
+            self.first_time(options, datasets)
 
         if self.dataset_name is None or self.split_name is None:
             logger.error('can\'t find a dataset name or split name!')
             return
 
         logger.info('CallbackReportingModelStatistics calculating stats...')
+        gradient_stats, activation_stats = calculate_stats_gradient(
+            model,
+            datasets[self.dataset_name][self.split_name],
+            self.nb_samples)
+
+        module_to_name = collect_hierarchical_module_name(type(model).__name__, model)
+        parameter_to_name = collect_hierarchical_parameter_name(type(model).__name__, model, with_grad_only=True)
+
+        layer_names = []
+        epochs = []
+        datasets = []
+        splits = []
+        metrics = []
+        metric_values = []
+
+        for parameter, values in gradient_stats.items():
+            for name, value in values.items():
+                if name == 'nb_items':
+                    continue
+                parameter_name = parameter_to_name.get(parameter)
+                if parameter_name is None:
+                    warnings.warn(f'module could not be recursively found! Parameter={parameter}')
+                    parameter_name = str(parameter)
+
+                layer_names.append(parameter_name)
+                epochs.append(len(history))
+                datasets.append(self.dataset_name)
+                splits.append(self.split_name)
+                metrics.append('gradient_' + name)
+                metric_values.append(value)
+
+        for layer, stats in activation_stats.items():
+            for name, value in stats.items():
+                if name == 'nb_items' or name == 'norm2':
+                    continue
+
+                layer_name = module_to_name.get(layer)
+                if layer_name is None:
+                    warnings.warn(f'module could not be recursively found! Module={layer}')
+                    layer_name = str(layer)
+
+                layer_names.append(layer_name)
+                epochs.append(len(history))
+                datasets.append(self.dataset_name)
+                splits.append(self.split_name)
+                metrics.append('activation_' + name)
+                metric_values.append(value)
+
+        table = collections.OrderedDict([
+            ('layer', layer_names),
+            ('epoch', epochs),
+            ('dataset', datasets),
+            ('split', splits),
+            ('metric', metrics),
+            ('metric_value', metric_values),
+        ])
+
         logger.info('exporting to SQL...')
+
+        export_table(
+            options,
+            self.table_name,
+            table,
+            table_role='data_graph',
+            clear_existing_data=False)
+
         logger.info('CallbackReportingModelStatistics calculating done!')

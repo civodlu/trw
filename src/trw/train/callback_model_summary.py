@@ -1,4 +1,4 @@
-from trw.reporting import len_batch
+from trw.reporting import len_batch, collect_hierarchical_module_name
 from trw.train import callback
 from trw.train import utilities
 from trw.train import trainer
@@ -40,18 +40,14 @@ def model_summary_base(model, batch):
     def register_hook(module):
         def hook(module, input, output):
             nonlocal parameters_counted
-
-            class_name = str(module.__class__).split(".")[-1].split("'")[0]
-            module_idx = len(summary)
-
-            m_key = "%s-%i" % (class_name, module_idx + 1)
-            summary[m_key] = collections.OrderedDict()
-            summary[m_key]['input_shape'] = input_shape(input)
-            summary[m_key]['output_shape'] = input_shape(output)
+            if module in summary:
+                return
+            summary[module] = collections.OrderedDict()
+            summary[module]['input_shape'] = input_shape(input)
+            summary[module]['output_shape'] = input_shape(output)
 
             total_trainable_params = 0  # ALL parameters of the layer (including sub-module parameters)
             params = 0  # if we have recursion, these are the unique parameters
-            trainable = False
             for p in module.parameters():
                 if p.requires_grad:
                     total_trainable_params += np.prod(np.asarray(p.shape))
@@ -60,12 +56,10 @@ def model_summary_base(model, batch):
                     # make sure there is double counted parameters!
                     parameters_counted.add(p)
                     if p.requires_grad:
-                        trainable = True
                         params += np.prod(np.asarray(p.shape))
 
-            summary[m_key]["nb_params"] = params
-            summary[m_key]["trainable"] = trainable
-            summary[m_key]["total_trainable_params"] = total_trainable_params
+            summary[module]["nb_params"] = params
+            summary[module]["total_trainable_params"] = total_trainable_params
 
         hooks.append(module.register_forward_hook(hook))
 
@@ -86,15 +80,14 @@ def model_summary_base(model, batch):
     total_params = 0
     total_output = 0
     trainable_params = 0
-    for layer in summary:
-        total_params += summary[layer]["nb_params"]
-        outputs = summary[layer]["output_shape"]
+    for layer, values in summary.items():
+        total_params += values["nb_params"]
+        outputs = values["output_shape"]
         if not isinstance(outputs, str):
             for output in outputs:
                 total_output += np.prod(output[1:])  # remove the batch size
-        if "trainable" in summary[layer]:
-            if summary[layer]["trainable"]:
-                trainable_params += summary[layer]["nb_params"]
+
+        trainable_params += values["nb_params"]
 
     # assume 4 bytes/number (float on cuda)
     total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
@@ -108,15 +101,21 @@ def model_summary(model, batch, logger):
     logger(line_new)
     logger("=========================================================================================================")
 
+    module_to_name = collect_hierarchical_module_name(type(model).__name__, model)
+
     summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)
-    for layer in summary:
+    for layer, values in summary.items():
         # input_shape, output_shape, trainable, nb_params
+        layer_name = module_to_name.get(layer)
+        if layer_name is None:
+            layer_name = str(layer)
+
         line_new = "{:>20} {:>25} {:>25} {:>15} {:>15}".format(
-            layer,
-            str(summary[layer]["input_shape"]),
-            str(summary[layer]["output_shape"]),
-            "{0:,}".format(summary[layer]["nb_params"]),
-            "{0:,}".format(summary[layer]["total_trainable_params"]),
+            layer_name,
+            str(values["input_shape"]),
+            str(values["output_shape"]),
+            "{0:,}".format(values["nb_params"]),
+            "{0:,}".format(values["total_trainable_params"]),
         )
 
         logger(line_new)

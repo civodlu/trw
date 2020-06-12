@@ -129,23 +129,30 @@ def get_tables_name_and_role(cursor):
     return name_roles
 
 
-def get_table_data(cursor, table_name):
+def get_table_data(cursor, table_name, single_row=False):
     """
     Extract all the data of the table
 
     Args:
         cursor: the DB cursor
         table_name: the name of the database
+        single_row: if True, returns a single row
 
     Returns:
         a dictionary of (name, values)
     """
     cursor = cursor.execute(f"select * from '{table_name}'")
     column_names = [column[0] for column in cursor.description]
-    rows = cursor.fetchall()
+    if single_row:
+        rows = cursor.fetchone()
+        if rows is None:
+            return {}
+        rows = [[value] for value in rows]  # must be a list!
+    else:
+        rows = cursor.fetchall()
 
     transpose = zip(*rows)
-    d = dict(zip(column_names, transpose))
+    d = collections.OrderedDict(zip(column_names, transpose))
     return d
 
 

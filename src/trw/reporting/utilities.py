@@ -137,3 +137,60 @@ def recursive_dict_update(dict, dict_update):
             else:
                 # the value is not a dictionary, we can update directly its value
                 dict[updated_name] = values
+
+
+def collect_hierarchical_module_name(base_name, model, module_to_name=None):
+    """
+    Create a meaningful name of the module based on the module hierarchy
+
+    Args:
+        base_name: the base name
+        model: the model
+        module_to_name: where to store the module to name conversion
+
+    Returns:
+        a dictionary with mapping nn.Module to string
+    """
+    if module_to_name is None:
+        module_to_name = collections.OrderedDict()
+
+    module_to_name[model] = base_name
+    for child_id, child in enumerate(model.children()):
+        child_name = base_name + '/' + type(child).__name__ + f'_{child_id}'
+        collect_hierarchical_module_name(child_name, child, module_to_name=module_to_name)
+
+    return module_to_name
+
+
+def collect_hierarchical_parameter_name(base_name, model, parameter_to_name=None, with_grad_only=False):
+    """
+        Create a meaningful name of the module's parameters based on the module hierarchy
+
+        Args:
+            base_name: the base name
+            model: the model
+            parameter_to_name: where to store the module to name conversion
+            with_grad_only: only the parameters requiring gradient are collected
+
+        Returns:
+            a dictionary with mapping nn.Parameter to string
+        """
+    if parameter_to_name is None:
+        parameter_to_name = collections.OrderedDict()
+
+    for child_id, child in enumerate(model.children()):
+        child_name = base_name + '/' + type(child).__name__ + f'_{child_id}'
+        for name, parameter in child.named_parameters(recurse=False):
+            if with_grad_only and not parameter.requires_grad:
+                # discard if not gradient
+                continue
+            parameter_name = child_name + '/' + name
+            parameter_to_name[parameter] = parameter_name
+
+        collect_hierarchical_parameter_name(
+            child_name,
+            child,
+            parameter_to_name=parameter_to_name,
+            with_grad_only=with_grad_only)
+
+    return parameter_to_name

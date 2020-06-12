@@ -5,28 +5,48 @@ import collections
 
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
-    CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter, LayoutDOM
+    CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter
 from bokeh.models.widgets import Panel, Div
 from bokeh.plotting import figure
 import numpy as np
 from bokeh.transform import transform
 from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.data_category import DataCategory
-from trw.reporting.reporting_bokeh_tabs_dynamic_data import TabsDynamicData
 from trw.reporting import utilities, safe_lookup
-from trw.reporting.table_sqlite import get_table_data, get_metadata_name
 
 
 class PanelDataSamplesTabular(BokehUi):
-    def __init__(self, options, data, data_types, type_categories, title='Tabular'):
-        ui, self.table = process_data_samples__tabular(options, data, data_types, type_categories, title=title)
+    """
+    Display tabular data
+
+    Configuration options:
+        default/with_column_title_rotation: 1 or 0
+    """
+    def __init__(self, options, name, data, data_types, type_categories, title='Tabular'):
+        with_column_title_rotation = int(safe_lookup(
+            options.config,
+            name,
+            'default',
+            'with_column_title_rotation',
+            default='1'))
+
+        ui, self.table = process_data_samples__tabular(
+            options,
+            name,
+            data,
+            data_types,
+            type_categories,
+            title=title,
+            with_column_title_rotation=with_column_title_rotation
+        )
         super().__init__(ui)
 
     def update_data(self, options, name, data, data_types, type_categories):
         source = self.table.source
 
         # make sure we do not populate very large data to a table. Remove
-        # the large datasets
+        # the large datasets (if not, the data is sent to the client, which
+        # may result in slow rendering time)
         data = filter_large_data(options, data)
 
         for key in source.column_names:
@@ -36,7 +56,7 @@ class PanelDataSamplesTabular(BokehUi):
         self.table.source.update(data=data)
 
 
-def process_data_samples__tabular(options, data, data_types, type_categories, title):
+def process_data_samples__tabular(options, name, data, data_types, type_categories, title, with_column_title_rotation=True):
     """
     Create a tabular panel of the data & types
 
@@ -88,27 +108,30 @@ def process_data_samples__tabular(options, data, data_types, type_categories, ti
     filtered_data = filter_large_data(options, data)
     data_source = ColumnDataSource(filtered_data)
 
-    # custom CSS to slightly rotate the column header
-    # and draw text outside their respective columns
-    # to improve readability. TODO That could be improved
-    div = Div(text="""
-    <style>
-    .trw_reporting_table .slick-header-column {
-            background-color: transparent;
-            background-image: none !important;
-            transform: 
-                rotate(-10deg)
-          }
-
-    .bk-root .slick-header-column.ui-state-default {
-        height: 40px;
-        overflow: visible;
-        vertical-align: bottom;
-        line-height: 4.4;
-    }
-    </style>
-    """)
-    div.visible = False  # hide the div to avoid position issues
+    if with_column_title_rotation:
+        # custom CSS to slightly rotate the column header
+        # and draw text outside their respective columns
+        # to improve readability. TODO That could be improved
+        div = Div(text=f"""
+        <style>
+        .trw_reporting_table_{name} .slick-header-column {{
+                background-color: transparent;
+                background-image: none !important;
+                transform: 
+                    rotate(-10deg)
+              }}
+    
+        .bk-root .slick-header-column.ui-state-default {{
+            height: 40px;
+            overflow: visible;
+            vertical-align: bottom;
+            line-height: 4.4;
+        }}
+        </style>
+        """)
+        div.visible = False  # hide the div to avoid position issues
+    else:
+        div = Div()
 
     row_height = options.font_size
     if with_images:
@@ -117,7 +140,8 @@ def process_data_samples__tabular(options, data, data_types, type_categories, ti
         source=data_source,
         columns=columns,
         row_height=row_height,
-        css_classes=["trw_reporting_table"])
+        #fit_columns=True,
+        css_classes=[f"trw_reporting_table_{name}"])
 
     return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title=title), data_table
 
@@ -740,7 +764,7 @@ class PanelDataSamplesScatter(BokehUi):
 def process_data_samples(options, name, role, data, types, type_categories):
     tabs = []
     if options.data_samples.display_tabular:
-        panel = PanelDataSamplesTabular(options, data, types, type_categories)
+        panel = PanelDataSamplesTabular(options, name, data, types, type_categories)
         tabs.append(panel)
 
     if options.data_samples.display_scatter and options.embedded:
@@ -754,7 +778,7 @@ def process_data_samples(options, name, role, data, types, type_categories):
 
 def process_data_tabular(options, name, role, data, types, type_categories):
     tabs = []
-    panel = PanelDataSamplesTabular(options, data, types, type_categories, title=name)
+    panel = PanelDataSamplesTabular(options, name, data, types, type_categories, title=name)
     tabs.append(panel)
     return tabs
 
