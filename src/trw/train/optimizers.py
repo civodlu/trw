@@ -96,7 +96,7 @@ def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, 
     return create_adam_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn)
 
 
-def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, scheduler_fn=None):
+def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, nesterov=False, scheduler_fn=None):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with optional scheduler
 
@@ -107,15 +107,29 @@ def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weigh
             scheduler_fn: a scheduler, or `None`
             momentum: the momentum of the SGD
             weight_decay: the weight decay
+            nesterov: enables Nesterov momentum
 
         Returns:
             An optimizer
         """
-    optimizer_fn = functools.partial(torch.optim.SGD, lr=learning_rate, momentum=momentum, weight_decay=weight_decay)
+    optimizer_fn = functools.partial(
+        torch.optim.SGD,
+        lr=learning_rate,
+        momentum=momentum,
+        weight_decay=weight_decay,
+        nesterov=nesterov)
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 
-def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0, momentum=0.9):
+def create_sgd_optimizers_scheduler_step_lr_fn(
+        datasets,
+        model,
+        learning_rate,
+        step_size,
+        gamma,
+        weight_decay=0,
+        momentum=0.9,
+        nesterov=False):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with step learning rate scheduler
 
@@ -126,9 +140,18 @@ def create_sgd_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, s
             step_size: the number of epoch composing a step. Each step the learning rate will be multiplied by `gamma`
             gamma: the factor to apply to the learning rate every step
             weight_decay: the weight decay
+            nesterov: enables Nesterov momentum
+            momentum: the momentum of the SGD
 
         Returns:
             An optimizer with a step scheduler
         """
     scheduler_fn = functools.partial(create_scheduler_step_lr, step_size=step_size, gamma=gamma)
-    return create_sgd_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn, momentum=momentum)
+    return create_sgd_optimizers_fn(
+        datasets,
+        model,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        scheduler_fn=scheduler_fn,
+        momentum=momentum,
+        nesterov=nesterov)

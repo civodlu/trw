@@ -339,8 +339,6 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
     for key in batches[0]:
         bs = [b[key] for b in batches]
         bs = collate_tensors(bs, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
-        #if not isinstance(bs, list):
-        #    bs = bs.view([-1] + list(bs.shape)[2:])
         d[key] = bs
 
     return d
@@ -742,3 +740,33 @@ def update_json_config(path_to_json, config_update):
     json_str = json.dumps(config, indent=3)
     with open(path_to_json, 'w') as f:
         f.write(json_str)
+
+
+def prepare_loss_terms(outputs, batch, is_training):
+    """
+    Return the loss_terms for the given outputs
+    """
+    from trw.train import Output
+
+    loss_terms = collections.OrderedDict()
+    for output_name, output in outputs.items():
+        assert isinstance(output, Output), f'output must be a `trw.train.Output`' \
+                                                       f' instance. Got={type(output)}'
+        loss_term = output.evaluate_batch(batch, is_training)
+        if loss_term is not None:
+            loss_terms[output_name] = loss_term
+    return loss_terms
+
+
+def default_sum_all_losses(dataset_name, batch, loss_terms):
+    """
+    Default loss is the sum of all loss terms
+    """
+    sum_losses = 0.0
+    for name, loss_term in loss_terms.items():
+        loss = loss_term.get('loss')
+        if loss is not None:
+            # if the loss term doesn't contain a `loss` attribute, it means
+            # this is not used during optimization (e.g., embedding output)
+            sum_losses += loss
+    return sum_losses

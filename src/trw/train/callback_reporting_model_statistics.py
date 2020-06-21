@@ -9,10 +9,10 @@ import numpy as np
 
 from trw.reporting import len_batch, to_value
 from trw.reporting.utilities import collect_hierarchical_module_name, collect_hierarchical_parameter_name
-from trw.train import Callback, find_default_dataset_and_split_names, CleanAddedHooks
+from trw.train.callback import Callback
 from trw.train.callback_reporting_model_summary import export_table
-from trw.train.trainer import prepare_loss_terms, default_sum_all_losses
-from trw.train.utilities import update_json_config, get_device, transfer_batch_to_device
+from trw.train.utilities import update_json_config, get_device, \
+    transfer_batch_to_device, CleanAddedHooks, find_default_dataset_and_split_names, prepare_loss_terms, default_sum_all_losses
 
 logger = logging.getLogger(__name__)
 

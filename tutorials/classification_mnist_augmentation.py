@@ -38,7 +38,7 @@ if __name__ == '__main__':
     
     # perform augmentation on each batch of training data
     transforms = [
-        trw.transforms.TransformRandomCrop(padding=[0, 2, 2])
+        trw.transforms.TransformRandomCropPad(padding=[0, 2, 2])
     ]
     
     model, results = trainer.fit(

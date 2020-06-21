@@ -120,7 +120,7 @@ if __name__ == '__main__':
 
     transform_train = [
         trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
-        trw.transforms.TransformRandomCrop(padding=[0, 4, 4]),
+        trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
         trw.transforms.TransformNormalize(mean=mean, std=std)
     ]

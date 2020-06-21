@@ -151,7 +151,7 @@ def transform_batch_random_crop_joint(arrays, crop_shape):
 
     Args:
         arrays: a list of numpy or Torch arrays. Samples are stored in the first dimension
-        crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop
+        crop_shape: a sequence of size `len(array.shape)-1` indicating the size of the cropped tensor
 
     Returns:
         a cropped array

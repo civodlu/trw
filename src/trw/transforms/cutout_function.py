@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def cutout_value_fn_constant(image, value):
@@ -8,18 +9,47 @@ def cutout_value_fn_constant(image, value):
     image[:] = value
 
 
+def cutout_random_ui8_torch(image: torch.Tensor, min_value=0, max_value=255):
+    """
+    Replace the image content as a constant value
+    """
+    assert isinstance(image, torch.Tensor), f'must be a tensor. Got={type(image)}'
+    size = [image.shape[0]] + [1] * (len(image.shape) - 1)
+    color = torch.randint(min_value, max_value, dtype=image.dtype, device=image.device, size=size)
+    image[:] = color
+
+
+def cutout_random_size(min_size, max_size):
+    """
+    Return a random size within the specified bounds.
+
+    Args:
+        min_size: a sequence representing the min size to be generated
+        max_size: a sequence representing the max size (inclusive) to be generated
+
+    Returns:
+        a tuple representing the size
+    """
+    assert len(min_size) == len(max_size)
+    return [np.random.randint(low=min_value, high=max_value + 1) for min_value, max_value in zip(min_size, max_size)]
+
+
 def cutout(image, cutout_size, cutout_value_fn):
     """
     Remove a part of the image randomly
 
     Args:
         array: a :class:`numpy.ndarray` or :class:`torch.Tensor` n-dimensional array. Samples are stored on axis 0
-        cutout_size: the cutout_size of the regions to be occluded
+        cutout_size: the cutout_size of the regions to be occluded or a callable function taking no argument
+            and returning a tuple representing the shape of the region to be occluded (without the ``N`` component)
         cutout_value_fn: the function value used for occlusion. Must take as argument `image` and modify directly the image
 
     Returns:
         None
     """
+    if callable(cutout_size):
+        cutout_size = cutout_size()
+
     nb_dims = len(cutout_size)
     assert len(image.shape) == nb_dims
     offsets = [np.random.randint(0, image.shape[n] - cutout_size[n] + 1) for n in range(len(cutout_size))]

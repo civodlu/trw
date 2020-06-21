@@ -18,7 +18,7 @@ class ShiftScale(nn.Module):
     This layer simplify the preprocessing for the `trw.simple_layers` package
     """
     
-    def __init__(self, mean, standard_deviation):
+    def __init__(self, mean, standard_deviation, output_dtype=torch.float32):
         """
 
         Args:
@@ -28,6 +28,7 @@ class ShiftScale(nn.Module):
         super().__init__()
         self.mean = mean
         self.standard_deviation = standard_deviation
+        self.output_dtype = output_dtype
     
     def forward(self, x):
         """
@@ -38,5 +39,5 @@ class ShiftScale(nn.Module):
         """
         self.mean = transfer_to_device(self.mean, x.device)
         self.standard_deviation = transfer_to_device(self.standard_deviation, x.device)
-
-        return (x - self.mean) / self.standard_deviation
+        o = (x - self.mean) / self.standard_deviation
+        return o.type(self.output_dtype)

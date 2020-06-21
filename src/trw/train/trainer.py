@@ -36,8 +36,13 @@ from trw.train import callback_worst_samples_by_epoch
 from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
 from trw.train import callback_export_convolution_kernel
+
 from trw.train import callback_reporting_epoch_summary
+from trw.train import callback_reporting_model_summary
+from trw.train import callback_reporting_model_statistics
 from trw.train import utilities
+
+from trw.train.utilities import prepare_loss_terms, default_sum_all_losses
 
 logger = logging.getLogger(__name__)
 
@@ -68,20 +73,6 @@ def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batc
     if callbacks_per_batch is not None:
         for callback in callbacks_per_batch:
             callback(dataset_name, split_name, batch)
-
-
-def prepare_loss_terms(outputs, batch, is_training):
-    """
-    Return the loss_terms for the given outputs
-    """
-    loss_terms = collections.OrderedDict()
-    for output_name, output in outputs.items():
-        assert isinstance(output, outputs_trw.Output), f'output must be a `trw.train.Output`' \
-                                                       f' instance. Got={type(output)}'
-        loss_term = output.evaluate_batch(batch, is_training)
-        if loss_term is not None:
-            loss_terms[output_name] = loss_term
-    return loss_terms
 
 
 def create_losses_fn(datasets, generic_loss):
@@ -500,15 +491,22 @@ def epoch_train_eval(
 default_logger = utilities.log_and_print
 
 
-def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, with_export_augmentations=True, with_reporting_server=True):
+def default_pre_training_callbacks(
+        logger=default_logger,
+        with_lr_finder=False,
+        with_export_augmentations=True,
+        with_reporting_server=True,
+        additional_callbacks=None):
     """
     Default callbacks to be performed before the fitting of the model
     """
     callbacks = [
-        callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
+        #callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
         callback_model_summary.CallbackModelSummary(logger=logger),
         callback_data_summary.CallbackDataSummary(logger=logger),
         callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..')),
+
+        callback_reporting_model_summary.CallbackReportingModelSummary(),
         callback_reporting_export_samples.CallbackReportingExportSamples(table_name='random_samples'),
     ]
 
@@ -522,6 +520,9 @@ def default_pre_training_callbacks(logger=default_logger, with_lr_finder=False, 
         # this may take some time, hence the reason it is disabled by default
         callbacks.append(callback_learning_rate_finder.CallbackLearningRateFinder())
 
+    if additional_callbacks is not None:
+        callbacks += additional_callbacks
+
     return callbacks
 
 
@@ -529,14 +530,15 @@ def default_per_epoch_callbacks(
         logger=default_logger,
         with_worst_samples_by_epoch=True,
         with_activation_statistics=False,
-        convolutional_kernel_export_frequency=None):
+        convolutional_kernel_export_frequency=None,
+        additional_callbacks=None):
     """
     Default callbacks to be performed at the end of each epoch
     """
     callbacks = [
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
-        callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
+        #callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
         callback_reporting_epoch_summary.CallbackReportingRecordHistory(),
     ]
 
@@ -550,6 +552,9 @@ def default_per_epoch_callbacks(
     if with_activation_statistics:
         callbacks.append(callback_activation_statistics.CallbackActivationStatistics())
 
+    if additional_callbacks is not None:
+        callbacks += additional_callbacks
+
     return callbacks
 
 
@@ -559,7 +564,8 @@ def default_post_training_callbacks(
         split_name=None,
         discard_train_error_export=False,
         export_errors=True,
-        explain_decision=True):
+        explain_decision=True,
+        additional_callbacks=None):
     """
     Default callbacks to be performed after the model has been trained
     """
@@ -574,31 +580,20 @@ def default_post_training_callbacks(
         callback_export_classification_report.CallbackExportClassificationReport(),
         callback_export_history.CallbackExportHistory(),
         callback_export_best_history.CallbackExportBestHistory(),
-        callback_tensorboard_embedding.CallbackTensorboardEmbedding(
-            embedding_name=embedding_name,
-            dataset_name=dataset_name,
-            split_name=split_name),
-        callback_tensorboard_record_model.CallbackTensorboardRecordModel(),
+        #callback_tensorboard_embedding.CallbackTensorboardEmbedding(
+        #    embedding_name=embedding_name,
+        #    dataset_name=dataset_name,
+        #    split_name=split_name),
+        #callback_tensorboard_record_model.CallbackTensorboardRecordModel(),
     ]
 
     if explain_decision:
         callbacks.append(callback_explain_decision.CallbackExplainDecision(split_name=split_name))
 
+    if additional_callbacks is not None:
+        callbacks += additional_callbacks
+
     return callbacks
-
-
-def default_sum_all_losses(dataset_name, batch, loss_terms):
-    """
-    Default loss is the sum of all loss terms
-    """
-    sum_losses = 0.0
-    for name, loss_term in loss_terms.items():
-        loss = loss_term.get('loss')
-        if loss is not None:
-            # if the loss term doesn't contain a `loss` attribute, it means
-            # this is not used during optimization (e.g., embedding output)
-            sum_losses += loss
-    return sum_losses
 
 
 def trainer_callbacks_per_batch(dataset_name, split_name, batch):

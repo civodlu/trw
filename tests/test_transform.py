@@ -87,7 +87,7 @@ class TestTransform(TestCase):
         d = np.zeros([60000] + size, dtype=np.float)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1
 
-        transform = trw.transforms.TransformRandomCrop(padding=[0, 8, 8])
+        transform = trw.transforms.TransformRandomCropPad(padding=[0, 8, 8])
         batch = transform({'d': d})
 
         assert batch['d'].shape == (60000, 1, 46, 63)
@@ -110,7 +110,7 @@ class TestTransform(TestCase):
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 
-        transform = trw.transforms.TransformRandomCrop(padding=[0, 8, 8])
+        transform = trw.transforms.TransformRandomCropPad(padding=[0, 8, 8])
         batch = transform({'d': d})
 
         d_transformed = batch['d'].data.numpy()
@@ -133,12 +133,25 @@ class TestTransform(TestCase):
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 
-        transform = trw.transforms.TransformRandomCrop(padding=None, size=[1, 16, 32])
+        transform = trw.transforms.TransformRandomCropPad(padding=None, shape=[1, 16, 32])
         batch = transform({'d': d})
 
         d_transformed = batch['d'].data.numpy()
 
         assert d_transformed.shape == (1000, 1, 16, 32)
+
+    def test_random_crop_resize(self):
+        size = [1, 31, 63]
+        d = np.zeros([1000] + size, dtype=np.float)
+        d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
+        d = torch.from_numpy(d)
+
+        transform = trw.transforms.TransformRandomCropResize([16, 32])
+        batch = transform({'d': d})
+
+        d_transformed = batch['d'].data.numpy()
+
+        assert d_transformed.shape == (1000, 1, 31, 63)
 
     def test_transform_base_criteria(self):
         # filter by name
@@ -246,6 +259,31 @@ class TestTransform(TestCase):
             nb_0 = np.where(i.numpy() == 0)
             assert len(nb_0[0]) == 3 * 16 * 32
 
+    def test_cutout_size_functor(self):
+        batch = {
+            'images': torch.ones([50, 3, 64, 128], dtype=torch.uint8) * 255
+        }
+
+        size_functor_called = 0
+
+        def cutout_size_fn():
+            nonlocal size_functor_called
+            s = trw.transforms.cutout_random_size([3, 5, 5], [3, 10, 10])
+            assert s[0] == 3
+            assert s[1] >= 5
+            assert s[2] >= 5
+
+            assert s[1] <= 10
+            assert s[2] <= 10
+            size_functor_called += 1
+            return s
+
+        transformer = trw.transforms.TransformRandomCutout(
+            cutout_size=cutout_size_fn,
+            cutout_value_fn=trw.transforms.cutout_random_ui8_torch)
+        _ = transformer(batch)
+        assert size_functor_called == 50
+
     def test_random_crop_pad_joint(self):
         batch = {
             'images': torch.zeros([50, 3, 64, 128], dtype=torch.int64),
@@ -256,7 +294,7 @@ class TestTransform(TestCase):
         batch['images'][:, :, 32, 64] = 42
         batch['segmentations'][:, :, 32, 64] = 42
 
-        transformer = trw.transforms.TransformRandomCrop(
+        transformer = trw.transforms.TransformRandomCropPad(
             criteria_fn=lambda batch, names: ['images', 'segmentations'],
             padding=[0, 16, 16],
             mode='constant')
@@ -403,3 +441,41 @@ class TestTransform(TestCase):
         c = trw.transforms.batch_crop(i, [10, 11, 12], [12, 15, 20])
         assert c.shape == (16, 2, 4, 8)
         assert (c == i[:, 10:12, 11:15, 12:20]).all()
+
+    def test_cast_numpy(self):
+        batch = {
+            'float': np.zeros([10], dtype=np.long),
+            'long': np.zeros([10], dtype=np.long),
+            'byte': np.zeros([10], dtype=np.long),
+        }
+
+        transforms = [
+            trw.transforms.TransformCast(['float'], 'float'),
+            trw.transforms.TransformCast(['long'], 'long'),
+            trw.transforms.TransformCast(['byte'], 'byte'),
+        ]
+        tfm = trw.transforms.TransformCompose(transforms)
+
+        batch_tfm = tfm(batch)
+        assert batch_tfm['float'].dtype == np.float32
+        assert batch_tfm['long'].dtype == np.long
+        assert batch_tfm['byte'].dtype == np.byte
+
+    def test_cast_torch(self):
+        batch = {
+            'float': torch.zeros([10], dtype=torch.long),
+            'long': torch.zeros([10], dtype=torch.float),
+            'byte': torch.zeros([10], dtype=torch.long),
+        }
+
+        transforms = [
+            trw.transforms.TransformCast(['float'], 'float'),
+            trw.transforms.TransformCast(['long'], 'long'),
+            trw.transforms.TransformCast(['byte'], 'byte'),
+        ]
+        tfm = trw.transforms.TransformCompose(transforms)
+
+        batch_tfm = tfm(batch)
+        assert batch_tfm['float'].dtype == torch.float32
+        assert batch_tfm['long'].dtype == torch.long
+        assert batch_tfm['byte'].dtype == torch.int8

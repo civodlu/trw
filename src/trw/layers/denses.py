@@ -15,7 +15,7 @@ def denses(
     """
 
     Args:
-        sizes:
+          sizes:
         dropout_probability:
         with_batchnorm: deprecated. Use `batch_norm_kwargs`
         batchnorm_momentum: deprecated Use `batch_norm_kwargs`

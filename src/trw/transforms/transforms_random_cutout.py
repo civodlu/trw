@@ -34,11 +34,12 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
             cutout_value_fn=functools.partial(cutout_function.cutout_value_fn_constant, value=0)):
         """
         Args:
-            cutout_size: the size of the regions to occlude
+            cutout_size: the size of the regions to occlude or a callable function with no argument returning
+                a tuple representing the size of the region to occlude (with ``N`` dimension removed)
             cutout_value_fn: a function to fill the cutout images. Should directly modify the image
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
         """
-        assert isinstance(cutout_size, tuple), 'must be a tuple!'
+        assert isinstance(cutout_size, tuple) or callable(cutout_size), 'must be a tuple or a callable!'
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 

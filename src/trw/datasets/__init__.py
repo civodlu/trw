@@ -4,6 +4,7 @@ from .cifar10 import create_cifar10_dataset
 from .voc2012 import create_segmentation_voc2012_dataset
 from .cityscapes import create_cityscapes_dataset
 from .facades import create_facades_dataset
+from .tiny_imagenet import TinyImageNet, create_tiny_imagenet_dataset
 
 
 from .dataset_fake_symbols import create_fake_symbols_datasset, _random_location, _random_color, _add_shape, _create_image, _noisy
