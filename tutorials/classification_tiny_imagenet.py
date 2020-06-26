@@ -8,45 +8,12 @@ import torch.nn as nn
 import torchvision
 
 
-class SimpleNet(nn.Module):
-    def __init__(self, options, conv_filters=[32, 64, 128, 256], conv_repeats=[3, 3, 3, 3], denses_filters=[2048, 200]):
-        super().__init__()
-
-        activation_conv = nn.LeakyReLU
-        batch_norm_kwargs = {}
-        dropout_probability = options['training_parameters']['dropout_probability']
-
-        self.convs = trw.layers.convs_2d(
-            input_channels=3,
-            channels=conv_filters,
-            activation=activation_conv,
-            batch_norm_kwargs=batch_norm_kwargs,
-            convolution_repeats=conv_repeats,
-            convolution_kernels=3,
-            last_layer_is_output=False,
-        )
-
-        self.denses = trw.layers.denses(
-            [256 * 4 * 4] + denses_filters,
-            last_layer_is_output=True,
-            dropout_probability=dropout_probability)
-
-    def forward(self, batch):
-        images = batch['images'].float() / 255.0
-        r = self.convs(images)
-        r = self.denses(r)
-        return collections.OrderedDict([
-            ('classification', trw.train.OutputClassification(r, 'targets'))
-        ])
-
-
 class SimpleNet2(nn.Module):
-    def __init__(self, options, conv_filters=[64, 128, 256, 512, 200], conv_repeats=[5, 4, 3, 3, 1]):
+    def __init__(self, options, conv_filters=[64, 128, 256, 512, 200], conv_repeats=[3, 3, 3, 3, 1]):
         super().__init__()
 
         activation_conv = nn.LeakyReLU
         batch_norm_kwargs = {}
-        dropout_probability = options['training_parameters']['dropout_probability']
 
         self.convs = trw.layers.convs_2d(
             input_channels=3,

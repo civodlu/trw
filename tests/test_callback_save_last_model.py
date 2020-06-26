@@ -40,3 +40,50 @@ class TestCallbackSaveLastModel(TestCase):
 
         oldest_model = os.path.split(sorted(models)[0])[1]
         assert oldest_model == 'checkpoint_e_16.model'
+
+    def test_keep_best_model(self):
+        callback = trw.train.CallbackSaveLastModel(
+            keep_model_with_lowest_metric=trw.train.ModelWithLowestMetric(
+                dataset_name='dataset1',
+                split_name='split1',
+                output_name='output1',
+                metric_name='metric1',
+                lowest_metric=0.2
+            ))
+
+        model = ModelDense()
+        logging_directory = tempfile.mkdtemp()
+        options = trw.train.create_default_options(logging_directory=logging_directory)
+        history = []
+
+        outputs = {
+            'dataset1': {
+                'split1': {
+                    'output1': {
+                        'metric1': 0.9
+                    }
+                }
+            }
+        }
+        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+
+        # metric was not good enough. Do not save!
+        models = glob.glob(os.path.join(logging_directory, '*.model'))
+        assert len(models) == 1
+        assert os.path.basename(models[0]) == 'last.model'
+
+        # update with a better metric: expect `best model` to be exported!
+        outputs['dataset1']['split1']['output1']['metric1'] = 0.01
+        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+
+        models = glob.glob(os.path.join(logging_directory, '*.model'))
+        assert len(models) == 2
+        assert os.path.basename(models[-1]) == 'best.model'
+
+        # make sure we don't export worst model
+        outputs['dataset1']['split1']['output1']['metric1'] = 0.1
+        os.remove(models[-1])
+        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+
+        models = glob.glob(os.path.join(logging_directory, '*.model'))
+        assert len(models) == 1

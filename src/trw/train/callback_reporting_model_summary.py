@@ -2,17 +2,102 @@ import collections
 import logging
 import os
 
+import torch
+import numpy as np
 from trw import reporting
 from trw.reporting import collect_hierarchical_module_name
 from trw.reporting.table_sqlite import table_truncate
 from trw.train import create_or_recreate_folder, callback, find_default_dataset_and_split_names, utilities
-from trw.train.callback_model_summary import model_summary_base
 from trw.train.utilities import update_json_config
+from trw.train.data_parallel_extented import DataParallelExtended
 
 logger = logging.getLogger(__name__)
 
 
-def export_table(options, table_name, batch, table_role, clear_existing_data, base_name='', table_preamble=''):
+def input_shape(i, root=True):
+    if isinstance(i, collections.Mapping):
+        return 'Dict'
+    elif isinstance(i, torch.Tensor):
+        shape = tuple(i.shape)
+
+        if root:
+            # we want to have all outputs/inputs in a consistent format (list of shapes)
+            return [shape]
+        return shape
+
+    if isinstance(i, (list, tuple)):
+        shapes = []
+        for n in i:
+            # make sure the shapes are flattened
+            sub_shapes = input_shape(n, root=False)
+            if isinstance(sub_shapes, list):
+                shapes += sub_shapes
+            else:
+                shapes.append(sub_shapes)
+        return shapes
+    raise NotImplementedError()
+
+
+def model_summary_base(model, batch):
+    def register_hook(module):
+        def hook(module, input, output):
+            nonlocal parameters_counted
+            if module in summary:
+                return
+            summary[module] = collections.OrderedDict()
+            summary[module]['input_shape'] = input_shape(input)
+            summary[module]['output_shape'] = input_shape(output)
+
+            total_trainable_params = 0  # ALL parameters of the layer (including sub-module parameters)
+            params = 0  # if we have recursion, these are the unique parameters
+            for p in module.parameters():
+                if p.requires_grad:
+                    total_trainable_params += np.prod(np.asarray(p.shape))
+
+                if p not in parameters_counted:
+                    # make sure there is double counted parameters!
+                    parameters_counted.add(p)
+                    if p.requires_grad:
+                        params += np.prod(np.asarray(p.shape))
+
+            summary[module]["nb_params"] = params
+            summary[module]["total_trainable_params"] = total_trainable_params
+
+        hooks.append(module.register_forward_hook(hook))
+
+    parameters_counted = set()
+    summary = collections.OrderedDict()
+    hooks = []
+
+    if isinstance(model, (torch.nn.DataParallel, DataParallelExtended)):
+        # get the underlying module only. `DataParallel` will replicate the module on the different devices
+        model = model.module
+
+    model.apply(register_hook)
+    model(batch)
+
+    for h in hooks:
+        h.remove()
+
+    total_params = 0
+    total_output = 0
+    trainable_params = 0
+    for layer, values in summary.items():
+        total_params += values["nb_params"]
+        outputs = values["output_shape"]
+        if not isinstance(outputs, str):
+            for output in outputs:
+                total_output += np.prod(output[1:])  # remove the batch size
+
+        trainable_params += values["nb_params"]
+
+    # assume 4 bytes/number (float on cuda)
+    total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
+    total_params_size = abs(utilities.to_value(total_params) * 4. / (1024 ** 2.))
+    return summary, total_output_size, total_params_size, total_params, trainable_params
+
+
+def export_table(options, table_name, batch, table_role, clear_existing_data, base_name='', table_preamble='', commit=True):
     sql_database = options['workflow_options']['sql_database']
     root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', table_name)
 
@@ -39,6 +124,10 @@ def export_table(options, table_name, batch, table_role, clear_existing_data, ba
         batch=batch,
         name_expansions=[],  # we already expanded in the basename!
     )
+
+    if commit:
+        sql_database.commit()
+
     logger.info(f'export table done!')
 
 

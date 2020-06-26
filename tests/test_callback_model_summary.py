@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import warnings
 
-from trw.train.callback_model_summary import model_summary_base
+from trw.train.callback_reporting_model_summary import model_summary_base
 
 
 class ModelDense(nn.Module):

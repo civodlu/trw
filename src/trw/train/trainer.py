@@ -12,34 +12,26 @@ import pickle
 import time
 import itertools
 from trw.train import outputs_trw
-from trw.train import callback_reporting_epoch_summary
-from trw.train import callback_reporting_export_samples
-from trw.train import callback_reporting_start_server
-from trw.train import callback_model_summary
-from trw.train import callback_data_summary
-from trw.train import callback_export_classification_errors
 from trw.train import callback_epoch_summary
 from trw.train import callback_export_classification_report
 from trw.train import callback_export_history
 from trw.train import callback_save_last_model
-from trw.train import callback_tensorboard
-from trw.train import callback_tensorboard_record_history
-from trw.train import callback_tensorboard_embedding
-from trw.train import callback_tensorboard_record_model
-from trw.train import callback_export_samples
-from trw.train import callback_export_augmentations
-from trw.train import callback_export_best_history
+
 from trw.train import callback_learning_rate_finder
 from trw.train import callback_learning_rate_recorder
 from trw.train import callback_explain_decision
 from trw.train import callback_worst_samples_by_epoch
-from trw.train import callback_activation_statistics
 from trw.train import callback_zip_sources
 from trw.train import callback_export_convolution_kernel
 
+from trw.train import callback_reporting_export_samples
+from trw.train import callback_reporting_start_server
 from trw.train import callback_reporting_epoch_summary
 from trw.train import callback_reporting_model_summary
 from trw.train import callback_reporting_model_statistics
+from trw.train import callback_reporting_dataset_summary
+from trw.train import callback_reporting_augmentations
+from trw.train import callback_reporting_best_metrics
 from trw.train import utilities
 
 from trw.train.utilities import prepare_loss_terms, default_sum_all_losses
@@ -501,12 +493,10 @@ def default_pre_training_callbacks(
     Default callbacks to be performed before the fitting of the model
     """
     callbacks = [
-        #callback_tensorboard.CallbackClearTensorboardLog(),  # make sure the previous model train log is removed
-        callback_model_summary.CallbackModelSummary(logger=logger),
-        callback_data_summary.CallbackDataSummary(logger=logger),
         callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..')),
 
         callback_reporting_model_summary.CallbackReportingModelSummary(),
+        callback_reporting_dataset_summary.CallbackReportingDatasetSummary(),
         callback_reporting_export_samples.CallbackReportingExportSamples(table_name='random_samples'),
     ]
 
@@ -514,7 +504,7 @@ def default_pre_training_callbacks(
         callbacks.append(callback_reporting_start_server.CallbackReportingStartServer())
     
     if with_export_augmentations:
-        callbacks.append(callback_export_augmentations.CallbackExportAugmentations())
+        callbacks.append(callback_reporting_augmentations.CallbackReportingAugmentations())
 
     if with_lr_finder:
         # this may take some time, hence the reason it is disabled by default
@@ -538,8 +528,8 @@ def default_per_epoch_callbacks(
     callbacks = [
         callback_learning_rate_recorder.CallbackLearningRateRecorder(),
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
-        #callback_tensorboard_record_history.CallbackTensorboardRecordHistory(),
         callback_reporting_epoch_summary.CallbackReportingRecordHistory(),
+        callback_reporting_best_metrics.CallbackReportingBestMetrics(),
     ]
 
     if convolutional_kernel_export_frequency is not None:
@@ -550,7 +540,7 @@ def default_per_epoch_callbacks(
         callbacks.append(callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch())
 
     if with_activation_statistics:
-        callbacks.append(callback_activation_statistics.CallbackActivationStatistics())
+        callbacks.append(callback_reporting_model_statistics.CallbackReportingModelStatistics())
 
     if additional_callbacks is not None:
         callbacks += additional_callbacks
@@ -574,12 +564,11 @@ def default_post_training_callbacks(
     ]
 
     if export_errors:
-        callbacks.append(callback_export_classification_errors.CallbackExportClassificationErrors(discard_train=discard_train_error_export))
+        callbacks.append(callback_reporting_export_samples.CallbackReportingExportSamples())
 
     callbacks += [
         callback_export_classification_report.CallbackExportClassificationReport(),
         callback_export_history.CallbackExportHistory(),
-        callback_export_best_history.CallbackExportBestHistory(),
         #callback_tensorboard_embedding.CallbackTensorboardEmbedding(
         #    embedding_name=embedding_name,
         #    dataset_name=dataset_name,

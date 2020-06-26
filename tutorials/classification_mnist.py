@@ -16,7 +16,7 @@ class Net(nn.Module):
 
     def forward(self, batch):
         # a batch should be a dictionary of features
-        x = batch['images'] / 255.0
+        x = batch['images']
 
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
@@ -37,7 +37,7 @@ trainer = trw.train.Trainer()
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(),
+    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
     run_prefix='mnist_cnn',
     model_fn=lambda options: Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(

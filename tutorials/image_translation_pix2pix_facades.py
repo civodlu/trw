@@ -90,7 +90,6 @@ def per_epoch_callbacks():
 
 def pre_training_callbacks():
     return [
-        trw.train.CallbackModelSummary(),
         trw.train.CallbackReportingStartServer(),
     ]
 

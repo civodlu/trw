@@ -2,10 +2,7 @@ import trw.train
 import trw.datasets
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import functools
-from trw.reporting import len_batch
-from trw.train import OutputEmbedding, OutputClassification
 from trw.train.losses import one_hot
 
 
@@ -101,15 +98,13 @@ def create_model(options):
 def per_epoch_callbacks():
     return [
         trw.train.CallbackReportingExportSamples(split_exclusions=['valid', 'test']),
-        trw.train.CallbackExportSamples(),
         trw.train.CallbackEpochSummary(),
     ]
 
 
 def pre_training_callbacks():
     return [
-        trw.train.CallbackModelSummary(),
-        trw.train.CallbackReportingStartServer(port=5110),
+        trw.train.CallbackReportingStartServer(),
     ]
 
 
