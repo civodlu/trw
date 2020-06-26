@@ -77,6 +77,7 @@ class TestCallbackSaveLastModel(TestCase):
         callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
 
         models = glob.glob(os.path.join(logging_directory, '*.model'))
+        models = sorted(models, reverse=True)
         assert len(models) == 2
         assert os.path.basename(models[-1]) == 'best.model'
 
