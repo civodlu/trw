@@ -14,7 +14,7 @@ def normal_init(m, mean, std):
 
 class Generator(nn.Module):
     def __init__(self, latent_size, nb_digits=10):
-        super(Generator, self).__init__()
+        super().__init__()
 
         self.nb_digits = nb_digits
         self.convs_t = trw.layers.ConvsTransposeBase(
@@ -41,7 +41,7 @@ class Generator(nn.Module):
 
 class Discriminator(nn.Module):
     def __init__(self, nb_digits=10):
-        super(Discriminator, self).__init__()
+        super().__init__()
 
         self.nb_digits = nb_digits
         self.convs = trw.layers.convs_2d(
@@ -89,6 +89,7 @@ def create_model(options):
         image_from_batch_fn=get_image,
         observed_discriminator_fn=get_target,
         observed_generator_fn=get_target,
+        l1_lambda=0.5
     )
 
     model.apply(functools.partial(normal_init, mean=0.0, std=0.01))
@@ -99,6 +100,7 @@ def per_epoch_callbacks():
     return [
         trw.train.CallbackReportingExportSamples(split_exclusions=['valid', 'test']),
         trw.train.CallbackEpochSummary(),
+        trw.train.CallbackReportingRecordHistory(),
     ]
 
 

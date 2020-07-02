@@ -93,7 +93,7 @@ class OutputEmbedding(Output):
 
     This is only used to record a tensor that we consider an embedding (e.g., to be exported to tensorboard)
     """
-    def __init__(self, output, clean_loss_term_each_batch=False, sample_uid_name=default_sample_uid_name):
+    def __init__(self, output, clean_loss_term_each_batch=False, sample_uid_name=default_sample_uid_name, functor=None):
         """
         
         Args:
@@ -104,6 +104,7 @@ class OutputEmbedding(Output):
                 large embeddings. If ``False``, the output will not be cleaned (and possibly accumulated
                 for the whole epoch)
             sample_uid_name: UID name to be used for collecting the embedding of the samples
+            functor: a functio taking as argument embedding and returning embedding
         """
         super().__init__(
             output=output,
@@ -112,6 +113,7 @@ class OutputEmbedding(Output):
             sample_uid_name=sample_uid_name,
             metrics=None)
         self.clean_loss_term_each_batch = clean_loss_term_each_batch
+        self.functor = functor
 
     def evaluate_batch(self, batch, is_training):
         loss_term = collections.OrderedDict()
@@ -120,6 +122,8 @@ class OutputEmbedding(Output):
         # ``clean_loss_term_each_batch`` may be ``False``, so the output
         # would never be cleaned up.
         self.output = utilities.to_value(self.output)
+        if self.functor is not None:
+            self.output = self.functor(self.output)
 
         loss_term['output'] = self.output
         loss_term[Output.output_ref_tag] = self  # keep a back reference
@@ -499,43 +503,6 @@ class OutputRegression(Output):
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
-        return loss_term
-    
-
-class OutputRecord(Output):
-    """
-    Record the raw value, but do not compute any loss from it.
-
-    This is useful, e.g., to collect UIDs so that we can save them in the network result and
-    further post-process it (e.g., k-fold cross validation)
-    """
-    
-    def __init__(
-            self,
-            output):
-        """
-
-        Args:
-            output: the output value to record. May be of any type.
-        """
-        super().__init__(output=output, criterion_fn=None, collect_output=True, metrics=None)
-    
-    def evaluate_batch(self, batch, is_training):
-        nb_samples = utilities.len_batch(batch)
-        
-        assert len(self.output) == nb_samples, 'one output for each sample is required'
-    
-        loss_term = {
-            'output': utilities.to_value(self.output),
-            'losses': torch.zeros([nb_samples], dtype=torch.float32),
-            'loss': 0.0,
-            Output.output_ref_tag: self,
-        }
-        
-        # do NOT keep the original output else memory will be an issue
-        del self.output
-        self.output = None
-    
         return loss_term
 
 

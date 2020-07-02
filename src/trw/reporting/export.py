@@ -217,6 +217,9 @@ def export_sample(
         elif isinstance(value, list):
             # if a list, make sure we make a copy so that the original batch is not modified
             value = list(value)
+        elif value is None:
+            # discard any ``None``
+            continue
         batch_list[name] = value
 
     if sample_ids is None:

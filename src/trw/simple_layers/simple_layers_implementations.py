@@ -49,32 +49,15 @@ class OutputClassification(simple_layers.SimpleOutputBase):
     
 def return_output(outputs, batch):
     return outputs
-
-    
-class OutputRecord(simple_layers.SimpleOutputBase):
-    """
-    Record a field based from the node input values or the batch
-    """
-    def __init__(self, node, output_name, functor=return_output):
-        super().__init__(node=node, output_name=output_name, shape=None)
-        self.module_type = trw.train.OutputRecord
-        self.functor = functor
-
-    def forward(self, inputs, batch):
-        return self.module_type(self.functor(inputs, batch))
-
-    def get_module(self):
-        # output layer, doesn't have a `Module` implementation
-        return None
     
     
 class OutputEmbedding(simple_layers.SimpleOutputBase):
     """
     Create an embedding for display purposes
     """
-    def __init__(self, node, output_name):
+    def __init__(self, node, output_name, functor=None):
         super().__init__(node=node, output_name=output_name, shape=node.shape)
-        self.module_type = trw.train.OutputEmbedding
+        self.module_type = functools.partial(trw.train.OutputEmbedding, functor=functor)
 
     def forward(self, inputs, batch):
         return self.module_type(inputs)

@@ -23,6 +23,12 @@ def normalize_data(options, data, table_name):
     d = collections.OrderedDict()
     for name, values in data.items():
         d[name] = np.asarray(values)
+
+    for name in list(d.keys()):
+        dtype = d[name].dtype
+        if dtype in options.data.types_to_discard:
+            del d[name]
+
     types = get_data_types_and_clean_data(d)
     type_categories = {}
 

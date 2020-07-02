@@ -3,7 +3,6 @@ import functools
 
 import torch
 import trw
-import numpy as np
 import torch.nn as nn
 import torchvision
 
@@ -65,7 +64,6 @@ if __name__ == '__main__':
         trw.transforms.TransformRandomCutout(
             cutout_size=functools.partial(trw.transforms.cutout_random_size, min_size=[3, 5, 5], max_size=[3, 15, 15]),
             cutout_value_fn=trw.transforms.cutout_random_ui8_torch),
-        #trw.transforms.TransformRandomCropResize(crop_size=[64 - 8, 64 - 8]),
         trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
     ])
@@ -87,9 +85,7 @@ if __name__ == '__main__':
             transforms_train=transforms_train,
             transforms_valid=transforms_valid),
         run_prefix='tiny_imagenet',
-        #model_fn=lambda options: SimpleNet(options),
         model_fn=lambda options: SimpleNet2(options),
-        #model_fn=lambda options: Torchvision(),
 
         eval_every_X_epoch=1,
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(

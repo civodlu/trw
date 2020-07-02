@@ -5,7 +5,7 @@ from .utilities import len_batch, create_or_recreate_folder, to_value, set_optim
     get_classification_mapping, get_classification_mappings, safe_lookup, flatten_nested_dictionaries, clamp_n, \
     make_triplet_indices, make_pair_indices, make_unique_colors, make_unique_colors_f, sub_tensor
 
-from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, OutputRecord, \
+from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, \
     OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
@@ -44,7 +44,7 @@ from .callback_reporting_start_server import CallbackReportingStartServer
 from .callback_reporting_classification_errors import CallbackReportingClassificationErrors
 from .callback_reporting_model_summary import CallbackReportingModelSummary
 from .callback_reporting_epoch_summary import CallbackReportingRecordHistory
-from .callback_reporting_model_statistics import CallbackReportingModelStatistics
+from .callback_reporting_layer_statistics import CallbackReportingLayerStatistics
 from .callback_reporting_dataset_summary import CallbackReportingDatasetSummary
 from .callback_reporting_best_metrics import CallbackReportingBestMetrics
 from .callback_reporting_augmentations import CallbackReportingAugmentations
@@ -59,7 +59,8 @@ from .sequence_collate import SequenceCollate
 from .sequence_rebatch import SequenceReBatch
 from .sequence_sub_batch import SequenceSubBatch
 
-from .metrics import Metric, MetricClassificationError, MetricClassificationSensitivitySpecificity, MetricLoss
+from .metrics import Metric, MetricClassificationError, MetricClassificationSensitivitySpecificity, MetricLoss, \
+    MetricClassificationAUC
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image

@@ -173,6 +173,7 @@ class CallbackReportingModelSummary(callback.Callback):
             })
 
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
+        batch['split_name'] = self.split_name
         device = options['workflow_options']['device']
         batch = utilities.transfer_batch_to_device(batch, device=device)
         summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(

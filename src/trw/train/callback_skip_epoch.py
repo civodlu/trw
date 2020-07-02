@@ -1,3 +1,5 @@
+import collections
+
 from trw.train import callback
 
 
@@ -17,6 +19,7 @@ class CallbackSkipEpoch(callback.Callback):
         self.include_epoch_zero = include_epoch_zero
         self.nb_epochs = nb_epochs
         self.callbacks = callbacks
+        assert isinstance(callbacks, collections.Sequence), f'callbacks must be a sequence! Got type={type(callbacks)}'
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         if len(history) % self.nb_epochs == 0 or (self.include_epoch_zero and len(history) == 1):

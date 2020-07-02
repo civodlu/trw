@@ -14,6 +14,7 @@ from trw.reporting.reporting_bokeh_tabs_dynamic_header import TabsDynamicHeader
 import sqlite3
 from bokeh.server.server import Server
 import json
+import numpy as np
 
 from trw.reporting.table_sqlite import get_metadata_name, get_table_data
 
@@ -94,6 +95,9 @@ def create_default_reporting_options(embedded=True, config={}):
     o.data = Object()
     o.data.refresh_time = 5.0
     o.data.unpack_numpy_arrays_with_less_than_x_columns = 15
+    o.data.types_to_discard = [
+        np.dtype('|S1'),        # binary string
+    ]
 
     o.config = config
     return o

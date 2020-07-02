@@ -146,7 +146,7 @@ def calculate_stats_gradient(
     return gradient_stats, activation_stats
 
 
-class CallbackReportingModelStatistics(Callback):
+class CallbackReportingLayerStatistics(Callback):
     """
     Report the activation and gradient statistics layer by layer
     """
@@ -200,7 +200,7 @@ class CallbackReportingModelStatistics(Callback):
             logger.error('can\'t find a dataset name or split name!')
             return
 
-        logger.info('CallbackReportingModelStatistics calculating stats...')
+        logger.info('CallbackReportingLayerStatistics calculating stats...')
         gradient_stats, activation_stats = calculate_stats_gradient(
             model,
             datasets[self.dataset_name][self.split_name],
@@ -267,4 +267,4 @@ class CallbackReportingModelStatistics(Callback):
             table_role='data_graph',
             clear_existing_data=False)
 
-        logger.info('CallbackReportingModelStatistics calculating done!')
+        logger.info('CallbackReportingLayerStatistics calculating done!')

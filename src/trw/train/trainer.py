@@ -28,7 +28,7 @@ from trw.train import callback_reporting_export_samples
 from trw.train import callback_reporting_start_server
 from trw.train import callback_reporting_epoch_summary
 from trw.train import callback_reporting_model_summary
-from trw.train import callback_reporting_model_statistics
+from trw.train import callback_reporting_layer_statistics
 from trw.train import callback_reporting_dataset_summary
 from trw.train import callback_reporting_augmentations
 from trw.train import callback_reporting_best_metrics
@@ -540,7 +540,7 @@ def default_per_epoch_callbacks(
         callbacks.append(callback_worst_samples_by_epoch.CallbackWorstSamplesByEpoch())
 
     if with_activation_statistics:
-        callbacks.append(callback_reporting_model_statistics.CallbackReportingModelStatistics())
+        callbacks.append(callback_reporting_layer_statistics.CallbackReportingLayerStatistics())
 
     if additional_callbacks is not None:
         callbacks += additional_callbacks

@@ -238,6 +238,7 @@ class UNetBase(nn.Module):
         """
         Args:
             x: the input image
+            latent: a latent variable appended by the middle block
         """
         prev = self.init_block(x)
         x_n = [prev]

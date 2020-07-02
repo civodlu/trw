@@ -4,6 +4,7 @@ from sklearn import metrics
 from trw.train import losses
 import collections
 import torch
+from .analysis_plots import auroc
 
 
 class Metric:
@@ -34,7 +35,7 @@ class Metric:
         Returns:
             a dictionary of result name and value
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class MetricLoss(Metric):
@@ -55,6 +56,42 @@ class MetricLoss(Metric):
         return {'loss': loss / len(metric_by_batch)}
 
 
+class MetricClassificationAUC(Metric):
+    """
+    Calculate the Area under the Receiver operating characteristic (ROC) curve.
+
+    For this, the output needs to provide an ``output_raw`` of shape [N, 2] (i.e., binary classification).
+    """
+    def __call__(self, outputs):
+        truth = utilities.to_value(outputs.get('output_truth'))
+        found = utilities.to_value(outputs.get('output_raw'))
+        if truth is None or found is None:
+            # data is missing
+            return None
+
+        if len(found.shape) != len(truth.shape) + 1 or len(found.shape) < 2 or found.shape[1] != 2:
+            # dimensions are of the expected shape
+            return None
+
+        if len(found.shape) > 2:
+            # TODO: implement for N-dimensions! We probably can't keep everything in memory
+            return None
+
+        return {
+            'output_raw': found,
+            'output_truth': truth,
+        }
+
+    @staticmethod
+    def aggregate_metrics(metric_by_batch):
+        all_output_raw = [m['output_raw'] for m in metric_by_batch]
+        all_output_raw = np.concatenate(all_output_raw)
+        all_output_truth = [m['output_truth'] for m in metric_by_batch]
+        all_output_truth = np.concatenate(all_output_truth)
+        auc = auroc(all_output_truth, all_output_raw[:, 1])
+        return {'1-auc': 1.0 - auc}
+
+
 class MetricClassificationError(Metric):
     """
     Calculate the accuracy using the `output_truth` and `output`
@@ -63,10 +100,10 @@ class MetricClassificationError(Metric):
         truth = utilities.to_value(outputs.get('output_truth'))
         found = utilities.to_value(outputs.get('output'))
         if truth is not None and found is not None:
-            return {
-                'nb_trues': np.sum(found == truth),
-                'total': len(truth)
-            }
+            return collections.OrderedDict([
+                ('nb_trues', np.sum(found == truth)),
+                ('total', len(truth)),
+            ])
         return None
 
     @staticmethod
@@ -118,7 +155,6 @@ class MetricSegmentationDice(Metric):
             for c in range(len(sum_dices)):
                 r[f'1-dice[class={c}]'] = one_minus_dice[c]
             r['1-dice'] = np.average(one_minus_dice)
-
             return r
 
         return {'1-dice': 1}
@@ -143,29 +179,29 @@ class MetricClassificationSensitivitySpecificity(Metric):
                 # special case: only binary classification
                 tn, fp, fn, tp = cm.ravel()
 
-                return {
-                    'tn': tn,
-                    'fn': fn,
-                    'fp': fp,
-                    'tp': tp,
-                }
+                return collections.OrderedDict([
+                    ('tn', tn),
+                    ('fn', fn),
+                    ('fp', fp),
+                    ('tp', tp),
+                ])
             else:
                 if truth[0] == 0:
                     # 0, means perfect classification of the negative
-                    return {
-                        'tn': cm[0, 0],
-                        'fn': 0,
-                        'fp': 0,
-                        'tp': 0,
-                    }
+                    return collections.OrderedDict([
+                        ('tn', cm[0, 0]),
+                        ('fn', 0),
+                        ('fp', 0),
+                        ('tp', 0),
+                    ])
                 else:
                     # 1, means perfect classification of the positive
-                    return {
-                        'tp': cm[0, 0],
-                        'fn': 0,
-                        'fp': 0,
-                        'tn': 0,
-                    }
+                    return collections.OrderedDict([
+                        ('tp', cm[0, 0]),
+                        ('fn', 0),
+                        ('fp', 0),
+                        ('tn', 0),
+                    ])
 
         # something is missing, don't calculate the stats
         return None
@@ -195,11 +231,11 @@ class MetricClassificationSensitivitySpecificity(Metric):
             # invalid! `None` will be discarded
             one_minus_specificity = None
 
-        return {
+        return collections.OrderedDict([
             # we return the 1.0 - metric, since in the history we always keep the smallest number
-            '1-sensitivity': one_minus_sensitivity,
-            '1-specificity': one_minus_specificity,
-        }
+            ('1-sensitivity', one_minus_sensitivity),
+            ('1-specificity', one_minus_specificity),
+        ])
 
 
 def default_classification_metrics():
@@ -210,6 +246,7 @@ def default_classification_metrics():
         MetricLoss(),
         MetricClassificationError(),
         MetricClassificationSensitivitySpecificity(),
+        MetricClassificationAUC(),
     ]
 
 

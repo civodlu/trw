@@ -1,3 +1,5 @@
+import collections
+
 from trw.reporting import len_batch
 from trw.train import OutputEmbedding, OutputClassification
 import torch
@@ -99,9 +101,10 @@ class Gan(nn.Module):
         batch['real'] = real
         batch['fake'] = fake
 
-        return {
-            'images_fake': OutputEmbedding(images_fake),
+        return collections.OrderedDict([
+            ('images_fake', OutputEmbedding(images_fake)),
+
             # do NOT record the gradient here in case the trainer optimizer was not set to ``None``
-            'classifier_true': OutputClassification(output_real.data, classes_name='real'),
-            'classifier_fake': OutputClassification(output_fake.data, classes_name='fake'),
-        }
+            ('classifier_real', OutputClassification(output_real.detach(), classes_name='real')),
+            ('classifier_fake', OutputClassification(output_fake.detach(), classes_name='fake')),
+        ])

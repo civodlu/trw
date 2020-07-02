@@ -339,7 +339,7 @@ class TestLayers(TestCase):
         }
         o = model(batch)
         assert 'images_fake' in o
-        assert 'classifier_true' in o
+        assert 'classifier_real' in o
         assert 'classifier_fake' in o
 
     def test_gan_conditional(self):
@@ -367,6 +367,7 @@ class TestLayers(TestCase):
         }
 
         o = model(batch)
-        assert 'images_fake' in o
-        assert 'classifier_true' in o
+        assert 'fake' in o
+        assert 'real' in o
+        assert 'classifier_real' in o
         assert 'classifier_fake' in o

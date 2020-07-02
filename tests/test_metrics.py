@@ -158,3 +158,37 @@ class TestMetrics(TestCase):
         assert abs(r['classification error'] - 1.0) < 1e-4
         assert abs(r['1-sensitivity'] - 1.0) < 1e-4
         assert abs(r['1-specificity'] - 1.0) < 1e-4
+
+    def test_auc_random(self):
+        # completely random: the AUC should be 0.5
+        nb_samples = 100000
+        input_values = torch.from_numpy(np.random.choice([0, 1], size=[nb_samples]))
+
+        r = np.random.uniform(0, 1, size=[nb_samples])
+        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target[:, 0] = r
+        target[:, 1] = 1 - r
+        target_values = torch.from_numpy(target)
+
+        metric = trw.train.MetricClassificationAUC()
+        auc = metric({'output_truth': input_values, 'output_raw': target_values})
+        auc = metric.aggregate_metrics([auc])
+        assert abs(auc['1-auc'] - 0.5) < 0.1
+        print('DONE')
+
+    def test_auc_perfect(self):
+        # perfect classification: AUC should be 1.0 (so metric should be 0.0)
+        nb_samples = 100
+
+        r = np.random.uniform(0, 1, size=[nb_samples])
+        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target[:, 0] = r
+        target[:, 1] = 1 - r
+        target_values = torch.from_numpy(target)
+
+        input_values = (1 - r > 0.5).astype(int)
+
+        metric = trw.train.MetricClassificationAUC()
+        auc = metric({'output_truth': input_values, 'output_raw': target_values})
+        auc = metric.aggregate_metrics([auc])
+        assert abs(auc['1-auc'] - 0.0) < 0.001

@@ -2,7 +2,7 @@ from unittest import TestCase
 import trw
 import torch
 import torch.nn as nn
-from trw.train.callback_reporting_model_statistics import calculate_stats_gradient
+from trw.train.callback_reporting_layer_statistics import calculate_stats_gradient
 
 
 class ModelLinearRegression(nn.Module):

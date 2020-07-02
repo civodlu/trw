@@ -83,15 +83,6 @@ class TestOutput(TestCase):
         self.assertTrue(len(loss.shape) == 0)
         self.assertTrue(loss < 1e-6)
 
-    def test_output_record(self):
-        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
-        o = trw.train.OutputRecord(input_values)
-
-        batch = {'i': input_values}
-        loss_term = o.evaluate_batch(batch, is_training=False)
-        assert loss_term['loss'] == 0.0
-        assert (loss_term['output'] == input_values.numpy()).all()
-
     def test_output_segmentation(self):
         mask_scores = torch.zeros(10, 4, 32, 32, dtype=torch.float32)  # 10 samples, 4 classes, 2D 32x32 grid
         mask_scores[:, 1, :, :] = 100.0

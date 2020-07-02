@@ -134,9 +134,9 @@ class TestSimplifiedNN(TestCase):
         outputs = network(inputs)
         assert len(outputs) == 1
         
-    def test_output_record(self):
+    def test_output_embedding_functor(self):
         n = trw.simple_layers.Input([None, 1], 'i')
-        n = trw.simple_layers.OutputRecord(n, output_name='record', functor=functor_extract_i)
+        n = trw.simple_layers.OutputEmbedding(n, output_name='record', functor=functor_extract_i)
         network = trw.simple_layers.compile_nn([n])
         
         inputs = {
@@ -150,7 +150,7 @@ class TestSimplifiedNN(TestCase):
         i1 = trw.simple_layers.Input([None, 1], 'i1')
         i2 = trw.simple_layers.Input([None, 1], 'i2')
         n = trw.simple_layers.ConcatChannels([i1, i2])
-        n = trw.simple_layers.OutputRecord(n, output_name='concat')
+        n = trw.simple_layers.OutputEmbedding(n, output_name='concat')
         
         network = trw.simple_layers.compile_nn([n])
         inputs = {
@@ -170,7 +170,7 @@ class TestSimplifiedNN(TestCase):
         i2 = trw.simple_layers.Input([None, 1], 'i2')
         intermediate = trw.simple_layers.Linear(i2, 3)
         n = trw.simple_layers.ConcatChannels([intermediate, i1, i2])
-        n = trw.simple_layers.OutputRecord(n, output_name='concat')
+        n = trw.simple_layers.OutputEmbedding(n, output_name='concat')
 
         network = trw.simple_layers.compile_nn([n, intermediate])
         inputs = {
@@ -224,8 +224,8 @@ class TestSimplifiedNN(TestCase):
         tmp_2 = trw.simple_layers.ReLU(input_2)
         tmp_3 = trw.simple_layers.ConcatChannels([input_1, tmp_2])
 
-        output_1 = trw.simple_layers.OutputRecord(tmp_3, output_name='output_1')
-        output_2 = trw.simple_layers.OutputRecord(tmp_2, output_name='output_2')
+        output_1 = trw.simple_layers.OutputEmbedding(tmp_3, output_name='output_1')
+        output_2 = trw.simple_layers.OutputEmbedding(tmp_2, output_name='output_2')
         
         net = trw.simple_layers.compile_nn([output_1, output_2])
 
@@ -241,8 +241,8 @@ class TestSimplifiedNN(TestCase):
         We expect an error: 2 outputs can NOT have the same name!
         """
         input_1 = trw.simple_layers.Input(shape=[None, 1], feature_name='input_1')
-        output_1 = trw.simple_layers.OutputRecord(input_1, output_name='output_1')
-        output_2 = trw.simple_layers.OutputRecord(input_1, output_name='output_1')
+        output_1 = trw.simple_layers.OutputEmbedding(input_1, output_name='output_1')
+        output_2 = trw.simple_layers.OutputEmbedding(input_1, output_name='output_1')
 
         exception_raised = False
         try:

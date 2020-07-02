@@ -1,3 +1,4 @@
+import collections
 import functools
 import torch
 import torch.nn as nn
@@ -44,7 +45,7 @@ class GanConditional(nn.Module):
             generator: a generator taking as input [N, latent_size, [1] * dim], with dim=2 for 2D images
                 and returning as output the same shape as ``image_from_batch_fn(batch)``. Last layer should not
                 be apply an activation function.
-            latent_size: the latent size
+            latent_size: the latent size (random vector to seed the generator)
             optimizer_discriminator_fn: the optimizer function to be used for the discriminator. Takes
                 as input a model and return the trainable parameters
             optimizer_generator_fn: the optimizer function to be used for the generator. Takes
@@ -73,7 +74,7 @@ class GanConditional(nn.Module):
         self.l1_lambda = l1_lambda
 
     def forward(self, batch):
-        if batch['split_name'] != self.train_split_name:
+        if 'split_name' not in batch or batch['split_name'] != self.train_split_name:
             return {}
 
         observed_discriminator = self.observed_discriminator_fn(batch)
@@ -86,8 +87,8 @@ class GanConditional(nn.Module):
         nb_samples = len_batch(batch)
         images_real = self.image_from_batch_fn(batch)
 
-        real = torch.ones(nb_samples, dtype=torch.long, device=images_real.device)
-        fake = torch.zeros(nb_samples, dtype=torch.long, device=images_real.device)
+        real = torch.ones(nb_samples, dtype=torch.long, device=images_real.device, requires_grad=False)
+        fake = torch.zeros(nb_samples, dtype=torch.long, device=images_real.device, requires_grad=False)
 
         self.optmizer_generator.zero_grad()
         self.discriminator.zero_grad()
@@ -107,6 +108,10 @@ class GanConditional(nn.Module):
         generator_loss = self.criterion_fn(output_generator, real)
         generator_loss_mean = generator_loss.mean() + self.l1_lambda * generator_l1
 
+        if generator_loss_mean.requires_grad:
+            generator_loss_mean.backward()
+            self.optmizer_generator.step()
+
         # discriminator: train with all real
         output_real = self.discriminator(images_real, *observed_discriminator)
         loss_real = self.criterion_fn(output_real, real)
@@ -118,9 +123,7 @@ class GanConditional(nn.Module):
         discriminator_loss_mean = (loss_fake + loss_real).mean() / 2
 
         # model updates
-        if generator_loss_mean.requires_grad:
-            generator_loss_mean.backward()
-            self.optmizer_generator.step()
+        if discriminator_loss_mean.requires_grad:
             discriminator_loss_mean.backward()
             self.optmizer_discriminator.step()
 
@@ -128,9 +131,12 @@ class GanConditional(nn.Module):
         batch['real'] = real
         batch['fake'] = fake
 
-        return {
-            'images_fake': OutputEmbedding(images_fake),
-            # do NOT record the gradient here in case the trainer optimizer was not set to ``None``
-            'classifier_true': OutputClassification(output_real.data, classes_name='real'),
-            'classifier_fake': OutputClassification(output_fake.data, classes_name='fake'),
-        }
+        observed_generator = [(f'observed_generator_{n}', OutputEmbedding(o)) for n, o in enumerate(observed_generator)]
+        observed_discriminator = [(f'observed_discriminator_{n}', OutputEmbedding(o)) for n, o in enumerate(observed_discriminator)]
+
+        return collections.OrderedDict([
+            ('fake', OutputEmbedding(images_fake.detach())),
+            ('real', OutputEmbedding(images_real.detach())),
+            ('classifier_real', OutputClassification(output_real.detach(), classes_name='real')),
+            ('classifier_fake', OutputClassification(output_fake.detach(), classes_name='fake')),
+        ] + observed_generator + observed_discriminator)

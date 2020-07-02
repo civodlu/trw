@@ -120,16 +120,6 @@ class TestSimpleLayers(TestCase):
         assert len(r) == 1
         assert r['classification'].output.shape == (5, 2)
 
-    def test_output_record(self):
-        i = trw.simple_layers.Input([None, 3, 6, 6], feature_name='input')
-        o = trw.simple_layers.OutputRecord(i, output_name='record')
-        net = trw.simple_layers.compile_nn([o])
-
-        i_torch = torch.randn([5, 32]).float()
-        r = net({'input': i_torch})
-        assert len(r) == 1
-        assert (r['record'].output == i_torch).all()
-
     def test_output_embedding(self):
         i = trw.simple_layers.Input([None, 3, 6, 6], feature_name='input')
         o = trw.simple_layers.OutputEmbedding(i, output_name='embedding')
