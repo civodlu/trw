@@ -14,6 +14,5 @@ from .autoencoder_convolutional import AutoencoderConvolutional
 from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
 from .autoencoder_convolutional_variational_conditional import AutoencoderConvolutionalVariationalConditional
 from .sub_tensor import SubTensor
-from .gan import Gan
 from .gan_conditional import GanConditional
 from .unet_base import UNetBase

@@ -462,6 +462,9 @@ def confusion_matrix(
         if classes is not None:
             classes = np.asarray(classes)[classes_to_keep]
 
+    if len(classes_predictions.shape) != 1:
+        return
+
     cm = sklearn.metrics.confusion_matrix(y_pred=classes_predictions, y_true=classes_trues)
     cm_orig = cm.copy()
     if normalize:

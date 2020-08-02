@@ -5,16 +5,11 @@ import torch.nn as nn
 import functools
 
 
-def normal_init(m, mean, std):
-    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        m.weight.data.normal_(mean, std)
-        m.bias.data.zero_()
-
-
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackExportSamples(),
+        trw.train.CallbackReportingExportSamples(),
         trw.train.CallbackEpochSummary(),
+        trw.train.CallbackReportingRecordHistory(),
     ]
 
 
@@ -52,16 +47,15 @@ def create_model(options):
 
     optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
 
-    model = trw.layers.Gan(
+    model = trw.layers.GanConditional(
         discriminator=discriminator,
         generator=generator,
         latent_size=latent_size,
         optimizer_discriminator_fn=optimizer_fn,
         optimizer_generator_fn=optimizer_fn,
-        image_from_batch_fn=get_image
+        real_image_from_batch_fn=get_image
     )
 
-    model.apply(functools.partial(normal_init, mean=0.0, std=0.01))
     return model
 
 

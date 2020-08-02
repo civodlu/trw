@@ -3,6 +3,7 @@ import trw.train
 import numpy as np
 import torch
 import functools
+import torch.nn as nn
 
 
 class TestOutput(TestCase):
@@ -194,3 +195,50 @@ class TestOutput(TestCase):
         loss = r['loss'].data.numpy()
         self.assertTrue(loss == 0)
 
+    def test_classification_multi_dim(self):
+        i1 = np.asarray([
+            [
+                [1, 1, 0],
+                [0, 0, 0],
+            ], [
+                [0, 0, 1],
+                [1, 1, 1],
+            ]
+        ], dtype=np.float32)
+
+        o1 = np.asarray([
+                [0, 0, 1],
+                [1, 1, 1],
+            ], dtype=int)
+
+        i2 = np.asarray([
+            [
+                [0, 0, 0],
+                [1, 0, 0],
+            ], [
+                [1, 1, 1],
+                [0, 1, 1],
+            ]
+        ], dtype=np.float32)
+
+        o2 = np.asarray([
+            [1, 1, 1],
+            [0, 1, 1],
+        ], dtype=int)
+
+        inputs = torch.from_numpy(np.asarray([i1, i2]))
+        outputs = torch.from_numpy(np.asarray([o1, o2]))
+        batch = {
+            'classes': outputs,
+        }
+        o = trw.train.OutputClassification(inputs, 'classes')
+        os = o.evaluate_batch(batch, is_training=True)
+
+        nb_trues = int((os['output_truth'] == os['output']).sum())
+        assert nb_trues == 2 * 2 * 3
+
+        h_classification = None
+        for metric, h in os['metrics_results'].items():
+            if isinstance(metric, trw.train.MetricClassificationError):
+                h_classification = h
+        assert h_classification['nb_trues'] == 12

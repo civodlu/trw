@@ -54,7 +54,6 @@ class TestCallbackSaveLastModel(TestCase):
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()
         options = trw.train.create_default_options(logging_directory=logging_directory)
-        history = []
 
         outputs = {
             'dataset1': {
@@ -65,7 +64,7 @@ class TestCallbackSaveLastModel(TestCase):
                 }
             }
         }
-        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+        callback(options, [outputs], model, None, outputs, None, {'info': 'dummy'}, None)
 
         # metric was not good enough. Do not save!
         models = glob.glob(os.path.join(logging_directory, '*.model'))
@@ -74,7 +73,7 @@ class TestCallbackSaveLastModel(TestCase):
 
         # update with a better metric: expect `best model` to be exported!
         outputs['dataset1']['split1']['output1']['metric1'] = 0.01
-        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+        callback(options, [outputs], model, None, outputs, None, {'info': 'dummy'}, None)
 
         models = glob.glob(os.path.join(logging_directory, '*.model'))
         models = sorted(models, reverse=True)
@@ -84,7 +83,7 @@ class TestCallbackSaveLastModel(TestCase):
         # make sure we don't export worst model
         outputs['dataset1']['split1']['output1']['metric1'] = 0.1
         os.remove(models[-1])
-        callback(options, history, model, None, outputs, None, {'info': 'dummy'}, None)
+        callback(options, [outputs], model, None, outputs, None, {'info': 'dummy'}, None)
 
         models = glob.glob(os.path.join(logging_directory, '*.model'))
         assert len(models) == 1

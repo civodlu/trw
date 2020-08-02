@@ -492,16 +492,18 @@ def default_pre_training_callbacks(
     """
     Default callbacks to be performed before the fitting of the model
     """
-    callbacks = [
+    callbacks = []
+
+    if with_reporting_server:
+        callbacks.append(callback_reporting_start_server.CallbackReportingStartServer())
+
+    callbacks += [
         callback_zip_sources.CallbackZipSources(folders_to_record=os.path.join(os.path.dirname(__file__), '..', '..')),
 
         callback_reporting_model_summary.CallbackReportingModelSummary(),
         callback_reporting_dataset_summary.CallbackReportingDatasetSummary(),
         callback_reporting_export_samples.CallbackReportingExportSamples(table_name='random_samples'),
     ]
-
-    if with_reporting_server:
-        callbacks.append(callback_reporting_start_server.CallbackReportingStartServer())
     
     if with_export_augmentations:
         callbacks.append(callback_reporting_augmentations.CallbackReportingAugmentations())

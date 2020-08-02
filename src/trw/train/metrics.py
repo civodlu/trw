@@ -25,8 +25,7 @@ class Metric:
         metric_value = 0
         return Metric, {'metric_name': metric_value}
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         """
 
         Args:
@@ -48,15 +47,14 @@ class MetricLoss(Metric):
             return {'loss': float(loss)}
         return None
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         loss = 0.0
         for m in metric_by_batch:
             loss += m['loss']
         return {'loss': loss / len(metric_by_batch)}
 
 
-class MetricClassificationAUC(Metric):
+class MetricClassificationBinaryAUC(Metric):
     """
     Calculate the Area under the Receiver operating characteristic (ROC) curve.
 
@@ -82,8 +80,7 @@ class MetricClassificationAUC(Metric):
             'output_truth': truth,
         }
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         all_output_raw = [m['output_raw'] for m in metric_by_batch]
         all_output_raw = np.concatenate(all_output_raw)
         all_output_truth = [m['output_truth'] for m in metric_by_batch]
@@ -94,7 +91,7 @@ class MetricClassificationAUC(Metric):
 
 class MetricClassificationError(Metric):
     """
-    Calculate the accuracy using the `output_truth` and `output`
+    Calculate the ``1 - accuracy`` using the `output_truth` and `output`
     """
     def __call__(self, outputs):
         truth = utilities.to_value(outputs.get('output_truth'))
@@ -102,12 +99,11 @@ class MetricClassificationError(Metric):
         if truth is not None and found is not None:
             return collections.OrderedDict([
                 ('nb_trues', np.sum(found == truth)),
-                ('total', len(truth)),
+                ('total', truth.size),  # for multi-dimension, use the size! (e.g., patch discriminator, segmentation)
             ])
         return None
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         nb_trues = 0
         total = 0
         for m in metric_by_batch:
@@ -141,8 +137,7 @@ class MetricSegmentationDice(Metric):
             'dice_by_class': dice_by_class
         }
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         sum_dices = metric_by_batch[0]['dice_by_class'].copy()
         for m in metric_by_batch[1:]:
             sum_dices += m['dice_by_class']
@@ -160,7 +155,57 @@ class MetricSegmentationDice(Metric):
         return {'1-dice': 1}
 
 
-class MetricClassificationSensitivitySpecificity(Metric):
+class MetricClassificationF1(Metric):
+    def __init__(self, average=None):
+        """
+        Calculate the Multi-class ``1 - F1 score``.
+
+        Args:
+            average: one of ``binary``, ``micro``, ``macro`` or ``weighted`` or None. If ``None``, use
+                ``binary`` if only 2 classes or ``macro`` if more than two classes
+        """
+        self.average = average
+        self.max_classes = 0
+
+    def __call__(self, outputs):
+        output_raw = utilities.to_value(outputs.get('output_raw'))
+        if output_raw is None:
+            return None
+        if len(output_raw.shape) != 2:
+            return None
+
+        truth = utilities.to_value(outputs.get('output_truth'))
+        if truth is None:
+            return None
+
+        self.max_classes = max(self.max_classes, output_raw.shape[1])
+        found = np.argmax(output_raw, axis=1)
+        return {
+            'truth': truth,
+            'found': found
+        }
+
+    def aggregate_metrics(self, metric_by_batch):
+        truth = [m['truth'] for m in metric_by_batch]
+        truth = np.concatenate(truth)
+        found = [m['found'] for m in metric_by_batch]
+        found = np.concatenate(found)
+
+        if self.average is None:
+            if self.max_classes <= 1:
+                average = 'binary'
+            else:
+                average = 'macro'
+        else:
+            average = self.average
+
+        score = 1.0 - metrics.f1_score(y_true=truth, y_pred=found, average=average)
+        return {
+            f'1-f1[{average}]': score
+        }
+
+
+class MetricClassificationBinarySensitivitySpecificity(Metric):
     """
     Calculate the sensitivity and specificity for a binary classification using the `output_truth` and `output`
     """
@@ -206,8 +251,7 @@ class MetricClassificationSensitivitySpecificity(Metric):
         # something is missing, don't calculate the stats
         return None
 
-    @staticmethod
-    def aggregate_metrics(metric_by_batch):
+    def aggregate_metrics(self, metric_by_batch):
         tn = 0
         fp = 0
         fn = 0
@@ -245,8 +289,9 @@ def default_classification_metrics():
     return [
         MetricLoss(),
         MetricClassificationError(),
-        MetricClassificationSensitivitySpecificity(),
-        MetricClassificationAUC(),
+        MetricClassificationBinarySensitivitySpecificity(),
+        MetricClassificationBinaryAUC(),
+        MetricClassificationF1(),
     ]
 
 

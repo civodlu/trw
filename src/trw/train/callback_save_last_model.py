@@ -100,7 +100,7 @@ class CallbackSaveLastModel(callback.Callback):
             # look up the correct metric and record the model and results
             # if we obtain a better (lower) metric.
             metric_value = safe_lookup(
-                outputs,
+                history[-1],
                 self.keep_model_with_lowest_metric.dataset_name,
                 self.keep_model_with_lowest_metric.split_name,
                 self.keep_model_with_lowest_metric.output_name,

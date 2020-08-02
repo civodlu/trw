@@ -15,7 +15,8 @@ def convs_2d(
         batch_norm_kwargs=None,
         lrn_kwargs=None,
         padding='same',
-        last_layer_is_output=False):
+        last_layer_is_output=False,
+        bias=True):
     """
 
     Args:
@@ -34,6 +35,7 @@ def convs_2d(
             None, not LRN
         padding: 'same' will add padding so that convolution output as the same size as input
         last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
+        bias: if True, add a learnable bias for the convolution
     """
 
     return ConvsBase(
@@ -50,5 +52,6 @@ def convs_2d(
         lrn_kwargs=lrn_kwargs,
         dropout_probability=dropout_probability,
         padding=padding,
-        last_layer_is_output=last_layer_is_output)
+        last_layer_is_output=last_layer_is_output,
+        bias=bias)
 

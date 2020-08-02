@@ -216,6 +216,43 @@ class LossTriplets(nn.Module):
         return d
 
 
+class LossBinaryF1(nn.Module):
+    """
+    The macro F1-score is non-differentiable. Instead use a surrogate that is differentiable
+        and correlates well with the Macro F1 score by working on the class probabilities rather
+        than the discrete classification.
+
+    For example, if the ground truth is 1 and the model prediction is 0.8, we calculate it as 0.8 true
+        positive and 0.2 false negative
+    """
+    def __init__(self, eps=1e-4):
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, outputs, targets):
+        assert len(outputs.shape) == len(targets.shape) + 1, 'output: must have W x C x d0 x ... x dn shape and ' \
+                                                            'target: must have W x d0 x ... x dn shape'
+        assert outputs.shape[1] == 2, 'only for binary classification!'
+
+        y_true = F.one_hot(targets, 2).type(torch.float32)
+        y_pred = F.softmax(outputs, dim=1)
+
+        tp = (y_true * y_pred).sum(dim=0).type(torch.float32)
+        fp = ((1 - y_true) * y_pred).sum(dim=0).type(torch.float32)
+        fn = (y_true * (1 - y_pred)).sum(dim=0).type(torch.float32)
+
+        precision = tp / (tp + fp + self.eps)
+        recall = tp / (tp + fn + self.eps)
+
+        f1 = 2 * (precision * recall) / (precision + recall + self.eps)
+        f1 = f1.clamp(min=0.0, max=1.0)
+        one_minus_f1 = 1 - f1.mean()
+
+        # per design, we MUST return a per-sample loss. This is not valid for F1
+        # so instead repeat the ``one_minus_f1`` to have correct dimension.
+        return one_minus_f1.repeat(targets.shape[0])
+
+
 class LossCenter(nn.Module):
     """
     Center loss, penalize the features falling further from the feature class center.

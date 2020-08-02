@@ -59,13 +59,13 @@ from .sequence_collate import SequenceCollate
 from .sequence_rebatch import SequenceReBatch
 from .sequence_sub_batch import SequenceSubBatch
 
-from .metrics import Metric, MetricClassificationError, MetricClassificationSensitivitySpecificity, MetricLoss, \
-    MetricClassificationAUC
+from .metrics import Metric, MetricClassificationError, MetricClassificationBinarySensitivitySpecificity, MetricLoss, \
+    MetricClassificationBinaryAUC, MetricClassificationF1
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
-    total_variation_norm, LossCrossEntropyCsiMulticlass
+    total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1
 from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing

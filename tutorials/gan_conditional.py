@@ -6,12 +6,6 @@ import functools
 from trw.train.losses import one_hot
 
 
-def normal_init(m, mean, std):
-    if isinstance(m, nn.ConvTranspose2d) or isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        m.weight.data.normal_(mean, std)
-        m.bias.data.zero_()
-
-
 class Generator(nn.Module):
     def __init__(self, latent_size, nb_digits=10):
         super().__init__()
@@ -69,7 +63,7 @@ def get_image(batch):
 
 
 def get_target(batch):
-    return batch['targets']
+    return {'digits': batch['targets']}
 
 
 def create_model(options):
@@ -86,13 +80,12 @@ def create_model(options):
         latent_size=latent_size,
         optimizer_discriminator_fn=optimizer_fn,
         optimizer_generator_fn=optimizer_fn,
-        image_from_batch_fn=get_image,
+        real_image_from_batch_fn=get_image,
         observed_discriminator_fn=get_target,
         observed_generator_fn=get_target,
         l1_lambda=0.5
     )
 
-    model.apply(functools.partial(normal_init, mean=0.0, std=0.01))
     return model
 
 
@@ -107,13 +100,16 @@ def per_epoch_callbacks():
 def pre_training_callbacks():
     return [
         trw.train.CallbackReportingStartServer(),
+        trw.train.CallbackReportingModelSummary(),
     ]
 
 
 options = trw.train.create_default_options(num_epochs=10)
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,
-    callbacks_pre_training_fn=pre_training_callbacks)
+    callbacks_pre_training_fn=pre_training_callbacks
+)
+
 model, result = trw.train.run_trainer_repeat(
     trainer,
     options,

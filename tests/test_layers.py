@@ -324,13 +324,13 @@ class TestLayers(TestCase):
 
         optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
 
-        model = trw.layers.Gan(
+        model = trw.layers.GanConditional(
             discriminator=discriminator,
             generator=generator,
             latent_size=latent_size,
             optimizer_discriminator_fn=optimizer_fn,
             optimizer_generator_fn=optimizer_fn,
-            image_from_batch_fn=lambda batch: 2 * batch['images'] - 1
+            real_image_from_batch_fn=lambda batch: 2 * batch['images'] - 1
         )
 
         batch = {
@@ -338,7 +338,8 @@ class TestLayers(TestCase):
             'split_name': 'train'
         }
         o = model(batch)
-        assert 'images_fake' in o
+        assert 'fake' in o
+        assert 'real' in o
         assert 'classifier_real' in o
         assert 'classifier_fake' in o
 
@@ -355,9 +356,9 @@ class TestLayers(TestCase):
             latent_size=latent_size,
             optimizer_discriminator_fn=optimizer_fn,
             optimizer_generator_fn=optimizer_fn,
-            image_from_batch_fn=lambda batch: batch['images'],
-            observed_discriminator_fn=lambda batch: batch['targets'],
-            observed_generator_fn=lambda batch: batch['targets'],
+            real_image_from_batch_fn=lambda batch: batch['images'],
+            observed_discriminator_fn=lambda batch: {'digits': batch['targets']},
+            observed_generator_fn=lambda batch: {'digits': batch['targets']},
         )
 
         batch = {

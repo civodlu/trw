@@ -47,7 +47,8 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             batch_norm_kwargs=None,
             lrn_kwargs=None,
             padding='same',
-            last_layer_is_output=False):
+            last_layer_is_output=False,
+            bias=True):
         """
 
         Args:
@@ -67,6 +68,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
                 None, not LRN
             padding: 'same' will add padding so that convolution output as the same size as input
             last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
+            bias: if ``True``, add a learnable bias to the convolution layer
         """
         super().__init__()
 
@@ -83,6 +85,12 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             pooling_size = [pooling_size] * nb_convs
         if isinstance(convolution_repeats, numbers.Number):
             convolution_repeats = [convolution_repeats] * nb_convs
+        if isinstance(padding, numbers.Number):
+            padding = [padding] * nb_convs
+        elif isinstance(padding, str):
+            pass
+        else:
+            assert len(padding) == nb_convs
 
         assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
@@ -107,8 +115,10 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             p = 0
             if padding == 'same':
                 p = div_shape(convolution_kernels[n], 2)
+            else:
+                p = padding[n]
 
-            ops = [ops_conv.conv_fn(prev, current, kernel_size=convolution_kernels[n], stride=strides[n], padding=p)]
+            ops = [ops_conv.conv_fn(prev, current, kernel_size=convolution_kernels[n], stride=strides[n], padding=p, bias=bias)]
             if not last_layer_is_output or not currently_last_layer:
                 # only use the activation if not the last layer
                 ops.append(activation())
@@ -123,7 +133,7 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
                 if with_lrn:
                     ops.append(lrn_fn(current, **lrn_kwargs))
 
-                ops.append(ops_conv.conv_fn(current, current, kernel_size=convolution_kernels[n], stride=1, padding=p))
+                ops.append(ops_conv.conv_fn(current, current, kernel_size=convolution_kernels[n], stride=1, padding=p, bias=bias))
 
                 if last_layer_is_output and currently_last_layer and r + 1 == nb_repeats:
                     # we don't want to add activation if the output is the last layer

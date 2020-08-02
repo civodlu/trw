@@ -1,8 +1,10 @@
+import sklearn
 import trw
 import numpy as np
 import torch
 import torch.nn as nn
 from unittest import TestCase
+import scipy
 
 from trw.train import LossContrastive
 from trw.train.losses import LossCrossEntropyCsiMulticlass
@@ -455,3 +457,36 @@ class TestLosses(TestCase):
         assert losses[2] == 0
         assert losses[3] > 0
         assert losses[4] > 0
+
+    def test_loss_f1(self):
+        nb_samples = 100
+        np.random.seed(1)
+
+        for exp in range(100):
+            results = []
+            for n in range(200):
+                r = np.random.uniform(0, 1, size=[nb_samples])
+                output = np.zeros([nb_samples, 2], dtype=np.float)
+                output[:, 0] = r
+                output[:, 1] = 1 - r
+
+                output_values = torch.from_numpy(output).type(torch.float32)
+                truth_values = torch.from_numpy(np.random.uniform(0, 1, size=[nb_samples]) >= 0.7).type(torch.long)
+
+                loss = trw.train.LossBinaryF1()
+                surrogate_f1 = loss(output_values, truth_values)
+                assert len(surrogate_f1) == nb_samples
+                surrogate_f1 = surrogate_f1.mean()
+                f1 = 1 - sklearn.metrics.f1_score(truth_values, output.argmax(axis=1), average='macro')
+                results.append((f1, float(surrogate_f1)))
+
+            d = np.asarray(results)
+            r, _ = scipy.stats.pearsonr(d[:, 0], d[:, 1])
+            print('r=', r)
+            assert r > 0.7  # we MUST have a good correlation!
+
+            # from matplotlib import pyplot as plt
+            # plt.scatter(d[:, 0], d[:, 1])
+            # plt.ylabel('Macro F1-score')
+            # plt.xlabel('Differentiable F1 loss')
+            # plt.show()

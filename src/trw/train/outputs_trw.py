@@ -8,6 +8,27 @@ from trw.train import losses
 from trw.train import utilities
 
 
+def flatten(x):
+    """
+    Flatten a tensor
+
+    Example, a tensor of shape[N, Z, Y, X] will be reshaped [N, Z * Y * X]
+
+    TODO:
+        move to common pytorch ops
+
+    Args:
+        x: a tensor
+
+    Returns: return a flattened tensor
+
+    """
+    dim = 1
+    for d in x.shape[1:]:
+        dim *= d
+    return x.view((-1, dim))
+
+
 def dict_torch_values_to_numpy(d):
     """
     Transform all torch.Tensor to numpy arrays of a dictionary like object
@@ -81,9 +102,8 @@ def extract_metrics(metrics_outputs, outputs):
         for metric in metrics_outputs:
             metric_result = metric(outputs)
             if metric_result is not None:
-                metric_type = type(metric)
                 assert isinstance(metric_result, collections.Mapping), 'must be a dict like structure'
-                history.update({metric_type: metric_result})
+                history.update({metric: metric_result})
     return history
 
 
@@ -361,8 +381,8 @@ class OutputClassification(Output):
         assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature={}'.format(self.classes_name)
         
         # make sure the class is not out of bound. This is a very common mistake!
-        max_index = int(torch.max(truth).cpu().numpy())
-        min_index = int(torch.min(truth).cpu().numpy())
+        #max_index = int(torch.max(truth).cpu().numpy())
+        #min_index = int(torch.min(truth).cpu().numpy())
         #assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
         #                                         f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
         #assert min_index >= 0, f'incorrect index! got={min_index}'
@@ -373,6 +393,10 @@ class OutputClassification(Output):
         else:
             losses = torch.zeros(len(self.output), device=self.output.device)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
+        if len(losses.shape) >= 1:
+            # average the per-sample loss
+            losses = flatten(losses).mean(dim=1)
+
         assert len(losses.shape) == 1, 'loss must be a 1D Tensor'
         assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:

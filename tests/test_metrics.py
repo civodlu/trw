@@ -2,6 +2,7 @@ from unittest import TestCase
 import trw.train
 import numpy as np
 import torch
+import sklearn
 
 
 class TestMetrics(TestCase):
@@ -170,7 +171,7 @@ class TestMetrics(TestCase):
         target[:, 1] = 1 - r
         target_values = torch.from_numpy(target)
 
-        metric = trw.train.MetricClassificationAUC()
+        metric = trw.train.MetricClassificationBinaryAUC()
         auc = metric({'output_truth': input_values, 'output_raw': target_values})
         auc = metric.aggregate_metrics([auc])
         assert abs(auc['1-auc'] - 0.5) < 0.1
@@ -188,7 +189,29 @@ class TestMetrics(TestCase):
 
         input_values = (1 - r > 0.5).astype(int)
 
-        metric = trw.train.MetricClassificationAUC()
+        metric = trw.train.MetricClassificationBinaryAUC()
         auc = metric({'output_truth': input_values, 'output_raw': target_values})
         auc = metric.aggregate_metrics([auc])
         assert abs(auc['1-auc'] - 0.0) < 0.001
+
+    def test_f1(self):
+        nb_samples = 20
+
+        r = np.random.uniform(0, 1, size=[nb_samples])
+        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target[:, 0] = r
+        target[:, 1] = 1 - r
+        target_values = torch.from_numpy(target)
+
+        input_values = np.random.uniform(0, 1, size=[nb_samples]) >= 0.5
+
+        metric = trw.train.MetricClassificationF1(average='binary')
+        one_minus_f1 = metric({'output_truth': input_values, 'output_raw': target_values})
+        one_minus_f1 = metric.aggregate_metrics([one_minus_f1])
+
+        cm = sklearn.metrics.confusion_matrix(np.argmax(target, axis=1), input_values)
+        tn, fp, fn, tp = cm.ravel()
+
+        expected_f1 = 2 * tp / (2 * tp + fp + fn)
+        assert abs(1 - one_minus_f1['1-f1[binary]'] - expected_f1) <= 1e-4
+

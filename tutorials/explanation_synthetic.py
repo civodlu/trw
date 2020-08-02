@@ -17,7 +17,7 @@ trainer = trw.train.Trainer(callbacks_post_training_fn=lambda: trw.train.default
 
 model, results = trainer.fit(
     trw.train.create_default_options(num_epochs=5),
-    inputs_fn=lambda: trw.datasets.create_fake_symbols_2d_datasset(
+    inputs_fn=lambda: trw.datasets.create_fake_symbols_2d_dataset(
         image_shape=[64, 64],
         nb_classes_at_once=1,
         nb_samples=10000,

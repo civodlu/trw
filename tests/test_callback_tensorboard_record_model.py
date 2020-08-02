@@ -27,7 +27,7 @@ class Net(nn.Module):
 
 
 def create_dataset():
-    return trw.datasets.create_fake_symbols_2d_datasset(
+    return trw.datasets.create_fake_symbols_2d_dataset(
         nb_samples=20,
         global_scale_factor=0.5,
         image_shape=[32, 32],

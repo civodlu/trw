@@ -348,7 +348,7 @@ def default_collate_fn(batch, device, pin_memory=False, non_blocking=False):
     """
 
     Args:
-        batches: a dictionary of features or a list of dictionary of features
+        batch: a dictionary of features or a list of dictionary of features
         device: the device where to create the torch.Tensor
         pin_memory: if True, pin the memory. Required to be a `CUDA` allocated torch.Tensor
 

@@ -55,8 +55,8 @@ def per_epoch_fn():
         trw.train.CallbackEpochSummary(),
         trw.train.CallbackSkipEpoch(
             nb_epochs=10,
-            callbacks=[trw.train.CallbackExportSamples(
-                dirname='random_samples',
+            callbacks=[trw.train.CallbackReportingExportSamples(
+                table_name='random_samples',
                 max_samples=5,
                 split_exclusions=['train'])]),
     ]
@@ -67,7 +67,6 @@ def per_epoch_fn():
 # configure and run the training/evaluation
 options = trw.train.create_default_options(num_epochs=400)
 trainer = trw.train.Trainer(
-    callbacks_pre_training_fn=None,
     callbacks_per_epoch_fn=per_epoch_fn,
 )
 

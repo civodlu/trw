@@ -29,7 +29,7 @@ def default_shapes_3d(global_scale_factor=1.0):
     ]
 
 
-def create_fake_symbols_3d_datasset(
+def create_fake_symbols_3d_dataset(
         nb_samples,
         image_shape,
         ratio_valid=0.2,

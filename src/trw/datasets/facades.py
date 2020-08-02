@@ -14,7 +14,6 @@ def create_facades_dataset(
         batch_size=32,
         normalize_0_1=True,
         transforms_train=None,
-        transforms_valid=None,
         url='https://people.eecs.berkeley.edu/~tinghuiz/projects/pix2pix/datasets/facades.tar.gz'):
 
     split_loader = functools.partial(image_directory_facades, normalize_0_1=normalize_0_1, extension='.jpg')
@@ -24,7 +23,6 @@ def create_facades_dataset(
         split_loader=split_loader,
         batch_size=batch_size,
         transforms_train=transforms_train,
-        transforms_valid=transforms_valid,
         url=url,
         dataset_name='facades',
         split_train_name='train',
@@ -79,11 +77,7 @@ def create_dataset_from_archive_url(
         batch_size=32,
         split_train_name='train',
         transforms_train=None,
-        transforms_valid=None,
         ):
-
-    assert transforms_train is None, 'TODO implement!'
-    assert transforms_valid is None, 'TODO implement!'
 
     if root is None:
         # first, check if we have some environment variables configured
@@ -110,6 +104,9 @@ def create_dataset_from_archive_url(
 
         root_split = os.path.join(path, dataset_name, split_name)
         split = split_loader(sampler, root_split, uid_prefix=split_name)
+        if split_name == split_train_name and transforms_train is not None:
+            split = split.map(transforms_train, nb_workers=0)
+
         dataset[split_name] = split
 
     return collections.OrderedDict([
