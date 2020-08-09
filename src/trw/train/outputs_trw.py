@@ -436,6 +436,131 @@ class OutputClassification(Output):
         return loss_term
 
 
+class OutputClassification2(Output):
+    """
+    Classification output
+    """
+
+    def __init__(
+            self,
+            output,
+            output_truth,
+            criterion_fn=lambda: nn.CrossEntropyLoss(reduction='none'),
+            collect_output=True,
+            collect_only_non_training_output=False,
+            metrics=metrics.default_classification_metrics(),
+            loss_reduction=torch.mean,
+            weights=None,
+            loss_scaling=1.0,
+            output_postprocessing=functools.partial(torch.argmax, dim=1),  # =1 as we export the class
+            maybe_optional=False,
+            sample_uid_name=default_sample_uid_name):
+        """
+
+        Args:
+            output: the raw output values
+            output_truth: the tensor to be used as target. Targets must be compatible with ``criterion_fn``
+            criterion_fn: the criterion to minimize between the output and the output_truth. If ``None``, the returned
+                loss will be 0
+            collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
+            collect_only_non_training_output: if True, only the non-training splits will have the outputs collected
+            metrics: the metrics to be reported each epoch
+            loss_reduction: a function to reduce the N-d losses to a single loss value
+            weights: if not None, the weight name. the loss of each sample will be weighted by this vector
+            loss_scaling: scale the loss by a scalar
+            output_postprocessing: the output will be post-processed by this function for the classification report.
+                For example, the classifier may return logit scores for each class and we can use argmax of the
+                scores to get the class.
+            maybe_optional: if True, the loss term may be considered optional if the ground
+                truth is not part of the batch
+            sample_uid_name (str): if not None, collect the sample UID
+        """
+        super().__init__(
+            output=output,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            sample_uid_name=sample_uid_name,
+            metrics=metrics)
+        self.output_truth = output_truth
+        self.loss_reduction = loss_reduction
+        self.output_postprocessing = output_postprocessing
+        self.collect_only_non_training_output = collect_only_non_training_output
+        self.loss_scaling = loss_scaling
+        self.weights = weights
+        self.maybe_optional = maybe_optional
+
+    def evaluate_batch(self, batch, is_training):
+        truth = self.output_truth
+        if truth is None and self.maybe_optional:
+            return None
+        assert truth is not None, 'truth is `None` use `maybe_optional` to True'
+        assert len(truth) == len(self.output), f'expected len output ({len(self.output)}) == len truth ({len(truth)})!'
+        assert isinstance(truth, torch.Tensor), 'feature must be a torch.Tensor!'
+        assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature'
+
+        # make sure the class is not out of bound. This is a very common mistake!
+        # max_index = int(torch.max(truth).cpu().numpy())
+        # min_index = int(torch.min(truth).cpu().numpy())
+        # assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
+        #                                         f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        # assert min_index >= 0, f'incorrect index! got={min_index}'
+
+        loss_term = {}
+        if self.criterion_fn is not None:
+            losses = self.criterion_fn()(self.output, truth)
+        else:
+            losses = torch.zeros(len(self.output), device=self.output.device)
+        assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
+
+        if self.weights is not None:
+            weights = self.weights
+            assert len(weights) == len(losses), 'must have a weight per sample'
+            assert len(weights.shape) == 1, 'must be a 1D vector'
+        else:
+            weights = torch.ones_like(losses)
+
+        # weight the loss of each sample by the corresponding weight
+        weighted_losses = weights * losses
+
+        if len(weighted_losses.shape) >= 1:
+            # average the per-sample loss
+            weighted_losses = flatten(weighted_losses).mean(dim=1)
+
+        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        if self.collect_output:
+            # we may not want to collect any outputs or training outputs to save some time
+            if not self.collect_only_non_training_output or not is_training:
+                # detach the output so as not to calculate gradients. Keep the truth so that we
+                # can calculate statistics (e.g., accuracy, FP/FN...)
+                loss_term['output_raw'] = self.output
+                output_postprocessed = self.output_postprocessing(self.output)
+                assert torch.is_tensor(output_postprocessed)
+                assert output_postprocessed.dtype == torch.long, f'output must have a `long` type. ' \
+                                                                 f'Got={output_postprocessed.dtype}'
+                loss_term['output'] = output_postprocessed
+                loss_term['output_truth'] = truth
+
+        if self.sample_uid_name is not None and self.sample_uid_name in batch:
+            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+
+        # TODO label smoothing
+        loss_term['losses'] = weighted_losses
+        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
+        loss_term[Output.output_ref_tag] = self  # keep a back reference
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
+        return loss_term
+
+    def loss_term_cleanup(self, loss_term):
+        super().loss_term_cleanup(loss_term)
+
+        # delete possibly large outputs
+        del self.output
+        self.output = None
+
+        del self.output_truth
+        self.output_truth = None
+
+
 def mean_all(x):
     """
     :param x: a Tensor

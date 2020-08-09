@@ -383,3 +383,27 @@ def total_variation_norm(x, beta):
         return _total_variation_norm_3d(x, beta)
     else:
         raise NotImplemented()
+
+
+class LossMsePacked(nn.Module):
+    """
+    Mean squared error loss with target packed as an integer (e.g., classification)
+
+    The ``packed_target`` will be one hot encoded and the mean squared error is applied with the ``tensor``.
+    """
+    def __init__(self):
+        super().__init__()
+
+    def forward(self, tensor, packed_target):
+        assert len(tensor.shape) == len(packed_target.shape) + 1, '`tensor` must be encoded as NxCx... while' \
+                                                                  '`packed_target` must be encoded as Nx...'
+        assert tensor.shape[0] == packed_target.shape[0]
+        assert tensor.shape[2:] == packed_target.shape[1:], '`tensor` and `packed_target` must have the same shape' \
+                                                            '(except the N, C components)'
+
+        nb_classes = tensor.shape[1]
+        assert nb_classes >= 2, f'expected at least 2 classes! Got={nb_classes}'
+        assert packed_target.max() < nb_classes, f'error: target larger than the number ' \
+                                                 f'of classes ({packed_target.max()} vs {nb_classes})'
+
+        return (tensor - one_hot(packed_target, nb_classes)) ** 2

@@ -121,7 +121,7 @@ def create_tables(name, role, doc, options, connection):
         panel = data_table.get_ui()
     else:
         raise NotImplementedError(f'role not implemented={role}')
-    assert isinstance(panel, Panel)
+    assert isinstance(panel, Panel), f'unexpected type={type(panel)}'
 
     # handle the table preamble here
     metadata_name = get_metadata_name(name)
@@ -132,6 +132,7 @@ def create_tables(name, role, doc, options, connection):
         child = column(Div(text=preamble[0]), panel.child, sizing_mode='stretch_both')
         panel.update(child=child)
 
+    print(f'table={name} created!')
     return panel
 
 

@@ -86,6 +86,8 @@ class MetricClassificationBinaryAUC(Metric):
         all_output_truth = [m['output_truth'] for m in metric_by_batch]
         all_output_truth = np.concatenate(all_output_truth)
         auc = auroc(all_output_truth, all_output_raw[:, 1])
+        if np.isnan(auc):
+            auc = 0.0
         return {'1-auc': 1.0 - auc}
 
 

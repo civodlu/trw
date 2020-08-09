@@ -490,3 +490,13 @@ class TestLosses(TestCase):
             # plt.ylabel('Macro F1-score')
             # plt.xlabel('Differentiable F1 loss')
             # plt.show()
+
+    def test_mse_packed(self):
+        metric = trw.train.LossMsePacked()
+
+        targets = torch.randint(0, 3, [10, 5, 6])
+        outputs = torch.randint(0, 1, [10, 3, 5, 6])
+        losses = metric(outputs, targets)
+
+        expected_loss = (trw.train.one_hot(targets, 3) - outputs) ** 2
+        assert (losses - expected_loss).abs().max() < 1e-5

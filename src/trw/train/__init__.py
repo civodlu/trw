@@ -7,6 +7,8 @@ from .utilities import len_batch, create_or_recreate_folder, to_value, set_optim
 
 from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, \
     OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss
+from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
+    total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
@@ -64,8 +66,6 @@ from .metrics import Metric, MetricClassificationError, MetricClassificationBina
 
 from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
 from .sample_export import as_rgb_image, as_image_ui8, export_image
-from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
-    total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1
 from .upsample import upsample
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing

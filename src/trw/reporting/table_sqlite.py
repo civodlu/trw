@@ -129,7 +129,7 @@ def get_tables_name_and_role(cursor):
     return name_roles
 
 
-def get_table_data(cursor, table_name, single_row=False):
+def get_table_data(cursor, table_name, single_row=False, replace_none=False):
     """
     Extract all the data of the table
 
@@ -137,6 +137,7 @@ def get_table_data(cursor, table_name, single_row=False):
         cursor: the DB cursor
         table_name: the name of the database
         single_row: if True, returns a single row
+        replace_none: if True, replace all ``None`` values by empty string
 
     Returns:
         a dictionary of (name, values)
@@ -153,6 +154,13 @@ def get_table_data(cursor, table_name, single_row=False):
 
     transpose = zip(*rows)
     d = collections.OrderedDict(zip(column_names, transpose))
+    if replace_none:
+        for column_name, column_values in d.items():
+            column_values = list(column_values)
+            for n, value in enumerate(column_values):
+                if value is None:
+                    column_values[n] = ''
+            d[column_name] = column_values
     return d
 
 
@@ -187,9 +195,9 @@ def get_metadata_name(table_name):
 
 def table_add_columns(cursor, table_name, column_names):
     column_names_p = [f"'{n}'" for n in column_names]
-    columns = ', '.join(column_names_p)
-    sql_command = f"ALTER TABLE '{table_name}' ADD {columns};"
-    cursor.execute(sql_command)
+    for c in column_names_p:
+        sql_command = f"ALTER TABLE '{table_name}' ADD {c};"
+        cursor.execute(sql_command)
 
 
 class TableStream:
@@ -277,6 +285,7 @@ class TableStream:
             missing_columns = set(batch.keys()) - self.column_names
             if len(missing_columns) > 0:
                 table_add_columns(self.cursor, self.table_name, list(missing_columns))
+                self.column_names = {*self.column_names, *missing_columns}
 
         self._insert(batch)
 

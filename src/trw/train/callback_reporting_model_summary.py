@@ -87,7 +87,8 @@ def model_summary_base(model, batch):
         outputs = values["output_shape"]
         if not isinstance(outputs, str):
             for output in outputs:
-                total_output += np.prod(output[1:])  # remove the batch size
+                if not isinstance(output, str):
+                    total_output += np.prod(output[1:])  # remove the batch size
 
         trainable_params += values["nb_params"]
 

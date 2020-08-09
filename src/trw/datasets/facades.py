@@ -7,6 +7,7 @@ import torch
 from PIL import Image
 import numpy as np
 from trw.train import SamplerSequential, SamplerRandom, SequenceArray
+from .utils import download_and_extract_archive
 
 
 def create_facades_dataset(
@@ -92,7 +93,7 @@ def create_dataset_from_archive_url(
 
     exist = os.path.exists(os.path.join(path, 'facades'))
     if not exist:
-        torchvision.datasets.utils.download_and_extract_archive(url, download_root=path)
+        download_and_extract_archive(url, path)
 
     dataset = collections.OrderedDict()
     assert split_train_name in split_names, 'no training split!'

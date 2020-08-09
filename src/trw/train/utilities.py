@@ -332,8 +332,8 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
         Returns:
             a dictionary of torch.Tensor
         """
-    assert isinstance(batches, collections.Sequence), 'must be a list of dictionary!'
-    assert isinstance(batches[0], collections.Mapping), 'must be a list of dictionary!'
+    assert isinstance(batches, collections.Sequence), f'must be a list of dictionary! Got={type(batches)}'
+    assert isinstance(batches[0], collections.Mapping), f'must be a list of dictionary! Got={type(batches[0])}, str={str(batches[0])}'
 
     d = collections.OrderedDict()
     for key in batches[0]:

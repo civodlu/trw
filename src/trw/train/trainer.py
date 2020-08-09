@@ -267,6 +267,9 @@ def train_loop(
                 optimizer.zero_grad()
 
             outputs = model(batch)
+            if outputs is None:
+                # skip this batch
+                continue
 
             assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
             loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
@@ -349,6 +352,9 @@ def eval_loop(
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
             with torch.no_grad():  # do not keep track of the gradient as we are just evaluating
                 outputs = model(batch)
+                if outputs is None:
+                    # skip this batch
+                    continue
                 loss_terms = prepare_loss_terms(outputs, batch, is_training=False)
                 loss = loss_fn(dataset_name, batch, loss_terms)
                 loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}

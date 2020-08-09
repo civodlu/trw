@@ -2,6 +2,7 @@ import trw
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+from trw.train.outputs_trw import OutputClassification2
 
 
 class Net(nn.Module):
@@ -27,7 +28,7 @@ class Net(nn.Module):
         # here we create a softmax output that will use
         # the `targets` feature as classification target
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': OutputClassification2(x, batch['targets'])
         }
 
 

@@ -1,4 +1,4 @@
-pillow<=6.2
+pillow
 matplotlib
 numpy
 scikit-learn
@@ -7,5 +7,5 @@ pandas
 tensorboardX
 tensorboard
 onnx
-bokeh
+bokeh >= 2.1
 scipy

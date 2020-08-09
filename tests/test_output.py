@@ -209,7 +209,7 @@ class TestOutput(TestCase):
         o1 = np.asarray([
                 [0, 0, 1],
                 [1, 1, 1],
-            ], dtype=int)
+            ], dtype=np.int64)
 
         i2 = np.asarray([
             [
@@ -224,7 +224,7 @@ class TestOutput(TestCase):
         o2 = np.asarray([
             [1, 1, 1],
             [0, 1, 1],
-        ], dtype=int)
+        ], dtype=np.int64)
 
         inputs = torch.from_numpy(np.asarray([i1, i2]))
         outputs = torch.from_numpy(np.asarray([o1, o2]))

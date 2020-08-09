@@ -9,9 +9,10 @@ import unicodedata
 import string
 
 import torch
-from torchvision.datasets.utils import download_and_extract_archive
 
 import trw.train
+from .utils import download_and_extract_archive
+
 
 def find_files(root):
     return glob.glob(os.path.join(root, 'data/names/*.txt'))

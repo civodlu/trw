@@ -16,3 +16,4 @@ from .autoencoder_convolutional_variational_conditional import AutoencoderConvol
 from .sub_tensor import SubTensor
 from .gan_conditional import GanConditional
 from .unet_base import UNetBase
+from .gan_cycle import CycleGan
