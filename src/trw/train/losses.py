@@ -11,6 +11,8 @@ def one_hot(targets, num_classes, dtype=torch.float32):
 
     Support target as N-dimensional data (e.g., 3D segmentation map).
 
+    Equivalent to torch.nn.functional.one_hot for backward compatibility with pytorch 1.0
+
     Args:
         num_classes: the total number of classes
         targets: a N-dimensional integral tensor (e.g., 1D for classification, 2D for 2D segmentation map...)
@@ -234,7 +236,7 @@ class LossBinaryF1(nn.Module):
                                                             'target: must have W x d0 x ... x dn shape'
         assert outputs.shape[1] == 2, 'only for binary classification!'
 
-        y_true = F.one_hot(targets, 2).type(torch.float32)
+        y_true = one_hot(targets, 2).type(torch.float32)
         y_pred = F.softmax(outputs, dim=1)
 
         tp = (y_true * y_pred).sum(dim=0).type(torch.float32)

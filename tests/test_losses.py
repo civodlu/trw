@@ -465,13 +465,13 @@ class TestLosses(TestCase):
         for exp in range(100):
             results = []
             for n in range(200):
-                r = np.random.uniform(0, 1, size=[nb_samples])
-                output = np.zeros([nb_samples, 2], dtype=np.float)
+                r = np.random.uniform(0, 1, size=[nb_samples]).astype(np.float32)
+                output = np.zeros([nb_samples, 2], dtype=np.float32)
                 output[:, 0] = r
                 output[:, 1] = 1 - r
 
                 output_values = torch.from_numpy(output).type(torch.float32)
-                truth_values = torch.from_numpy(np.random.uniform(0, 1, size=[nb_samples]) >= 0.7).type(torch.long)
+                truth_values = torch.from_numpy((np.random.uniform(0, 1, size=[nb_samples]) >= 0.7).astype(np.int64))
 
                 loss = trw.train.LossBinaryF1()
                 surrogate_f1 = loss(output_values, truth_values)
@@ -494,8 +494,8 @@ class TestLosses(TestCase):
     def test_mse_packed(self):
         metric = trw.train.LossMsePacked()
 
-        targets = torch.randint(0, 3, [10, 5, 6])
-        outputs = torch.randint(0, 1, [10, 3, 5, 6])
+        targets = torch.randint(0, 3, [10, 5, 6], dtype=torch.long)
+        outputs = torch.randint(0, 1, [10, 3, 5, 6], dtype=torch.float32)
         losses = metric(outputs, targets)
 
         expected_loss = (trw.train.one_hot(targets, 3) - outputs) ** 2
