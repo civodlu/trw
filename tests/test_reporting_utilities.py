@@ -1,3 +1,6 @@
+import trw.utils
+
+
 import trw
 from unittest import TestCase
 import torch.nn as nn
@@ -26,7 +29,7 @@ class Root(nn.Module):
 class TestReportingUtilities(TestCase):
     def test_hierarchical_name(self):
         model = Root()
-        d = trw.reporting.collect_hierarchical_module_name('Root', model)
+        d = trw.utils.collect_hierarchical_module_name('Root', model)
         assert d[model.sub.conv1] == 'Root/Sub1_0/Conv2d_0'
         assert d[model.sub.conv2] == 'Root/Sub1_0/Conv2d_1'
         assert d[model.sub.sub2.linear] == 'Root/Sub1_0/Sub2_2/Linear_0'
@@ -36,7 +39,7 @@ class TestReportingUtilities(TestCase):
 
     def test_hierarchical_parameter(self):
         model = Root()
-        d = trw.reporting.collect_hierarchical_parameter_name('Root', model, with_grad_only=True)
+        d = trw.utils.collect_hierarchical_parameter_name('Root', model, with_grad_only=True)
 
         module_d = dict(model.sub.conv1.named_parameters(recurse=False))
         assert d[module_d['weight']] == 'Root/Sub1_0/Conv2d_0/weight'

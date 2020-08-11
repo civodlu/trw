@@ -4,6 +4,8 @@ import torch
 from unittest import TestCase
 import collections
 
+import trw.utils
+
 
 def make_data(size):
     d = collections.OrderedDict()
@@ -20,7 +22,7 @@ class TestSequenceReBatch(TestCase):
         total_samples = 0
         sequence = trw.train.SequenceArray(d, sampler=trw.train.SamplerSequential(batch_size=10)).rebatch(20)
         for batch_id, batch in enumerate(sequence):
-            nb_samples = trw.train.len_batch(batch)
+            nb_samples = trw.utils.len_batch(batch)
             nb_batches += 1
             total_samples += nb_samples
             self.assertTrue(nb_samples == 20)
@@ -40,7 +42,7 @@ class TestSequenceReBatch(TestCase):
             rebatch(20, discard_batch_not_full=True)
 
         for batch_id, batch in enumerate(sequence):
-            nb_samples = trw.train.len_batch(batch)
+            nb_samples = trw.utils.len_batch(batch)
             nb_batches += 1
             total_samples += nb_samples
             self.assertTrue(nb_samples == 20)
@@ -60,7 +62,7 @@ class TestSequenceReBatch(TestCase):
             rebatch(10, discard_batch_not_full=True)
 
         for batch_id, batch in enumerate(sequence):
-            nb_samples = trw.train.len_batch(batch)
+            nb_samples = trw.utils.len_batch(batch)
             nb_batches += 1
             total_samples += nb_samples
             self.assertTrue(nb_samples == 10)
@@ -80,7 +82,7 @@ class TestSequenceReBatch(TestCase):
                 rebatch(10, discard_batch_not_full=False)
 
         for batch_id, batch in enumerate(sequence):
-            nb_samples = trw.train.len_batch(batch)
+            nb_samples = trw.utils.len_batch(batch)
             nb_batches += 1
             total_samples += nb_samples
             if batch_id == 8:
@@ -103,7 +105,7 @@ class TestSequenceReBatch(TestCase):
                 rebatch(10, discard_batch_not_full=False)
 
         for batch_id, batch in enumerate(sequence):
-            nb_samples = trw.train.len_batch(batch)
+            nb_samples = trw.utils.len_batch(batch)
             nb_batches += 1
             total_samples += nb_samples
             if batch_id == 8:

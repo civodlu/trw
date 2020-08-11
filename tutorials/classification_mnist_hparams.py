@@ -1,3 +1,5 @@
+import trw.utils
+
 import trw
 import os
 
@@ -37,7 +39,7 @@ def evaluate_hparams(hparams):
         model_fn=lambda options: create_net(hparams),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=learning_rate))
     
-    hparam_loss = trw.train.to_value(results['history'][-1]['mnist']['test']['overall_loss']['loss'])
+    hparam_loss = trw.utils.to_value(results['history'][-1]['mnist']['test']['overall_loss']['loss'])
     hparam_infos = results['history']
     return hparam_loss, hparam_infos
     

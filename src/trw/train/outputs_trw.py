@@ -2,6 +2,8 @@ import torch
 import functools
 import collections
 import torch.nn as nn
+import trw
+import trw.utils
 from trw.train import metrics
 from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
 from trw.train import losses
@@ -39,7 +41,7 @@ def dict_torch_values_to_numpy(d):
 
     for name, value in d.items():
         if isinstance(value, torch.Tensor):
-            d[name] = utilities.to_value(value)
+            d[name] = trw.utils.to_value(value)
 
 
 class Output:
@@ -141,7 +143,7 @@ class OutputEmbedding(Output):
         # do not keep track of GPU torch.Tensor, specially for large embeddings.
         # ``clean_loss_term_each_batch`` may be ``False``, so the output
         # would never be cleaned up.
-        self.output = utilities.to_value(self.output)
+        self.output = trw.utils.to_value(self.output)
         if self.functor is not None:
             self.output = self.functor(self.output)
 
@@ -278,7 +280,7 @@ class OutputSegmentation(Output):
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth, per_voxel_weight=per_voxel_weight)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+        assert trw.utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
 
         # keep these as torch variable since metrics may be slow to calculate with numpy (e.g., dice)
         if (is_training and not self.collect_only_non_training_output) or not is_training:
@@ -304,7 +306,7 @@ class OutputSegmentation(Output):
             weights = torch.ones_like(losses)
             
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -398,7 +400,7 @@ class OutputClassification(Output):
             losses = flatten(losses).mean(dim=1)
 
         assert len(losses.shape) == 1, 'loss must be a 1D Tensor'
-        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert trw.utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
@@ -409,7 +411,7 @@ class OutputClassification(Output):
                 loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # do NOT keep the original output else memory will be an issue
         del self.output
@@ -526,7 +528,7 @@ class OutputClassification2(Output):
             # average the per-sample loss
             weighted_losses = flatten(weighted_losses).mean(dim=1)
 
-        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert trw.utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
@@ -541,7 +543,7 @@ class OutputClassification2(Output):
                 loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # TODO label smoothing
         loss_term['losses'] = weighted_losses
@@ -619,7 +621,7 @@ class OutputRegression(Output):
         loss_term = {}
         losses = self.criterion_fn()(self.output, truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert utilities.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert trw.utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
             # we may not want to collect any outputs or training outputs to save some time
             if not self.collect_only_non_training_output or not is_training:
@@ -642,7 +644,7 @@ class OutputRegression(Output):
             weights = torch.ones_like(losses)
             
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -681,7 +683,7 @@ class OutputTriplets(Output):
         loss_term = collections.OrderedDict()
         losses = self.criterion_fn()(self.output, self.positive_samples, self.negative_samples)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert utilities.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
+        assert trw.utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
 
         loss_term['output_raw'] = self.output
 
@@ -705,7 +707,7 @@ class OutputTriplets(Output):
             weights = torch.ones_like(losses)
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # weight the loss of each sample by the corresponding weight
         weighted_losses = weights * losses
@@ -745,7 +747,7 @@ class OutputLoss(Output):
         }
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = utilities.to_value(batch[self.sample_uid_name])
+            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
         # do NOT keep the original output else memory will be an issue
         del self.output

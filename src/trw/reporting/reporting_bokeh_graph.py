@@ -5,7 +5,7 @@ from bokeh.layouts import column, row, gridplot
 from bokeh.models import Panel, CheckboxGroup, PreText, RadioGroup, ColumnDataSource, HoverTool
 from bokeh.palettes import Category20
 from bokeh.plotting import figure
-from trw.reporting import safe_lookup, len_batch, get_batch_n
+from trw.utils import get_batch_n, safe_lookup, len_batch
 from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.data_category import DataCategory
 import numpy as np

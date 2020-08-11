@@ -4,7 +4,7 @@ import itertools
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from trw.reporting import len_batch
+from trw.utils import len_batch
 from trw.train import OutputEmbedding, OutputClassification, LossMsePacked, get_device
 from trw.train.utilities import prepare_loss_terms
 
@@ -636,7 +636,10 @@ class Gan(nn.Module):
         nb_samples = len_batch(batch)
         latent = self._generate_latent(nb_samples)
 
-        images_fake, generator_outputs = self.generator(batch, latent)
+        o = self.generator(batch, latent)
+        assert isinstance(o, tuple) and len(o) == 2, 'must return a tuple (torch.Tensor, dict of outputs)'
+        images_fake, generator_outputs = o
+        assert isinstance(images_fake, torch.Tensor), 'must be a torch.Tensor!'
         images_real = self.real_image_from_batch_fn(batch)
 
         if batch['split_name'] != self.train_split_name:

@@ -1,4 +1,6 @@
 import numpy as np
+import trw
+import trw.utils
 from trw.train import utilities
 from sklearn import metrics
 from trw.train import losses
@@ -42,7 +44,7 @@ class MetricLoss(Metric):
     Extract the loss from the outputs
     """
     def __call__(self, outputs):
-        loss = utilities.to_value(outputs.get('loss'))
+        loss = trw.utils.to_value(outputs.get('loss'))
         if loss is not None:
             return {'loss': float(loss)}
         return None
@@ -61,8 +63,8 @@ class MetricClassificationBinaryAUC(Metric):
     For this, the output needs to provide an ``output_raw`` of shape [N, 2] (i.e., binary classification).
     """
     def __call__(self, outputs):
-        truth = utilities.to_value(outputs.get('output_truth'))
-        found = utilities.to_value(outputs.get('output_raw'))
+        truth = trw.utils.to_value(outputs.get('output_truth'))
+        found = trw.utils.to_value(outputs.get('output_raw'))
         if truth is None or found is None:
             # data is missing
             return None
@@ -96,8 +98,8 @@ class MetricClassificationError(Metric):
     Calculate the ``1 - accuracy`` using the `output_truth` and `output`
     """
     def __call__(self, outputs):
-        truth = utilities.to_value(outputs.get('output_truth'))
-        found = utilities.to_value(outputs.get('output'))
+        truth = trw.utils.to_value(outputs.get('output_truth'))
+        found = trw.utils.to_value(outputs.get('output'))
         if truth is not None and found is not None:
             return collections.OrderedDict([
                 ('nb_trues', np.sum(found == truth)),
@@ -133,7 +135,7 @@ class MetricSegmentationDice(Metric):
 
         assert len(found.shape) == len(truth.shape) + 1, f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
         with torch.no_grad():
-            dice_by_class = utilities.to_value(self.dice_fn(found, truth))
+            dice_by_class = trw.utils.to_value(self.dice_fn(found, truth))
 
         return {
             'dice_by_class': dice_by_class
@@ -170,13 +172,13 @@ class MetricClassificationF1(Metric):
         self.max_classes = 0
 
     def __call__(self, outputs):
-        output_raw = utilities.to_value(outputs.get('output_raw'))
+        output_raw = trw.utils.to_value(outputs.get('output_raw'))
         if output_raw is None:
             return None
         if len(output_raw.shape) != 2:
             return None
 
-        truth = utilities.to_value(outputs.get('output_truth'))
+        truth = trw.utils.to_value(outputs.get('output_truth'))
         if truth is None:
             return None
 
@@ -218,8 +220,8 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
         if len(output_raw.shape) != 2 or output_raw.shape[1] != 2:
             return None
 
-        truth = utilities.to_value(outputs.get('output_truth'))
-        found = utilities.to_value(outputs.get('output'))
+        truth = trw.utils.to_value(outputs.get('output_truth'))
+        found = trw.utils.to_value(outputs.get('output'))
         if truth is not None and found is not None:
             cm = metrics.confusion_matrix(y_pred=found, y_true=truth)
             if len(cm) == 2:

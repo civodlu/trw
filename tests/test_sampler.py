@@ -1,7 +1,12 @@
 from unittest import TestCase
+
+import trw
 import trw.train
 import numpy as np
 import collections
+
+import trw.utils
+
 
 
 def function_to_run(batch):
@@ -192,10 +197,10 @@ class TestSampler(TestCase):
 
         for epoch in range(nb_epochs):
             for batch in sequence:
-                nb_batch_samples = trw.train.len_batch(batch)
+                nb_batch_samples = trw.utils.len_batch(batch)
                 for n in range(nb_batch_samples):
                     nb_samples += 1
-                    uid = int(trw.train.to_value(batch[trw.train.default_sample_uid_name][n]))
+                    uid = int(trw.utils.to_value(batch[trw.train.default_sample_uid_name][n]))
                     frequencies[uid] += 1
 
         expected_sampling = nb_samples / nb_indices

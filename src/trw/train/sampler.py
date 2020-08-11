@@ -1,3 +1,5 @@
+import trw
+import trw.utils
 from trw.train import utilities
 import torch
 import collections
@@ -63,9 +65,9 @@ class SamplerSequential(Sampler):
 
     def __iter__(self):
         if self.batch_size == 1:
-            return iter(range(utilities.len_batch(self.data_source)))
+            return iter(range(trw.utils.len_batch(self.data_source)))
         else:
-            return _SamplerSequentialIter(utilities.len_batch(self.data_source), self.batch_size)
+            return _SamplerSequentialIter(trw.utils.len_batch(self.data_source), self.batch_size)
 
 
 class SamplerRandom(Sampler):
@@ -100,7 +102,7 @@ class SamplerRandom(Sampler):
         self.indices = None
         self.last_index = 0
 
-        self.num_samples = utilities.len_batch(self.data_source)
+        self.num_samples = trw.utils.len_batch(self.data_source)
         if not self.replacement and self.nb_samples_to_generate is None:
             self.nb_samples_to_generate = self.num_samples
         
@@ -172,9 +174,9 @@ class SamplerClassResampling(Sampler):
         assert self.class_name in data_source, 'can\'t find {} in data!'.format(self.class_name)
         self.data_source = data_source
 
-        data_source_samples = utilities.len_batch(data_source)
+        data_source_samples = trw.utils.len_batch(data_source)
 
-        classes = utilities.to_value(data_source[self.class_name])  # we want numpy values here!
+        classes = trw.utils.to_value(data_source[self.class_name])  # we want numpy values here!
         assert len(classes.shape) == 1, 'must be a 1D vector representing a class'
         if self.samples_index_by_classes is None or \
            not self.reuse_class_frequencies_across_epochs or \

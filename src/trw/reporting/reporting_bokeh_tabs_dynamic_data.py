@@ -8,7 +8,7 @@ from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.normalize_data import normalize_data
 from trw.reporting.table_sqlite import get_table_data, get_table_number_of_rows, get_tables_name_and_role, table_create, \
     get_metadata_name, table_insert
-from trw.reporting import safe_lookup
+from trw.utils import safe_lookup
 
 logger = logging.getLogger(__name__)
 

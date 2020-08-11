@@ -1,9 +1,12 @@
 from unittest import TestCase
+
+import trw
 import trw.train
 import numpy as np
 import torch
 import functools
 import torch.nn as nn
+import trw.utils
 
 
 class TestOutput(TestCase):
@@ -69,7 +72,7 @@ class TestOutput(TestCase):
         self.assertTrue(loss < 1e-6)
 
         assert r.get('output') is not None
-        self.assertTrue((trw.train.to_value(r['output']) == [1, 0]).all())
+        self.assertTrue((trw.utils.to_value(r['output']) == [1, 0]).all())
 
     def test_classification_weight(self):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
@@ -99,8 +102,8 @@ class TestOutput(TestCase):
             'weights': torch.ones(10, dtype=torch.float32)
         }
         loss_term = o.evaluate_batch(batch, is_training=False)
-        assert trw.train.to_value(loss_term['loss']) < 1e-5
-        assert (trw.train.to_value(loss_term['output']) == 1).all()
+        assert trw.utils.to_value(loss_term['loss']) < 1e-5
+        assert (trw.utils.to_value(loss_term['output']) == 1).all()
 
     def test_output_segmentation_weight(self):
         """

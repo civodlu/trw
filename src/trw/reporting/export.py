@@ -2,8 +2,9 @@ import numbers
 
 import collections
 import torch
+import trw
+import trw.utils
 
-from trw.reporting import utilities
 import numpy as np
 import os
 
@@ -85,7 +86,7 @@ def export_image(image, path):
 
 
 def export_as_image(batch, feature_name, name, sample_id, export_root, feature_attributes):
-    samples = utilities.to_value(batch[feature_name])
+    samples = trw.utils.to_value(batch[feature_name])
     # an image MUST have a filter component, else we could confuse
     # if as a 2D array that we want to export in a text file
     if not isinstance(samples, list) or not isinstance(samples[sample_id], np.ndarray) or len(samples[sample_id].shape) < 3:
@@ -131,7 +132,7 @@ def export_as_image(batch, feature_name, name, sample_id, export_root, feature_a
 
 
 def export_as_npy(batch, feature_name, name, sample_id, export_root, feature_attributes):
-    samples = utilities.to_value(batch[feature_name])
+    samples = trw.utils.to_value(batch[feature_name])
 
     if isinstance(samples, list) and isinstance(samples[sample_id], np.ndarray):
         sample_shape = samples[sample_id].shape
@@ -162,7 +163,7 @@ def export_as_npy(batch, feature_name, name, sample_id, export_root, feature_att
 
 
 def export_as_text(batch, feature_name, name, sample_id, export_root, feature_attributes):
-    samples = utilities.to_value(batch[feature_name])
+    samples = trw.utils.to_value(batch[feature_name])
     if isinstance(samples, list) and isinstance(
             samples[sample_id],
             (np.ndarray, torch.Tensor, list, collections.Mapping, numbers.Number)):
@@ -197,12 +198,12 @@ def export_sample(
             to make sure the name is unique
     """
     assert isinstance(table_stream, TableStream)
-    batch_size = utilities.len_batch(batch)
+    batch_size = trw.utils.len_batch(batch)
 
     # transform the first dim of numpy arrays as lists
     batch_list = collections.OrderedDict()
     for name, value in batch.items():
-        value = utilities.to_value(value)
+        value = trw.utils.to_value(value)
         if isinstance(value, np.ndarray):
             # remove the first numpy dimension and replace it as a list
             # this is done so that we can replace a numpy array (e.g., image, large array) to
@@ -259,7 +260,7 @@ def export_sample(
                     break
 
         # final batch_export
-        one_sample_batch = utilities.get_batch_n(
+        one_sample_batch = trw.utils.get_batch_n(
             batch_list,
             batch_size,
             [id],

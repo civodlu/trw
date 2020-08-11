@@ -3,6 +3,8 @@ import math
 import functools
 import collections
 
+import trw
+import trw.utils
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
     CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter
@@ -12,7 +14,7 @@ import numpy as np
 from bokeh.transform import transform
 from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.data_category import DataCategory
-from trw.reporting import utilities, safe_lookup
+from trw.utils import safe_lookup
 
 
 class PanelDataSamplesTabular(BokehUi):
@@ -318,7 +320,7 @@ def render_data(
             indices = np.where(np.asarray(scatter_values) == selection_value)
             groups = [(f'group={selection}, ', indices)]
     else:
-        nb_data = utilities.len_batch(data)
+        nb_data = trw.utils.len_batch(data)
         groups = [('', [np.arange(nb_data)])]
 
     # remove very large data, this will be communicated to the client and this is
@@ -362,7 +364,7 @@ def render_data_frame(fig_title, fig_name, options, data_source, data, groups, d
     fig = prepare_new_figure(options, data, data_types)
     layout_children = [row(fig, sizing_mode='stretch_both')]
 
-    nb_data = utilities.len_batch(data)
+    nb_data = trw.utils.len_batch(data)
     fig.title.text = f'{fig_title}Samples selected: {len(groups[0])}'
     fig.renderers.clear()
     fig.yaxis.visible = False

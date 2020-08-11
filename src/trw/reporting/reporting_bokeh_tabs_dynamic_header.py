@@ -5,7 +5,7 @@ from trw.reporting.bokeh_ui import BokehUi
 from trw.reporting.table_sqlite import get_tables_name_and_role
 import json
 
-from trw.reporting.utilities import recursive_dict_update
+from trw.utils import recursive_dict_update
 
 
 class TabsDynamicHeader(BokehUi):

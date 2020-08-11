@@ -4,8 +4,10 @@ import os
 
 import torch
 import numpy as np
+import trw
+import trw.utils
 from trw import reporting
-from trw.reporting import collect_hierarchical_module_name
+from trw.utils import collect_hierarchical_module_name
 from trw.reporting.table_sqlite import table_truncate
 from trw.train import create_or_recreate_folder, callback, find_default_dataset_and_split_names, utilities
 from trw.train.utilities import update_json_config
@@ -94,7 +96,7 @@ def model_summary_base(model, batch):
 
     # assume 4 bytes/number (float on cuda)
     total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
-    total_params_size = abs(utilities.to_value(total_params) * 4. / (1024 ** 2.))
+    total_params_size = abs(trw.utils.to_value(total_params) * 4. / (1024 ** 2.))
     return summary, total_output_size, total_params_size, total_params, trainable_params
 
 

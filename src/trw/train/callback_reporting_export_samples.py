@@ -3,9 +3,11 @@ import functools
 import logging
 
 import torch
+import trw
+import trw.utils
 from trw import reporting
+from trw.utils import to_value
 from trw.layers import flatten
-from trw.reporting import to_value
 from trw.reporting.table_sqlite import table_drop, table_truncate
 from trw.train import callback
 from trw.train import trainer
@@ -55,7 +57,7 @@ def expand_classification_mapping(batch, loss_term_name, loss_term, classificati
 
 
 def select_all(batch, loss_terms):
-    nb_samples = utilities.len_batch(batch)
+    nb_samples = trw.utils.len_batch(batch)
     return range(nb_samples)
 
 
@@ -105,7 +107,7 @@ def callbacks_per_loss_term(
     batch['epoch'] = epoch
 
     # calculate how many samples to export
-    nb_batch_samples = utilities.len_batch(batch)
+    nb_batch_samples = trw.utils.len_batch(batch)
     nb_samples_exported = len(exported_cases)
     nb_samples_to_export = min(max_samples - nb_samples_exported, nb_batch_samples)
     if nb_samples_to_export <= 0:

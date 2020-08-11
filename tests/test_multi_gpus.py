@@ -1,6 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
+import trw.utils
+
 import trw
 from unittest import TestCase
 import functools
@@ -94,7 +96,7 @@ class TestMultiGpus(TestCase):
             model_fn=create_model_classic,
             optimizers_fn=optimizer_fn)
 
-        assert trw.train.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
+        assert trw.utils.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
 
     def test_simplified_layers(self):
         # here just make sure the use of multiple GPUs do not create errors
@@ -120,7 +122,7 @@ class TestMultiGpus(TestCase):
             model_fn=create_model_simplified,
             optimizers_fn=optimizer_fn)
 
-        assert trw.train.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
+        assert trw.utils.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
 
     def test_simplified_2(self):
         nb_cuda_devices = torch.cuda.device_count()

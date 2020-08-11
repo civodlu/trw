@@ -1,9 +1,15 @@
+import collections
+
 import trw.train
 import trw.datasets
 import torch
 import torch.nn as nn
 import functools
-from trw.train.losses import one_hot
+
+from trw.layers.gan_conditional import Gan
+from trw.train import OutputEmbedding, OutputLoss
+from trw.train.losses import one_hot, LossMsePacked
+from trw.train.outputs_trw import OutputClassification2
 
 
 class Generator(nn.Module):
@@ -24,13 +30,21 @@ class Generator(nn.Module):
             target_shape=[28, 28]
         )
 
-    def forward(self, latent, digits):
+    def forward(self, batch, latent):
+        digits = batch['targets']
+        real = batch['images']
         assert len(digits.shape) == 1
 
+        # introduce the target as one hot encoding input to the generator
         digits_one_hot = one_hot(digits, self.nb_digits).unsqueeze(2).unsqueeze(3)
+        latent = latent.unsqueeze(2).unsqueeze(3)
+
         full_latent = torch.cat((digits_one_hot, latent), dim=1)
-        x = self.convs_t(full_latent)
-        return x
+        o = self.convs_t(full_latent)
+        return o, collections.OrderedDict([
+            ('image', OutputEmbedding(o)),
+            #('l1', OutputLoss(0.5 * torch.nn.L1Loss()(o, real)))  # on average, the generated & real should match
+        ])
 
 
 class Discriminator(nn.Module):
@@ -50,12 +64,22 @@ class Discriminator(nn.Module):
             last_layer_is_output=True
         )
 
-    def forward(self, input, digits):
+    def forward(self, batch, image, is_real):
+        digits = batch['targets']
+
+        # introduce the target as one hot encoding input to the discriminator
         input_class = torch.ones(
-            [digits.shape[0], self.nb_digits, input.shape[2], input.shape[3]],
-            device=input.device) * one_hot(digits, 10).unsqueeze(2).unsqueeze(3)
-        x = self.convs(torch.cat((input, input_class), dim=1))
-        return x
+            [image.shape[0], self.nb_digits, image.shape[2], image.shape[3]],
+            device=image.device) * one_hot(digits, 10).unsqueeze(2).unsqueeze(3)
+        o = self.convs(torch.cat((image, input_class), dim=1))
+        o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
+
+        return {
+            'classification': OutputClassification2(
+                o, o_expected,
+                criterion_fn=LossMsePacked,  # LSGan loss function
+            )
+        }
 
 
 def get_image(batch):
@@ -74,16 +98,13 @@ def create_model(options):
 
     optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
 
-    model = trw.layers.GanConditional(
+    model = Gan(
         discriminator=discriminator,
         generator=generator,
         latent_size=latent_size,
         optimizer_discriminator_fn=optimizer_fn,
         optimizer_generator_fn=optimizer_fn,
         real_image_from_batch_fn=get_image,
-        observed_discriminator_fn=get_target,
-        observed_generator_fn=get_target,
-        l1_lambda=0.5
     )
 
     return model
@@ -91,7 +112,11 @@ def create_model(options):
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackReportingExportSamples(split_exclusions=['valid', 'test']),
+        trw.train.CallbackReportingExportSamples(
+            max_samples=200,
+            reporting_scatter_x='targets',
+            reporting_scatter_y='split_name',
+            reporting_display_with='term_gen_image_output'),
         trw.train.CallbackEpochSummary(),
         trw.train.CallbackReportingRecordHistory(),
     ]
@@ -104,7 +129,7 @@ def pre_training_callbacks():
     ]
 
 
-options = trw.train.create_default_options(num_epochs=10)
+options = trw.train.create_default_options(num_epochs=15)
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,
     callbacks_pre_training_fn=pre_training_callbacks

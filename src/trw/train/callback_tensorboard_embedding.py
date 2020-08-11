@@ -1,3 +1,5 @@
+import trw
+import trw.utils
 from trw.train import callback_tensorboard
 from trw.train import utilities
 from trw.train import trainer
@@ -198,14 +200,14 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
                 # else a global feature (e.g., learning rate, dropout rate...)
                 full_name = prefix + feature_name
                 if is_batch_vector(feature_values, batch_size):
-                    embedding[full_name].append(utilities.to_value(feature_values))
+                    embedding[full_name].append(trw.utils.to_value(feature_values))
 
         def collect_embedding(dataset_name, split_name, batch, loss_terms, embedding, embedding_name, image_name):
-            batch_size = utilities.len_batch(batch)
+            batch_size = trw.utils.len_batch(batch)
 
             embedding_values = loss_terms.get(embedding_name)
             if embedding_values is not None:
-                embedding['output'].append(utilities.to_value(embedding_values['output']))
+                embedding['output'].append(trw.utils.to_value(embedding_values['output']))
 
             for output_name, output in loss_terms.items():
                 if output_name == embedding_name:
@@ -216,7 +218,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
             images = batch.get(image_name)
             if images is not None:
                 images = get_as_image(images)
-                embedding['images'].append(utilities.to_value(images))
+                embedding['images'].append(trw.utils.to_value(images))
 
             fill_embedding(batch_size, batch)
 

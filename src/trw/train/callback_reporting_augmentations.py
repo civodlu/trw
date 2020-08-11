@@ -1,4 +1,6 @@
 import torch
+import trw
+import trw.utils
 from trw import reporting
 from trw.reporting.table_sqlite import table_truncate
 from trw.train import callback, create_or_recreate_folder
@@ -98,8 +100,8 @@ class CallbackReportingAugmentations(callback.Callback):
             for augmentation_id in range(self.nb_augmentation):
                 nb_samples_recorded = 0
                 for batch in split_subsampled:
-                    batch = {name: utilities.to_value(values) for name, values in batch.items()}
-                    uids = utilities.to_value(batch.get(self.uid_name))
+                    batch = {name: trw.utils.to_value(values) for name, values in batch.items()}
+                    uids = trw.utils.to_value(batch.get(self.uid_name))
                     if uids is None:
                         logger.error('no UID found in the dataset! Can\'t link the augmentations')
                         return

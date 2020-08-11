@@ -7,6 +7,8 @@ import numpy as np
 import math
 import collections
 
+import trw
+import trw.utils
 from trw.train import callback
 from trw.train import trainer
 from trw.train import utilities
@@ -30,7 +32,7 @@ class CallbackStopEpoch:
     def __call__(self, dataset_name, split_name, batch):
         if self.current_samples >= self.nb_samples:
             raise StopIteration()
-        nb_batch_samples = utilities.len_batch(batch)
+        nb_batch_samples = trw.utils.len_batch(batch)
         self.current_samples += nb_batch_samples
 
 
@@ -276,7 +278,7 @@ class CallbackLearningRateFinder(callback.Callback):
 
             loss = 0.0
             for loss_batch in all_loss_terms:
-                current_loss = utilities.to_value(loss_batch['overall_loss']['loss'])
+                current_loss = trw.utils.to_value(loss_batch['overall_loss']['loss'])
                 loss += current_loss
             loss /= len(all_loss_terms)
 

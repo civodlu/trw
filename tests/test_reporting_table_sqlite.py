@@ -6,7 +6,8 @@ import trw
 from unittest import TestCase
 import sqlite3
 import numpy as np
-from trw.reporting import TableStream, export_sample, len_batch
+from trw.reporting import TableStream, export_sample
+from trw.utils import len_batch
 from trw.reporting.table_sqlite import get_tables_name_and_role, get_metadata_name, get_table_data
 
 

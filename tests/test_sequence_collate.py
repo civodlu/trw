@@ -1,7 +1,10 @@
 from unittest import TestCase
+
+import trw
 import trw.train
 import numpy as np
 import torch
+import trw.utils
 
 
 def make_list_dicts(batch):
@@ -29,4 +32,4 @@ class TestSequenceCollate(TestCase):
                                                     function_to_run=make_list_dicts, min_reservoir_samples=10).collate()
 
         for batch in sequence:
-            assert trw.train.len_batch(batch) == 10
+            assert trw.utils.len_batch(batch) == 10

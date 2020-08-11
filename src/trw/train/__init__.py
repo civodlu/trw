@@ -1,9 +1,10 @@
 from .options import create_default_options
-from .utilities import len_batch, create_or_recreate_folder, to_value, set_optimizer_learning_rate, \
+from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     default_collate_fn, collate_dicts, collate_list_of_dicts, time_it, CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
     get_classification_mapping, get_classification_mappings, safe_lookup, flatten_nested_dictionaries, clamp_n, \
     make_triplet_indices, make_pair_indices, make_unique_colors, make_unique_colors_f, sub_tensor
+from trw.utils import to_value, len_batch
 
 from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, \
     OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss

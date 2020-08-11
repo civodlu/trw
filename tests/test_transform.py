@@ -388,12 +388,12 @@ class TestTransform(TestCase):
 
     def test_transform_compose(self):
         batch = {
-            'images': torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.int64)
+            'images': torch.randint(high=42, size=[10, 3, 5, 6], dtype=torch.int64).float()
         }
 
         transforms = [
-            trw.transforms.TransformNormalize(mean=[np.int64(10), np.int64(10), np.int64(10)], std=[np.int64(1), np.int64(1), np.int64(1)]),
-            trw.transforms.TransformNormalize(mean=[np.int64(100), np.int64(100), np.int64(100)], std=[np.int64(1), np.int64(1), np.int64(1)]),
+            trw.transforms.TransformNormalize(mean=[np.float32(10), np.float32(10), np.float32(10)], std=[np.float32(1), np.float32(1), np.float32(1)]),
+            trw.transforms.TransformNormalize(mean=[np.float32(100), np.float32(100), np.float32(100)], std=[np.float32(1), np.float32(1), np.float32(1)]),
         ]
 
         transformer = trw.transforms.TransformCompose(transforms)

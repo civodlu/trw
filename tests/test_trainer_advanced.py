@@ -1,6 +1,8 @@
 from unittest import TestCase
 import torch.nn as nn
 import torch
+import trw.utils
+
 import trw
 import collections
 import numpy as np
@@ -33,8 +35,8 @@ class ComposedModel(nn.ModuleDict):
         x_1 = self['dataset_1'](batch)
         x_2 = self['dataset_2'](batch)
 
-        w1 = trw.train.to_value(self['dataset_1'].w)
-        w2 = trw.train.to_value(self['dataset_2'].w)
+        w1 = trw.utils.to_value(self['dataset_1'].w)
+        w2 = trw.utils.to_value(self['dataset_2'].w)
         self.record[dataset_name].append({'w1': w1, 'w2': w2})
 
         o = trw.train.OutputRegression(output=x_1 + x_2, target_name='output')
@@ -117,8 +119,10 @@ class TestTrainerAdvanced(TestCase):
             optimizers_fn=optimizer_fn)
 
         # first make sure the model was trained perfectly
-        loss_1 = float(trw.train.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
-        loss_2 = float(trw.train.to_value(results['history'][-1]['dataset_2']['train']['overall_loss']['loss']))
+        loss_1 = float(
+            trw.utils.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
+        loss_2 = float(
+            trw.utils.to_value(results['history'][-1]['dataset_2']['train']['overall_loss']['loss']))
         assert loss_1 < 1e-3
         assert loss_2 < 1e-3
 
@@ -146,8 +150,8 @@ class TestTrainerAdvanced(TestCase):
         # reload the model and compare the parameters
         device = torch.device('cpu')
         loaded_model, loaded_result = trw.train.Trainer.load_model(path=path, with_result=True, device=device)
-        w_loaded = trw.train.to_value(loaded_model['dataset_1'].w)
-        w = trw.train.to_value(model['dataset_1'].w)
+        w_loaded = trw.utils.to_value(loaded_model['dataset_1'].w)
+        w = trw.utils.to_value(model['dataset_1'].w)
         assert w == w_loaded
 
         r_loaded = loaded_result['outputs']['dataset_1']['train']['regression']
@@ -177,9 +181,9 @@ class TestTrainerAdvanced(TestCase):
 
         print('Done!')
         # first make sure the model was trained perfectly
-        loss = float(trw.train.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
+        loss = float(trw.utils.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
         assert loss < 1e-3
 
         # we expect `model1` to not be trained (w=0)
-        w_1 = trw.train.to_value(final_model.model1.w)[0]
+        w_1 = trw.utils.to_value(final_model.model1.w)[0]
         assert abs(w_1) < 1e-5

@@ -1,7 +1,10 @@
 from unittest import TestCase
+
+import trw
 import trw.train
 import numpy as np
 import torch
+import trw.utils
 
 
 def double_values(item):
@@ -92,7 +95,7 @@ class TestSequenceArray(TestCase):
 
         for batch_index, batch in enumerate(sequence_subsampled):
             # make sure we kept the ordering of the UIDs
-            assert trw.train.len_batch(batch) == 1
+            assert trw.utils.len_batch(batch) == 1
             expected_uids = uids[batch_index]
             assert expected_uids == batch['uids'][0]
             assert expected_uids == batch['list'][0]
@@ -115,7 +118,7 @@ class TestSequenceArray(TestCase):
 
         uids = []
         for batch_index, batch in enumerate(sequence_subsampled):
-            assert trw.train.len_batch(batch) == 1
+            assert trw.utils.len_batch(batch) == 1
             assert batch['uids'][0] == batch['list'][0]
             uids.append(batch['uids'][0])
 
@@ -133,7 +136,7 @@ class TestSequenceArray(TestCase):
         batches = []
         for i in split:
             i = trw.train.default_collate_fn(i, device=None)
-            for n in range(trw.train.len_batch(i)):
+            for n in range(trw.utils.len_batch(i)):
                 self.assertTrue(i['uid'].data.numpy()[n] * 2.0 == i['values'][n])
                 self.assertTrue(np.max(i['uid'].data.numpy()) < 40)
             batches.append(i)

@@ -1,4 +1,6 @@
 import sklearn
+import trw.utils
+
 import trw
 import numpy as np
 import torch
@@ -330,10 +332,10 @@ class TestLosses(TestCase):
         alpha = torch.from_numpy(np.asarray([1.0, 1.0], dtype=np.float32))
 
         loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=10.0)
-        loss_focal = trw.train.to_value(loss_focal_fn(outputs, targets))
+        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets))
         assert len(loss_focal) == len(targets)
 
-        ce_loss = trw.train.to_value(torch.nn.CrossEntropyLoss(reduction='none')(outputs, targets))
+        ce_loss = trw.utils.to_value(torch.nn.CrossEntropyLoss(reduction='none')(outputs, targets))
 
         # rescale the focal loss to have a similar max range
         loss_focal_scaled = max(ce_loss) / max(loss_focal) * loss_focal
@@ -349,7 +351,7 @@ class TestLosses(TestCase):
         outputs = torch.ones([10, 3, 5, 5], dtype=torch.float32)
 
         loss_focal_fn = trw.train.LossFocalMulticlass(gamma=1.0)
-        loss_focal = trw.train.to_value(loss_focal_fn(outputs, targets))
+        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets))
         assert len(loss_focal) == len(targets)
 
     def test_triplet_loss(self):

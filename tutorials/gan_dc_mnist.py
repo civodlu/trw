@@ -22,12 +22,6 @@ def per_epoch_callbacks():
     ]
 
 
-def pre_training_callbacks():
-    return [
-        trw.train.CallbackReportingStartServer(),
-    ]
-
-
 def get_image(batch):
     return 2 * batch['images'] - 1
 

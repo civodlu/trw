@@ -4,6 +4,8 @@ import torch
 from unittest import TestCase
 import collections
 
+import trw.utils
+
 
 def make_sequence(size, batch_size):
     d = collections.OrderedDict()
@@ -27,7 +29,7 @@ class TestSequenceSubBatch(TestCase):
         batches = []
         for batch in sequence:
             batches.append(batch)
-            assert trw.reporting.len_batch(batch) == 5
+            assert trw.utils.len_batch(batch) == 5
         assert len(batches) == (30 // 10) * (10 // 5)
 
         all_batches = trw.train.default_collate_fn(batches, device=None)
@@ -45,10 +47,10 @@ class TestSequenceSubBatch(TestCase):
             batches.append(batch)
         assert len(batches) == 4
 
-        assert trw.train.len_batch(batches[0]) == 10
-        assert trw.train.len_batch(batches[1]) == 5
-        assert trw.train.len_batch(batches[2]) == 10
-        assert trw.train.len_batch(batches[3]) == 5
+        assert trw.utils.len_batch(batches[0]) == 10
+        assert trw.utils.len_batch(batches[1]) == 5
+        assert trw.utils.len_batch(batches[2]) == 10
+        assert trw.utils.len_batch(batches[3]) == 5
 
         all_batches = trw.train.default_collate_fn(batches, device=None)
         assert sequence_source.split['string_list'] == all_batches['string_list']
@@ -64,8 +66,8 @@ class TestSequenceSubBatch(TestCase):
         for batch in sequence:
             batches.append(batch)
         assert len(batches) == 2
-        assert trw.train.len_batch(batches[0]) == 10
-        assert trw.train.len_batch(batches[1]) == 10
+        assert trw.utils.len_batch(batches[0]) == 10
+        assert trw.utils.len_batch(batches[1]) == 10
 
         all_batches = trw.train.default_collate_fn(batches, device=None)
         assert all_batches['torch_array'].numpy().tolist() == np.arange(0, 10).tolist() + np.arange(15, 25).tolist()

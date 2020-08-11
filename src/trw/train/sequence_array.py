@@ -1,5 +1,7 @@
 import warnings
 
+import trw
+import trw.utils
 from trw.train import sequence
 from trw.train import sampler as sampler_trw
 from trw.train import utilities
@@ -37,7 +39,7 @@ class SequenceArray(sequence.Sequence):
 
         # create a unique UID
         if sample_uid_name is not None and sample_uid_name not in split:
-            split[sample_uid_name] = np.asarray(np.arange(utilities.len_batch(split)))
+            split[sample_uid_name] = np.asarray(np.arange(trw.utils.len_batch(split)))
 
     def subsample(self, nb_samples):
         # get random indices
@@ -48,7 +50,7 @@ class SequenceArray(sequence.Sequence):
         indices = next(iter(subsample_sample))
         subsampled_split = SequenceArray.get(
             self.split,
-            utilities.len_batch(self.split),
+            trw.utils.len_batch(self.split),
             indices,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -79,7 +81,7 @@ class SequenceArray(sequence.Sequence):
         # extract the samples
         subsampled_split = SequenceArray.get(
             self.split,
-            utilities.len_batch(self.split),
+            trw.utils.len_batch(self.split),
             indices_to_keep,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -96,7 +98,7 @@ class SequenceArray(sequence.Sequence):
     def get(split, nb_samples, indices, transforms, use_advanced_indexing):
         warnings.warn('deprecated. Use `trw.reporting.get_batch_n`')
 
-        from trw.reporting import get_batch_n
+        from trw.utils import get_batch_n
         return get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing)
 
     def __iter__(self):
@@ -115,7 +117,7 @@ class SequenceIteratorArray(sequence.SequenceIterator):
     def __init__(self, base_sequence, sampler):
         super().__init__()
         self.base_sequence = base_sequence
-        self.nb_samples = utilities.len_batch(self.base_sequence.split)
+        self.nb_samples = trw.utils.len_batch(self.base_sequence.split)
 
         self.sampler = sampler
         self.sampler.initializer(self.base_sequence.split)

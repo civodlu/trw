@@ -1,4 +1,4 @@
-from trw.reporting import safe_lookup
+from trw.utils import safe_lookup
 from trw.train import callback
 from trw.train import trainer
 import os

@@ -1,4 +1,7 @@
 import os
+
+import trw
+import trw.utils
 from trw.train import callback
 from trw.train import trainer
 from trw.train import utilities
@@ -67,7 +70,7 @@ def run_classification_explanation(
         logger.info('sample={}'.format(n))
         batch_n = sequence_array.SequenceArray.get(
             batch,
-            utilities.len_batch(batch),
+            trw.utils.len_batch(batch),
             np.asarray([n]),
             transforms=None,
             use_advanced_indexing=True)
@@ -82,7 +85,7 @@ def run_classification_explanation(
                 outputs = model(batch_n)
                 output = outputs.get(output_name)
                 assert output is not None
-                output_np = utilities.to_value(output.output)[0]
+                output_np = trw.utils.to_value(output.output)[0]
                 max_class_indices = (-output_np).argsort()[0:nb_explanations]
         except Exception as e:
             logger.error('exception, aborted `run_classification_explanation`=', e)
@@ -242,7 +245,7 @@ class CallbackExplainDecision(callback.Callback):
             logger.error('can\'t find a classification output')
             return
 
-        nb_samples = min(self.max_samples, utilities.len_batch(batch))
+        nb_samples = min(self.max_samples, trw.utils.len_batch(batch))
         for algorithm in self.algorithms:
             algorithm_kwargs = {}
             if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:

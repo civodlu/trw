@@ -11,8 +11,6 @@ import datetime
 import traceback as traceback_module
 import io
 
-from trw.reporting.utilities import recursive_dict_update
-
 logger = logging.getLogger(__name__)
 
 
@@ -58,7 +56,7 @@ def log_console(msg):
     print(msg)
 
 
-from trw.reporting import len_batch
+from trw.utils import to_value, recursive_dict_update, len_batch
 
 
 def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
@@ -123,9 +121,6 @@ class time_it:
                 self.log(string)
             return r
         return fn_decorated
-
-
-from trw.reporting import to_value
 
 
 def make_unique_colors():

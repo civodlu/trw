@@ -1,4 +1,6 @@
 from unittest import TestCase
+
+import trw
 import trw.hparams
 import trw.train
 import numpy as np
@@ -7,6 +9,8 @@ import collections
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import trw.utils
+
 import utils
 import numpy as np
 
@@ -149,7 +153,7 @@ class TestParamsOptimizer(TestCase):
                 optimizers_fn=optimizer_fn,
                 run_prefix=prefix)
             loss = output['outputs']['dataset_1']['train']['regression']['loss']
-            return trw.train.to_value(loss), 'no report'
+            return trw.utils.to_value(loss), 'no report'
 
         np.random.seed(0)
         prefix = 'hparams'

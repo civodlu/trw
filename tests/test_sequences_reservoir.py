@@ -1,10 +1,14 @@
 from unittest import TestCase
+
+import trw
 import trw.train
 import numpy as np
 import time
 import collections
 import torch
 import functools
+
+import trw.utils
 
 
 def function_to_run(batch):
@@ -70,15 +74,15 @@ class TestSequenceReservoir(TestCase):
         for i in range(1, nb_epochs):
             batches = []
             for batch in sequence:
-                nb_samples = trw.train.len_batch(batch)
+                nb_samples = trw.utils.len_batch(batch)
                 # we requested a single sample at a time
                 self.assertTrue(nb_samples == 1)
 
-                p = trw.train.to_value(batch['path'])
+                p = trw.utils.to_value(batch['path'])
                 self.assertTrue(p.shape == (1, 2))
                 batches.append(batch)
 
-                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                value = int(trw.utils.to_value(batch['sample_uid'])[0])
                 samples[value] += 1
             self.assertTrue(len(batches) <= max_reservoir_samples)
         time_end = time.time()
@@ -110,8 +114,8 @@ class TestSequenceReservoir(TestCase):
         nb_samples = 0
         values = set()
         for batch in subsampled_sequence:
-            batch_set = set(trw.train.to_value(batch['sample_uid']))
-            nb_samples += trw.train.len_batch(batch)
+            batch_set = set(trw.utils.to_value(batch['sample_uid']))
+            nb_samples += trw.utils.len_batch(batch)
             values = values.union(batch_set)
 
         assert len(values) == 100
@@ -130,7 +134,8 @@ class TestSequenceReservoir(TestCase):
                                                     function_to_run=make_list_dicts, min_reservoir_samples=10).batch(5)
 
         for batch in sequence:
-            assert trw.train.len_batch(batch) == 5 * 10, 'found={}, expected={}'.format(trw.train.len_batch(batch), 5 * 10)
+            assert trw.utils.len_batch(batch) == 5 * 10, 'found={}, expected={}'.format(
+                trw.utils.len_batch(batch), 5 * 10)
 
     def test_fill_reservoir_every_epoch(self):
         """
@@ -200,15 +205,15 @@ class TestSequenceReservoir(TestCase):
             it_0 = iter(sequence)
             it_1 = iter(sequence)
             for batch in it_0:
-                nb_samples = trw.train.len_batch(batch)
+                nb_samples = trw.utils.len_batch(batch)
                 self.assertTrue(nb_samples == 1)
-                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                value = int(trw.utils.to_value(batch['sample_uid'])[0])
                 samples_0[value] += 1
 
             for batch in it_1:
-                nb_samples = trw.train.len_batch(batch)
+                nb_samples = trw.utils.len_batch(batch)
                 self.assertTrue(nb_samples == 1)
-                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                value = int(trw.utils.to_value(batch['sample_uid'])[0])
                 samples_1[value] += 1
 
         expected_counts = nb_epochs / nb_indices * max_reservoir_samples
@@ -238,7 +243,7 @@ class TestSequenceReservoir(TestCase):
         uids = set()
         for epoch in range(10):
             for batch in sequence:
-                value = int(trw.train.to_value(batch['sample_uid'])[0])
+                value = int(trw.utils.to_value(batch['sample_uid'])[0])
                 uids.add(value)
         assert len(uids) == 2
 

@@ -11,6 +11,9 @@ import os
 import pickle
 import time
 import itertools
+
+import trw
+import trw.utils
 from trw.train import outputs_trw
 from trw.train import callback_epoch_summary
 from trw.train import callback_export_classification_report
@@ -281,7 +284,7 @@ def train_loop(
                     loss.backward()
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
-            loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}
+            loss_terms['overall_loss'] = {'loss': float(trw.utils.to_value(loss))}
             
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
@@ -297,7 +300,7 @@ def train_loop(
 
             all_loss_terms.append(loss_terms)
             batch_processing_last = time.perf_counter()
-            nb_samples += utilities.len_batch(batch)
+            nb_samples += trw.utils.len_batch(batch)
 
     except StopIteration:
         pass
@@ -357,7 +360,7 @@ def eval_loop(
                     continue
                 loss_terms = prepare_loss_terms(outputs, batch, is_training=False)
                 loss = loss_fn(dataset_name, batch, loss_terms)
-                loss_terms['overall_loss'] = {'loss': float(utilities.to_value(loss))}
+                loss_terms['overall_loss'] = {'loss': float(trw.utils.to_value(loss))}
                 all_loss_terms.append(loss_terms)
 
                 if callbacks_per_batch_loss_terms is not None:
@@ -378,7 +381,7 @@ def approximate_batch_size_from_loss_terms(all_loss_terms):
     samples within one batch
     """
     for name, values in all_loss_terms[0].items():
-        s = utilities.len_batch(values)
+        s = trw.utils.len_batch(values)
         if s != 0:
             return s * len(all_loss_terms)
     return 0

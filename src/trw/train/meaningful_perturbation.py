@@ -1,6 +1,9 @@
 import logging
 import collections
 import functools
+
+import trw
+import trw.utils
 from trw.train import guided_back_propagation
 from trw.train import outputs_trw as outputs_trw
 from trw.train import utilities
@@ -156,8 +159,8 @@ class MeaningfulPerturbation:
                     target_class_name = output_name
                     break
         output = MeaningfulPerturbation._get_output(target_class_name, outputs, self.model_output_postprocessing)
-        logger.info('original model output={}'.format(utilities.to_value(output)))
-        output_start = utilities.to_value(output)
+        logger.info('original model output={}'.format(trw.utils.to_value(output)))
+        output_start = trw.utils.to_value(output)
 
         if target_class is None:
             target_class = torch.argmax(output, dim=1)
@@ -167,7 +170,7 @@ class MeaningfulPerturbation:
 
         # construct our gradient target
         model_device = utilities.get_device(self.model, batch=inputs)
-        nb_samples = utilities.len_batch(inputs)
+        nb_samples = trw.utils.len_batch(inputs)
         assert nb_samples == 1, 'only a single sample is handled at once! (TODO fix this!)'
 
         masks_by_feature = {}
@@ -227,7 +230,7 @@ class MeaningfulPerturbation:
 
                 if i == 0:
                     # must be collected BEFORE backward!
-                    c_start = utilities.to_value(c)
+                    c_start = trw.utils.to_value(c)
 
                 loss.backward()
                 optimizer.step()
@@ -239,26 +242,26 @@ class MeaningfulPerturbation:
                 if i % 20 == 0:
                     logger.info('iter={}, total_loss={}, l1_loss={}, tv_loss={}, c_loss={}'.format(
                         i,
-                        utilities.to_value(loss),
-                        utilities.to_value(l1),
-                        utilities.to_value(tv),
-                        utilities.to_value(c),
+                        trw.utils.to_value(loss),
+                        trw.utils.to_value(l1),
+                        trw.utils.to_value(tv),
+                        trw.utils.to_value(c),
                     ))
 
                     if self.export_fn is not None:
                         self.export_fn(i, input_name, perturbated_input, upsampled_mask)
 
-            logger.info('class loss start={}, end={}'.format(c_start, utilities.to_value(c)))
-            logger.info('final output={}'.format(utilities.to_value(output)))
+            logger.info('class loss start={}, end={}'.format(c_start, trw.utils.to_value(c)))
+            logger.info('final output={}'.format(trw.utils.to_value(output)))
 
             masks_by_feature[input_name] = {
-                'mask': utilities.to_value(upsampled_mask),
-                'perturbated_input': utilities.to_value(perturbated_input),
-                'smoothed_input': utilities.to_value(blurred_img),
+                'mask': trw.utils.to_value(upsampled_mask),
+                'perturbated_input': trw.utils.to_value(perturbated_input),
+                'smoothed_input': trw.utils.to_value(blurred_img),
                 'loss_c_start': c_start,
-                'loss_c_end': utilities.to_value(c),
+                'loss_c_end': trw.utils.to_value(c),
                 'output_start': output_start,
-                'output_end': utilities.to_value(output),
+                'output_end': trw.utils.to_value(output),
             }
 
         return target_class_name, masks_by_feature

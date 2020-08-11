@@ -1,5 +1,8 @@
 import torch
 import logging
+
+import trw
+import trw.utils
 from trw.train import outputs_trw as outputs_trw
 from trw.train import utilities
 from trw.train import guided_back_propagation
@@ -89,7 +92,7 @@ class IntegratedGradients:
         # construct our gradient target
         model_device = utilities.get_device(self.model, batch=inputs)
         nb_classes = model_output.shape[1]
-        nb_samples = utilities.len_batch(inputs)
+        nb_samples = trw.utils.len_batch(inputs)
 
         if self.use_output_as_target:
             one_hot_output = model_output.clone()
@@ -135,7 +138,7 @@ class IntegratedGradients:
 
         # average the gradients and multiply by input
         for name in list(integrated_gradients.keys()):
-            integrated_gradients[name] = utilities.to_value((inputs[name] - baseline_inputs[name]) * integrated_gradients[name] / self.steps)
+            integrated_gradients[name] = trw.utils.to_value((inputs[name] - baseline_inputs[name]) * integrated_gradients[name] / self.steps)
 
         logger.info('integrated gradient successful!')
         return target_class_name, integrated_gradients

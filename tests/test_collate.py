@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import collections
 
+import trw.utils
+
 
 class TestCollate(TestCase):
     def test_collate_dicts(self):
@@ -46,7 +48,7 @@ class TestCollate(TestCase):
         collated = trw.train.default_collate_fn([batch_1, batch_2], device=None)
 
         self.assertTrue(isinstance(collated, collections.OrderedDict))
-        self.assertTrue(trw.train.len_batch(collated) == 2)
+        self.assertTrue(trw.utils.len_batch(collated) == 2)
         self.assertTrue(isinstance(collated['list'], torch.Tensor))
         self.assertTrue(len(collated['list']) == 2)
         self.assertTrue(isinstance(collated['np'], torch.Tensor))

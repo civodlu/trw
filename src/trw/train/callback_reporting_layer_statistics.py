@@ -7,8 +7,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-from trw.reporting import len_batch, to_value
-from trw.reporting.utilities import collect_hierarchical_module_name, collect_hierarchical_parameter_name
+from trw.utils import collect_hierarchical_module_name, collect_hierarchical_parameter_name, to_value, len_batch
 from trw.train.callback import Callback
 from trw.train.callback_reporting_model_summary import export_table
 from trw.train.utilities import update_json_config, get_device, \

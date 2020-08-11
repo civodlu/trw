@@ -5,7 +5,9 @@ import collections
 import numpy as np
 import torch
 import torch.utils.data
+import trw
 import trw.train
+import trw.utils
 from trw.train import default_pre_training_callbacks
 
 import utils
@@ -146,7 +148,7 @@ class TestTrainer(TestCase):
             optimizers_fn=optimizer_fn,
             eval_every_X_epoch=2)
 
-        coef_found = trw.train.to_value(list(model.parameters())[0])
+        coef_found = trw.utils.to_value(list(model.parameters())[0])
         self.assertAlmostEqual(coef_found, 2.0, delta=1e-3)
 
     def test_model_mode(self):
@@ -249,6 +251,6 @@ class TestTrainer(TestCase):
             optimizers_fn=None,  # no optimizer: it is embedded in the model!
             eval_every_X_epoch=2)
 
-        coef_found = trw.train.to_value(list(model.model.parameters())[0])
+        coef_found = trw.utils.to_value(list(model.model.parameters())[0])
         print(coef_found)
         self.assertAlmostEqual(coef_found, 2.0, delta=1e-3)
