@@ -31,10 +31,10 @@ class TestFilterGaussian(TestCase):
         """
         sigmas = [1]
         for sigma in sigmas:
-            i = np.random.randint(0, 255, size=[128, 256, 64, 3]).astype(np.float32)
+            i = np.random.randint(0, 255, size=[96, 48, 64, 3]).astype(np.float32)
             g = trw.train.FilterGaussian(input_channels=3, sigma=sigma, nb_dims=3)
 
-            i_torch = np.reshape(i.transpose((3, 0, 1, 2)), [1, 3, 128, 256, 64])
+            i_torch = np.reshape(i.transpose((3, 0, 1, 2)), [1, 3, 96, 48, 64])
             i_torch_filtered = g(torch.from_numpy(i_torch))
             i_torch_filtered = i_torch_filtered.numpy()[0].transpose((1, 2, 3, 0))
 
