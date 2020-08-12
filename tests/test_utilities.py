@@ -175,7 +175,7 @@ class TestUtilities(TestCase):
         t[1, 2, 1, 1] = 144
         g_t = trw.utils.global_max_pooling_2d(t)
         assert g_t.shape == (2, 3)
-        assert (g_t - torch.tensor([[42, 43, 44], [142, 143, 144]])).abs().max() <= 1e-5
+        assert (g_t - torch.tensor([[42.0, 43.0, 44.0], [142.0, 143.0, 144.0]])).abs().max() <= 1e-5
 
     def test_global_average_2d(self):
         t = torch.randn([2, 3, 10, 10])
@@ -200,7 +200,7 @@ class TestUtilities(TestCase):
         t[1, 2, 1, 1, 0] = 144
         g_t = trw.utils.global_max_pooling_3d(t)
         assert g_t.shape == (2, 3)
-        assert (g_t - torch.tensor([[42, 43, 44], [142, 143, 144]])).abs().max() <= 1e-5
+        assert (g_t - torch.tensor([[42.0, 43.0, 44.0], [142.0, 143.0, 144.0]])).abs().max() <= 1e-5
 
     def test_global_average_3d(self):
         t = torch.randn([2, 3, 10, 10, 5])
