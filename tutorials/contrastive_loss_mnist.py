@@ -3,6 +3,7 @@ import torch.nn as nn
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
+import trw.utils
 from trw.train import make_pair_indices, LossContrastive
 import torch.nn.functional as F
 
@@ -43,7 +44,7 @@ class NetEmbedding(nn.Module):
     def forward(self, x):
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
-        x = trw.layers.flatten(x)
+        x = trw.utils.flatten(x)
         fc1 = F.relu(self.fc1(x))
 
         # No ReLu: so that we can have negative features

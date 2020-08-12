@@ -1,4 +1,3 @@
-from bokeh.layouts import row
 from bokeh.models.widgets import Tabs
 import os
 from trw.reporting.bokeh_ui import BokehUi

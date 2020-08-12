@@ -1,5 +1,5 @@
 import torch
-from trw.train import sub_tensor
+from trw.utils import sub_tensor
 
 
 class SubTensor(torch.nn.Module):

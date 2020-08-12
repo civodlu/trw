@@ -5,7 +5,7 @@ import os
 import collections
 import logging
 import numbers
-
+from trw.utils import safe_lookup
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,7 @@ def extract_metrics_name(history, dataset_name, split_name, output_name, dicarde
     """
     names = set()
     for h in history:
-        metrics_kvp = utilities.safe_lookup(h, dataset_name, split_name, output_name)
+        metrics_kvp = safe_lookup(h, dataset_name, split_name, output_name)
         if metrics_kvp is not None:
             for key, value in metrics_kvp.items():
                 if isinstance(value, numbers.Number):

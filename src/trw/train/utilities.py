@@ -56,7 +56,7 @@ def log_console(msg):
     print(msg)
 
 
-from trw.utils import to_value, recursive_dict_update, len_batch
+from trw.utils import to_value, recursive_dict_update
 
 
 def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
@@ -513,113 +513,6 @@ def find_default_dataset_and_split_names(datasets, default_dataset_name=None, de
             return None, None
 
     return default_dataset_name, default_split_name
-
-
-def safe_lookup(dictionary, *keys):
-    """
-    Recursively access nested dictionaries
-
-    Args:
-        dictionary: nested dictionary
-        *keys: the keys to access within the nested dictionaries
-
-    Returns:
-        None if we can't access to all the keys, else dictionary[key_0][key_1][...][key_n]
-    """
-    for key in keys:
-        dictionary = dictionary.get(key)
-        if dictionary is None:
-            return
-    return dictionary
-
-
-def flatten_nested_dictionaries(d, root_name='', delimiter='-'):
-    """
-    Recursively flatten a dictionary of arbitrary nested size into a flattened dictionary
-    of nested size 1
-
-    Args:
-        d: a dictionary
-        root_name: the root name to be appended of the keys of d
-        delimiter: use this string as delimiter to concatenate nested dictionaries
-
-    Returns:
-        a dictionary of maximum depth 1
-    """
-    assert isinstance(d, collections.Mapping)
-    flattened = collections.OrderedDict()
-    for name, value in d.items():
-        if len(root_name) == 0:
-            full_name = name
-        else:
-            full_name = f'{root_name}{delimiter}{name}'
-
-        if isinstance(value, collections.Mapping):
-            sub_flattened = flatten_nested_dictionaries(value, root_name=full_name)
-            flattened.update(sub_flattened)
-        else:
-            flattened[full_name] = value
-    return flattened
-
-
-def clamp_n(tensor, min_values, max_values):
-    """
-    Clamp a tensor with axis dependent values.
-
-    Args:
-        tensor: a N-d torch.Tensor
-        min_values: a 1D torch.Tensor. Min value is axis dependent
-        max_values: a 1D torch.Tensor. Max value is axis dependent
-
-    Returns:
-        tensor with values clamped to min_values and max_values
-
-    Examples:
-        >>> t = torch.LongTensor([[1, 2, 3], [4, 5, 6]])
-        >>> min_values = torch.LongTensor([3, 2, 4])
-        >>> max_values = torch.LongTensor([3, 4, 8])
-        >>> clamped_t = clamp_n(t, min_values, max_values)
-    """
-    assert isinstance(min_values, torch.Tensor)
-    assert isinstance(max_values, torch.Tensor)
-    assert min_values.shape == max_values.shape
-    if len(min_values.shape) == 1:
-        min_values = min_values.unsqueeze(dim=0)
-        max_values = max_values.unsqueeze(dim=0)
-    else:
-        assert min_values.shape[0] == 1, 'must be broadcastable to tensor shape'
-        assert max_values.shape[0] == 1, 'must be broadcastable to tensor shape'
-    return torch.max(torch.min(tensor, max_values), min_values)
-
-
-def sub_tensor(tensor, min_indices, max_indices_exclusive):
-    """
-    Select a region of a tensor (without copy)
-
-    Examples:
-        >>> t = torch.randn([5, 10])
-        >>> sub_t = trw.train.sub_tensor(t, [2, 3], [4, 8])
-        Returns the t[2:4, 3:8]
-
-        >>> t = torch.randn([5, 10])
-        >>> sub_t = trw.train.sub_tensor(t, [2], [4])
-        Returns the t[2:4]
-
-    Args:
-        tensor: a tensor
-        min_indices: the minimum indices to select for each dimension
-        max_indices_exclusive: the maximum indices (excluded) to select for each dimension
-
-    Returns:
-        torch.tensor
-    """
-    assert len(min_indices) == len(max_indices_exclusive)
-    assert len(tensor.shape) >= len(min_indices)
-
-    for dim, (min_index, max_index) in enumerate(zip(min_indices, max_indices_exclusive)):
-        size = max_index - min_index
-        tensor = tensor.narrow(dim, min_index, size)
-    return tensor
 
 
 def make_triplet_indices(targets):

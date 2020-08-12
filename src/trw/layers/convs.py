@@ -1,7 +1,7 @@
 import torch.nn as nn
 import numbers
 from trw.layers.utils import div_shape
-from trw.layers.flatten import flatten
+from trw.utils import flatten
 from trw.layers.ops_conversion import OpsConversion
 
 

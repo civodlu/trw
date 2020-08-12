@@ -4,12 +4,13 @@ import trw.transforms
 import numpy as np
 import torch
 import functools
+import trw.utils
 
 
 class TestTransform(TestCase):
     def test_batch_pad_constant_numpy(self):
         d = np.asarray([[4], [5], [6]], dtype=int)
-        d_transformed = trw.transforms.transform_batch_pad_numpy(d, [2], mode='constant', constant_value=9)
+        d_transformed = trw.utils.batch_pad_numpy(d, [2], mode='constant', constant_value=9)
         self.assertTrue(d_transformed.shape == (3, 5))
         assert (d_transformed[0] == [9, 9, 4, 9, 9]).all()
         assert (d_transformed[1] == [9, 9, 5, 9, 9]).all()
@@ -18,7 +19,7 @@ class TestTransform(TestCase):
     def test_batch_pad_constant_torch(self):
         d = np.asarray([[4], [5], [6]], dtype=int)
         d = torch.from_numpy(d)
-        d_transformed = trw.transforms.transform_batch_pad_torch(d, [2], mode='constant', constant_value=9)
+        d_transformed = trw.utils.batch_pad_torch(d, [2], mode='constant', constant_value=9)
         d_transformed = d_transformed.data.numpy()
         self.assertTrue(d_transformed.shape == (3, 5))
         assert (d_transformed[0] == [9, 9, 4, 9, 9]).all()
@@ -27,7 +28,7 @@ class TestTransform(TestCase):
 
     def test_batch_pad_symmetric_numpy(self):
         d = np.asarray([[10, 11, 12], [20, 21, 22], [30, 31, 32]], dtype=int)
-        d_transformed = trw.transforms.transform_batch_pad_numpy(d, [2], mode='symmetric')
+        d_transformed = trw.utils.batch_pad_numpy(d, [2], mode='symmetric')
         self.assertTrue(d_transformed.shape == (3, 7))
 
     def test_batch_pad_edge_torch(self):
@@ -36,7 +37,7 @@ class TestTransform(TestCase):
         d = np.asarray([i1, i2], dtype=float)
         d = d.reshape((2, 1, 3, 3))
         d = torch.from_numpy(d)
-        d_transformed = trw.transforms.transform_batch_pad_torch(d, [0, 2, 3], mode='edge')
+        d_transformed = trw.utils.batch_pad_torch(d, [0, 2, 3], mode='edge')
         d_transformed = d_transformed.data.numpy()
         self.assertTrue(d_transformed.shape == (2, 1, 7, 9))
 
@@ -45,7 +46,7 @@ class TestTransform(TestCase):
         i2 = [[40, 41, 42], [50, 51, 52], [60, 61, 62]]
         d = np.asarray([i1, i2], dtype=float)
         d = d.reshape((2, 1, 3, 3))
-        d_transformed = trw.transforms.transform_batch_pad_numpy(d, [0, 2, 3], mode='edge')
+        d_transformed = trw.utils.batch_pad_numpy(d, [0, 2, 3], mode='edge')
         self.assertTrue(d_transformed.shape == (2, 1, 7, 9))
 
     def test_batch_pad_constant_2d_numpy(self):
@@ -53,7 +54,7 @@ class TestTransform(TestCase):
         i2 = [[40, 41, 42], [50, 51, 52], [60, 61, 62]]
 
         d = np.asarray([i1, i2], dtype=int)
-        d_transformed = trw.transforms.transform_batch_pad_numpy(d, [2, 3], mode='constant')
+        d_transformed = trw.utils.batch_pad_numpy(d, [2, 3], mode='constant')
         self.assertTrue(d_transformed.shape == (2, 7, 9))
 
     def test_batch_pad_constant_2d_torch(self):
@@ -62,7 +63,7 @@ class TestTransform(TestCase):
         d = np.asarray([i1, i2], dtype=int)
         d = torch.from_numpy(d)
 
-        d_transformed = trw.transforms.transform_batch_pad_torch(d, [2, 3], mode='constant')
+        d_transformed = trw.utils.batch_pad_torch(d, [2, 3], mode='constant')
         d_transformed = d_transformed.data.numpy()
         self.assertTrue(d_transformed.shape == (2, 7, 9))
 

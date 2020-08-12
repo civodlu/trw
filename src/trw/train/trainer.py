@@ -36,6 +36,7 @@ from trw.train import callback_reporting_dataset_summary
 from trw.train import callback_reporting_augmentations
 from trw.train import callback_reporting_best_metrics
 from trw.train import utilities
+from trw.utils import safe_lookup
 
 from trw.train.utilities import prepare_loss_terms, default_sum_all_losses
 
@@ -679,7 +680,7 @@ class Trainer:
             if 'outputs' in result_cp is not None:
                 result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
 
-            sql_database = utilities.safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database')
+            sql_database = safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database')
             if sql_database is not None:
                 del result_cp['options']['workflow_options']['sql_database']
 

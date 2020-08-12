@@ -1,6 +1,7 @@
 from .ops_conversion import OpsConversion
 from .utils import div_shape
-from .flatten import Flatten, flatten
+from .flatten import Flatten
+from trw.utils import flatten
 from .denses import denses
 from .convs import ConvsBase, ModulelWithIntermediate
 from .convs_2d import convs_2d

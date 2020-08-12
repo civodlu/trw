@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import matplotlib.pyplot as plt
+import trw.utils
 
 
 def export_scatter(embedding, output_truth, name, min_values=None, max_values=None):
@@ -49,7 +50,7 @@ class Net(nn.Module):
 
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
-        x = trw.layers.flatten(x)
+        x = trw.utils.flatten(x)
         fc1 = F.relu(self.fc1(x))
 
         # No ReLu: so that we can have negative features

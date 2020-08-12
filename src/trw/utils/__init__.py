@@ -6,6 +6,14 @@ import collections
 import numpy as np
 import torch
 
+from .upsample import upsample
+from .clamp_n import clamp_n
+from .sub_tensor import sub_tensor
+from .flatten import flatten
+from .global_pooling import global_max_pooling_2d, global_average_pooling_2d, global_average_pooling_3d, \
+    global_max_pooling_3d
+from .batch_pad import batch_pad, batch_pad_joint, batch_pad_torch, batch_pad_numpy
+
 
 def collect_hierarchical_module_name(base_name, model, module_to_name=None):
     """
@@ -73,7 +81,8 @@ def get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing):
         split: a mapping of `np.ndarray` or `torch.Tensor`
         indices: a list of indices as numpy array
         transforms: a transformation or list of transformations or None
-        use_advanced_indexing: if True, use the advanced indexing mechanism else use a simple list (original data is referenced)
+        use_advanced_indexing: if True, use the advanced indexing mechanism else
+            use a simple list (original data is referenced)
             advanced indexing is typically faster for small objects, however for large objects (e.g., 3D data)
             the advanced indexing makes a copy of the data making it very slow.
 
@@ -86,8 +95,6 @@ def get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing):
             # here we prefer [split_data[i] for i in indices] over split_data[indices]
             # this is because split_data[indices] will make a deep copy of the data which may be time consuming
             # for large data
-
-            # TODO for small data batch: prefer the indexing, for large data, prefer the referencing
             if use_advanced_indexing:
                 split_data = split_data[indices]
             else:
@@ -198,3 +205,32 @@ def len_batch(batch):
         if isinstance(values, np.ndarray) and len(values.shape) != 0:
             return values.shape[0]
     return 0
+
+
+def flatten_nested_dictionaries(d, root_name='', delimiter='-'):
+    """
+    Recursively flatten a dictionary of arbitrary nested size into a flattened dictionary
+    of nested size 1
+
+    Args:
+        d: a dictionary
+        root_name: the root name to be appended of the keys of d
+        delimiter: use this string as delimiter to concatenate nested dictionaries
+
+    Returns:
+        a dictionary of maximum depth 1
+    """
+    assert isinstance(d, collections.Mapping)
+    flattened = collections.OrderedDict()
+    for name, value in d.items():
+        if len(root_name) == 0:
+            full_name = name
+        else:
+            full_name = f'{root_name}{delimiter}{name}'
+
+        if isinstance(value, collections.Mapping):
+            sub_flattened = flatten_nested_dictionaries(value, root_name=full_name)
+            flattened.update(sub_flattened)
+        else:
+            flattened[full_name] = value
+    return flattened

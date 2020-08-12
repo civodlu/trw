@@ -89,7 +89,7 @@ def create_dataset_from_archive_url(
         root = './data'
 
     path = os.path.join(root, 'facades')
-    torchvision.datasets.utils.makedir_exist_ok(path)
+    os.makedirs(path, exist_ok=True)
 
     exist = os.path.exists(os.path.join(path, 'facades'))
     if not exist:

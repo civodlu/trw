@@ -2,7 +2,6 @@ import time
 
 from trw.train import callback
 import logging
-import os
 import collections
 
 from trw.train.callback_reporting_model_summary import export_table

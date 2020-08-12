@@ -1,7 +1,6 @@
 import trw
 import trw.utils
 from trw.train import callback
-from trw.train import utilities
 from trw.train.callback_reporting_model_summary import export_table
 from trw.train.utilities import update_json_config
 import collections

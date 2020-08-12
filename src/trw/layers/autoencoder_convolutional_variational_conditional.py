@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch
-from trw.layers import flatten, crop_or_pad_fun, AutoencoderConvolutionalVariational
+from trw.layers import crop_or_pad_fun, AutoencoderConvolutionalVariational
+from trw.utils import flatten
 import numpy as np
 
 

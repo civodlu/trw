@@ -3,6 +3,7 @@ import trw.train
 import collections
 import torch
 import numpy as np
+import trw.utils
 
 
 class TestUtilities(TestCase):
@@ -111,7 +112,7 @@ class TestUtilities(TestCase):
         d['key1'] = 'v1'
         d['key2'] = {'key3': 'v2'}
         d['key4'] = {'key5': {'key6': 'v3'}}
-        flattened_d = trw.train.flatten_nested_dictionaries(d)
+        flattened_d = trw.utils.flatten_nested_dictionaries(d)
         assert len(flattened_d) == 3
         assert flattened_d['key1'] == 'v1'
         assert flattened_d['key2-key3'] == 'v2'
@@ -121,7 +122,7 @@ class TestUtilities(TestCase):
         t = torch.LongTensor([[1, 2, 3], [4, 5, 6]])
         min = torch.LongTensor([3, 2, 4])
         max = torch.LongTensor([3, 4, 8])
-        clamped_t = trw.train.clamp_n(t, min, max)
+        clamped_t = trw.utils.clamp_n(t, min, max)
 
         assert (clamped_t == torch.LongTensor([[3, 2, 4], [3, 4, 6]])).all()
 
@@ -154,7 +155,7 @@ class TestUtilities(TestCase):
 
     def test_sub_tensor(self):
         t = torch.randn([5, 10])
-        sub_t = trw.train.sub_tensor(t, [2, 3], [4, 8])
+        sub_t = trw.utils.sub_tensor(t, [2, 3], [4, 8])
         sub_t2 = t[2:4, 3:8]
         assert sub_t.shape == sub_t2.shape
         assert (sub_t == sub_t2).all()
@@ -162,3 +163,53 @@ class TestUtilities(TestCase):
         # make sure we reference the same underlying tensor
         sub_t[0, 0] = 42
         assert sub_t2[0, 0] == 42
+
+    def test_global_pooling_2d(self):
+        t = torch.randn([2, 3, 10, 10])
+        t[0, 0, 3, 4] = 42
+        t[0, 1, 2, 0] = 43
+        t[0, 2, 1, 1] = 44
+
+        t[1, 0, 3, 4] = 142
+        t[1, 1, 2, 0] = 143
+        t[1, 2, 1, 1] = 144
+        g_t = trw.utils.global_max_pooling_2d(t)
+        assert g_t.shape == (2, 3)
+        assert (g_t - torch.tensor([[42, 43, 44], [142, 143, 144]])).abs().max() <= 1e-5
+
+    def test_global_average_2d(self):
+        t = torch.randn([2, 3, 10, 10])
+        g_t = trw.utils.global_average_pooling_2d(t)
+        assert g_t.shape == (2, 3)
+
+        assert (g_t[0, 0] - trw.utils.flatten(t[0, 0]).mean()).abs().max() <= 1e-5
+        assert (g_t[0, 1] - trw.utils.flatten(t[0, 1]).mean()).abs().max() <= 1e-5
+        assert (g_t[0, 2] - trw.utils.flatten(t[0, 2]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 0] - trw.utils.flatten(t[1, 0]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 1] - trw.utils.flatten(t[1, 1]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 2] - trw.utils.flatten(t[1, 2]).mean()).abs().max() <= 1e-5
+
+    def test_global_pooling_3d(self):
+        t = torch.randn([2, 3, 10, 11, 12])
+        t[0, 0, 3, 4, 3] = 42
+        t[0, 1, 2, 0, 11] = 43
+        t[0, 2, 1, 1, 10] = 44
+
+        t[1, 0, 3, 4, 2] = 142
+        t[1, 1, 2, 0, 11] = 143
+        t[1, 2, 1, 1, 0] = 144
+        g_t = trw.utils.global_max_pooling_3d(t)
+        assert g_t.shape == (2, 3)
+        assert (g_t - torch.tensor([[42, 43, 44], [142, 143, 144]])).abs().max() <= 1e-5
+
+    def test_global_average_3d(self):
+        t = torch.randn([2, 3, 10, 10, 5])
+        g_t = trw.utils.global_average_pooling_3d(t)
+        assert g_t.shape == (2, 3)
+
+        assert (g_t[0, 0] - trw.utils.flatten(t[0, 0]).mean()).abs().max() <= 1e-5
+        assert (g_t[0, 1] - trw.utils.flatten(t[0, 1]).mean()).abs().max() <= 1e-5
+        assert (g_t[0, 2] - trw.utils.flatten(t[0, 2]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 0] - trw.utils.flatten(t[1, 0]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 1] - trw.utils.flatten(t[1, 1]).mean()).abs().max() <= 1e-5
+        assert (g_t[1, 2] - trw.utils.flatten(t[1, 2]).mean()).abs().max() <= 1e-5

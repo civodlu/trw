@@ -1,9 +1,9 @@
 import collections
 
 import functools
+import trw.utils
 from trw.transforms import transforms
 from trw.transforms import crop
-from trw.transforms import pad
 
 
 def _transform_random_crop_pad(features_names, batch, padding, mode='edge', constant_value=0, shape=None):
@@ -39,7 +39,7 @@ def _transform_random_crop_pad(features_names, batch, padding, mode='edge', cons
     arrays = [batch[name] for name in features_names]
     cropped_arrays = crop.transform_batch_random_crop_joint(arrays, shape)
     if padding is not None:
-        cropped_arrays = pad.transform_batch_pad_joint(
+        cropped_arrays = trw.utils.batch_pad_joint(
             cropped_arrays,
             padding=padding,
             mode=mode,

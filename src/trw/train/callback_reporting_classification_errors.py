@@ -5,7 +5,6 @@ import trw
 import trw.utils
 from trw.utils import to_value
 from trw.train import callback, CallbackReportingExportSamples
-from trw.train import utilities
 from trw.train import outputs_trw as outputs_trw
 
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ class CallbackReportingClassificationErrors(callback.Callback):
             clear_previously_exported_samples: if ``True``, the table will be emptied before each sample export
         """
 
-        # this callback is a simple reparameterization of the export samples
+        # this callback is a simple re-parameterization of the export samples
         self.impl = CallbackReportingExportSamples(
             max_samples=max_samples,
             table_name=table_name,

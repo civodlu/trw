@@ -2,10 +2,11 @@ import trw.train
 import torch
 import numpy as np
 import skimage.transform
+import trw.utils
 
 
 def resize_torch(array, size, mode):
-    return trw.train.upsample(array, size, mode)
+    return trw.utils.upsample(array, size, mode)
 
 
 def resize_numpy(array, size, mode):

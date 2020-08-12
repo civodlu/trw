@@ -1,7 +1,8 @@
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
-from trw.layers import flatten, crop_or_pad_fun
+from trw.layers import crop_or_pad_fun
+from trw.utils import flatten
 import numpy as np
 from trw.train import get_device
 

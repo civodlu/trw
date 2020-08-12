@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from trw.layers.ops_conversion import OpsConversion
-from trw.train.upsample import upsample
+from trw.utils import upsample
 
 
 class Down(nn.Module):

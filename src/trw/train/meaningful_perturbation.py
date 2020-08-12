@@ -9,7 +9,7 @@ from trw.train import outputs_trw as outputs_trw
 from trw.train import utilities
 from torch.nn import functional as F
 from trw.train.filter_gaussian import FilterGaussian
-from trw.train.upsample import upsample as upsample_fn
+from trw.utils import upsample as upsample_fn
 from trw.train.losses import total_variation_norm
 import torch
 

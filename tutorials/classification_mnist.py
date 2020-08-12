@@ -2,6 +2,7 @@ import trw
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
+import trw.utils
 from trw.train.outputs_trw import OutputClassification2
 
 
@@ -21,7 +22,7 @@ class Net(nn.Module):
 
         x = F.relu(self.conv1(x))
         x = F.max_pool2d(x, 2, 2)
-        x = trw.layers.flatten(x)
+        x = trw.utils.flatten(x)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
 

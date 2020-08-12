@@ -6,9 +6,8 @@ import torch
 import trw
 import trw.utils
 from trw import reporting
-from trw.utils import to_value
-from trw.layers import flatten
-from trw.reporting.table_sqlite import table_drop, table_truncate
+from trw.utils import to_value, flatten
+from trw.reporting.table_sqlite import table_truncate
 from trw.train import callback
 from trw.train import trainer
 from trw.train import utilities

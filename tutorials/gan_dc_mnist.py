@@ -4,12 +4,12 @@ import trw.train
 import trw.datasets
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import functools
 
 from trw.layers.gan_conditional import Gan
 from trw.train import LossMsePacked, OutputEmbedding
 from trw.train.outputs_trw import OutputClassification2
+from trw.utils import global_average_pooling_2d
 
 
 def per_epoch_callbacks():
@@ -24,16 +24,6 @@ def per_epoch_callbacks():
 
 def get_image(batch):
     return 2 * batch['images'] - 1
-
-
-def global_max_pooling_2d(tensor):
-    assert len(tensor.shape) == 4, 'must be a NCHW tensor!'
-    return F.max_pool2d(tensor, tensor.shape[2:]).squeeze(2).squeeze(2)
-
-
-def global_average_pooling_2d(tensor):
-    assert len(tensor.shape) == 4, 'must be a NCHW tensor!'
-    return F.avg_pool2d(tensor, tensor.shape[2:]).squeeze(2).squeeze(2)
 
 
 class Discriminator(nn.Module):

@@ -2,6 +2,7 @@ from unittest import TestCase
 import trw.train
 import numpy as np
 import torch
+import trw.utils
 
 
 class TestUpsample(TestCase):
@@ -17,7 +18,7 @@ class TestUpsample(TestCase):
             ],
             dtype=np.float32)
 
-        upsampled_a = trw.train.upsample(torch.from_numpy(a), size=[4, 6], mode='nearest')
+        upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[4, 6], mode='nearest')
         assert upsampled_a.shape == (2, 1, 4, 6)
         assert upsampled_a[0, 0, 0, 0] == 1
         assert upsampled_a[0, 0, 1, 1] == 1
@@ -45,7 +46,7 @@ class TestUpsample(TestCase):
             ],
             dtype=np.float32)
 
-        upsampled_a = trw.train.upsample(torch.from_numpy(a), size=[5, 5], mode='linear')
+        upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[5, 5], mode='linear')
         assert upsampled_a.shape == (2, 1, 5, 5)
         assert upsampled_a[0, 0, 0, 0] == 0
         assert upsampled_a[0, 0, 0, 2] == 0.5
@@ -68,7 +69,7 @@ class TestUpsample(TestCase):
             ],
             dtype=np.int)
 
-        upsampled_a = trw.train.upsample(torch.from_numpy(a), size=[4, 6])
+        upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[4, 6])
         assert upsampled_a.shape == (2, 1, 4, 6)
         assert upsampled_a[0, 0, 0, 0] == 1
         assert upsampled_a[0, 0, 1, 1] == 1
@@ -88,7 +89,7 @@ class TestUpsample(TestCase):
         a = np.asarray(
             [[[1, 2]]], dtype=np.int)
 
-        upsampled_a = trw.train.upsample(torch.from_numpy(a), size=[4])
+        upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[4])
         assert upsampled_a.shape == (1, 1, 4)
 
         assert upsampled_a[0, 0, 0] == 1
@@ -108,7 +109,7 @@ class TestUpsample(TestCase):
             ]],
             dtype=np.int)
 
-        upsampled_a = trw.train.upsample(torch.from_numpy(a), size=[2, 4, 6])
+        upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[2, 4, 6])
         assert upsampled_a.shape == (1, 1, 2, 4, 6)
 
         assert upsampled_a[0, 0, 1, 0, 0] == 6

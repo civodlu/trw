@@ -1,11 +1,12 @@
-import torch.nn as nn
 import torch
+import torch.nn as nn
 
 
 def _upsample_int_1d(tensor, size):
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
-    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, WITHOUT the batch and filter channels'
+    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
+                                               'WITHOUT the batch and filter channels'
     assert len(tensor.shape) == 3
 
     dx = torch.linspace(0 + 0.5, tensor.shape[2] - 1 + 0.5, steps=size[0], dtype=torch.float32).long()
@@ -17,7 +18,8 @@ def _upsample_int_1d(tensor, size):
 def _upsample_int_2d(tensor, size):
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
-    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, WITHOUT the batch and filter channels'
+    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
+                                               'WITHOUT the batch and filter channels'
     assert len(tensor.shape) == 4
 
     dx = torch.linspace(0 + 0.5, tensor.shape[2] - 1 + 0.5, steps=size[0], dtype=torch.float32).long()
@@ -30,7 +32,8 @@ def _upsample_int_2d(tensor, size):
 def _upsample_int_3d(tensor, size):
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
-    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, WITHOUT the batch and filter channels'
+    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
+                                               'WITHOUT the batch and filter channels'
     assert len(tensor.shape) == 5
 
     dx = torch.linspace(0 + 0.5, tensor.shape[2] - 1 + 0.5, steps=size[0], dtype=torch.float32).long()
@@ -62,7 +65,8 @@ def upsample(tensor, size, mode='linear'):
         an up-sampled tensor with same batch size and filter size as the input
     """
 
-    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, WITHOUT the batch and filter channels'
+    assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
+                                               'WITHOUT the batch and filter channels'
     assert len(tensor.shape) >= 3, 'only 1D, 2D, 3D tensors are currently handled!'
     assert len(tensor.shape) <= 5, 'only 1D, 2D, 3D tensors are currently handled!'
 
