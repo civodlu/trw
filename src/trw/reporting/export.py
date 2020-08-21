@@ -199,6 +199,7 @@ def export_sample(
     """
     assert isinstance(table_stream, TableStream)
     batch_size = trw.utils.len_batch(batch)
+    base_name = trw.utils.safe_filename(base_name)
 
     # transform the first dim of numpy arrays as lists
     batch_list = collections.OrderedDict()

@@ -213,3 +213,8 @@ class TestUtilities(TestCase):
         assert (g_t[1, 0] - trw.utils.flatten(t[1, 0]).mean()).abs().max() <= 1e-5
         assert (g_t[1, 1] - trw.utils.flatten(t[1, 1]).mean()).abs().max() <= 1e-5
         assert (g_t[1, 2] - trw.utils.flatten(t[1, 2]).mean()).abs().max() <= 1e-5
+
+    def test_safe_filename(self):
+        filename = 'test/1\\2#3.bin'
+        filename_safe = trw.utils.safe_filename(filename, replace_with='?')
+        assert filename_safe == 'test?1?2?3.bin'

@@ -749,9 +749,13 @@ class OutputLoss(Output):
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
             loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
 
-        # do NOT keep the original output else memory will be an issue
+        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
+        return loss_term
+
+    def loss_term_cleanup(self, loss_term):
+        super().loss_term_cleanup(loss_term)
+
+        # delete possibly large outputs
         del self.output
         self.output = None
 
-        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
-        return loss_term

@@ -12,7 +12,10 @@ def _transform_random_crop_resize(features_names, batch, crop_size, resize_mode)
 
     shape = arrays[0].shape[2:]
     cropped_arrays = crop.transform_batch_random_crop_joint(arrays, [arrays[0].shape[1]] + list(crop_size))
-    resized_arrays = [resize(cropped_array, shape, resize_mode) for cropped_array in cropped_arrays]
+    if resize_mode == 'none':
+        resized_arrays = cropped_arrays
+    else:
+        resized_arrays = [resize(cropped_array, shape, resize_mode) for cropped_array in cropped_arrays]
 
     new_batch = collections.OrderedDict(zip(features_names, resized_arrays))
     for feature_name, feature_value in batch.items():
@@ -32,7 +35,7 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
             the ``N`` and ``C`` components
         criteria_fn: function applied on each feature. If satisfied, the feature will be transformed, if not
             the original feature is returned
-        resize_mode: string among ('nearest', 'linear') specifying the resampling method
+        resize_mode: string among ('nearest', 'linear', 'none') specifying the resampling method
 
     Returns:
         a transformed batch

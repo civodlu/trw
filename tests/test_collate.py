@@ -3,6 +3,7 @@ import trw
 import numpy as np
 import torch
 import collections
+import trw.train.collate
 
 import trw.utils
 
@@ -17,7 +18,7 @@ class TestCollate(TestCase):
             'strs': ['1', '2', '3'],
         }
 
-        collated = trw.train.default_collate_fn(batch, device=None)
+        collated = trw.train.collate.default_collate_fn(batch, device=None)
         self.assertTrue(isinstance(collated, collections.OrderedDict))
         self.assertTrue(isinstance(collated['list'], torch.Tensor))
         self.assertTrue(len(collated['list']) == 3)
@@ -45,7 +46,7 @@ class TestCollate(TestCase):
             'strs': ['2'],
         }
 
-        collated = trw.train.default_collate_fn([batch_1, batch_2], device=None)
+        collated = trw.train.collate.default_collate_fn([batch_1, batch_2], device=None)
 
         self.assertTrue(isinstance(collated, collections.OrderedDict))
         self.assertTrue(trw.utils.len_batch(collated) == 2)

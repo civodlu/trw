@@ -1,9 +1,8 @@
 import logging
 import collections
-from trw.train.utilities import collate_list_of_dicts, default_collate_fn
 import torch
 import torch.utils.data.dataloader
-from trw.train import sampler
+from trw.train import sampler, collate_list_of_dicts, default_collate_fn
 import functools
 import weakref
 from collections import abc

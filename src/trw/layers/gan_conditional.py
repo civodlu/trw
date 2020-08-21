@@ -1,14 +1,11 @@
 import collections
-import itertools
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from trw.utils import len_batch
-from trw.train import OutputEmbedding, OutputClassification, LossMsePacked, get_device
-from trw.train.utilities import prepare_loss_terms
+from trw.train import OutputEmbedding, OutputClassification, LossMsePacked
 
-"""
+
 class GanHelper(nn.Module):
     def __init__(self,
                  discriminator,
@@ -166,7 +163,7 @@ class GanHelper(nn.Module):
             ('classifier_fake', OutputClassification(discriminator_output_fake.detach(), classes_name='fake')),
             ('classifier_generator', OutputClassification(discrimator_output_generator.detach(), classes_name='fake')),
         ] + observed_generator + observed_discriminator)
-"""
+
 
 """
 class GanCycle(nn.Module):
@@ -530,159 +527,7 @@ class GanConditional(nn.Module):
             ('classifier_generator', OutputClassification(discrimator_output_generator.detach(), classes_name='fake')),
         ] + observed_generator + observed_discriminator)
 
-
-def process_outputs_and_extract_loss(outputs, batch, is_training):
-    loss_terms = prepare_loss_terms(outputs, batch, is_training)
-    sum_losses = 0.0
-    for name, loss_term in loss_terms.items():
-        loss = loss_term.get('loss')
-        if loss is not None:
-            # if the loss term doesn't contain a `loss` attribute, it means
-            # this is not used during optimization (e.g., embedding output)
-            sum_losses += loss
-    return sum_losses
-
 #def create_loss_terms(outputs, batch, is_training):
 
 
 
-class Gan(nn.Module):
-    """
-    Generic GAN implementation. Support conditional GANs.
-
-    Examples:
-        - generator conditioned by concatenating a one-hot attribute to the latent or conditioned
-            by another image (e.g., using UNet)
-        - discriminator conditioned by concatenating a one-hot image sized to the image
-            or one-hot concatenated to intermediate layer
-        - simple GAN (i.e., no observation)
-
-    Notes:
-        Here the module will have its own optimizer. The :class:`trw.train.Trainer` should have ``optimizers_fn``
-        set to ``None``.
-    """
-
-    def __init__(
-            self,
-            discriminator,
-            generator,
-            latent_size,
-            optimizer_discriminator_fn,
-            optimizer_generator_fn,
-            real_image_from_batch_fn,
-            train_split_name='train',
-            loss_from_outputs_fn=process_outputs_and_extract_loss,
-    ):
-        """
-
-        Args:
-            discriminator: a discriminator taking input ``image_from_batch_fn(batch)`` and
-                returning Nx2 output (without the activation function applied)
-            generator: a generator taking as input [N, latent_size, [1] * dim], with dim=2 for 2D images
-                and returning as output the same shape as ``image_from_batch_fn(batch)``. Last layer should not
-                be apply an activation function.
-            latent_size: the latent size (random vector to seed the generator), `None` for no random latent (e.g., pix2pix)
-            optimizer_discriminator_fn: the optimizer function to be used for the discriminator. Takes
-                as input a model and return the trainable parameters
-            optimizer_generator_fn: the optimizer function to be used for the generator. Takes
-                as input a model and return the trainable parameters
-            real_image_from_batch_fn: a function to extract the relevant image from the batch. Takes as input
-                a batch and return an image
-            train_split_name: only this split will be used for the training
-        """
-        super().__init__()
-        self.discriminator = discriminator
-        self.generator = generator
-        self.optmizer_discriminator = optimizer_discriminator_fn(params=self.discriminator.parameters())
-        self.optmizer_generator = optimizer_generator_fn(params=self.generator.parameters())
-        self.latent_size = latent_size
-        self.train_split_name = train_split_name
-        self.real_image_from_batch_fn = real_image_from_batch_fn
-        self.loss_from_outputs_fn = loss_from_outputs_fn
-
-    def _generate_latent(self, nb_samples):
-        device = get_device(self)
-        if self.latent_size is not None:
-            with torch.no_grad():
-                z = torch.randn(nb_samples, self.latent_size, device=device)
-        else:
-            z = None
-
-        return z
-
-    @staticmethod
-    def _merge_generator_discriminator_outputs(generator_outputs, discriminator_real_outputs, discriminator_fake_outputs):
-        output_prefix = [
-            ('gen_', generator_outputs),
-            ('real_', discriminator_real_outputs),
-            ('fake_', discriminator_fake_outputs)
-        ]
-
-        all_outputs = []
-        for prefix, outputs in output_prefix:
-            if outputs is None:
-                continue
-            for output_name, output in outputs.items():
-                all_outputs.append((prefix + output_name, output))
-
-        return collections.OrderedDict(all_outputs)
-
-    def forward(self, batch):
-        if 'split_name' not in batch:
-            # MUST have the split name!
-            return {}
-
-        # generate a fake image
-        nb_samples = len_batch(batch)
-        latent = self._generate_latent(nb_samples)
-
-        o = self.generator(batch, latent)
-        assert isinstance(o, tuple) and len(o) == 2, 'must return a tuple (torch.Tensor, dict of outputs)'
-        images_fake, generator_outputs = o
-        assert isinstance(images_fake, torch.Tensor), 'must be a torch.Tensor!'
-        images_real = self.real_image_from_batch_fn(batch)
-
-        if batch['split_name'] != self.train_split_name:
-            # we are in valid/test mode, return only the generated image!
-            all_outputs = self._merge_generator_discriminator_outputs(
-                generator_outputs,
-                None,
-                None)
-            return all_outputs
-
-        #
-        # train discriminator
-        #
-
-        # discriminator: train with all real
-        self.optmizer_discriminator.zero_grad()
-        discriminator_outputs_real = self.discriminator(batch, images_real, is_real=True)
-
-        # discriminator: train with all fakes
-        discriminator_outputs_fake = self.discriminator(batch, images_fake.detach(), is_real=False)
-
-        # extend the real, fake label to the size of the discriminator output (e.g., PatchGan)
-        discriminator_loss_fake = self.loss_from_outputs_fn(discriminator_outputs_fake, batch, is_training=True)
-        discriminator_loss_real = self.loss_from_outputs_fn(discriminator_outputs_real, batch, is_training=True)
-        discriminator_loss = (discriminator_loss_fake + discriminator_loss_real) / 2
-
-        if discriminator_loss.requires_grad:
-            discriminator_loss.backward()
-            self.optmizer_discriminator.step()
-
-        #
-        # train generator
-        #
-        self.optmizer_generator.zero_grad()
-        discrimator_outputs_generator = self.discriminator(batch, images_fake, is_real=True)
-        generator_loss = self.loss_from_outputs_fn(discrimator_outputs_generator, batch, is_training=True)
-
-        if generator_loss.requires_grad:
-            generator_loss.backward()
-            self.optmizer_generator.step()
-
-        all_outputs = self._merge_generator_discriminator_outputs(
-            generator_outputs,
-            discriminator_outputs_real,
-            discriminator_outputs_fake)
-        return all_outputs

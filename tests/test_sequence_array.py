@@ -4,6 +4,7 @@ import trw
 import trw.train
 import numpy as np
 import torch
+import trw.train.collate
 import trw.utils
 
 
@@ -135,7 +136,7 @@ class TestSequenceArray(TestCase):
 
         batches = []
         for i in split:
-            i = trw.train.default_collate_fn(i, device=None)
+            i = trw.train.collate.default_collate_fn(i, device=None)
             for n in range(trw.utils.len_batch(i)):
                 self.assertTrue(i['uid'].data.numpy()[n] * 2.0 == i['values'][n])
                 self.assertTrue(np.max(i['uid'].data.numpy()) < 40)

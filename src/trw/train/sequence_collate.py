@@ -1,5 +1,5 @@
+from trw.train import collate
 from trw.train import sequence
-from trw.train import utilities
 
 
 class SequenceCollate(sequence.Sequence):
@@ -10,7 +10,7 @@ class SequenceCollate(sequence.Sequence):
     concatenated on axis 0. Often used in conjunction of :class:`trw.train.SequenceAsyncReservoir`
     and :class:`trw.train.SequenceMap`.
     """
-    def __init__(self, source_split, collate_fn=utilities.default_collate_fn, device=None):
+    def __init__(self, source_split, collate_fn=collate.default_collate_fn, device=None):
         """
         Group the samples into a batch.
 

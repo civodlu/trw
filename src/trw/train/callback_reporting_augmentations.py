@@ -1,5 +1,6 @@
 import torch
 import trw
+import trw.train.collate
 import trw.utils
 from trw import reporting
 from trw.reporting.table_sqlite import table_truncate
@@ -125,7 +126,7 @@ class CallbackReportingAugmentations(callback.Callback):
             for uid, samples in samples_by_uid.items():
                 nb_samples = len(samples)
                 if len(samples) > 1:
-                    samples = utilities.collate_list_of_dicts(samples, device=torch.device('cpu'))
+                    samples = trw.train.collate.collate_list_of_dicts(samples, device=torch.device('cpu'))
                     samples['dataset'] = np.asarray([dataset_name] * nb_samples)
                     samples['split'] = np.asarray([self.split_name] * nb_samples)
                     for n in range(nb_samples):

@@ -3,6 +3,7 @@ import numpy as np
 import torch
 from unittest import TestCase
 import collections
+import trw.train.collate
 
 import trw.utils
 
@@ -32,7 +33,7 @@ class TestSequenceSubBatch(TestCase):
             assert trw.utils.len_batch(batch) == 5
         assert len(batches) == (30 // 10) * (10 // 5)
 
-        all_batches = trw.train.default_collate_fn(batches, device=None)
+        all_batches = trw.train.collate.default_collate_fn(batches, device=None)
         assert sequence_source.split['string_list'] == all_batches['string_list']
 
     def test_not_full_batches_not_discarded(self):
@@ -52,7 +53,7 @@ class TestSequenceSubBatch(TestCase):
         assert trw.utils.len_batch(batches[2]) == 10
         assert trw.utils.len_batch(batches[3]) == 5
 
-        all_batches = trw.train.default_collate_fn(batches, device=None)
+        all_batches = trw.train.collate.default_collate_fn(batches, device=None)
         assert sequence_source.split['string_list'] == all_batches['string_list']
 
     def test_not_full_batches_discarded(self):
@@ -69,5 +70,5 @@ class TestSequenceSubBatch(TestCase):
         assert trw.utils.len_batch(batches[0]) == 10
         assert trw.utils.len_batch(batches[1]) == 10
 
-        all_batches = trw.train.default_collate_fn(batches, device=None)
+        all_batches = trw.train.collate.default_collate_fn(batches, device=None)
         assert all_batches['torch_array'].numpy().tolist() == np.arange(0, 10).tolist() + np.arange(15, 25).tolist()

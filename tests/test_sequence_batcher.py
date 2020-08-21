@@ -3,6 +3,7 @@ import trw.train
 import numpy as np
 import collections
 import torch
+import trw.train.collate
 
 
 class TestSequenceBatcher(TestCase):
@@ -15,7 +16,7 @@ class TestSequenceBatcher(TestCase):
         indices = []
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).batch(2)
         for batch in split_np:
-            batch = trw.train.default_collate_fn(batch, device=None)
+            batch = trw.train.collate.default_collate_fn(batch, device=None)
             assert isinstance(batch, collections.Mapping)
             assert len(batch['classes']) == 2
             assert len(batch['indices']) == 2
@@ -33,7 +34,7 @@ class TestSequenceBatcher(TestCase):
         indices = []
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).batch(2)
         for batch in split_np:
-            batch = trw.train.default_collate_fn(batch, device=None)
+            batch = trw.train.collate.default_collate_fn(batch, device=None)
             indices.append(batch['indices'])
 
         assert len(indices) == 3
@@ -48,7 +49,7 @@ class TestSequenceBatcher(TestCase):
         indices = []
         split_np = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).batch(2, discard_batch_not_full=True)
         for batch in split_np:
-            batch = trw.train.default_collate_fn(batch, device=None)
+            batch = trw.train.collate.default_collate_fn(batch, device=None)
             indices.append(batch['indices'])
 
         assert len(indices) == 2

@@ -6,7 +6,7 @@ import torch
 import torch.nn as nn
 import functools
 
-from trw.layers.gan_conditional import Gan
+from trw.layers.gan import Gan
 from trw.train import OutputEmbedding, OutputLoss
 from trw.train.losses import one_hot, LossMsePacked
 from trw.train.outputs_trw import OutputClassification2

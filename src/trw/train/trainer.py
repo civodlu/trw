@@ -263,7 +263,7 @@ def train_loop(
             total_collate_and_postprocess_start = time.perf_counter()
             batch = utilities.transfer_batch_to_device(batch, device)
             
-            postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
+            postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=i)
             total_collate_and_postprocess_end = time.perf_counter()
             total_collate_and_postprocess += total_collate_and_postprocess_end - total_collate_and_postprocess_start
 
@@ -353,7 +353,7 @@ def eval_loop(
         for i, batch in enumerate(split):
             assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
             batch = utilities.transfer_batch_to_device(batch, device=device)
-            postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch)
+            postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=i)
             with torch.no_grad():  # do not keep track of the gradient as we are just evaluating
                 outputs = model(batch)
                 if outputs is None:
