@@ -1,7 +1,6 @@
 import trw
 import trw.utils
 from trw.train import sequence
-from trw.train import utilities
 from trw.train import sequence_rebatch
 
 

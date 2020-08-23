@@ -1,3 +1,4 @@
+import trw.train.job_executor
 from trw.train import sequence
 from trw.train import sequence_map
 
@@ -87,7 +88,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # before blocking
             max_jobs_at_once = nb_workers
 
-        self.job_executer = sequence_map.JobExecutor(
+        self.job_executer = trw.train.job_executor.JobExecutor(
             nb_workers=nb_workers,
             function_to_run=self.function_to_run,
             max_jobs_at_once=max_jobs_at_once,
@@ -156,8 +157,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # we are done! Reset the input iterator
             self.iter_source = self.source_split.__iter__()
 
-        #print('nb_queued=', nb_queued)
-
     def _retrieve_results_and_fill_queue(self):
         """
         Retrieve results from the output queue
@@ -185,8 +184,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
                     break
             except Empty:
                 break
-
-        #print('nb_samples_replaced=', nb_samples_replaced)
 
     def _wait_for_job_completion(self):
         """

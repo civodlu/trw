@@ -35,12 +35,7 @@ class SequenceCollate(sequence.Sequence):
 
     def __next__(self):
         items = self.iter_source.__next__()
-
-        #import time
-        #start = time.perf_counter()
         items = self.collate_fn(items, device=self.device)
-        #end = time.perf_counter()
-        #print('TIME=', end - start)
         return items
 
     def __iter__(self):

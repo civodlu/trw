@@ -1,7 +1,6 @@
 import trw
 import trw.utils
 from trw.train import sequence
-from trw.train import utilities
 import numpy as np
 import torch
 import collections
@@ -115,10 +114,7 @@ class SequenceReBatch(sequence.Sequence):
 
         if self.collate_fn is not None:
             # finally make a batch
-            #time_start = time.perf_counter()
             batches = self.collate_fn(batches)
-            #time_end = time.perf_counter()
-            #print('COLLATE=', time_end - time_start)
 
         return batches
 

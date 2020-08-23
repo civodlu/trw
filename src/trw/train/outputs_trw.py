@@ -7,28 +7,7 @@ import trw.utils
 from trw.train import metrics
 from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
 from trw.train import losses
-from trw.train import utilities
-
-
-def flatten(x):
-    """
-    Flatten a tensor
-
-    Example, a tensor of shape[N, Z, Y, X] will be reshaped [N, Z * Y * X]
-
-    TODO:
-        move to common pytorch ops
-
-    Args:
-        x: a tensor
-
-    Returns: return a flattened tensor
-
-    """
-    dim = 1
-    for d in x.shape[1:]:
-        dim *= d
-    return x.view((-1, dim))
+from trw.utils import flatten
 
 
 def dict_torch_values_to_numpy(d):

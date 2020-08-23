@@ -52,7 +52,8 @@ from .callback_reporting_best_metrics import CallbackReportingBestMetrics
 from .callback_reporting_augmentations import CallbackReportingAugmentations
 
 from .sequence import Sequence
-from .sequence_map import SequenceMap, JobExecutor
+from .sequence_map import SequenceMap
+from trw.train.job_executor import JobExecutor
 from .sequence_array import SequenceArray
 from .sequence_batch import SequenceBatch
 from .sequence_async_reservoir import SequenceAsyncReservoir

@@ -20,8 +20,6 @@ def collate_dicts_pytorch(list_of_dicts):
     Returns:
         a batch
     """
-    
-    #start = time.time()
     assert isinstance(list_of_dicts, collections.Sequence), 'must be a list!'
     assert isinstance(list_of_dicts[0], collections.Mapping), 'must be a dictionary!'
     if len(list_of_dicts) == 0:
@@ -36,8 +34,6 @@ def collate_dicts_pytorch(list_of_dicts):
         else:
             r[name] = value
 
-    #end = time.time()
-    #print('COLLATE=', end - start)
     return r
 
 

@@ -1,6 +1,7 @@
 import trw
 from unittest import TestCase
 
+import trw.train.job_executor
 
 keep_ids = set()
 
@@ -30,7 +31,7 @@ class TestJobExecutor(TestCase):
         """
         Process a series of jobs. Make sure all jobs are processed exactly once
         """
-        executor = trw.train.JobExecutor(nb_workers=2, function_to_run=fn_to_run_add_msg, max_jobs_at_once=0)
+        executor = trw.train.job_executor.JobExecutor(nb_workers=2, function_to_run=fn_to_run_add_msg, max_jobs_at_once=0)
 
         # post jobs
         for i in range(10):
@@ -52,7 +53,7 @@ class TestJobExecutor(TestCase):
         """
         Make sure we can send and receive message from and to the worker directly
         """
-        executor = trw.train.JobExecutor(nb_workers=1, function_to_run=fn_to_run_identity, worker_post_process_results_fun=post_process_results_fun)
+        executor = trw.train.job_executor.JobExecutor(nb_workers=1, function_to_run=fn_to_run_identity, worker_post_process_results_fun=post_process_results_fun)
 
         # send a direct message to the worker
         executor.channel_main_to_worker.send('test')
