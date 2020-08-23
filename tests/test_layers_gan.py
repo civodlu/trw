@@ -38,7 +38,7 @@ class TestLayersGan(TestCase):
             batch = {
                 'id': id
             }
-            images = torch.ones([batch_size, 1, 16, 16]) * id.unsqueeze(1).unsqueeze(1).unsqueeze(1)
+            images = torch.ones([batch_size, 1, 16, 16], dtype=torch.float32) * id.type(torch.float32).unsqueeze(1).unsqueeze(1).unsqueeze(1)
 
             pool_ids_old = torch.tensor([b['id'][0] for b in pool.batches])
             batch_new, images_new = pool.get_data(batch, images)

@@ -103,8 +103,7 @@ class Gan(nn.Module):
             discriminator: a discriminator taking input ``image_from_batch_fn(batch)`` and
                 returning Nx2 output (without the activation function applied)
             generator: a generator taking as input [N, latent_size, [1] * dim], with dim=2 for 2D images
-                and returning as output the same shape as ``image_from_batch_fn(batch)``. Last layer should not
-                be apply an activation function.
+                and returning as output the same shape and type as ``image_from_batch_fn(batch)``
             latent_size: the latent size (random vector to seed the generator), `None` for no random
                 latent (e.g., pix2pix)
             optimizer_discriminator_fn: the optimizer function to be used for the discriminator. Takes
@@ -181,8 +180,10 @@ class Gan(nn.Module):
         o = self.generator(batch, latent)
         assert isinstance(o, tuple) and len(o) == 2, 'must return a tuple (torch.Tensor, dict of outputs)'
         images_fake_orig, generator_outputs = o
-        assert isinstance(images_fake_orig, torch.Tensor), 'must be a torch.Tensor!'
         images_real = self.real_image_from_batch_fn(batch)
+        assert type(images_real) == type(images_fake_orig), 'return must be of the same type!'
+        if isinstance(images_fake_orig, collections.Sequence) and not isinstance(images_fake_orig, torch.Tensor):
+            assert isinstance(images_fake_orig[0], torch.Tensor), 'if list, elements must be tensors!'
 
         if batch['split_name'] != self.train_split_name:
             # we are in valid/test mode, return only the generated image!

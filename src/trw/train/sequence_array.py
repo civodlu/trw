@@ -8,6 +8,7 @@ from trw.train import utilities
 import numpy as np
 import collections
 import copy
+from trw.utils import get_batch_n
 
 
 # this the name used for the sample UID
@@ -79,7 +80,7 @@ class SequenceArray(sequence.Sequence):
         indices_to_keep = [index for index, ordering in kvp_uids_ordering]
 
         # extract the samples
-        subsampled_split = SequenceArray.get(
+        subsampled_split = get_batch_n(
             self.split,
             trw.utils.len_batch(self.split),
             indices_to_keep,
@@ -97,8 +98,6 @@ class SequenceArray(sequence.Sequence):
     @staticmethod
     def get(split, nb_samples, indices, transforms, use_advanced_indexing):
         warnings.warn('deprecated. Use `trw.reporting.get_batch_n`')
-
-        from trw.utils import get_batch_n
         return get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing)
 
     def __iter__(self):
@@ -128,7 +127,7 @@ class SequenceIteratorArray(sequence.SequenceIterator):
         if not isinstance(indices, (np.ndarray, collections.Sequence)):
             indices = [indices]
 
-        return SequenceArray.get(
+        return get_batch_n(
             self.base_sequence.split,
             self.nb_samples,
             indices,

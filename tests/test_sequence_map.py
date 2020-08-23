@@ -1,3 +1,5 @@
+import unittest
+
 import numpy as np
 import time
 import datetime
@@ -7,6 +9,10 @@ from unittest import TestCase
 import collections
 import os
 import copy
+
+
+import matplotlib
+matplotlib.use('Agg')  # non interactive backend
 
 
 def load_fake_volumes_npy(item):
@@ -103,7 +109,7 @@ class TestSequenceMap(TestCase):
         time_end = time.time()
         split.close()
         print('test_map_async_1.TIME=', time_end - time_start)
-        self.assertTrue(len(vs) == 20)
+        assert(len(vs) == 20)
 
     def test_map_sync_multiple_items(self):
         # make sure we have iterate through each item of the returned items
@@ -114,7 +120,7 @@ class TestSequenceMap(TestCase):
         for v in split:
             vs.append(v['volume'].shape)
 
-        self.assertTrue(len(vs) == 20 * 5)
+        assert(len(vs) == 20 * 5)
         split.close()
         print('DONE')
 
@@ -127,7 +133,7 @@ class TestSequenceMap(TestCase):
         for v in split:
             vs.append(v['volume'].shape)
 
-        self.assertTrue(len(vs) == 20 * 5)
+        assert(len(vs) == 20 * 5)
         split.close()
         print('DONE')
 
@@ -145,7 +151,7 @@ class TestSequenceMap(TestCase):
         time_end = time.time()
         print('test_map_async_1.TIME=', time_end - time_start)
 
-        self.assertTrue(len(vs) == 20)
+        assert(len(vs) == 20)
         split.close()
         print('DONE')
 
@@ -309,4 +315,4 @@ class TestSequenceMap(TestCase):
             index = batch['indices'][0]
             indices.append(index)
         assert 10 not in indices, 'index 10 should have failed!'
-        assert len(indices) == nb_indices - 1
+        assert len(indices) == nb_indices - 1, f'expected={nb_indices - 1}, got={len(indices)}'

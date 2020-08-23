@@ -186,6 +186,12 @@ class Discriminator2(nn.Module):
 
         # introduce the target as one hot encoding input to the discriminator
         o = self.convs(torch.cat([image, segmentation], dim=1))
+        #o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
+        o_expected = torch.zeros(len(image), device=image.device, dtype=torch.float32)
+        if is_real:
+            # one sided label smoothing
+            o_expected.uniform_(0.8, 1.2)
+
         o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
         o_expected = o_expected.unsqueeze(1).unsqueeze(1)
         o_expected = o_expected.repeat([1, o.shape[2], o.shape[3]])
@@ -207,8 +213,8 @@ def get_segmentation(batch, source=None):
     }
 
 
-def optimizer_fn(params):
-    optimizer = torch.optim.Adam(lr=0.0002, betas=(0.5, 0.999), params=params)
+def optimizer_fn(params, lr):
+    optimizer = torch.optim.Adam(lr=lr, betas=(0.5, 0.999), params=params)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=200, gamma=0.1)
     return optimizer, scheduler
 
@@ -218,13 +224,14 @@ def create_model(options):
 
     discriminator = Discriminator2()
     generator = Generator2(latent_size)
+    lr_base = 0.0002
 
     model = Gan(
         discriminator=discriminator,
         generator=generator,
         latent_size=latent_size,
-        optimizer_discriminator_fn=optimizer_fn,
-        optimizer_generator_fn=optimizer_fn,
+        optimizer_discriminator_fn=functools.partial(optimizer_fn, lr=lr_base),  # TTUR
+        optimizer_generator_fn=functools.partial(optimizer_fn, lr=lr_base / 2.0),
         real_image_from_batch_fn=get_image,
         image_pool=GanDataPool(100)
     )

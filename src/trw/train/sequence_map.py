@@ -1,11 +1,16 @@
+import time
+
 import os
 import datetime
 import logging
 import collections
-from torch import multiprocessing as mp
 from queue import Empty
 import functools
 import traceback
+
+import multiprocessing
+# make sure we start a new process in an empty state
+mp = multiprocessing.get_context("spawn")
 
 from trw.train import sequence
 
@@ -43,8 +48,6 @@ class JobExecutor:
         :param worker_post_process_results_fun: a function used to post-process the worker results. It takes as input `results, channel_main_to_worker, channel_worker_to_main`
         :param output_queue_size: the output queue size. If `0`, no maximum size. If `None`, same as `max_jobs_at_once`
         """
-
-        #print('JobExecutor | ', os.getpid(), '| created | ', datetime.datetime.now().time())
         logger.info(f'JobExecutor created={self}, nb_workers={nb_workers}, '
                     f'max_jobs_at_once={max_jobs_at_once}, output_queue_size={output_queue_size}')
 
@@ -55,7 +58,8 @@ class JobExecutor:
             self.output_queue = mp.Queue(maxsize=output_queue_size)
         self.nb_workers = nb_workers
 
-        # we can't cancel jobs, so instead record a session ID. If session of the worker and current session ID do not match
+        # we can't cancel jobs, so instead record a session ID. If session of
+        # the worker and current session ID do not match
         # it means the results of these tasks should be discarded
         self.job_session_id = mp.Value('i', 0)
 
@@ -84,24 +88,28 @@ class JobExecutor:
         """
         Terminate all jobs
         """
-        logger.info(f'closing JobExecutor={self}')
+        if self.pool is not None:
+            logger.info(f'closing JobExecutor={self}')
 
-        # clear all the queues so that the jobs are started
-        self.reset()  # clear everything
-        logger.info(f'JobExecutor queue emptied!')
+            # clear all the queues so that the jobs are started
 
-        # notify all workers that they need to stop
-        self.must_finish_processes.value = 1
-        self.pool.close()
+            self.reset()  # clear everything
+            logger.info(f'JobExecutor queue emptied!')
 
-        logger.info(f'JobExecutor pool closed!')
+            # notify all workers that they need to stop
+            with self.must_finish_processes.get_lock():
+                self.must_finish_processes.value = 1
 
-        # using `torch.multiprocessing.set_sharing_strategy('file_system')`, a deadlock could occur
-        # when the workers are terminated. To avoid this, simply terminate the process. At this point
-        # we are not interested in the results anyway.
-        self.pool.terminate()
-        # self.pool.join()
-        logger.info(f'terminated JobExecutor={self}!')
+            self.pool.close()
+            logger.info(f'JobExecutor pool closed!')
+
+            # using `torch.multiprocessing.set_sharing_strategy('file_system')`, a deadlock could occur
+            # when the workers are terminated. To avoid this, simply terminate the process. At this point
+            # we are not interested in the results anyway.
+            self.pool.terminate()
+            self.pool.join()
+            logger.info(f'terminated JobExecutor={self}!')
+            self.pool = None
 
     def reset(self):
         """
@@ -109,11 +117,17 @@ class JobExecutor:
 
         The results of the jobs that have not yet been calculated will be discarded
         """
-        while not self.input_queue.empty():
-            self.input_queue.get()
+        try:
+            while not self.input_queue.empty():
+                self.input_queue.get()
+        except EOFError:  # in case the other process was already terminated
+            pass
 
-        while not self.output_queue.empty():
-            self.output_queue.get()
+        try:
+            while not self.output_queue.empty():
+                self.output_queue.get()
+        except EOFError:  # in case the other process was already terminated
+            pass
 
         # discard the results of the jobs that will not have the
         # current `job_session_id`
@@ -154,8 +168,10 @@ class JobExecutor:
 
                 if post_process_results_fun is not None and results:
                     # channels are reversed for the communication worker->main thread
-                    post_process_results_fun(results, channel_main_to_worker=channel_worker_to_main, channel_worker_to_main=channel_main_to_worker)
-                    # post_process_results_fun(results, channel_main_to_worker=channel_main_to_worker, channel_worker_to_main=channel_worker_to_main)
+                    post_process_results_fun(
+                        results,
+                        channel_main_to_worker=channel_worker_to_main,
+                        channel_worker_to_main=channel_main_to_worker)
             except Exception as e:
                 print('-------------- ERROR in worker function --------------')
                 print(e)
@@ -164,7 +180,6 @@ class JobExecutor:
                 print('-------------------------------------------------------')
 
                 results = None
-                #continue  # restart the worker
 
             try:
                 with job_session_id.get_lock():
