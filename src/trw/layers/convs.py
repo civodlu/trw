@@ -1,58 +1,49 @@
-import torch.nn as nn
+import copy
 import numbers
-from trw.layers.utils import div_shape
+
+import torch
+from trw.layers import div_shape
+from trw.layers.blocks import BlockConvNormActivation, BlockPool
+from trw.layers.layer_config import default_layer_config, NormType, LayerConfig
+import torch.nn as nn
+from typing import Union, Dict, Sequence, Optional, Callable, List
+
 from trw.utils import flatten
-from trw.layers.ops_conversion import OpsConversion
 
 
-class ModulelWithIntermediate:
+class ModuleWithIntermediate:
     """
     Represent a module with intermediate results
     """
-    def forward_with_intermediate(self, x):
+    def forward_with_intermediate(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
         raise NotImplemented()
 
 
-class ConvsBase(nn.Module, ModulelWithIntermediate):
-    """
-    Generic group based convolutional network (e.g., VGG) for 2D or 3D CNN
-
-    The following operations will take place:
-        Conv group 1
-            Conv 1, repeat 1
-            Activation
-            [...]
-            Conv n, repeat n
-            Activation
-            Pooling
-            LRN or BatchNorm
-            Dropout
-        [...]
-        Conv group n
-            [...]
-
-    """
+class ConvsBase(nn.Module, ModuleWithIntermediate):
     def __init__(
             self,
-            cnn_dim,
-            input_channels,
-            channels,
-            convolution_kernels=5,
-            strides=1,
-            pooling_size=2,
-            convolution_repeats=1,
-            activation=nn.ReLU,
-            with_flatten=False,
-            dropout_probability=None,
-            batch_norm_kwargs=None,
-            lrn_kwargs=None,
-            padding='same',
-            last_layer_is_output=False,
-            bias=True):
+            dimensionality: int,
+            input_channels: int,
+            *,
+            channels: Sequence[int],
+            convolution_kernels: Optional[Union[int, Sequence[int]]] = 5,
+            strides: Optional[Union[int, Sequence[int]]] = 1,
+            pooling_size: Optional[Union[int, Sequence[int]]] = 2,
+            convolution_repeats: Union[int, Sequence[int]] = 1,
+            activation: Optional[nn.Module] = nn.ReLU,
+            padding: Union[str, int] = 'same',
+            with_flatten: bool = False,
+            dropout_probability: Optional[float] = None,
+            norm_type: Optional[NormType] = None,
+            norm_kwargs: Dict = {},
+            pool_kwargs: Dict = {},
+            activation_kwargs: Dict = {},
+            last_layer_is_output: bool = False,
+            conv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+            config: LayerConfig = default_layer_config(dimensionality=None)):
         """
-
         Args:
-            cnn_dim: the dimension of the  CNN (2 for 2D or 3 for 3D)
+            dimensionality: the dimension of the  CNN (2 for 2D or 3 for 3D)
             input_channels: the number of input channels
             channels: the number of channels for each convolutional layer
             convolution_kernels: for each convolution group, the kernel of the convolution
@@ -61,19 +52,23 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
             convolution_repeats: the number of repeats of a convolution. ``1`` means no repeat.
             activation: the activation function
             with_flatten: if True, the last output will be flattened
-            dropout_probability: if None, not dropout. Else the probability of dropout after each convolution
-            batch_norm_kwargs: the batch norm kwargs. See the original torch functions for description. If None,
-                no batch norm
-            lrn_kwargs: the local response normalization kwargs. See the original torch functions for description. If
-                None, not LRN
+            norm_kwargs: additional arguments to be used for the normalization layer
             padding: 'same' will add padding so that convolution output as the same size as input
             last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
-            bias: if ``True``, add a learnable bias to the convolution layer
+            dropout_probability: dropout probability
         """
         super().__init__()
 
-        ops_conv = OpsConversion(cnn_dim)
-        lrn_fn = nn.LocalResponseNorm
+        # update the configuration locally
+        config = copy.copy(config)
+        if norm_type is not None:
+            config.norm_type = norm_type
+        if activation is not None:
+            config.activation = activation
+        config.set_dim(dimensionality)
+        config.pool_kwargs = {**pool_kwargs, **config.pool_kwargs}
+        config.norm_kwargs = {**norm_kwargs, **config.norm_kwargs}
+        config.activation_kwargs = {**activation_kwargs, **config.activation_kwargs}
 
         # normalize the arguments
         nb_convs = len(channels)
@@ -98,82 +93,61 @@ class ConvsBase(nn.Module, ModulelWithIntermediate):
         assert nb_convs == len(convolution_repeats)
 
         self.with_flatten = with_flatten
-        with_batchnorm = batch_norm_kwargs is not None
-        with_lrn = lrn_kwargs is not None
 
-        # instantiate the net work. We do this as a nn.Module instead of simply a nn.Sequential
-        # so that we can take advantage of the shared involving multiple layers in downstream tasks
-        # for example in fully convolutional layers, we need to re-use intermediate results for the
-        # pixel level segmentation that can't be achieved using nn.Sequential
         layers = nn.ModuleList()
-
         prev = input_channels
         for n in range(len(channels)):
+            is_last_layer = (n + 1) == len(channels)
             current = channels[n]
-            currently_last_layer = n + 1 == len(channels)
 
-            p = 0
             if padding == 'same':
                 p = div_shape(convolution_kernels[n], 2)
             else:
                 p = padding[n]
 
-            ops = [ops_conv.conv_fn(prev, current, kernel_size=convolution_kernels[n], stride=strides[n], padding=p, bias=bias)]
-            if not last_layer_is_output or not currently_last_layer:
-                # only use the activation if not the last layer
-                ops.append(activation())
+            ops = []
+            for r in range(convolution_repeats[n]):
+                is_last_repetition = (r + 1) == convolution_repeats[n]
+                if r == 0:
+                    stride = strides[n]
+                else:
+                    stride = 1
 
-            nb_repeats = convolution_repeats[n] - 1
-            for r in range(nb_repeats):
-                # do NOT apply strides in the repeat convolutions, else we will loose too quickly
-                # the resolution
-                if with_batchnorm:
-                    ops.append(ops_conv.bn_fn(current, **batch_norm_kwargs))
+                if last_layer_is_output and is_last_layer and is_last_repetition:
+                    # Last layer layer should not have dropout/normalization/activation
+                    config.activation = None
+                    config.norm = None
+                    config.dropout = None
+                ops.append(conv_block_fn(config, prev, current, kernel_size=convolution_kernels[n], padding=p, stride=stride))
+                prev = current
 
-                if with_lrn:
-                    ops.append(lrn_fn(current, **lrn_kwargs))
+            if pooling_size is not None:
+                ops.append(BlockPool(config, kernel_size=pooling_size[n]))
 
-                ops.append(ops_conv.conv_fn(current, current, kernel_size=convolution_kernels[n], stride=1, padding=p, bias=bias))
-
-                if last_layer_is_output and currently_last_layer and r + 1 == nb_repeats:
-                    # we don't want to add activation if the output is the last layer
-                    break
-
-                ops.append(activation())
-
-            if not last_layer_is_output or not currently_last_layer:
-                # if not, we are done here: do not add batch norm, LRN, dropout....
-                if pooling_size is not None:
-                    ops.append(ops_conv.pool_fn(pooling_size[n])),
-
-                if with_batchnorm:
-                    ops.append(ops_conv.bn_fn(current, **batch_norm_kwargs))
-
-                if with_lrn:
-                    ops.append(lrn_fn(current, **lrn_kwargs))
-
-                if dropout_probability is not None:
-                    ops.append(ops_conv.dropout_fn(p=dropout_probability))
+            if not is_last_layer or not last_layer_is_output:
+                if dropout_probability is not None and config.dropout is not None:
+                    ops.append(config.dropout(p=dropout_probability, **config.dropout_kwargs))
 
             layers.append(nn.Sequential(*ops))
-            prev = current
+
         self.layers = layers
 
-    def forward_simple(self, x):
-        for l in self.layers:
-            x = l(x)
+    def forward_simple(self, x: torch.Tensor) -> torch.Tensor:
+        for layer in self.layers:
+            x = layer(x)
 
         if self.with_flatten:
             x = flatten(x)
         return x
 
-    def forward_with_intermediate(self, x):
+    def forward_with_intermediate(self, x: torch.Tensor) -> List[torch.Tensor]:
         r = []
-        for l in self.layers:
-            x = l(x)
+        for layer in self.layers:
+            x = layer(x)
             r.append(x)
 
         return r
 
     def forward(self, x):
         return self.forward_simple(x)
+

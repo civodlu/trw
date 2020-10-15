@@ -1,3 +1,4 @@
+import functools
 import json
 import time
 import logging
@@ -9,6 +10,7 @@ import collections
 import datetime
 import traceback as traceback_module
 import io
+import torch.nn as nn
 
 logger = logging.getLogger(__name__)
 
@@ -531,3 +533,83 @@ def default_sum_all_losses(dataset_name, batch, loss_terms):
             # this is not used during optimization (e.g., embedding output)
             sum_losses += loss
     return sum_losses
+
+
+def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=None):
+    """
+    Post process a batch of data (e.g., this can be useful to add additional
+    data to the current batch)
+
+    Args:
+        dataset_name (str): the name of the dataset the `batch` belongs to
+        split_name (str): the name of the split the `batch` belongs to
+        batch: the current batch of data
+        callbacks_per_batch (list): the callbacks to be executed for each batch.
+            Each callback must be callable with `(dataset_name, split_name, batch)`.
+            if `None`, no callbacks
+        batch_id: indicate the current batch within an epoch. May be ``None``. This can be useful
+            for embedding optimizer within a module (e.g., scheduler support)
+    """
+
+    # always useful: for example if we do a model composed of multiple sub-models (one per dataset)
+    # we would need to know what sub-model to use
+    batch['dataset_name'] = dataset_name
+    batch['split_name'] = split_name
+    if batch_id is not None:
+        batch['batch_id'] = batch_id
+
+    if callbacks_per_batch is not None:
+        for callback in callbacks_per_batch:
+            callback(dataset_name, split_name, batch)
+
+
+def apply_spectral_norm(
+        module,
+        n_power_iterations=1,
+        eps=1e-12,
+        dim=None,
+        name='weight',
+        discard_layer_types=[torch.nn.InstanceNorm2d, torch.nn.InstanceNorm3d]):
+    """
+    Apply spectral norm on every sub-modules
+
+    Args:
+        module: the parent module to apply spectral norm
+        discard_layer_types: the layers_legacy of this type will not have spectral norm applied
+        n_power_iterations: number of power iterations to calculate spectral norm
+        eps: epsilon for numerical stability in calculating norms
+        dim: dimension corresponding to number of outputs, the default is ``0``,
+            except for modules that are instances of ConvTranspose{1,2,3}d, when it is ``1``
+        name: name of weight parameter
+
+    Returns:
+        the same module as input module
+    """
+    def apply_sn(m):
+        for layer in discard_layer_types:
+            if isinstance(m, layer):
+                # abort: don't apply SN on this layer
+                return
+
+        if hasattr(m, name):
+            logger.info(f'applying spectral norm={m}')
+            nn.utils.spectral_norm(m, n_power_iterations=n_power_iterations, eps=eps, dim=dim, name=name)
+
+    module.apply(apply_sn)
+    return module
+
+
+def apply_gradient_clipping(module: nn.Module, value):
+    """
+    Apply gradient clipping recursively on a module as callback.
+
+    Every time the gradient is calculated, it is intercepted and clipping applied.
+
+    Args:
+        module: a module where sub-modules will have their gradients clipped
+        value: the maximum value of the gradient
+
+    """
+    assert value >= 0
+    for p in module.parameters():
+        p.register_hook(lambda gradient: torch.clamp(gradient, -value, value))

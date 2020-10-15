@@ -14,8 +14,8 @@ import torch
 class NetSpatialTransformer(nn.Module):
     def __init__(self):
         super().__init__()
-        self.localization_convs = trw.layers.convs_2d(1, channels=[16, 32], convolution_kernels=7, strides=2, batch_norm_kwargs={}, dropout_probability=0.5)
-        self.localization_regressor = trw.layers.denses([32 * 4 * 4, 64, 2 * 3], last_layer_is_output=True, batch_norm_kwargs={}, dropout_probability=0.5)
+        self.localization_convs = trw.layers.convs_2d(1, channels=[16, 32], convolution_kernels=7, strides=2, dropout_probability=0.5)
+        self.localization_regressor = trw.layers.denses([32 * 4 * 4, 64, 2 * 3], last_layer_is_output=True, dropout_probability=0.5)
 
         # make sure the initial transformation is reasonable (e.g., identity)
         self.localization_regressor[-1].weight.data.zero_()
@@ -33,8 +33,8 @@ class NetSpatialTransformer(nn.Module):
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.convs = trw.layers.convs_2d(1, channels=[8, 16], convolution_kernels=7, strides=2, batch_norm_kwargs={})
-        self.denses = trw.layers.denses([16 * 1 * 1, 500, 10], last_layer_is_output=True, batch_norm_kwargs={})
+        self.convs = trw.layers.convs_2d(1, channels=[8, 16], convolution_kernels=7, strides=2)
+        self.denses = trw.layers.denses([16 * 1 * 1, 500, 10], last_layer_is_output=True)
 
         self.transformer = NetSpatialTransformer()
 

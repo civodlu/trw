@@ -1,3 +1,5 @@
+from typing import Sequence, Union, List, Tuple
+
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
@@ -15,7 +17,13 @@ class AutoencoderConvolutionalVariational(nn.Module):
         https://wiseodd.github.io/techblog/2016/12/10/variational-autoencoder/
 
     """
-    def __init__(self, input_shape, encoder, decoder, z_size, input_type=torch.float32):
+    def __init__(
+            self,
+            input_shape: Union[List[int], Tuple[int, ...], Sequence[int]],
+            encoder: nn.Module,
+            decoder: nn.Module,
+            z_size: int,
+            input_type: torch.dtype = torch.float32):
         """
 
         Args:

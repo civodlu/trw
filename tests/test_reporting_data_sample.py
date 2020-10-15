@@ -104,6 +104,57 @@ class TestReporting(TestCase):
         assert 'numpy_arrays_int_5_4' in normalized_data
         assert type_categories['numpy_arrays_int_5_4'] == DataCategory.DiscreteOrdered
 
+    def test_data_normalization_different_numpy_shapes_3d(self):
+        # make sure we can load differently shaped data samples
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        batch = {
+            'values': [
+                np.zeros([1, 1, 64, 64, 64]),
+                np.zeros([1, 1, 64, 64, 64]),
+                np.zeros([1, 1, 65, 65, 65])],
+        }
+
+        table_name = 'table_name'
+        tmp_folder, _ = make_table(cursor, table_name, 'table_role', batch)
+
+        data = get_table_data(cursor, table_name)
+        options = trw.reporting.create_default_reporting_options()
+        options.db_root = os.path.join(tmp_folder, 'test.db')
+
+        normalized_data, types, type_categories = normalize_data(options, data, table_name)
+        assert len(normalized_data['values']) == 3
+        assert normalized_data['values'][0].shape == (1, 1, 64, 64, 64)
+        assert normalized_data['values'][2].shape == (1, 1, 65, 65, 65)
+
+    def test_data_normalization_different_numpy_shapes_2d(self):
+        # make sure we can load differently shaped data samples
+        connection = sqlite3.connect(':memory:')
+        cursor = connection.cursor()
+
+        batch = {
+            'values': [
+                np.zeros([1, 1, 64, 64]),
+                np.zeros([1, 1, 64, 64]),
+                np.zeros([1, 1, 65, 65])],
+        }
+
+        table_name = 'table_name'
+        tmp_folder, _ = make_table(cursor, table_name, 'table_role', batch)
+
+        data = get_table_data(cursor, table_name)
+        options = trw.reporting.create_default_reporting_options()
+        options.db_root = os.path.join(tmp_folder, 'test.db')
+
+        normalized_data, types, type_categories = normalize_data(options, data, table_name)
+        assert len(normalized_data['values']) == 3
+
+        # these were exported as image
+        assert '0.png' in normalized_data['values'][0]
+        assert '1.png' in normalized_data['values'][1]
+        assert '2.png' in normalized_data['values'][2]
+
     def test_data_normalization(self):
         # publish data the same way the application would:
         # export samples to a database, then read the data

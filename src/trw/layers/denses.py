@@ -1,31 +1,42 @@
+import copy
+
 import torch.nn as nn
+from trw.layers.layer_config import default_layer_config, LayerConfig, NormType
 from trw.layers.flatten import Flatten
-import warnings
+from typing import Any, Sequence
 
 
 def denses(
-        sizes,
-        dropout_probability=None,
-        activation=nn.ReLU,
-        last_layer_is_output=False,
-        with_flatten=True,
-        batch_norm_kwargs=None):
+        sizes: Sequence[int],
+        dropout_probability: float = None,
+        activation: Any = nn.ReLU,
+        normalization_type: NormType = NormType.BatchNorm,
+        last_layer_is_output: bool = False,
+        with_flatten: bool = True,
+        config: LayerConfig = default_layer_config(dimensionality=None)) -> nn.Module:
     """
 
     Args:
-          sizes:
-        dropout_probability:
+        sizes: the size of the linear layers_legacy. The format is [linear1_input, linear1_output, ..., linearN_output]
+        dropout_probability: the probability of the dropout layer. If `None`, no dropout layer is added.
         activation: the activation to be used
-        last_layer_is_output: This must be set to `True` if the last layer of dense is actually an output. If the last layer is an output,
-            we should not add batch norm, dropout or activation of the last `nn.Linear`
+        normalization_type: the normalization to be used between dense layers_legacy. If `None`, no normalization added
+        last_layer_is_output: This must be set to `True` if the last layer of dense is actually an output.
+            If the last layer is an output, we should not add batch norm, dropout or
+            activation of the last `nn.Linear`
         with_flatten: if True, the input will be flattened
-        batch_norm_kwargs: specify the arguments to be used by the batch normalization layer
+        config: defines the available operations
         
     Returns:
         a nn.Module
     """
-    ops = []
+    config = copy.copy(config)
+    if activation is not None:
+        config.activation = activation
+    config.norm_type = normalization_type
+    config.set_dim(1)
 
+    ops = []
     if with_flatten:
         ops.append(Flatten())
     
@@ -36,14 +47,14 @@ def denses(
         ops.append(nn.Linear(current, next))
         if n + 2 == len(sizes):
             if not last_layer_is_output:
-                ops.append(activation())
+                ops.append(activation(**config.activation_kwargs))
 
         else:
-            ops.append(activation())
+            if config.norm_type is not None:
+                ops.append(nn.BatchNorm1d(next, **config.norm_kwargs))
 
-            if batch_norm_kwargs is not None:
-                ops.append(nn.BatchNorm1d(next, **batch_norm_kwargs))
-    
-            if dropout_probability is not None:
-                ops.append(nn.Dropout(p=dropout_probability))
+            ops.append(activation(**config.activation_kwargs))
+
+            if dropout_probability is not None and config.dropout is not None:
+                ops.append(config.dropout(p=dropout_probability, **config.dropout_kwargs))
     return nn.Sequential(*ops)

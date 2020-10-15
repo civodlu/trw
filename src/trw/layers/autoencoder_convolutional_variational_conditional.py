@@ -1,3 +1,5 @@
+from typing import Union, Sequence, List
+
 import torch.nn as nn
 import torch
 from trw.layers import crop_or_pad_fun, AutoencoderConvolutionalVariational
@@ -15,7 +17,14 @@ class AutoencoderConvolutionalVariationalConditional(nn.Module):
     latent given y. In this implementation, the encoder is not using ``y``, only the decoder is aware
     of it. This is done by concatenating the latent variable calculated by the encoder and ``y``.
     """
-    def __init__(self, input_shape, encoder, decoder, z_size, y_size, input_type=torch.float32):
+    def __init__(
+            self,
+            input_shape: Union[Sequence[int], List[int]],
+            encoder: nn.Module,
+            decoder: nn.Module,
+            z_size: int,
+            y_size: int,
+            input_type=torch.float32):
         """
 
         Args:

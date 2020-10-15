@@ -129,7 +129,7 @@ class Generator(nn.Module):
         latent_size = 0
         super(Generator, self).__init__()
         self.latent_size = latent_size
-        self.unet = trw.layers.UNetBase(2, input_channels=3 + latent_size, output_channels=3, channels=[64, 128, 256, 512])
+        self.unet = trw.layers_legacy.UNetBase(2, input_channels=3 + latent_size, output_channels=3, channels=[64, 128, 256, 512])
 
     def forward(self, segmentation):
         #latent = latent.repeat([1, 1, segmentation.shape[2], segmentation.shape[3]])
@@ -143,7 +143,7 @@ class Discriminator(nn.Module):
     def __init__(self):
         super(Discriminator, self).__init__()
 
-        self.convs = trw.layers.convs_2d(
+        self.convs = trw.layers_legacy.convs_2d(
             3,
             [64, 128, 256, 512, 512, 1],
             convolution_kernels=[4, 4, 4, 4, 4, 1],
@@ -191,7 +191,7 @@ def create_model(options):
     opt.lambda_A = 10
     opt.lambda_B = 10
 
-    m = trw.layers.CycleGan(
+    m = trw.layers_legacy.CycleGan(
         opt=opt,
         netG_A=generator_mask_to_facades,
         netG_B=generator_facades_to_mask,

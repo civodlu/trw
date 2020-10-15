@@ -14,6 +14,7 @@ from .global_pooling import global_max_pooling_2d, global_average_pooling_2d, gl
     global_max_pooling_3d
 from .batch_pad import batch_pad, batch_pad_joint, batch_pad_torch, batch_pad_numpy
 from .safe_filename import safe_filename
+from .optional_import import optional_import
 
 
 def collect_hierarchical_module_name(base_name, model, module_to_name=None):

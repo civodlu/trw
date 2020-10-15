@@ -59,25 +59,27 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
     return optimizers, schedulers
 
 
-def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, scheduler_fn=None):
+def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, betas=(0.9, 0.999), scheduler_fn=None):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
     Args:
-        datasets: a dictionary of dataset
+        datasets: a dictionary of datasets
         model: a model to optimize
         learning_rate: the initial learning rate
         weight_decay: the weight decay
         scheduler_fn: a scheduler, or `None`
+        betas: coefficients used for computing running averages of gradient
+            and its square (default: (0.9, 0.999))
 
     Returns:
         An optimizer
     """
-    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay)
+    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay, betas=betas)
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 
-def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0):
+def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0, betas=(0.9, 0.999)):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
@@ -88,12 +90,21 @@ def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, 
         step_size: the number of epoch composing a step. Each step the learning rate will be multiplied by `gamma`
         gamma: the factor to apply to the learning rate every step
         weight_decay : the weight decay
+        betas: coefficients used for computing running averages of gradient
+            and its square (default: (0.9, 0.999))
 
     Returns:
         An optimizer with a step scheduler
     """
     scheduler_fn = functools.partial(create_scheduler_step_lr, step_size=step_size, gamma=gamma)
-    return create_adam_optimizers_fn(datasets, model, learning_rate=learning_rate, weight_decay=weight_decay, scheduler_fn=scheduler_fn)
+    return create_adam_optimizers_fn(
+        datasets,
+        model,
+        learning_rate=learning_rate,
+        weight_decay=weight_decay,
+        betas=betas,
+        scheduler_fn=scheduler_fn
+    )
 
 
 def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, nesterov=False, scheduler_fn=None):

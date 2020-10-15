@@ -8,6 +8,7 @@ from .metadata import (
     __version__,
 )
 
+from . import utils
 from . import reporting
 from . import train
 from . import transforms

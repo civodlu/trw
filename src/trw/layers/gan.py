@@ -238,6 +238,10 @@ class Gan(nn.Module):
         discrimator_outputs_generator_and_generator_outputs = {**discrimator_outputs_generator, **generator_outputs}
         generator_loss = self.loss_from_outputs_fn(discrimator_outputs_generator_and_generator_outputs, batch, is_training=True)
 
+        #
+        # update generator and discriminator parameters all at once
+        #
+
         if generator_loss.requires_grad:
             generator_loss.backward()
             self.optmizer_generator.step()

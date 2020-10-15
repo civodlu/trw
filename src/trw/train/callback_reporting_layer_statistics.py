@@ -11,7 +11,8 @@ from trw.utils import collect_hierarchical_module_name, collect_hierarchical_par
 from trw.train.callback import Callback
 from trw.train.callback_reporting_model_summary import export_table
 from trw.train.utilities import update_json_config, get_device, \
-    transfer_batch_to_device, CleanAddedHooks, find_default_dataset_and_split_names, prepare_loss_terms, default_sum_all_losses
+    transfer_batch_to_device, CleanAddedHooks, find_default_dataset_and_split_names, prepare_loss_terms, \
+    default_sum_all_losses, postprocess_batch
 
 logger = logging.getLogger(__name__)
 
@@ -114,21 +115,34 @@ def calculate_stats_gradient(
         # must be in `train` mode to collect gradients
         model.train()
         model.apply(register_hooks)
-        for batch in sequence:
+        for batch_id, batch in enumerate(sequence):
             batch = transfer_batch_to_device(batch, device)
+            postprocess_batch(
+                dataset_name='dataset_name',
+                split_name='train',
+                batch=batch,
+                callbacks_per_batch=[],
+                batch_id=batch_id)
             model.zero_grad()
             outputs = model(batch)
             loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
             loss = default_sum_all_losses(None, batch, loss_terms)
-            if loss is None:
+            if loss is None or not isinstance(loss, torch.Tensor):
                 # there is no trainable parameter, abort!
                 return None
-            loss.backward()
 
-            # aggregate the module gradients
-            gradient_store = OrderedDict()
-            collect_gradient(model, gradient_store)
-            aggregate_stats_fn(gradient_stats, gradient_store)
+            try:
+                loss.backward()
+
+                # aggregate the module gradients
+                gradient_store = OrderedDict()
+                collect_gradient(model, gradient_store)
+                aggregate_stats_fn(gradient_stats, gradient_store)
+            except Exception as e:
+                # could be problematic in GAN as the optimizer is embedded
+                # in the model and clearing the gradient after each forward
+                logger.error(f'Gradient calculation failed! Exception={e}')
+
             aggregate_stats_fn(activation_stats, batch_stats)
 
             # make sure we collect statics from a subset of the samples
@@ -137,11 +151,13 @@ def calculate_stats_gradient(
             if total_samples >= nb_samples:
                 break
 
+            # clean any gradient calculated by this module
+            # after each batch
+            model.zero_grad()
+
         aggregate_stats_end_fn(gradient_stats)
         aggregate_stats_end_fn(activation_stats)
 
-    # clean any gradient calculated by this module
-    model.zero_grad()
     return gradient_stats, activation_stats
 
 
@@ -149,7 +165,7 @@ class CallbackReportingLayerStatistics(Callback):
     """
     Report the activation and gradient statistics layer by layer
     """
-    def __init__(self, dataset_name=None, split_name=None, nb_samples=500, table_name='layer_statistics'):
+    def __init__(self, dataset_name=None, split_name=None, nb_samples=500, table_name='layer'):
         """
 
         Args:
@@ -163,7 +179,8 @@ class CallbackReportingLayerStatistics(Callback):
         self.nb_samples = nb_samples
         self.split_name = split_name
         self.dataset_name = dataset_name
-        self.table_name = table_name
+        self.table_name_activation = table_name + '_activation'
+        self.table_name_gradient = table_name + '_gradient'
 
     def first_time(self, options, datasets):
         # here we only want to collect the kernels a single time per epoch, so fix the dataset/split names
@@ -175,19 +192,22 @@ class CallbackReportingLayerStatistics(Callback):
 
             # set the default parameter of the graph
             config_path = options['workflow_options']['sql_database_view_path']
-            update_json_config(config_path, {
-                self.table_name: {
-                    'default': {
-                        'X Axis': 'epoch',
-                        'Y Axis': 'metric_value',
-                        'Group by': 'layer',
-                        'discard_axis_y': 'epoch',
-                        'discard_axis_x': 'metric_value',
-                        'discard_group_by': 'epoch',
-                        'number_of_columns': 2,
+
+            table_names = [self.table_name_activation, self.table_name_gradient]
+            for table_name in table_names:
+                update_json_config(config_path, {
+                    table_name: {
+                        'default': {
+                            'X Axis': 'epoch',
+                            'Y Axis': 'metric_value',
+                            'Group by': 'layer',
+                            'discard_axis_y': 'epoch',
+                            'discard_axis_x': 'metric_value',
+                            'discard_group_by': 'epoch',
+                            'number_of_columns': 2,
+                        }
                     }
-                }
-            })
+                })
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
@@ -208,6 +228,10 @@ class CallbackReportingLayerStatistics(Callback):
         module_to_name = collect_hierarchical_module_name(type(model).__name__, model)
         parameter_to_name = collect_hierarchical_parameter_name(type(model).__name__, model, with_grad_only=True)
 
+        #
+        # Gradient stats
+        #
+        logger.info('preparing layer gradient export...')
         layer_names = []
         epochs = []
         datasets = []
@@ -230,6 +254,35 @@ class CallbackReportingLayerStatistics(Callback):
                 splits.append(self.split_name)
                 metrics.append('gradient_' + name)
                 metric_values.append(value)
+
+        table = collections.OrderedDict([
+            ('layer', layer_names),
+            ('epoch', epochs),
+            ('dataset', datasets),
+            ('split', splits),
+            ('metric', metrics),
+            ('metric_value', metric_values),
+        ])
+
+        logger.info('exporting layer gradient to SQL...')
+
+        export_table(
+            options,
+            self.table_name_gradient,
+            table,
+            table_role='data_graph',
+            clear_existing_data=False)
+
+        #
+        # activation stats
+        #
+        logger.info('preparing layer activation export...')
+        layer_names = []
+        epochs = []
+        datasets = []
+        splits = []
+        metrics = []
+        metric_values = []
 
         for layer, stats in activation_stats.items():
             for name, value in stats.items():
@@ -257,11 +310,11 @@ class CallbackReportingLayerStatistics(Callback):
             ('metric_value', metric_values),
         ])
 
-        logger.info('exporting to SQL...')
+        logger.info('exporting layer activation to SQL...')
 
         export_table(
             options,
-            self.table_name,
+            self.table_name_activation,
             table,
             table_role='data_graph',
             clear_existing_data=False)

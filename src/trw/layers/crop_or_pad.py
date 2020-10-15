@@ -1,9 +1,11 @@
 import torch.nn.functional as F
 import numpy as np
 from trw.transforms import batch_crop
+import torch
+from typing import Sequence
 
 
-def crop_or_pad_fun(x, shape, padding_default_value=0):
+def crop_or_pad_fun(x: torch.Tensor, shape: Sequence[int], padding_default_value=0) -> torch.Tensor:
     """
     Crop or pad a tensor to the specified shape (``N`` and ``C`` excluded)
 

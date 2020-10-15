@@ -2,9 +2,29 @@ import collections
 import os
 
 import numpy as np
+import skimage.transform
 from trw.utils import safe_lookup, len_batch
 from trw.reporting.data_category import DataCategory
 from trw.reporting.table_sqlite import get_data_types_and_clean_data
+from typing import List
+
+
+def resize_arrays(arrays: List[np.ndarray], shape=None) -> np.ndarray:
+    if shape is None:
+        shapes = [a.shape for a in arrays]
+        shape = np.asarray(shapes).mean(axis=0).round().astype(int)
+
+    resized_arrays = []
+    for array in arrays:
+        resized_array = skimage.transform.resize(
+            array,
+            shape,
+            order=1,
+            mode='constant',
+            anti_aliasing=False,
+            preserve_range=True)
+        resized_arrays.append(resized_array)
+    return np.asarray(resized_arrays)
 
 
 def normalize_data(options, data, table_name):
@@ -88,8 +108,14 @@ def normalize_data(options, data, table_name):
                     loaded_np.append(None)
 
             # expand the array if satisfying the criteria
-            array = np.asarray(loaded_np)
-            if len(array.shape) == 2 and array.shape[1] <= options.data.unpack_numpy_arrays_with_less_than_x_columns:
+            try:
+                array = np.asarray(loaded_np)
+            except ValueError as e:
+                array = None
+
+            if array is not None and \
+                    len(array.shape) == 2 and \
+                    array.shape[1] <= options.data.unpack_numpy_arrays_with_less_than_x_columns:
                 for n in range(array.shape[1]):
                     name_expanded = name + f'_{n}'
                     value_expanded = array[:, n]

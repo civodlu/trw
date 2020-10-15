@@ -298,7 +298,7 @@ class TestLosses(TestCase):
             'output_truth': t2,
             'output_raw': t1
         }
-        metric = MetricSegmentationDice()
+        metric = MetricSegmentationDice(dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True))
         metric_values = metric(output)
         assert np.abs(metric_values['dice_by_class'] - l).max() < 1e-4
 

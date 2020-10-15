@@ -5,7 +5,7 @@ import torch.nn as nn
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.unet = trw.layers.UNet(2, input_channels=3, n_outputs=2)
+        self.unet = trw.layers.UNetBase(2, input_channels=3, output_channels=2, channels=[4, 8, 16])
 
     def forward(self, batch):
         x = batch['image']

@@ -4,6 +4,34 @@ import collections
 import torch
 import numpy as np
 import trw.utils
+import torch.nn as nn
+import torch.nn.functional as F
+
+
+class Cnn(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 10, 5, 2, padding=1)
+        self.conv2 = nn.Conv2d(10, 20, 5, 1, padding=1)
+        self.fc1 = nn.Linear(500, 400)
+        self.fc2 = nn.Linear(400, 10)
+
+    def forward(self, batch):
+        # a batch should be a dictionary of features
+        x = batch['images'] / 255.0
+
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = F.max_pool2d(x, 2, 2)
+        x = trw.utils.flatten(x)
+        x = F.relu(self.fc1(x))
+        x = self.fc2(x)
+
+        # here we create a softmax output that will use
+        # the `targets` feature as classification target
+        return {
+            'softmax': trw.train.OutputClassification2(x, batch['targets'])
+        }
 
 
 class TestUtilities(TestCase):
@@ -218,3 +246,46 @@ class TestUtilities(TestCase):
         filename = 'test/1\\2#3.bin'
         filename_safe = trw.utils.safe_filename(filename, replace_with='?')
         assert filename_safe == 'test?1?2?3.bin'
+
+    def test_clipping(self):
+        """
+        Make sure the gradient is appropriately clipped
+        """
+
+        model = Cnn()
+        batch = {
+            'images': torch.full([100, 1, 28, 28], 1000, dtype=torch.float32),
+            'targets': torch.full([100], 1, dtype=torch.long),
+        }
+        trw.train.apply_gradient_clipping(model, 0.01)
+        output = model(batch)
+        loss_terms = output['softmax'].evaluate_batch(batch, is_training=True)
+        loss_terms['loss'].backward()
+
+        assert model.fc1.weight.grad.max() <= 0.01
+        assert model.fc2.weight.grad.max() <= 0.01
+        assert model.conv1.weight.grad.max() <= 0.01
+        assert model.conv2.weight.grad.max() <= 0.01
+
+        assert model.fc1.weight.grad.min() >= -0.01
+        assert model.fc2.weight.grad.min() >= -0.01
+        assert model.conv1.weight.grad.min() >= -0.01
+        assert model.conv2.weight.grad.min() >= -0.01
+
+    def test_optional_import(self):
+        # import a module, this should be found
+        m = trw.utils.optional_import('torch.nn')
+        assert m.ReLU is not None
+
+    def test_optional_import_failed(self):
+        # import a module that doesn't exist. Error should not be raised
+        # until the module is being used (but not imported)
+        m = trw.utils.optional_import('module.doesnot.exist')
+        assert m is not None
+
+        exception_raised = False
+        try:
+            m.function_call()
+        except Exception:
+            exception_raised = True
+        assert exception_raised

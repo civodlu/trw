@@ -1,112 +1,88 @@
+import copy
+from abc import ABC
+from numbers import Number
+from typing import Sequence, Callable, Optional, Union, Any
+
 import torch
 import torch.nn as nn
-from trw.layers.ops_conversion import OpsConversion
 from trw.utils import upsample
+from trw.layers.blocks import BlockConvNormActivation, BlockUpDeconvSkipConv
+from trw.layers.layer_config import LayerConfig, default_layer_config
 
 
-class Down(nn.Module):
-    def __init__(self, bloc_level, dim, in_channels, out_channels, activation_fn):
+class Down(nn.Module, ABC):
+    def __init__(
+            self,
+            layer_config: LayerConfig,
+            bloc_level: int,
+            input_channels: int,
+            output_channels: int,
+            block: nn.Module = BlockConvNormActivation,
+            **block_kwargs):
         super().__init__()
 
-        ops = OpsConversion(dim)
-        self.ops = nn.Sequential(
-            ops.conv_fn(in_channels, out_channels, kernel_size=4, stride=2, padding=1),
-            ops.bn_fn(out_channels),
-            activation_fn()
+        self.ops = block(
+            config=layer_config,
+            input_channels=input_channels,
+            output_channels=output_channels,
+            **block_kwargs
         )
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.ops(x)
 
 
-class Up(nn.Module):
-    def __init__(self, bloc_level, dim, skip_channels, in_channels, out_channels, activation_fn):
+class Up(nn.Module, ABC):
+    def __init__(
+            self,
+            layer_config: LayerConfig,
+            bloc_level: int,
+            skip_channels: int,
+            input_channels: int,
+            output_channels: int,
+            block: nn.Module = BlockUpDeconvSkipConv,
+            **block_kwargs):
         super().__init__()
-        ops = OpsConversion(dim)
+        self.ops = block(
+            config=layer_config,
+            skip_channels=skip_channels,
+            input_channels=input_channels,
+            output_channels=output_channels, **block_kwargs)
 
-        self.ops_deconv = nn.Sequential(
-            ops.decon_fn(in_channels, in_channels // 2, kernel_size=4, stride=2, padding=1),
-            ops.bn_fn(in_channels // 2),
-            activation_fn(),
-        )
-
-        self.ops_conv = nn.Sequential(
-            ops.conv_fn(in_channels // 2 + skip_channels, out_channels, kernel_size=3, stride=1, padding=1),
-            ops.bn_fn(out_channels),
-            activation_fn(),
-        )
-
-        self.skip_channels = skip_channels
-        self.in_channels = in_channels
-        self.out_channels = out_channels
-
-    def forward(self, skip, previous):
-        assert skip.shape[1] == self.skip_channels
-        assert previous.shape[1] == self.in_channels
-        x = self.ops_deconv(previous)
-        assert x.shape == skip.shape
-        x = torch.cat([skip, x], dim=1)
-        x = self.ops_conv(x)
-        return x
+    def forward(self, skip: torch.Tensor, previous: torch.Tensor) -> torch.Tensor:
+        return self.ops(skip, previous)
 
 
-class ConvBnActivation(nn.Module):
-    def __init__(self, dim, in_channels, out_channels, activation_fn=nn.ReLU, kernel_size=3, stride=1, padding=1):
-        super().__init__()
-        ops = OpsConversion(dim)
-
-        self.ops_conv = nn.Sequential(
-            ops.conv_fn(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            ops.bn_fn(out_channels),
-            activation_fn(),
-        )
-
-    def forward(self, x):
-        return self.ops_conv(x)
-
-
-class ConvBn(nn.Module):
-    def __init__(self, dim, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
-        super().__init__()
-        ops = OpsConversion(dim)
-
-        self.ops_conv = nn.Sequential(
-            ops.conv_fn(in_channels, out_channels, kernel_size=kernel_size, stride=stride, padding=padding),
-            ops.bn_fn(out_channels),
-        )
-
-    def forward(self, x):
-        return self.ops_conv(x)
-
-
-class LatentConv(nn.Module):
+class LatentConv(nn.Module, ABC):
     """
     Concatenate a latent variable (possibly resized to the input shape) and apply a convolution
     """
     def __init__(
             self,
-            bloc_level,
-            dim,
-            input_channels,
-            output_channels,
-            activation_fn=nn.ReLU,
-            latent_channels=None,
-            kernel_size=3,
-            stride=1,
-            padding=1):
+            config: LayerConfig,
+            bloc_level: int,
+            input_channels: int,
+            output_channels: int,
+            latent_channels: Optional[int] = None,
+            block: nn.Module = BlockConvNormActivation,
+            **block_kwargs):
         super().__init__()
         self.latent_channels = latent_channels
         self.input_channels = input_channels
         self.output_channels = output_channels
-        self.activation_fn = activation_fn
-        self.dim = dim
 
         if latent_channels is None:
             latent_channels = 0
 
-        self.ops = ConvBnActivation(dim, input_channels + latent_channels, output_channels, kernel_size=kernel_size, stride=stride, padding=padding)
+        # local copy for local configuration
+        config = copy.copy(config)
+        for key, value in block_kwargs.items():
+            config.conv_kwargs[key] = value
 
-    def forward(self, x, latent=None):
+        self.dim = config.ops.dim
+        self.ops = block(config, input_channels + latent_channels, output_channels)
+
+    def forward(self, x: torch.Tensor, latent: torch.Tensor = None) -> torch.Tensor:
         if latent is not None:
             assert latent.shape[1] == self.latent_channels
             assert len(latent.shape) == self.dim + 2
@@ -118,24 +94,27 @@ class LatentConv(nn.Module):
         return self.ops(x)
 
 
-class UNetBase(nn.Module):
+class UNetBase(nn.Module, ABC):
     """
     Configurable UNet-like architecture
     """
     def __init__(
             self,
-            dim,
-            input_channels,
-            channels,
-            output_channels,
-            down_block_fn=Down,
-            up_block_fn=Up,
-            init_block_fn=ConvBnActivation,
-            middle_block_fn=LatentConv,
-            output_block_fn=ConvBn,
-            activation_fn=nn.LeakyReLU,
-            init_block_channels=None,
-            latent_channels=None,
+            dim: int,
+            input_channels: int,
+            channels: Sequence[int],
+            output_channels: int,
+            down_block_fn: Callable[[LayerConfig, int, int, int, int, nn.Module], nn.Module] = Down,
+            up_block_fn: Callable[[LayerConfig, int, int, int, nn.Module], nn.Module] = Up,
+            init_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+            middle_block_fn: Callable[[LayerConfig, int, int, int, nn.Module], nn.Module] = LatentConv,
+            output_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+            init_block_channels: Optional[int] = None,
+            latent_channels: Optional[int] = None,
+            kernel_size: Optional[int] = 3,
+            strides: Optional[Union[int, Sequence[int]]] = 2,
+            activation: Optional[Any] = None,
+            config: LayerConfig = default_layer_config(dimensionality=None)
     ):
         """
 
@@ -152,11 +131,17 @@ class UNetBase(nn.Module):
             output_channels: the number of channels of the output
             down_block_fn: a function taking (dim, in_channels, out_channels) and returning a nn.Module
             up_block_fn: a function taking (dim, in_channels, out_channels, bilinear) and returning a nn.Module
-            activation_fn: the activation to be used for up and down convolution, except the final output
             init_block_channels: the number of channels to be used by the init block. If `None`, `channels[0] // 2`
                 will be used
         """
         assert len(channels) >= 1
+        config = copy.copy(config)
+        config.set_dim(dim)
+        if kernel_size is not None:
+            config.conv_kwargs['kernel_size'] = kernel_size
+            config.deconv_kwargs['kernel_size'] = kernel_size
+        if activation is not None:
+            config.activation = activation
 
         super().__init__()
         self.dim = dim
@@ -165,7 +150,11 @@ class UNetBase(nn.Module):
         self.init_block_channels = init_block_channels
         self.output_channels = output_channels
         self.latent_channels = latent_channels
-        self.activation_fn = activation_fn
+
+        if isinstance(strides, Number):
+            strides = [strides] * len(channels)
+        assert len(strides) == len(channels), f'expected one stride per channel-layer.' \
+                                              f'Got={len(strides)} expected={len(channels)}'
 
         self.init_block = None
         self.downs = None
@@ -175,9 +164,12 @@ class UNetBase(nn.Module):
         if latent_channels is not None:
             assert middle_block_fn is not None
 
-        self.build(init_block_fn, down_block_fn, up_block_fn, middle_block_fn, output_block_fn)
+        self._build(config, init_block_fn, down_block_fn, up_block_fn, middle_block_fn, output_block_fn, strides)
 
-    def build(self, init_block_fn, down_block_fn, up_block_fn, middle_block_fn, output_block_fn):
+    def _build(self, config, init_block_fn, down_block_fn, up_block_fn, middle_block_fn, output_block_fn, strides):
+        # make only local copy of config
+        config = copy.copy(config)
+
         self.downs = nn.ModuleList()
         skip_channels = None
 
@@ -185,22 +177,21 @@ class UNetBase(nn.Module):
             out_init_channels = self.channels[0] // 2
         else:
             out_init_channels = self.init_block_channels
-        self.init_block = init_block_fn(self.dim, self.input_channels, out_init_channels)
+        self.init_block = init_block_fn(config, self.input_channels, out_init_channels, stride=1)
 
         # down blocks
         input_channels = out_init_channels
         for i, skip_channels in enumerate(self.channels):
-            self.downs.append(down_block_fn(i, self.dim, input_channels, skip_channels, self.activation_fn))
+            self.downs.append(down_block_fn(config, i, input_channels, skip_channels, stride=strides[i]))
             input_channels = skip_channels
 
         # middle blocks
         if middle_block_fn is not None:
             self.middle_block = middle_block_fn(
-                len(self.channels),
-                self.dim,
-                skip_channels,
-                skip_channels,
-                self.activation_fn,
+                config=config,
+                bloc_level=len(self.channels),
+                input_channels=skip_channels,
+                output_channels=skip_channels,
                 latent_channels=self.latent_channels
             )
         else:
@@ -219,22 +210,27 @@ class UNetBase(nn.Module):
                 skip_channels = self.channels[-(i + 2)]
                 out_channels = skip_channels
 
+            stride = strides[len(strides) - i - 1]
             self.ups.append(up_block_fn(
+                config,
                 len(self.channels) - i - 1,
-                self.dim,
                 skip_channels=skip_channels,
-                in_channels=input_channels,
-                out_channels=out_channels,
-                activation_fn=self.activation_fn))
+                input_channels=input_channels,
+                output_channels=out_channels,
+                output_padding=stride - 1,
+                stride=stride))
             input_channels = skip_channels
 
         # here we need to have a special output block: this
         # is because we do NOT want to add the activation for the
         # result layer (i.e., often, the output is normalized [-1, 1]
         # and we would discard the negative portion)
-        self.output = output_block_fn(self.dim, out_init_channels, self.output_channels)
+        config.norm = None
+        config.activation = None
+        config.dropout = None
+        self.output = output_block_fn(config, out_init_channels, self.output_channels)
 
-    def forward(self, x, latent=None):
+    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
         """
         Args:
             x: the input image

@@ -1,12 +1,17 @@
 import collections
 import numbers
+from typing import Sequence, Union, Optional, Any, Dict, Callable
 
+import torch
 import torch.nn as nn
-from trw.layers import OpsConversion, div_shape, ModulelWithIntermediate
+from trw.layers import OpsConversion, div_shape, ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
+from trw.layers.blocks import BlockDeconvNormActivation
+import copy
+
 from .crop_or_pad import crop_or_pad_fun
 
 
-class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
+class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
     """
     Helper class to create sequence of transposed convolution
 
@@ -14,32 +19,33 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
     """
     def __init__(
             self,
-            cnn_dim,
-            input_channels,
-            channels,
-            convolution_kernels=5,
-            strides=1,
-            paddings=None,
-            activation=nn.ReLU,
-            dropout_probability=None,
-            batch_norm_kwargs=None,
-            lrn_kwargs=None,
-            last_layer_is_output=False,
-            squash_function=None,
-            target_shape=None):
+            dimensionality: int,
+            input_channels: int,
+            channels: Sequence[int],
+            *,
+            convolution_kernels: Union[int, Sequence[int]] = 5,
+            strides: Union[int, Sequence[int]] = 2,
+            paddings: Optional[Union[str, int, Sequence[int]]] = None,
+            activation: Any = nn.ReLU,
+            activation_kwargs: Dict = {},
+            dropout_probability: Optional[float] = None,
+            norm_type: Optional[NormType] = None,
+            norm_kwargs: Dict = {},
+            last_layer_is_output: bool = False,
+            squash_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+            deconv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockDeconvNormActivation,
+            config: LayerConfig = default_layer_config(dimensionality=None),
+            target_shape: Optional[Sequence[int]] = None):
         """
 
         Args:
-            cnn_dim: the dimension of the  CNN (2 for 2D or 3 for 3D)
+            dimensionality: the dimension of the  CNN (2 for 2D or 3 for 3D)
             input_channels: the number of input channels
             channels: the number of channels for each convolutional layer
             convolution_kernels: for each convolution group, the kernel of the convolution
             strides: for each convolution group, the stride of the convolution
             dropout_probability: if None, not dropout. Else the probability of dropout after each convolution
-            batch_norm_kwargs: the batch norm kwargs. See the original torch functions for description. If None,
-                no batch norm
-            lrn_kwargs: the local response normalization kwargs. See the original torch functions for description. If
-                None, not LRN
+            norm_kwargs: the normalization additional arguments. See the original torch functions for description.
             last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
             squash_function: a function to be applied on the reconstuction. It is common to apply
                 for example ``torch.sigmoid``. If ``None``, no function applied
@@ -49,8 +55,15 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
         """
         super().__init__()
 
-        ops_conv = OpsConversion(cnn_dim)
-        lrn_fn = nn.LocalResponseNorm
+        # update the configuration locally
+        config = copy.copy(config)
+        if norm_type is not None:
+            config.norm_type = norm_type
+        if activation is not None:
+            config.activation = activation
+        config.set_dim(dimensionality)
+        config.norm_kwargs = {**norm_kwargs, **config.activation_kwargs}
+        config.activation_kwargs = {**activation_kwargs, **config.activation_kwargs}
 
         # normalize the arguments
         nb_convs = len(channels)
@@ -67,8 +80,6 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
 
         assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
-        with_batchnorm = batch_norm_kwargs is not None
-        with_lrn = lrn_kwargs is not None
 
         layers = nn.ModuleList()
 
@@ -78,28 +89,26 @@ class ConvsTransposeBase(nn.Module, ModulelWithIntermediate):
             currently_last_layer = n + 1 == len(channels)
 
             p = paddings[n]
-            ops = [ops_conv.decon_fn(
+            if last_layer_is_output and currently_last_layer:
+                # Last layer layer should not have dropout/normalization/activation
+                config.norm = None
+                config.activation = None
+                config.dropout = None
+
+            ops = []
+
+            ops.append(deconv_block_fn(
+                config,
                 prev,
                 current,
                 kernel_size=convolution_kernels[n],
                 stride=strides[n],
                 padding=p,
-                output_padding=0)]
+                output_padding=strides[n] - 1,
+            ))
 
-            if not last_layer_is_output or not currently_last_layer:
-                # only use the activation if not the last layer
-                ops.append(activation())
-
-            if not last_layer_is_output or not currently_last_layer:
-                # if not, we are done here: do not add batch norm, LRN, dropout....
-                if with_batchnorm:
-                    ops.append(ops_conv.bn_fn(current, **batch_norm_kwargs))
-
-                if with_lrn:
-                    ops.append(lrn_fn(current, **lrn_kwargs))
-
-                if dropout_probability is not None:
-                    ops.append(ops_conv.dropout_fn(p=dropout_probability))
+            if config.dropout is not None and dropout_probability is not None:
+                ops.append(config.dropout(p=dropout_probability, **config.dropout_kwargs))
 
             layers.append(nn.Sequential(*ops))
             prev = current

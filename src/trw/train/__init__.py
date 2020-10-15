@@ -2,10 +2,11 @@ from .options import create_default_options
 from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     time_it, CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
-    get_classification_mapping, get_classification_mappings, make_triplet_indices, make_pair_indices, make_unique_colors, make_unique_colors_f
+    get_classification_mapping, get_classification_mappings, make_triplet_indices, make_pair_indices, \
+    make_unique_colors, make_unique_colors_f, apply_spectral_norm, apply_gradient_clipping
 from trw.train.collate import collate_dicts, collate_list_of_dicts, default_collate_fn
 
-from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, \
+from .outputs_trw import Output, OutputClassification, OutputClassification2, OutputRegression, OutputEmbedding, \
     OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
@@ -50,6 +51,7 @@ from .callback_reporting_layer_statistics import CallbackReportingLayerStatistic
 from .callback_reporting_dataset_summary import CallbackReportingDatasetSummary
 from .callback_reporting_best_metrics import CallbackReportingBestMetrics
 from .callback_reporting_augmentations import CallbackReportingAugmentations
+from .callback_reporting_layer_weights import CallbackReportingLayerWeights
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap

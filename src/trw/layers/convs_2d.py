@@ -1,22 +1,28 @@
+from typing import List, Union, Any, Dict, Optional, Sequence, Callable
+
 import torch.nn as nn
+from trw.layers import BlockConvNormActivation
+from trw.layers.layer_config import NormType, default_layer_config, LayerConfig
 from trw.layers.convs import ConvsBase
 
 
 def convs_2d(
-        input_channels,
-        channels,
-        convolution_kernels=5,
-        strides=1,
-        pooling_size=2,
-        convolution_repeats=1,
-        activation=nn.ReLU,
-        with_flatten=False,
-        dropout_probability=None,
-        batch_norm_kwargs=None,
-        lrn_kwargs=None,
-        padding='same',
-        last_layer_is_output=False,
-        bias=True):
+        input_channels: int,
+        channels: List[int],
+        convolution_kernels: Union[int, Sequence[int]] = 5,
+        strides: Union[int, Sequence[int]] = 1,
+        pooling_size: Optional[Union[int, Sequence[int]]] = 2,
+        convolution_repeats: Union[int, Sequence[int]] = 1,
+        activation: Any = nn.ReLU,
+        padding: Union[str, int] = 'same',
+        with_flatten: bool = False,
+        dropout_probability: float = None,
+        norm_type: NormType = None,
+        norm_kwargs: Dict[str, Any] = {},
+        pool_kwargs: Dict[str, Any] = {},
+        last_layer_is_output: bool = False,
+        conv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+        config: LayerConfig = default_layer_config(dimensionality=None)):
     """
 
     Args:
@@ -29,17 +35,17 @@ def convs_2d(
         activation: the activation function
         with_flatten: if True, the last output will be flattened
         dropout_probability: if None, not dropout. Else the probability of dropout after each convolution
-        batch_norm_kwargs: the batch norm kwargs. See the original torch functions for description. If None,
-            no batch norm
-        lrn_kwargs: the local response normalization kwargs. See the original torch functions for description. If
-            None, not LRN
         padding: 'same' will add padding so that convolution output as the same size as input
         last_layer_is_output: if True, the last convolution will NOT have activation, dropout, batch norm, LRN
-        bias: if True, add a learnable bias for the convolution
+        norm_type: the normalization layer (e.g., BatchNorm)
+        norm_kwargs: additional arguments for normalization
+        pool_kwargs: additional argument for pool
+        conv_block_fn: the base blocks convolutional
+        config: defines the allowed operations
     """
 
     return ConvsBase(
-        cnn_dim=2,
+        dimensionality=2,
         input_channels=input_channels,
         channels=channels,
         convolution_kernels=convolution_kernels,
@@ -47,11 +53,13 @@ def convs_2d(
         pooling_size=pooling_size,
         convolution_repeats=convolution_repeats,
         activation=activation,
-        with_flatten=with_flatten,
-        batch_norm_kwargs=batch_norm_kwargs,
-        lrn_kwargs=lrn_kwargs,
-        dropout_probability=dropout_probability,
         padding=padding,
+        with_flatten=with_flatten,
+        dropout_probability=dropout_probability,
+        norm_type=norm_type,
+        norm_kwargs=norm_kwargs,
+        pool_kwargs=pool_kwargs,
         last_layer_is_output=last_layer_is_output,
-        bias=bias)
+        conv_block_fn=conv_block_fn,
+        config=config)
 

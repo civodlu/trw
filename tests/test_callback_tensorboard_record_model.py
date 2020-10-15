@@ -9,7 +9,7 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
         self.convs = trw.layers.ConvsBase(
-            cnn_dim=2,
+            2,
             input_channels=3,
             channels=[4, 8],
             strides=[2, 2],

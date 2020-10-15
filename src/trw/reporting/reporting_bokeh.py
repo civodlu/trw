@@ -81,6 +81,7 @@ def create_default_reporting_options(embedded=True, config={}):
     o.data_samples.display_tabular = True
     o.data_samples.display_scatter = True
     o.data_samples.max_numpy_display = 10  # if array below this size, the content will be displayed
+    o.data_samples.resize_heterogeneous_numpy = True  # if True, numpy arrays of different shape will be resized to common average size
     o.db_root = None
     o.embedded = embedded
     o.style = Object()
@@ -93,7 +94,7 @@ def create_default_reporting_options(embedded=True, config={}):
     o.style.scatter_continuous_factor = 10
 
     o.data = Object()
-    o.data.refresh_time = 5.0
+    o.data.refresh_time = 2.0
     o.data.unpack_numpy_arrays_with_less_than_x_columns = 15
     o.data.types_to_discard = [
         np.dtype('|S1'),        # binary string

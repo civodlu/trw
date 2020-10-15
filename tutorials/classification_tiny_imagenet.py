@@ -12,13 +12,11 @@ class SimpleNet2(nn.Module):
         super().__init__()
 
         activation_conv = nn.LeakyReLU
-        batch_norm_kwargs = {}
 
         self.convs = trw.layers.convs_2d(
             input_channels=3,
             channels=conv_filters,
             activation=activation_conv,
-            batch_norm_kwargs=batch_norm_kwargs,
             convolution_repeats=conv_repeats,
             convolution_kernels=3,
             last_layer_is_output=True,

@@ -1,8 +1,9 @@
 import torch.nn as nn
 import torch
+from typing import Union
 
 
-def transfer_to_device(x, device):
+def transfer_to_device(x: torch.Tensor, device: torch.device) -> torch.Tensor:
     if isinstance(x, torch.Tensor):
         if x.device != device:
             return x.to(device)
@@ -18,7 +19,10 @@ class ShiftScale(nn.Module):
     This layer simplify the preprocessing for the `trw.simple_layers` package
     """
     
-    def __init__(self, mean, standard_deviation, output_dtype=torch.float32):
+    def __init__(self,
+                 mean: Union[float, torch.Tensor],
+                 standard_deviation: Union[float, torch.Tensor],
+                 output_dtype: torch.dtype = torch.float32):
         """
 
         Args:
@@ -30,7 +34,7 @@ class ShiftScale(nn.Module):
         self.standard_deviation = standard_deviation
         self.output_dtype = output_dtype
     
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x: a tensor

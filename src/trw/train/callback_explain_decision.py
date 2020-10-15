@@ -1,6 +1,7 @@
 import os
 
 import trw
+import trw.train.utilities
 import trw.utils
 from trw.train import callback
 from trw.train import trainer
@@ -237,7 +238,7 @@ class CallbackExplainDecision(callback.Callback):
             utilities.create_or_recreate_folder(root)
 
         batch = utilities.transfer_batch_to_device(self.batch, device=device)
-        trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
+        trw.train.utilities.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         outputs = model(batch)
         output_name = CallbackExplainDecision.find_output_name(outputs, self.output_name)

@@ -6,6 +6,7 @@ from .cityscapes import create_cityscapes_dataset
 from .facades import create_facades_dataset
 from .tiny_imagenet import TinyImageNet, create_tiny_imagenet_dataset
 from .name_nationality import create_name_nationality_dataset
+from .medical_decathlon import create_decathlon_dataset
 
 from .dataset_fake_symbols import create_fake_symbols_datasset, _random_location, _random_color, _add_shape, _create_image, _noisy
 from .dataset_fake_symbols_2d import create_fake_symbols_2d_dataset, default_shapes_2d

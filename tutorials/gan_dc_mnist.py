@@ -34,7 +34,6 @@ class Discriminator(nn.Module):
             channels=[64, 128, 256, 2],
             convolution_kernels=[4, 4, 4, 3],
             strides=[2, 2, 2, 1],
-            batch_norm_kwargs={},
             pooling_size=None,
             with_flatten=False,
             activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
@@ -64,7 +63,6 @@ class Generator(nn.Module):
             channels=[256, 128, 64, 1],
             convolution_kernels=4,
             strides=[1, 2, 2, 2],
-            batch_norm_kwargs={},
             paddings=[0, 1, 1, 1],
             activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
             squash_function=torch.tanh,
@@ -99,6 +97,7 @@ def create_model(options):
     return model
 
 
+torch.autograd.set_detect_anomaly(True)
 options = trw.train.create_default_options(num_epochs=50)
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,

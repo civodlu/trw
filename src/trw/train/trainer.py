@@ -38,37 +38,9 @@ from trw.train import callback_reporting_best_metrics
 from trw.train import utilities
 from trw.utils import safe_lookup
 
-from trw.train.utilities import prepare_loss_terms, default_sum_all_losses
+from trw.train.utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch
 
 logger = logging.getLogger(__name__)
-
-
-def postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=None):
-    """
-    Post process a batch of data (e.g., this can be useful to add additional
-    data to the current batch)
-
-    Args:
-        dataset_name (str): the name of the dataset the `batch` belongs to
-        split_name (str): the name of the split the `batch` belongs to
-        batch: the current batch of data
-        callbacks_per_batch (list): the callbacks to be executed for each batch.
-            Each callback must be callable with `(dataset_name, split_name, batch)`.
-            if `None`, no callbacks
-        batch_id: indicate the current batch within an epoch. May be ``None``. This can be useful
-            for embedding optimizer within a module (e.g., scheduler support)
-    """
-
-    # always useful: for example if we do a model composed of multiple sub-models (one per dataset)
-    # we would need to know what sub-model to use
-    batch['dataset_name'] = dataset_name
-    batch['split_name'] = split_name
-    if batch_id is not None:
-        batch['batch_id'] = batch_id
-    
-    if callbacks_per_batch is not None:
-        for callback in callbacks_per_batch:
-            callback(dataset_name, split_name, batch)
 
 
 def create_losses_fn(datasets, generic_loss):

@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 
 # make sure we start a new process in an empty state
 mp = multiprocessing.get_context("spawn")
+#mp = multiprocessing.get_context("fork")
 
 # timeout used for the queues
 default_queue_timeout = 0.1
@@ -51,6 +52,7 @@ class JobExecutor:
         self.channel_worker_to_main, self.channel_main_to_worker = mp.Pipe()
         self.must_finish_processes = mp.Value('i', 0)
 
+        self.pool = None
         self.pool = mp.Pool(
             processes=nb_workers,
             initializer=JobExecutor.worker,

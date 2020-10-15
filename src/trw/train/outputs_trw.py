@@ -105,7 +105,7 @@ class OutputEmbedding(Output):
                 large embeddings. If ``False``, the output will not be cleaned (and possibly accumulated
                 for the whole epoch)
             sample_uid_name: UID name to be used for collecting the embedding of the samples
-            functor: a functio taking as argument embedding and returning embedding
+            functor: apply a function on the output to create the embedding
         """
         super().__init__(
             output=output,
@@ -508,18 +508,14 @@ class OutputClassification2(Output):
             weighted_losses = flatten(weighted_losses).mean(dim=1)
 
         assert trw.utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
-        if self.collect_output:
-            # we may not want to collect any outputs or training outputs to save some time
-            if not self.collect_only_non_training_output or not is_training:
-                # detach the output so as not to calculate gradients. Keep the truth so that we
-                # can calculate statistics (e.g., accuracy, FP/FN...)
-                loss_term['output_raw'] = self.output
-                output_postprocessed = self.output_postprocessing(self.output)
-                assert torch.is_tensor(output_postprocessed)
-                assert output_postprocessed.dtype == torch.long, f'output must have a `long` type. ' \
-                                                                 f'Got={output_postprocessed.dtype}'
-                loss_term['output'] = output_postprocessed
-                loss_term['output_truth'] = truth
+
+        loss_term['output_raw'] = self.output
+        output_postprocessed = self.output_postprocessing(self.output)
+        assert torch.is_tensor(output_postprocessed)
+        assert output_postprocessed.dtype == torch.long, f'output must have a `long` type. ' \
+                                                         f'Got={output_postprocessed.dtype}'
+        loss_term['output'] = output_postprocessed
+        loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
             loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
@@ -540,6 +536,11 @@ class OutputClassification2(Output):
 
         del self.output_truth
         self.output_truth = None
+
+        if not self.collect_output:
+            del loss_term['output_raw']
+            del loss_term['output']
+            del loss_term['output_truth']
 
 
 def mean_all(x):

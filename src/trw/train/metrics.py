@@ -1,12 +1,12 @@
 import numpy as np
 import trw
 import trw.utils
-from trw.train import utilities
-from sklearn import metrics
 from trw.train import losses
+from sklearn import metrics
 import collections
 import torch
 from .analysis_plots import auroc
+import torch.nn as nn
 
 
 class Metric:
@@ -119,9 +119,12 @@ class MetricClassificationError(Metric):
 class MetricSegmentationDice(Metric):
     """
     Calculate the average dice score of a segmentation map 'output_truth' and class
-    segmentation probabilities 'output_raw'
+    segmentation probabilities 'output_raw'.
+
+    Notes:
+        nn.Sigmoid function will be applied on the output to force a range [0..1] of the output.
     """
-    def __init__(self, dice_fn=losses.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)):
+    def __init__(self, dice_fn=losses.LossDiceMulticlass(normalization_fn=nn.Sigmoid, return_dice_by_class=True)):
         self.dice_fn = dice_fn
 
     def __call__(self, outputs):
@@ -129,6 +132,8 @@ class MetricSegmentationDice(Metric):
         # be slow use numpy for this
         truth = outputs.get('output_truth')
         found = outputs.get('output_raw')
+
+        #assert found.min() >= 0, 'Unexpected value: `output` must be in range [0..1]'
 
         if found is None or truth is None:
             return None

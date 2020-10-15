@@ -6,16 +6,16 @@ class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
 
-        convs = trw.layers.ConvsBase(cnn_dim=2, input_channels=3, channels=[16, 32, 64])
-        fcnn = trw.layers.FullyConvolutional(
-            cnn_dim=2,
+        convs = trw.layers.ConvsBase(dimensionality=2, input_channels=3, channels=[16, 32, 64])
+        self.fcnn = trw.layers.FullyConvolutional(
+            dimensionality=2,
             base_model=convs,
-            deconv_filters=[64, 32, 16, 16],
+            input_channels=64,
+            deconv_filters=[32, 16, 16],
             convolution_kernels=5,
             strides=2,
             nb_classes=5
         )
-        self.fcnn = fcnn
 
     def forward(self, batch):
         x = batch['image']

@@ -1,8 +1,13 @@
+from abc import ABC
+from typing import Sequence, Union, Optional, Any, Dict, Callable, Tuple, List
+
+import torch
 import torch.nn as nn
-from trw.layers import ModulelWithIntermediate, ConvsBase, ConvsTransposeBase, crop_or_pad_fun
+from trw.layers import ModuleWithIntermediate, ConvsBase, ConvsTransposeBase, crop_or_pad_fun, NormType, LayerConfig, \
+    default_layer_config
 
 
-class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):
+class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate, ABC):
     """
     Convolutional autoencoder
 
@@ -13,80 +18,72 @@ class AutoencoderConvolutional(nn.Module, ModulelWithIntermediate):
     """
     def __init__(
             self,
-            cnn_dim,
-            input_channels,
-            encoder_channels,
-            decoder_channels,
-            convolution_kernels=5,
-            strides=1,
-            pooling_size=2,
-            convolution_repeats=1,
-            activation=nn.ReLU,
-            dropout_probability=None,
-            batch_norm_kwargs=None,
-            lrn_kwargs=None,
-            last_layer_is_output=False,
-            force_decoded_size_same_as_input=True):
-        """
+            dimensionality: int,
+            input_channels: int,
+            encoder_channels: Sequence[int],
+            decoder_channels: Sequence[int],
+            convolution_kernels: Optional[Union[int, Sequence[int]]] = 5,
+            encoder_strides: Union[int, Sequence[int]] = 1,
+            decoder_strides: Union[int, Sequence[int]] = 2,
+            pooling_size: Optional[Union[int, Sequence[int]]] = 2,
+            convolution_repeats: Union[int, Sequence[int]] = 1,
+            activation: Any = nn.ReLU,
+            dropout_probability: Optional[float] = None,
+            norm_type: NormType = NormType.BatchNorm,
+            norm_kwargs: Dict = {},
+            activation_kwargs: Dict = {},
+            last_layer_is_output: bool = False,
+            force_decoded_size_same_as_input: bool = True,
+            squash_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
+            config: LayerConfig = default_layer_config(dimensionality=None)):
 
-        Args:
-            cnn_dim:
-            input_channels:
-            encoder_channels:
-            decoder_channels:
-            convolution_kernels:
-            strides:
-            pooling_size:
-            convolution_repeats:
-            activation:
-            dropout_probability:
-            batch_norm_kwargs:
-            lrn_kwargs:
-            last_layer_is_output:
-            force_decoded_size_same_as_input: this will force
-        """
         super().__init__()
         self.force_decoded_size_same_as_input = force_decoded_size_same_as_input
 
         self.encoder = ConvsBase(
-            cnn_dim=cnn_dim,
+            dimensionality=dimensionality,
             input_channels=input_channels,
             channels=encoder_channels,
             convolution_kernels=convolution_kernels,
-            strides=strides,
+            strides=encoder_strides,
             pooling_size=pooling_size,
             convolution_repeats=convolution_repeats,
             activation=activation,
             dropout_probability=dropout_probability,
-            batch_norm_kwargs=batch_norm_kwargs,
-            lrn_kwargs=lrn_kwargs,
-            last_layer_is_output=False
+            norm_type=norm_type,
+            activation_kwargs=activation_kwargs,
+            norm_kwargs=norm_kwargs,
+            last_layer_is_output=False,
+            config=config
         )
 
         self.decoder = ConvsTransposeBase(
-            cnn_dim=cnn_dim,
+            dimensionality=dimensionality,
             input_channels=encoder_channels[-1],
             channels=decoder_channels,
-            strides=strides * 2,
+            strides=decoder_strides,
             activation=activation,
             dropout_probability=dropout_probability,
-            batch_norm_kwargs=batch_norm_kwargs,
-            lrn_kwargs=lrn_kwargs,
-            last_layer_is_output=last_layer_is_output
+            norm_type=norm_type,
+            norm_kwargs=norm_kwargs,
+            activation_kwargs=activation_kwargs,
+            last_layer_is_output=last_layer_is_output,
+            squash_function=squash_function,
+            config=config
         )
 
-    def forward_simple(self, x):
+    def forward_simple(self, x: torch.Tensor) -> torch.Tensor:
         encoded_x = self.encoder(x)
         return encoded_x
 
-    def forward_with_intermediate(self, x):
+    def forward_with_intermediate(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         encoded_x = self.encoder(x)
         decoded_x = self.decoder(encoded_x)
 
         if self.force_decoded_size_same_as_input:
             decoded_x = crop_or_pad_fun(decoded_x, x.shape[2:])
 
-        return [encoded_x, decoded_x]
+        return encoded_x, decoded_x
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.forward_simple(x)

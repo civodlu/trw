@@ -3,6 +3,7 @@ import functools
 import trw
 import torch
 import torch.nn as nn
+from trw.layers import NormType
 
 
 class RNN(nn.Module):
@@ -48,7 +49,7 @@ class Lstm(nn.Module):
             linear_in = 2 * hidden_size
         else:
             linear_in = hidden_size
-        self.linear = trw.layers.denses([linear_in, output_size], batch_norm_kwargs={}, last_layer_is_output=True)
+        self.linear = trw.layers.denses([linear_in, output_size], normalization_type=NormType.InstanceNorm, last_layer_is_output=True)
 
     def forward(self, batch):
         i = batch['name']

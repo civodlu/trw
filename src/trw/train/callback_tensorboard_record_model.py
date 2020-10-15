@@ -1,3 +1,4 @@
+import trw.train.utilities
 from trw.train import callback_tensorboard
 from trw.train import utilities
 from trw.train import trainer
@@ -41,7 +42,7 @@ class CallbackTensorboardRecordModel(callback_tensorboard.CallbackTensorboardBas
 
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
         batch = utilities.transfer_batch_to_device(batch, device=device)
-        trainer.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
+        trw.train.utilities.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         class NoDictModel(torch.nn.Module):
             # cahce the model input as onnx doesn't handle dict like input

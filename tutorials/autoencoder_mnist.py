@@ -12,13 +12,13 @@ class Net(nn.Module):
             [8, 16, 32],
             [32, 16, 8, 1],  # make sure we are cropping the decoded output by adding another layer
             convolution_kernels=3,
+            squash_function=torch.sigmoid,  # make sure the output is [0..1] domain
             last_layer_is_output=True  # do not apply the activation on the last layer
         )
 
     def forward(self, batch):
         x = batch['images']
         encoded_x, decoded_x = self.encoder_decoder.forward_with_intermediate(x)
-        decoded_x = torch.sigmoid(decoded_x)
 
         return {
             'regression': trw.train.OutputRegression(decoded_x, 'images'),
@@ -29,8 +29,8 @@ def per_epoch_fn():
     callbacks = [
         trw.train.CallbackEpochSummary(),
         trw.train.CallbackSkipEpoch(
-            nb_epochs=10,
-            callbacks=[trw.train.CallbackExportSamples(dirname='random_samples', max_samples=5, split_exclusions=['train'])]),
+            nb_epochs=1,
+            callbacks=[trw.train.CallbackReportingExportSamples(table_name='random_samples', max_samples=5, split_exclusions=['train'])]),
     ]
 
     return callbacks

@@ -9,7 +9,7 @@ import os
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.convs = trw.layers.ConvsBase(cnn_dim=2, input_channels=3, channels=[4, 8], strides=[2, 2], with_flatten=True)
+        self.convs = trw.layers.ConvsBase(2, input_channels=3, channels=[4, 8], strides=[2, 2], with_flatten=True)
         self.classifier = nn.Linear(32, 2)
 
     def forward(self, batch):

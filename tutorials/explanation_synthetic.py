@@ -5,9 +5,9 @@ import torch.nn as nn
 def create_net_simple(options):
     activation = nn.ReLU
     n = trw.simple_layers.Input([None, 3, 64, 64], 'image')
-    n = trw.simple_layers.convs_2d(n, channels=[4, 8, 16], batch_norm_kwargs={}, activation=activation)
+    n = trw.simple_layers.convs_2d(n, channels=[4, 8, 16], activation=activation)
     n = trw.simple_layers.global_max_pooling_2d(n)
-    n = trw.simple_layers.denses(n, sizes=[32, 2], batch_norm_kwargs={}, activation=activation, last_layer_is_output=True)
+    n = trw.simple_layers.denses(n, sizes=[32, 2], activation=activation, last_layer_is_output=True)
     n = trw.simple_layers.OutputClassification(n, output_name='softmax', classes_name='triangle')
     return trw.simple_layers.compile_nn([n])
 

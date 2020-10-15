@@ -10,7 +10,6 @@ from trw.train.losses import one_hot
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        batch_norm_kwargs = {}
 
         z_filters_in = 128
 
@@ -20,18 +19,17 @@ class Net(nn.Module):
         activation = nn.LeakyReLU
 
         encoder = trw.layers.ConvsBase(
-            cnn_dim=2,
+            dimensionality=2,
             input_channels=1,
             channels=[16, 32, 64, z_filters_in],
             convolution_kernels=[5, 5, 5, 5],
             strides=2,
             pooling_size=None,
-            batch_norm_kwargs=batch_norm_kwargs,
             activation=activation
         )
 
         decoder = trw.layers.ConvsTransposeBase(
-            cnn_dim=2,
+            dimensionality=2,
             input_channels=self.latent_size + self.y_size,
             channels=[64, 32, 16, 1],
             strides=[1, 1, 1, 2],
@@ -70,7 +68,7 @@ def per_epoch_fn():
         trw.train.CallbackEpochSummary(),
         trw.train.CallbackSkipEpoch(
             nb_epochs=10,
-            callbacks=[trw.train.CallbackExportSamples(dirname='random_samples', max_samples=5, split_exclusions=['train'])]),
+            callbacks=[trw.train.CallbackReportingExportSamples(table_name='random_samples', max_samples=5, split_exclusions=['train'])]),
     ]
 
     return callbacks
@@ -86,7 +84,6 @@ def pos_training_fn():
 options = trw.train.create_default_options(num_epochs=200)
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_fn,
-    callbacks_pre_training_fn=None,
     callbacks_post_training_fn=pos_training_fn,
 )
 
