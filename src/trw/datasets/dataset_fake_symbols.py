@@ -209,7 +209,7 @@ def create_fake_symbols_datasset(
         if normalize_0_1:
             image = (image.astype(np.float32) / 255.0 - 0.7) * 5
         dataset['image'].append(image)
-        dataset['mask'].append(mask)
+        dataset['mask'].append(mask.reshape([1] + list(mask.shape)))
 
         shapes_dict = dict(shapes)
 

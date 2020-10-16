@@ -52,7 +52,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1], dtype=np.float32).reshape((1, 2, 5, 6)))
-        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 5, 6)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None)
         l = loss(t1, t2)
@@ -108,7 +108,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([sample_0, sample_1], dtype=np.float32).reshape((2, 2, 2, 3)))
-        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((2, 2, 3)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((2, 1, 2, 3)))
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None)
         l = loss(t1, t2)
@@ -180,7 +180,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 5, 6)))
-        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 5, 6)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None)
         l = loss(t1, t2)
@@ -240,7 +240,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 4, 3)))
-        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 4, 3)))
+        t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 4, 3)))
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
         l = loss(t1, t2)
@@ -283,7 +283,7 @@ class TestLosses(TestCase):
         ]
 
         t1 = torch.from_numpy(np.asarray([e1_found_channel0, e1_found_channel1, e2_found_channel0, e2_found_channel1], dtype=np.float32).reshape((2, 2, 4, 3)))
-        t2 = torch.from_numpy(np.asarray([targets, targets], dtype=np.int64))
+        t2 = torch.from_numpy(np.asarray([targets, targets], dtype=np.int64)).unsqueeze(1)
 
         loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
         l = loss(t1, t2).numpy()

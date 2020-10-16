@@ -7,6 +7,7 @@ import torch
 import functools
 import torch.nn as nn
 import trw.utils
+from trw.train import segmentation_criteria_ce_dice
 
 
 class TestOutput(TestCase):
@@ -90,16 +91,15 @@ class TestOutput(TestCase):
     def test_output_segmentation(self):
         mask_scores = torch.zeros(10, 4, 32, 32, dtype=torch.float32)  # 10 samples, 4 classes, 2D 32x32 grid
         mask_scores[:, 1, :, :] = 100.0
-        expected_map = torch.ones(10, 32, 32, dtype=torch.int64)
+        expected_map = torch.ones(10, 1, 32, 32, dtype=torch.int64)
 
-        o = trw.train.OutputSegmentation(
+        o = trw.train.OutputSegmentation2(
             output=mask_scores,
-            target_name='target',
-            weight_name='weights',
+            output_truth=expected_map,
+            weights=torch.ones(10, dtype=torch.float32),
             criterion_fn=lambda: functools.partial(trw.train.segmentation_criteria_ce_dice, ce_weight=0.9999999))
         batch = {
             'target': expected_map,
-            'weights': torch.ones(10, dtype=torch.float32)
         }
         loss_term = o.evaluate_batch(batch, is_training=False)
         assert trw.utils.to_value(loss_term['loss']) < 1e-5
@@ -111,24 +111,23 @@ class TestOutput(TestCase):
         """
         torch.manual_seed(0)
         mask_scores = torch.randn([10, 4, 32, 40], dtype=torch.float32)  # 10 samples, 4 classes, 2D 32x32 grid
-        expected_map = torch.ones(10, 32, 40, dtype=torch.int64)
+        expected_map = torch.ones(10, 1, 32, 40, dtype=torch.int64)
 
         mask_weight = torch.zeros_like(expected_map, dtype=torch.float32)
-        mask_weight[:, 4:21, 8:38] = 1
+        mask_weight[:, :, 4:21, 8:38] = 1
 
-        def loss(found, expected, per_voxel_weight):
-            l = per_voxel_weight.view(10, 1, 32, 40) * found
+        def loss(found, expected, per_voxel_weights):
+            l = mask_weight.view(10, 1, 32, 40) * found
             return l.sum([1, 2, 3])
 
-        o = trw.train.OutputSegmentation(
+        o = trw.train.OutputSegmentation2(
             output=mask_scores,
-            target_name='target',
-            weight_name='weights',
+            output_truth=expected_map,
+            per_voxel_weights=mask_weight,
             criterion_fn=lambda: loss)
 
         batch = {
             'target': expected_map,
-            'weights': mask_weight
         }
 
         loss_term = o.evaluate_batch(batch, is_training=False)
@@ -136,6 +135,15 @@ class TestOutput(TestCase):
 
         losses = loss_term['losses']
         assert torch.max(torch.abs(losses - expected_loss)) < 1e-3
+
+        # make sure we support per_voxel_weights arguments
+        o = trw.train.OutputSegmentation2(
+            output=mask_scores,
+            output_truth=expected_map,
+            per_voxel_weights=torch.zeros_like(expected_map, dtype=torch.float32),
+            criterion_fn=lambda: functools.partial(segmentation_criteria_ce_dice, ce_weight=1.0))
+        loss_term = o.evaluate_batch(batch, is_training=False)
+        assert loss_term['loss'].item() == 0.0
 
     def test_output_triplets(self):
         samples = torch.tensor(

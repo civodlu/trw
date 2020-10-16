@@ -1,4 +1,4 @@
-from trw.train import OutputClassification2, OutputEmbedding
+from trw.train import OutputClassification2, OutputEmbedding, OutputSegmentation2
 import trw
 import numpy as np
 import torch.nn as nn
@@ -46,7 +46,7 @@ class Net(nn.Module):
             'x_2d': OutputEmbedding(x_2d),
             'o_2d': OutputEmbedding(nn.Sigmoid()(o_2d)),
             'labels_2d': OutputEmbedding(labels_2d),
-            'softmax': OutputClassification2(o, labels[0], criterion_fn=trw.train.LossDiceMulticlass, metrics=metrics, collect_output=False)
+            'softmax': OutputSegmentation2(o, labels)
         }
 
 

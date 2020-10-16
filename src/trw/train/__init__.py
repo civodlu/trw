@@ -7,7 +7,7 @@ from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
 from trw.train.collate import collate_dicts, collate_list_of_dicts, default_collate_fn
 
 from .outputs_trw import Output, OutputClassification, OutputClassification2, OutputRegression, OutputEmbedding, \
-    OutputSegmentation, default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss
+    default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss, OutputSegmentation2
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \

@@ -138,7 +138,7 @@ class MetricSegmentationDice(Metric):
         if found is None or truth is None:
             return None
 
-        assert len(found.shape) == len(truth.shape) + 1, f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
+        assert len(found.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
         with torch.no_grad():
             dice_by_class = trw.utils.to_value(self.dice_fn(found, truth))
 

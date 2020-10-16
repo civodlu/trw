@@ -101,8 +101,18 @@ def export_as_image(batch, feature_name, name, sample_id, export_root, feature_a
         # we need to keep track of the min/max across `export_as_image` calls
         # since we replace the array values by the name of the exported array
         np_arrays = [i.ravel() for i in samples if isinstance(i, np.ndarray)]
-        min_value = min([min(i) for i in np_arrays])  # handle variably sized arrays
-        max_value = max([max(i) for i in np_arrays])
+
+        # TODO refactor this! We should keep some context (e.g., in case batch size == 1)
+        #   to avoid recalculating min/max constantly
+        try:
+            # all data has same shape
+            min_value = np.min(np_arrays)
+            max_value = np.max(np_arrays)
+        except:
+            # data has different shapes. TODO this can be very slow!
+            min_value = min([min(i) for i in np_arrays])  # handle variably sized arrays
+            max_value = max([max(i) for i in np_arrays])
+
         feature_attributes = {
             'min_value': min_value,
             'max_value': max_value,

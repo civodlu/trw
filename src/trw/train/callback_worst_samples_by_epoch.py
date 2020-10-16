@@ -113,7 +113,11 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
             worst_k_samples=1000,
             export_top_k_samples=50,
             uids_name=sequence_array.sample_uid_name,
-            output_of_interest=(trw_outputs.OutputClassification, trw_outputs.OutputSegmentation, trw_outputs.OutputRegression)):
+            output_of_interest=(
+                    trw_outputs.OutputClassification,
+                    trw_outputs.OutputClassification2,
+                    trw_outputs.OutputSegmentation2,
+                    trw_outputs.OutputRegression)):
         """
 
         Args:

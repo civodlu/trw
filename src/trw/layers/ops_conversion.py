@@ -8,9 +8,24 @@ class OpsConversion:
     """
     def __init__(self):
         self.dim = None
-        self.group_norm_fn = nn.GroupNorm
-        self.sync_bn_fn = nn.SyncBatchNorm
-        self.layer_norm = nn.LayerNorm
+        self.group_norm_fn = None
+        try:
+            self.group_norm_fn = nn.GroupNorm
+        except:
+            pass
+
+        self.sync_bn_fn = None
+        try:
+            self.sync_bn_fn = nn.SyncBatchNorm
+        except:
+            pass
+
+        self.layer_norm = None
+        try:
+            self.layer_norm = nn.LayerNorm
+        except:
+            pass
+
         self.lrn_fn = nn.LocalResponseNorm
 
         self.conv_fn = None
@@ -24,7 +39,12 @@ class OpsConversion:
 
         self.dropout_fn = None
         self.dropout1d_fn = nn.Dropout
-        self.alpha_dropout = nn.AlphaDropout
+
+        self.alpha_dropout = None
+        try:
+            self.alpha_dropout = nn.AlphaDropout
+        except:
+            pass
 
         self.upsample_fn = None
         self.instance_norm = None
@@ -38,7 +58,13 @@ class OpsConversion:
             self.decon_fn = nn.ConvTranspose3d
             self.max_pool_fn = nn.MaxPool3d
             self.avg_pool_fn = nn.AvgPool3d
-            self.fractional_max_pool_fn = nn.FractionalMaxPool3d
+
+            self.fractional_max_pool_fn = None
+            try:
+                self.fractional_max_pool_fn = nn.FractionalMaxPool3d
+            except:
+                pass
+
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool3d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool3d
             self.dropout_fn = nn.Dropout3d
@@ -52,7 +78,13 @@ class OpsConversion:
             self.decon_fn = nn.ConvTranspose2d
             self.max_pool_fn = nn.MaxPool2d
             self.avg_pool_fn = nn.AvgPool2d
-            self.fractional_max_pool_fn = nn.FractionalMaxPool2d
+
+            self.fractional_max_pool_fn = None
+            try:
+                self.fractional_max_pool_fn = nn.FractionalMaxPool2d
+            except:
+                pass
+
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool2d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool2d
             self.dropout_fn = nn.Dropout2d
@@ -65,6 +97,7 @@ class OpsConversion:
             self.decon_fn = nn.ConvTranspose1d
             self.max_pool_fn = nn.MaxPool1d
             self.avg_pool_fn = nn.AvgPool1d
+
             self.fractional_max_pool_fn = None
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool1d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool1d

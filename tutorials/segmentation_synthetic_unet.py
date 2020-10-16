@@ -8,18 +8,17 @@ class Net(nn.Module):
         self.unet = trw.layers.UNetBase(2, input_channels=3, output_channels=2, channels=[4, 8, 16])
 
     def forward(self, batch):
-        x = batch['image']
-        x = self.unet(x)
+        x = self.unet(batch['image'])
 
         return {
-            'segmentation': trw.train.OutputSegmentation(x, target_name='mask'),
-            'segmentation_output': trw.train.OutputEmbedding(x.argmax(dim=1).unsqueeze(1))
+            'segmentation': trw.train.OutputSegmentation2(output=x, output_truth=batch['mask']),
+            'segmentation_output': trw.train.OutputEmbedding(x.argmax(dim=1, keepdim=True))
         }
 
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackReportingExportSamples(),
+        trw.train.CallbackReportingExportSamples(max_samples=5),
         trw.train.CallbackEpochSummary(),
     ]
 

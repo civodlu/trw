@@ -90,6 +90,7 @@ def per_epoch_fn():
 
 def pre_training_fn():
     callbacks = [
+        trw.train.CallbackReportingStartServer(),
         trw.train.CallbackReportingExportSamples(table_name='random_samples', max_samples=5, split_exclusions=['train']),
     ]
     return callbacks

@@ -1,5 +1,8 @@
+from typing import Union
+
 import numpy as np
 import torch
+from typing import Sequence
 
 
 def _crop_5d(image, min, max):
@@ -51,7 +54,7 @@ def batch_crop(images, min_index: list, max_index_exclusive: list):
     return crop_fn(images, [0] + min_index, [len(images)] + max_index_exclusive)
 
 
-def transform_batch_random_crop_offset(array, crop_shape):
+def transform_batch_random_crop_offset(array, crop_shape: Sequence[Union[None, int]]):
     """
     Calculate the offsets of array to randomly crop it with shape `crop_shape`
 
@@ -65,14 +68,18 @@ def transform_batch_random_crop_offset(array, crop_shape):
     nb_dims = len(array.shape) - 1
     assert len(crop_shape) == nb_dims, 'padding must have shape size of {}, got={}'.format(nb_dims, len(crop_shape))
     for index, size in enumerate(crop_shape):
-        assert array.shape[index + 1] >= size, \
+        assert size is None or array.shape[index + 1] >= size, \
             'crop_size is larger than array size! shape={}, crop_size={}, index={}'.format(array.shape[1:], crop_shape, index)
 
     # calculate the maximum offset per dimension. We can then
     # use `max_offsets` and `crop_shape` to calculate the cropping
     max_offsets = []
     for size, crop_size in zip(array.shape[1:], crop_shape):
-        max_offset = size - crop_size
+        if crop_size is None:
+            # crop ALL the dimension
+            max_offset = 0
+        else:
+            max_offset = size - crop_size
         max_offsets.append(max_offset)
 
     nb_samples = array.shape[0]
@@ -87,13 +94,14 @@ def transform_batch_random_crop_offset(array, crop_shape):
     return offsets
 
 
-def transform_batch_random_crop(array, crop_shape, offsets=None, return_offsets=False):
+def transform_batch_random_crop(array, crop_shape: Sequence[Union[int, None]], offsets=None, return_offsets=False):
     """
     Randomly crop a numpy array of samples given a target size. This works for an arbitrary number of dimensions
 
     Args:
         array: a numpy or Torch array. Samples are stored in the first dimension
-        crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop
+        crop_shape: a sequence of size `len(array.shape)-1` indicating the shape of the crop. If `None` in one
+            of the element of the shape, take the whole dimension
         offsets: if `None`, offsets will be randomly created to crop with `crop_shape`, else an array indicating
             the crop position for each sample
         return_offsets: if `True`, returns a tuple (cropped array, offsets)
@@ -127,6 +135,9 @@ def transform_batch_random_crop(array, crop_shape, offsets=None, return_offsets=
         crop_fn = _crop_5d
     else:
         assert 0, 'TODO implement for generic dimension'
+
+    # handle the `None` in crop shape. In that case crop the whole dimension
+    crop_shape = [s if s is not None else array.shape[d + 1] for d, s in enumerate(crop_shape)]
 
     cropped_array = []
     for n in range(nb_samples):

@@ -252,7 +252,7 @@ class CallbackReportingExportSamples(callback.Callback):
             table_name=self.table_name,
             table_role='data_samples')
 
-        logger.info('export started...')
+        logger.info(f'export started..., N={self.max_samples}')
         for dataset_name, dataset in datasets.items():
             root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', self.table_name)
             if not os.path.exists(root):

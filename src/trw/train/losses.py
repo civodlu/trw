@@ -56,23 +56,24 @@ class LossDiceMulticlass(nn.Module):
         
         Args:
             output: must have W x C x d0 x ... x dn shape, where C is the total number of classes to predict
-            target: must have W x d0 x ... x dn shape
+            target: must have W x 1 x d0 x ... x dn shape
 
         Returns:
             if return_dice_by_class is False, return 1 - dice score suitable for optimization.
             Else, return the average dice score by class
         """
         assert len(output.shape) > 2
-        assert len(output.shape) == len(target.shape) + 1, 'output: must have W x C x d0 x ... x dn shape and ' \
-                                                           'target: must have W x d0 x ... x dn shape'
+        assert len(output.shape) == len(target.shape), 'output: must have W x C x d0 x ... x dn shape and ' \
+                                                       'target: must have W x 1 x d0 x ... x dn shape'
         assert output.shape[0] == target.shape[0]
+        assert target.shape[1] == 1, 'segmentation must have a single channel!'
 
         if self.normalization is not None:
             output = self.normalization(output)
 
         # for each class (including background!), create a mask
         # so that class N is encoded as one hot at dimension 1
-        encoded_target = one_hot(target, output.shape[1], dtype=output.dtype)
+        encoded_target = one_hot(target[:, 0], output.shape[1], dtype=output.dtype)
         
         intersection = output * encoded_target
         indices_to_sum = tuple(range(2, len(output.shape)))

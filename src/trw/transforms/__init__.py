@@ -27,3 +27,4 @@ from .transforms_compose import TransformCompose
 from .transforms_affine import TransformAffine
 from .transforms_cast import TransformCast
 from .transforms_random_crop_resize import TransformRandomCropResize
+from .transforms_resize_modulo_pad_crop import TransformResizeModuloCropPad

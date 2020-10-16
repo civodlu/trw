@@ -1,3 +1,5 @@
+from typing import Callable, Any, List, Optional
+
 import torch
 import functools
 import collections
@@ -8,6 +10,7 @@ from trw.train import metrics
 from trw.train.sequence_array import sample_uid_name as default_sample_uid_name
 from trw.train import losses
 from trw.utils import flatten
+from trw.train.losses import LossDiceMulticlass
 
 
 def dict_torch_values_to_numpy(d):
@@ -137,33 +140,34 @@ class OutputEmbedding(Output):
             self.output = None
 
 
-def segmentation_criteria_ce_dice(output, truth, per_voxel_weight=None, ce_weight=0.5, per_class_weight=None):
+def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weight=0.5, per_class_weights=None):
     """
     loss combining cross entropy and multi-class dice
 
     Args:
         output: the output value, with shape [N, C, Dn...D0]
-        truth: the truth, with shape [N, Dn..D0]
+        truth: the truth, with shape [N, 1, Dn..D0]
         ce_weight: the weight of the cross entropy to use. This controls the importance of the
             cross entropy loss to the overall segmentation loss. Range in [0..1]
-        per_class_weight: the weight per class. A 1D vector of size C indicating the weight of the classes. This
+        per_class_weights: the weight per class. A 1D vector of size C indicating the weight of the classes. This
             will be used for the cross-entropy loss
-        per_voxel_weight: the weight of each truth voxel. Must be of shape [N, Dn..D0]
+        per_voxel_weights: the weight of each truth voxel. Must be of shape [N, Dn..D0]
 
     Returns:
         a torch tensor
     """
-    assert per_class_weight is None or len(per_class_weight) == output.shape[1], f'per_class_weight must have a' \
+    assert per_class_weights is None or len(per_class_weights) == output.shape[1], f'per_class_weights must have a' \
                                                                                  f'weight per class. ' \
-                                                                                 f'Got={len(per_class_weight)}, ' \
+                                                                                 f'Got={len(per_class_weights)}, ' \
                                                                                  f'expected={output.shape[1]}'
 
-    assert per_voxel_weight is None or per_voxel_weight.shape == truth.shape, 'incorrect per-voxel weight'
+    assert per_voxel_weights is None or per_voxel_weights.shape == truth.shape, 'incorrect per-voxel weight'
+    assert truth.shape[1] == 1, f'expected a single channel! Got={truth.shape[1]}'
 
     if ce_weight > 0:
-        cross_entropy_loss = nn.CrossEntropyLoss(reduction='none', weight=per_class_weight)(output, truth)
-        if per_voxel_weight is not None:
-            cross_entropy_loss = cross_entropy_loss * per_voxel_weight
+        cross_entropy_loss = nn.CrossEntropyLoss(reduction='none', weight=per_class_weights)(output, truth.squeeze(1))
+        if per_voxel_weights is not None:
+            cross_entropy_loss = cross_entropy_loss * per_voxel_weights
         cross_entropy_loss = cross_entropy_loss.mean(tuple(range(1, len(cross_entropy_loss.shape))))
     else:
         cross_entropy_loss = 0
@@ -182,121 +186,6 @@ def segmentation_output_postprocessing(mask_pb):
     Post-process the mask probability of the segmentation into discrete segmentation map
     """
     return torch.unsqueeze(torch.argmax(mask_pb))
-
-
-class OutputSegmentation(Output):
-    """
-    Segmentation output
-    """
-    def __init__(
-            self,
-            output,
-            target_name,
-            criterion_fn=lambda: segmentation_criteria_ce_dice,
-            collect_only_non_training_output=True,
-            metrics=metrics.default_segmentation_metrics(),
-            loss_reduction=torch.mean,
-            weight_name=None,
-            loss_scaling=1.0,
-            output_postprocessing=functools.partial(torch.argmax, dim=1),
-            sample_uid_name=default_sample_uid_name):
-        """
-
-        :param output:
-        :param target_name:
-        :param criterion_fn:
-        :param metrics:
-        :param loss_reduction:
-        :param weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
-        :param loss_scaling: scale the loss by a scalar
-        :param output_postprocessing:
-        :param collect_only_non_training_output: if True, only non-training output will be collected
-        """
-        super().__init__(
-            output=output,
-            criterion_fn=criterion_fn,
-            collect_output=False,
-            sample_uid_name=sample_uid_name,
-            metrics=metrics)
-
-        self.target_name = target_name
-        self.loss_reduction = loss_reduction
-        self.output_postprocessing = output_postprocessing
-        self.weight_name = weight_name
-        self.loss_scaling = loss_scaling
-        self.collect_only_non_training_output = collect_only_non_training_output
-
-    def loss_term_cleanup(self, loss_term):
-        """
-        This function is called for each batch just before switching to another batch.
-
-        It can be used to clean up large arrays stored or release CUDA memory
-        """
-        if 'output_raw' in loss_term:
-            # typically too big, so remove them
-            del loss_term['output_raw']
-            del loss_term['output']
-            del loss_term['output_truth']
-
-        super().loss_term_cleanup(loss_term)
-
-    def evaluate_batch(self, batch, is_training):
-        truth = batch.get(self.target_name)
-        assert truth is not None, 'classes `{}` is missing in current batch!'.format(self.target_name)
-
-        max_index = int(torch.max(truth).cpu().numpy())
-        min_index = int(torch.min(truth).cpu().numpy())
-        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
-                                                 f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
-        assert min_index >= 0, f'incorrect index! got={min_index}'
-
-        per_voxel_weight = None
-        if self.weight_name is not None:
-            w = batch.get(self.weight_name)
-            if w.shape == truth.shape:
-                per_voxel_weight = w
-
-        loss_term = {}
-        losses = self.criterion_fn()(self.output, truth, per_voxel_weight=per_voxel_weight)
-        assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
-        assert trw.utils.len_batch(batch) == losses.shape[0], 'loss must have 1 element per sample'
-
-        # keep these as torch variable since metrics may be slow to calculate with numpy (e.g., dice)
-        if (is_training and not self.collect_only_non_training_output) or not is_training:
-            loss_term['output_raw'] = self.output
-            loss_term['output'] = self.output_postprocessing(self.output)
-            loss_term['output_truth'] = truth
-
-        # do NOT keep the original output else memory will be an issue
-        # (e.g., CUDA device)
-        del self.output
-        self.output = None
-
-        if self.weight_name is not None and per_voxel_weight is None:
-            weights = batch.get(self.weight_name)
-            assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
-            assert len(weights) == len(losses), 'must have a weight per sample'
-            assert len(weights.shape) == 1, 'must be a 1D vector'
-
-            # expand to same shape size so that we can easily broadcast the weight
-            weights = weights.reshape([weights.shape[0]] + [1] * (len(losses.shape) - 1))
-
-        else:
-            weights = torch.ones_like(losses)
-            
-        if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
-
-        # weight the loss of each sample by the corresponding weight
-        weighted_losses = weights * losses
-
-        loss_term['losses'] = weighted_losses
-        # here we MUST be able to calculate the gradient so don't detach
-        loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
-        loss_term[Output.output_ref_tag] = self  # keep a back reference
-
-        loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
-        return loss_term
 
 
 class OutputClassification(Output):
@@ -432,6 +321,7 @@ class OutputClassification2(Output):
             metrics=metrics.default_classification_metrics(),
             loss_reduction=torch.mean,
             weights=None,
+            per_voxel_weights=None,
             loss_scaling=1.0,
             output_postprocessing=functools.partial(torch.argmax, dim=1),  # =1 as we export the class
             maybe_optional=False,
@@ -455,6 +345,7 @@ class OutputClassification2(Output):
             maybe_optional: if True, the loss term may be considered optional if the ground
                 truth is not part of the batch
             sample_uid_name (str): if not None, collect the sample UID
+            per_voxel_weights: a per voxel weighting that will be passed to criterion_fn
         """
         super().__init__(
             output=output,
@@ -468,7 +359,12 @@ class OutputClassification2(Output):
         self.collect_only_non_training_output = collect_only_non_training_output
         self.loss_scaling = loss_scaling
         self.weights = weights
+        self.per_voxel_weights = per_voxel_weights
         self.maybe_optional = maybe_optional
+
+        if self.per_voxel_weights is not None:
+            assert self.per_voxel_weights.shape[2:] == self.output.shape[2:]
+            assert len(self.per_voxel_weights) == len(self.output)
 
     def evaluate_batch(self, batch, is_training):
         truth = self.output_truth
@@ -486,9 +382,13 @@ class OutputClassification2(Output):
         #                                         f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
         # assert min_index >= 0, f'incorrect index! got={min_index}'
 
+        criterion_args = {}
+        if self.per_voxel_weights is not None:
+            criterion_args['per_voxel_weights'] = self.per_voxel_weights
+
         loss_term = {}
         if self.criterion_fn is not None:
-            losses = self.criterion_fn()(self.output, truth)
+            losses = self.criterion_fn()(self.output, truth, **criterion_args)
         else:
             losses = torch.zeros(len(self.output), device=self.output.device)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
@@ -541,6 +441,62 @@ class OutputClassification2(Output):
             del loss_term['output_raw']
             del loss_term['output']
             del loss_term['output_truth']
+
+
+class OutputSegmentation2(OutputClassification2):
+    def __init__(
+            self,
+            output: torch.Tensor,
+            output_truth: torch.Tensor,
+            criterion_fn: Callable[[], Any] = LossDiceMulticlass,
+            collect_output: bool = False,
+            collect_only_non_training_output: bool = False,
+            metrics: Callable[[], List[metrics.Metric]] = metrics.default_segmentation_metrics(),
+            loss_reduction: Callable[[torch.Tensor], torch.Tensor] = torch.mean,
+            weights=None,
+            per_voxel_weights=None,
+            loss_scaling=1.0,
+            output_postprocessing=functools.partial(torch.argmax, dim=1, keepdim=True),  # =1 as we export the class
+            maybe_optional=False,
+            sample_uid_name=default_sample_uid_name):
+        """
+
+        Args:
+            output: the raw output values
+            output_truth: the tensor to be used as target. Targets must be compatible with ``criterion_fn``
+            criterion_fn: the criterion to minimize between the output and the output_truth. If ``None``, the returned
+                loss will be 0
+            collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
+            collect_only_non_training_output: if True, only the non-training splits will have the outputs collected
+            metrics: the metrics to be reported each epoch
+            loss_reduction: a function to reduce the N-d losses to a single loss value
+            weights: if not None, the weight name. the loss of each sample will be weighted by this vector
+            loss_scaling: scale the loss by a scalar
+            output_postprocessing: the output will be post-processed by this function for the segmentation result.
+                For example, the classifier may return logit scores for each class and we can use argmax of the
+                scores to get the class.
+            maybe_optional: if True, the loss term may be considered optional if the ground
+                truth is not part of the batch
+            sample_uid_name (str): if not None, collect the sample UID
+            per_voxel_weights: a per voxel weighting that will be passed to criterion_fn
+        """
+        assert len(output.shape) == len(output_truth.shape), 'must have the same dimensionality!'
+
+        super().__init__(
+            output=output,
+            output_truth=output_truth,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            collect_only_non_training_output=collect_only_non_training_output,
+            metrics=metrics,
+            loss_reduction=loss_reduction,
+            weights=weights,
+            loss_scaling=loss_scaling,
+            output_postprocessing=output_postprocessing,
+            maybe_optional=maybe_optional,
+            sample_uid_name=sample_uid_name,
+            per_voxel_weights=per_voxel_weights
+        )
 
 
 def mean_all(x):

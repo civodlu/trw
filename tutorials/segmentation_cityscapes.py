@@ -3,10 +3,9 @@ import os
 os.environ['OMP_NUM_THREADS'] = '1'
 os.environ['MKL_NUM_THREADS'] = '1'
 
-import torch
+
 import torch.nn as nn
-import torchvision
-import numpy as np
+import torch
 import trw
 
 
@@ -21,14 +20,16 @@ class Net(nn.Module):
         x = self.unet(x)
 
         return {
-            'segmentation': trw.train.OutputSegmentation(x, target_name='segmentation', collect_only_non_training_output=False)
+            'segmentation': trw.train.OutputSegmentation2(x, batch['segmentation']),
+            'mask': trw.train.OutputEmbedding(torch.sigmoid(x)),
         }
 
 
-trainer = trw.train.Trainer(callbacks_pre_training_fn=None)
-model, results = trainer.fit(
-    trw.train.create_default_options(num_epochs=200),
-    inputs_fn=lambda: trw.datasets.create_cityscapes_dataset(batch_size=2),
-    run_prefix='cityscapes_segmentation_unet',
-    model_fn=lambda options: Net(),
-    optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(datasets=datasets, model=model, learning_rate=0.001, step_size=50, gamma=0.3))
+if __name__ == '__main__':
+    trainer = trw.train.Trainer(callbacks_pre_training_fn=None)
+    model, results = trainer.fit(
+        trw.train.create_default_options(num_epochs=200),
+        inputs_fn=lambda: trw.datasets.create_cityscapes_dataset(batch_size=2, nb_workers=2),
+        run_prefix='cityscapes_segmentation_unet',
+        model_fn=lambda options: Net(),
+        optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(datasets=datasets, model=model, learning_rate=0.001, step_size=50, gamma=0.3))

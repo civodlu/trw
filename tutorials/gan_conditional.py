@@ -94,7 +94,7 @@ def create_model(options):
     discriminator = Discriminator()
     generator = Generator(latent_size)
 
-    optimizer_fn = functools.partial(torch.optim.Adam, lr=0.0002, betas=(0.5, 0.999))
+    optimizer_fn = functools.partial(torch.optim.Adam, lr=0.002, betas=(0.5, 0.999))
 
     model = Gan(
         discriminator=discriminator,

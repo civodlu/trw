@@ -94,7 +94,7 @@ def create_default_reporting_options(embedded=True, config={}):
     o.style.scatter_continuous_factor = 10
 
     o.data = Object()
-    o.data.refresh_time = 2.0
+    o.data.refresh_time = 5.0
     o.data.unpack_numpy_arrays_with_less_than_x_columns = 15
     o.data.types_to_discard = [
         np.dtype('|S1'),        # binary string

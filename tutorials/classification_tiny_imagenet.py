@@ -8,7 +8,7 @@ import torchvision
 
 
 class SimpleNet2(nn.Module):
-    def __init__(self, options, conv_filters=[64, 128, 256, 512, 200], conv_repeats=[3, 3, 3, 3, 1]):
+    def __init__(self, options, conv_filters=[64, 128, 256, 200], conv_repeats=[3, 3, 3, 1]):
         super().__init__()
 
         activation_conv = nn.LeakyReLU
