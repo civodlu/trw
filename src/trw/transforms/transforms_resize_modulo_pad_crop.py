@@ -2,12 +2,13 @@ import collections
 
 import functools
 from numbers import Number
-from typing import Sequence, Callable, Union, Any, Dict
+from typing import Callable, Union, List
 
-import trw.utils
 from trw.transforms import transforms
 from trw.transforms import crop
 import numpy as np
+from trw.typing import ShapeX, Batch
+from trw.utils import batch_pad_minmax_joint
 
 
 def _transform_resize_modulo_crop_pad(
@@ -21,8 +22,9 @@ def _transform_resize_modulo_crop_pad(
     resized_arrays = []
     arrays = [batch[name] for name in features_names]
     for a in arrays[1:]:
-        assert a.shape == arrays[0].shape, f'selected tensors MUST have the same size. ' \
-                                           f'Expected={a.shape}, got={arrays[0].shape}'
+        assert len(a.shape) == len(arrays[0].shape)
+        assert a.shape[2:] == arrays[0].shape[2:], f'selected tensors MUST have the same size. ' \
+                                                   f'Expected={a.shape}, got={arrays[0].shape}'
 
     if len(features_names) > 0:
         shape = arrays[0].shape[2:]
@@ -30,12 +32,29 @@ def _transform_resize_modulo_crop_pad(
         if isinstance(multiple_of, Number):
             multiple_of = [multiple_of] * (len(shape))
         multiple_of = np.asarray(multiple_of)
+        assert len(shape) == len(multiple_of), 'expected multiple_of expressed as [D]HW shape!'
 
+        shape_extra = arrays[0].shape[2:] % multiple_of
         if mode == 'pad':
-            raise NotImplementedError('TODO IMPLEMENT')
+            # padding is centered
+            padding = multiple_of - shape_extra
+            padding_left = padding // 2
+            padding_right = padding - padding_left
+
+            padding_left = [0] + list(padding_left)
+            padding_right = [0] + list(padding_right)
+            resized_arrays = batch_pad_minmax_joint(
+                arrays,
+                padding_left,
+                padding_right,
+                padding_mode,
+                padding_constant_value
+            )
         elif mode == 'crop':
-            shape_extra = arrays[0].shape[2] % multiple_of
-            resized_arrays = crop.transform_batch_random_crop_joint(arrays, [None] + list(shape - shape_extra))
+            s = list(shape - shape_extra)
+            assert min(s) > 0, f'shape is too small! Use a different mode. ' \
+                               f'Got={arrays[0].shape[2:]}, multiple_of={multiple_of}'
+            resized_arrays = crop.transform_batch_random_crop_joint(arrays, [None] + s)
         else:
             raise NotImplementedError(f'mode={mode} is not handled!')
 
@@ -50,7 +69,7 @@ def _transform_resize_modulo_crop_pad(
 
 class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
     """
-    Resize tensors by padding or cropping the tensor so its shape is a multiple of a size.
+    Resize tensors by padding or cropping the tensor so its shape is a multiple of a ``multiple_of``.
 
     This can be particularly helpful in encoder-decoder architecture with skip connection which can impose
     constraints on the input shape (e.g., the input must be a multiple of 32 pixels).
@@ -70,12 +89,12 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
     """
     def __init__(
             self,
-            multiple_of: Union[int, Sequence[int]],
-            criteria_fn: Callable[[Dict[str, Any]], Dict[str, Any]] = None,
+            multiple_of: Union[int, ShapeX],
+            criteria_fn: Callable[[Batch], List[str]] = None,
             #mode: Literal['crop', 'pad'] = 'crop',  # TODO python 3.8
             mode: str = 'crop',
             #padding_mode: Literal['edge', 'constant', 'symmetric'] = 'edge',  # TODO python 3.8
-            padding_mode: str = 'edge',
+            padding_mode: str = 'constant',
             padding_constant_value: int = 0):
 
         if criteria_fn is None:
@@ -91,4 +110,3 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
                 multiple_of=multiple_of)
          )
         self.criteria_fn = transforms.criteria_is_array_3_or_above
-

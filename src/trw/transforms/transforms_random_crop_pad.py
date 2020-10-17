@@ -1,9 +1,13 @@
 import collections
 
 import functools
+from numbers import Number
+from typing import Optional, Callable, List
+
 import trw.utils
 from trw.transforms import transforms
 from trw.transforms import crop
+from trw.typing import ShapeCX, Batch
 
 
 def _transform_random_crop_pad(features_names, batch, padding, mode='edge', constant_value=0, shape=None):
@@ -70,7 +74,14 @@ class TransformRandomCropPad(transforms.TransformBatchWithCriteria):
     Returns:
         a randomly cropped batch
     """
-    def __init__(self, padding, criteria_fn=None, mode='edge', constant_value=0, shape=None):
+    def __init__(
+            self,
+            padding: ShapeCX,
+            criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+            mode: str = 'edge',
+            constant_value: Number = 0,
+            shape: ShapeCX = None):
+
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 

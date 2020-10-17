@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+from trw.typing import ShapeNCX, TensorNCX, TorchTensorNCX
 
 
-def _upsample_int_1d(tensor, size):
+def _upsample_int_1d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
     assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
@@ -15,7 +16,7 @@ def _upsample_int_1d(tensor, size):
     return tensor_interp
 
 
-def _upsample_int_2d(tensor, size):
+def _upsample_int_2d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
     assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
@@ -29,7 +30,7 @@ def _upsample_int_2d(tensor, size):
     return tensor_interp
 
 
-def _upsample_int_3d(tensor, size):
+def _upsample_int_3d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     # this is just a workaround! TODO assess the speed impact!
     # see https://discuss.pytorch.org/t/what-is-the-good-way-to-interpolate-int-tensor/29490
     assert len(size) + 2 == len(tensor.shape), 'shape must be only the resampled components, ' \
@@ -44,7 +45,7 @@ def _upsample_int_3d(tensor, size):
     return tensor_interp
 
 
-def upsample(tensor, size, mode='linear'):
+def upsample(tensor: TensorNCX, size: ShapeNCX, mode='linear') -> TensorNCX:
     """
     Upsample a 1D, 2D, 3D tensor
 

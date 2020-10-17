@@ -32,6 +32,6 @@ def optional_import(module_name: str):
         m = importlib.import_module(module_name)
         if m is not None:
             return m
-    except Exception:
+    except:
         return _LazyRaise(f'optional module cannot be imported `{module_name}`. '
                           f'To use this functionality, this module must be installed!')

@@ -1,7 +1,12 @@
 import functools
+from numbers import Number
+from typing import Optional, Callable, List, Sequence
+
 from trw.transforms import transforms
 from trw.transforms.normalize import normalize
 import collections
+
+from trw.typing import Batch
 
 
 def _transform_normalize(features_names, batch, mean, std):
@@ -31,7 +36,12 @@ class TransformNormalize(transforms.TransformBatchWithCriteria):
     Returns:
         A normalized batch such that the mean is 0 and std is 1 for the selected features
     """
-    def __init__(self, mean, std, criteria_fn=None):
+    def __init__(
+            self,
+            mean: Sequence[Number],
+            std: Sequence[Number],
+            criteria_fn: Optional[Callable[[Batch], List[str]]] = None):
+
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_3_or_above
 

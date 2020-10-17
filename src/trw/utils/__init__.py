@@ -13,6 +13,7 @@ from .flatten import flatten
 from .global_pooling import global_max_pooling_2d, global_average_pooling_2d, global_average_pooling_3d, \
     global_max_pooling_3d
 from .batch_pad import batch_pad, batch_pad_joint, batch_pad_torch, batch_pad_numpy
+from .batch_pad_minmax import batch_pad_minmax, batch_pad_minmax_joint, batch_pad_minmax_numpy, batch_pad_minmax_torch
 from .safe_filename import safe_filename
 from .optional_import import optional_import
 

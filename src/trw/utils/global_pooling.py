@@ -1,7 +1,8 @@
 import torch.nn.functional as F
+from trw.typing import TorchTensorNCX
 
 
-def global_max_pooling_2d(tensor):
+def global_max_pooling_2d(tensor: TorchTensorNCX) -> TorchTensorNCX:
     """
     2D Global max pooling.
 
@@ -17,7 +18,7 @@ def global_max_pooling_2d(tensor):
     return F.max_pool2d(tensor, tensor.shape[2:]).squeeze(2).squeeze(2)
 
 
-def global_average_pooling_2d(tensor):
+def global_average_pooling_2d(tensor: TorchTensorNCX) -> TorchTensorNCX:
     """
     2D Global average pooling.
 
@@ -33,7 +34,7 @@ def global_average_pooling_2d(tensor):
     return F.avg_pool2d(tensor, tensor.shape[2:]).squeeze(2).squeeze(2)
 
 
-def global_max_pooling_3d(tensor):
+def global_max_pooling_3d(tensor: TorchTensorNCX) -> TorchTensorNCX:
     """
     3D Global max pooling.
 
@@ -49,7 +50,7 @@ def global_max_pooling_3d(tensor):
     return F.max_pool3d(tensor, tensor.shape[2:]).squeeze(2).squeeze(2).squeeze(2)
 
 
-def global_average_pooling_3d(tensor):
+def global_average_pooling_3d(tensor: TorchTensorNCX) -> TorchTensorNCX:
     """
     3D Global average pooling.
 

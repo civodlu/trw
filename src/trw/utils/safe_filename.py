@@ -1,4 +1,4 @@
-def safe_filename(filename: str, replace_with:str='_') -> str:
+def safe_filename(filename: str, replace_with: str = '_') -> str:
     """
     Replace problematic characters (e.g., '/' or '#') considering Windows/Linux based OSes
     Args:

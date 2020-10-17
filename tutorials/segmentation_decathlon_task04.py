@@ -1,11 +1,6 @@
-from trw.train import OutputClassification2, OutputEmbedding, OutputSegmentation2
+from trw.train import OutputEmbedding, OutputSegmentation2
 import trw
-import numpy as np
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-metrics = trw.train.metrics.default_segmentation_metrics()
 
 
 class Net(nn.Module):
@@ -16,20 +11,9 @@ class Net(nn.Module):
 
     def forward(self, batch):
         # a batch should be a dictionary of features
+        labels = batch['label_voxels']
         x = batch['image_voxels']
         x = self.norm_input(x)
-        labels = batch['label_voxels']
-
-        # pad the input to be multiple of 8
-        # TODO create a transform for this
-        target_padding = 8 - np.array(x.shape[2:]) % 8
-        padding = [
-            0, target_padding[2],
-            0, target_padding[1],
-            0, target_padding[0],
-        ]
-        x = F.pad(x, padding)
-        labels = F.pad(labels, padding)
 
         o = self.model(x)
 
@@ -76,7 +60,8 @@ if __name__ == '__main__':
         options,
         inputs_fn=lambda: trw.datasets.create_decathlon_dataset(
             'Task04_Hippocampus',
-            #transform_train=trw.transforms.TransformRandomCropPad([0, 2, 2, 2], mode='constant'),
+            transform_train=trw.transforms.TransformResizeModuloCropPad(multiple_of=8, mode='pad'),
+            transform_valid=trw.transforms.TransformResizeModuloCropPad(multiple_of=8, mode='pad'),
             remove_patient_transform=True,
         ),
         run_prefix='decathlon_task4',

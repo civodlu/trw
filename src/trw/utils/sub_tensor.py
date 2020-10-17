@@ -1,17 +1,18 @@
 import torch
+from trw.typing import Shape
 
 
-def sub_tensor(tensor, min_indices, max_indices_exclusive):
+def sub_tensor(tensor: torch.Tensor, min_indices: Shape, max_indices_exclusive: Shape) -> torch.Tensor:
     """
     Select a region of a tensor (without copy)
 
     Examples:
         >>> t = torch.randn([5, 10])
-        >>> sub_t = trw.train.sub_tensor(t, [2, 3], [4, 8])
+        >>> sub_t = sub_tensor(t, [2, 3], [4, 8])
         Returns the t[2:4, 3:8]
 
         >>> t = torch.randn([5, 10])
-        >>> sub_t = trw.train.sub_tensor(t, [2], [4])
+        >>> sub_t = sub_tensor(t, [2], [4])
         Returns the t[2:4]
 
     Args:

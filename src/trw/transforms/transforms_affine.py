@@ -1,9 +1,12 @@
 import collections
+from numbers import Number
+from typing import Sequence, Callable, List
 
 import numpy as np
 import torch
 from trw.transforms import transforms
 from trw.transforms import affine
+from trw.typing import Batch
 
 
 def rand_n_2(n_min_max):
@@ -98,12 +101,12 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
     """
     def __init__(
             self,
-            translation_min_max,
-            scaling_min_max,
-            rotation_radian_min_max,
-            isotropic=True,
-            criteria_fn=None,
-            padding_mode='zeros'):
+            translation_min_max: Sequence[Number],
+            scaling_min_max: Sequence[Number],
+            rotation_radian_min_max: Sequence[Number],
+            isotropic: bool = True,
+            criteria_fn: Callable[[Batch], List[str]] = None,
+            padding_mode: str = 'zeros'):
         """
 
         Args:

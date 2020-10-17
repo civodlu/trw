@@ -1,7 +1,8 @@
+from typing import Sequence, Any
 import torch
 
 
-def clamp_n(tensor, min_values, max_values):
+def clamp_n(tensor: torch.Tensor, min_values: Sequence[Any], max_values: Sequence[Any]) -> torch.Tensor:
     """
     Clamp a tensor with axis dependent values.
 
