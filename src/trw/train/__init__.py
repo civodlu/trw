@@ -13,6 +13,7 @@ from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossC
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
+from .trainer_across_datasets import epoch_train_eval_across_datasets
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, \
     create_scheduler_step_lr, create_adam_optimizers_fn, \
     create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn
@@ -63,6 +64,7 @@ from .sequence_adaptor import SequenceAdaptorTorch
 from .sequence_collate import SequenceCollate
 from .sequence_rebatch import SequenceReBatch
 from .sequence_sub_batch import SequenceSubBatch
+from .sequence_array_fixed_samples_per_epoch import SequenceArrayFixedSamplesPerEpoch
 
 from .metrics import Metric, MetricClassificationError, MetricClassificationBinarySensitivitySpecificity, MetricLoss, \
     MetricClassificationBinaryAUC, MetricClassificationF1
@@ -74,4 +76,4 @@ from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing
 from .data_parallel_extented import DataParallelExtended
 
-from .compatibility import grid_sample
+from .compatibility import grid_sample, affine_grid

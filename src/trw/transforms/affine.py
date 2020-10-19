@@ -205,7 +205,7 @@ def affine_transform(images, affine_matrices, interpolation='bilinear', padding_
     else:
         raise NotImplementedError(f'dimension not supported! Must be 2 or 3, current={dim}')
 
-    grid = nn.functional.affine_grid(affine_matrices, images.shape)
+    grid = trw.train.affine_grid(affine_matrices, images.shape, align_corners=align_corners)
     resampled_images = trw.train.grid_sample(
         images,
         grid,

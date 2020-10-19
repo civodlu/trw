@@ -259,8 +259,12 @@ def classification_report(
 
     cm = sklearn.metrics.confusion_matrix(y_pred=predictions, y_true=trues)
     labels = list_classes_from_mapping(class_mapping)
+    if labels is not None:
+        labels_range = np.arange(0, len(labels))
+    else:
+        labels_range = None
     try:
-        report_str = sklearn.metrics.classification_report(y_true=trues, y_pred=predictions, target_names=labels)
+        report_str = sklearn.metrics.classification_report(y_true=trues, y_pred=predictions, target_names=labels, labels=labels_range, zero_division=0)
     except ValueError as e:
         report_str = 'Report failed. Exception={}'.format(e)
         
