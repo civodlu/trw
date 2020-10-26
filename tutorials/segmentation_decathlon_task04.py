@@ -36,7 +36,7 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     datasets = trw.datasets.create_decathlon_dataset('Task04_Hippocampus')
-    nb_epochs = 400
+    nb_epochs = 4
     options = trw.train.create_default_options(num_epochs=nb_epochs)
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=lambda: [
@@ -70,7 +70,8 @@ if __name__ == '__main__':
             datasets=datasets,
             model=model,
             learning_rate=0.005,
-            step_size=nb_epochs // 6,
+            #step_size=nb_epochs // 6,
+            step_size=100,
             gamma=0.2
         ))
 

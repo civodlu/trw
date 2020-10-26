@@ -1,7 +1,9 @@
-from typing import List
+from typing import List, Callable, Optional
 
+from trw.basic_typing import Datasets
 from trw.utils import safe_lookup
 from trw.train import callback
+from trw.train.outputs_trw import OutputEmbedding
 from trw.train import trainer
 import os
 import logging
@@ -27,6 +29,34 @@ class ModelWithLowestMetric:
         self.lowest_metric = lowest_metric
 
 
+def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Datasets:
+    """
+    Remove from the outputs embeddings larger than a specified threshold.
+
+    Args:
+        outputs: the outputs to check
+        counts_greater_than: the number of elements above which the embedding will be stripped
+
+    Returns:
+        outputs
+    """
+    for dataset_name, dataset in outputs.items():
+        for split_name, split in dataset.items():
+            # first collect the outputs to be discarded
+            outputs_to_remove = []
+            for output_name, output in split.items():
+                output_ref = output.get('output_ref')
+                if output_ref is not None and isinstance(output_ref, OutputEmbedding):
+                    count = output['output'].reshape(-1).shape[0]
+                    if count >= counts_greater_than:
+                        outputs_to_remove.append(output_name)
+
+            # first collect the outputs to be discarded
+            for output_to_remove in outputs_to_remove:
+                split[output_to_remove] = {}
+    return outputs
+
+
 class CallbackSaveLastModel(callback.Callback):
     """
     Save the current model to disk as well as metadata (history, outputs, infos).
@@ -44,6 +74,7 @@ class CallbackSaveLastModel(callback.Callback):
             rolling_size=None,
             keep_model_with_lowest_metric: ModelWithLowestMetric = None,
             best_model_name='best',
+            post_process_outputs: Optional[Callable[[Datasets], Datasets]] = exclude_large_embeddings,
     ):
         """
         Args:
@@ -55,6 +86,8 @@ class CallbackSaveLastModel(callback.Callback):
                 the oldest model files will be erased
             keep_model_with_lowest_metric: if not None, the best model for a given metric will be recorded
             best_model_name: the name to be used by the best model
+            post_process_outputs: a function to post-process the outputs just before export. For example,
+                if can be used to remove large embeddings to save smaller output files.
         """
         self.best_model_name = best_model_name
         if keep_model_with_lowest_metric is not None:
@@ -66,6 +99,7 @@ class CallbackSaveLastModel(callback.Callback):
         self.is_versioned = is_versioned
         self.rolling_size = rolling_size
         self.last_models: List[str] = []
+        self.post_process_outputs = post_process_outputs
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
@@ -79,6 +113,8 @@ class CallbackSaveLastModel(callback.Callback):
         if not self.with_outputs:
             # discard the outputs (e.g., for large outputs)
             result['outputs'] = None
+        elif self.post_process_outputs is not None:
+            result['outputs'] = self.post_process_outputs(result['outputs'])
 
         if self.is_versioned:
             name = f'{self.model_name}_e_{len(history)}.model'

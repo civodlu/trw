@@ -45,3 +45,12 @@ Batch = Dict[str, Any]
 
 """Length shaped as D, H, W, ..."""
 Length = Sequence[float]
+
+"""Represent a data split, a dictionary of any value"""
+Split = Dict[str, Any]
+
+"""Represent a dataset which is composed of named data splits"""
+Dataset = Dict[str, Split]
+
+"""Represent a collection of datasets"""
+Datasets = Dict[str, Dataset]

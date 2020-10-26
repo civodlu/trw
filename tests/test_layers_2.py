@@ -196,7 +196,7 @@ class TestLayers2(TestCase):
         assert len(children_00) == 3
         assert isinstance(children_00[0], nn.Conv3d)
         assert children_00[0].weight.shape[1] == 2
-        assert children_00[0].stride == (2, 2, 2)
+        assert children_00[0].stride == (1, 1, 1)
         assert isinstance(children_00[1], nn.InstanceNorm3d)
         assert isinstance(children_00[2], nn.LeakyReLU)
 
@@ -204,7 +204,7 @@ class TestLayers2(TestCase):
         assert len(children_01) == 3
         assert isinstance(children_01[0], nn.Conv3d)
         assert children_01[0].weight.shape[1] == 4
-        assert children_01[0].stride == (1, 1, 1)
+        assert children_01[0].stride == (2, 2, 2)
         assert isinstance(children_01[1], nn.InstanceNorm3d)
         assert isinstance(children_01[2], nn.LeakyReLU)
 
@@ -221,7 +221,7 @@ class TestLayers2(TestCase):
         assert len(children_10) == 3
         assert isinstance(children_10[0], nn.Conv3d)
         assert children_10[0].weight.shape[1] == 4
-        assert children_10[0].stride == (2, 2, 2)
+        assert children_10[0].stride == (1, 1, 1)
         assert isinstance(children_10[1], nn.InstanceNorm3d)
         assert isinstance(children_10[2], nn.LeakyReLU)
 
@@ -229,7 +229,7 @@ class TestLayers2(TestCase):
         assert len(children_11) == 3
         assert isinstance(children_11[0], nn.Conv3d)
         assert children_11[0].weight.shape[1] == 8
-        assert children_11[0].stride == (1, 1, 1)
+        assert children_11[0].stride == (2, 2, 2)
         assert isinstance(children_11[1], nn.InstanceNorm3d)
         assert isinstance(children_11[2], nn.LeakyReLU)
 
@@ -245,14 +245,14 @@ class TestLayers2(TestCase):
         children_20 = list(net.layers[2][0].ops)
         assert len(children_20) == 3
         assert isinstance(children_20[0], nn.Conv3d)
-        assert children_20[0].stride == (2, 2, 2)
+        assert children_20[0].stride == (1, 1, 1)
         assert isinstance(children_20[1], nn.InstanceNorm3d)
         assert isinstance(children_20[2], nn.LeakyReLU)
 
         children_21 = list(net.layers[2][1].ops)
         assert len(children_21) == 1
         assert isinstance(children_21[0], nn.Conv3d)
-        assert children_11[0].stride == (1, 1, 1)
+        assert children_11[0].stride == (2, 2, 2)
 
         children_22 = net.layers[2][2].op
         assert isinstance(children_22, nn.MaxPool3d)
