@@ -3,7 +3,7 @@ from typing import List
 from trw.transforms import transforms
 import collections
 
-from trw.typing import Batch
+from trw.basic_typing import Batch
 
 
 class TransformCompose(transforms.Transform):

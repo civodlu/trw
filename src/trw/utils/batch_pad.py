@@ -1,12 +1,12 @@
 from numbers import Number
 from typing import List
 
-from trw.typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX
+from trw.basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
 from trw.utils.batch_pad_minmax import batch_pad_minmax, batch_pad_minmax_joint, \
     batch_pad_minmax_numpy, batch_pad_minmax_torch
 
 
-def batch_pad_numpy(array: NumpyTensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Number = 0):
+def batch_pad_numpy(array: NumpyTensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Numeric = 0):
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -23,7 +23,7 @@ def batch_pad_numpy(array: NumpyTensorNCX, padding: ShapeCX, mode: str = 'edge',
     return batch_pad_minmax_numpy(array, padding, padding, mode, constant_value)
 
 
-def batch_pad_torch(array: TorchTensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Number = 0):
+def batch_pad_torch(array: TorchTensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Numeric = 0):
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -42,7 +42,7 @@ def batch_pad_torch(array: TorchTensorNCX, padding: ShapeCX, mode: str = 'edge',
     return batch_pad_minmax_torch(array, padding, padding, mode, constant_value)
 
 
-def batch_pad(array: TensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Number = 0):
+def batch_pad(array: TensorNCX, padding: ShapeCX, mode: str = 'edge', constant_value: Numeric = 0):
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -59,7 +59,7 @@ def batch_pad(array: TensorNCX, padding: ShapeCX, mode: str = 'edge', constant_v
     return batch_pad_minmax(array, padding, padding, mode, constant_value)
 
 
-def batch_pad_joint(arrays: List[TensorNCX], padding: ShapeCX, mode: str = 'edge', constant_value: Number = 0):
+def batch_pad_joint(arrays: List[TensorNCX], padding: ShapeCX, mode: str = 'edge', constant_value: Numeric = 0):
     """
     Add padding on a list of numpy or tensor array of samples. Supports arbitrary number of dimensions
 

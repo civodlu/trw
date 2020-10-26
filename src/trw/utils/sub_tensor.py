@@ -1,5 +1,5 @@
 import torch
-from trw.typing import Shape
+from trw.basic_typing import Shape
 
 
 def sub_tensor(tensor: torch.Tensor, min_indices: Shape, max_indices_exclusive: Shape) -> torch.Tensor:

@@ -82,7 +82,7 @@ class LatentConv(nn.Module, ABC):
         self.dim = config.ops.dim
         self.ops = block(config, input_channels + latent_channels, output_channels)
 
-    def forward(self, x: torch.Tensor, latent: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
         if latent is not None:
             assert latent.shape[1] == self.latent_channels
             assert len(latent.shape) == self.dim + 2
@@ -112,7 +112,7 @@ class UNetBase(nn.Module, ABC):
             init_block_channels: Optional[int] = None,
             latent_channels: Optional[int] = None,
             kernel_size: Optional[int] = 3,
-            strides: Optional[Union[int, Sequence[int]]] = 2,
+            strides: Union[int, Sequence[int]] = 2,
             activation: Optional[Any] = None,
             config: LayerConfig = default_layer_config(dimensionality=None)
     ):

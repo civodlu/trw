@@ -122,11 +122,11 @@ if __name__ == '__main__':
         trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
         trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
-        trw.transforms.TransformNormalize(mean=mean, std=std)
+        trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
     transform_valid = [
-        trw.transforms.TransformNormalize(mean=mean, std=std)
+        trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
     model, results = trainer.fit(

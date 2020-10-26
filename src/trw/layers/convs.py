@@ -108,7 +108,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             ops = []
             for r in range(convolution_repeats[n]):
                 is_last_repetition = (r + 1) == convolution_repeats[n]
-                if r == 0:
+                if is_last_repetition:
                     stride = strides[n]
                 else:
                     stride = 1

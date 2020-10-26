@@ -6,7 +6,7 @@ import numpy as np
 import torch
 from trw.transforms import transforms
 from trw.transforms import affine
-from trw.typing import Batch
+from trw.basic_typing import Batch
 
 
 def rand_n_2(n_min_max):
@@ -120,7 +120,7 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
             padding_mode: one of ``zero``, ``reflexion``, ``border``
         """
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         self.padding_mode = padding_mode
         self.criteria_fn = criteria_fn

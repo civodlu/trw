@@ -14,17 +14,20 @@ from .resize import resize
 from .stack import stack
 from .normalize import normalize
 from .renormalize import renormalize
+from .resample import resample_3d
 from .affine import affine_transformation_translation, affine_transformation_rotation2d, affine_transformation_scale, \
     affine_transform, to_voxel_space_transform
+from .spatial_info import SpatialInfo
 
-from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_3_or_above
+from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_4_or_above
 from .transforms_random_crop_pad import TransformRandomCropPad
 from .transforms_random_flip import TransformRandomFlip
 from .transforms_random_cutout import TransformRandomCutout
 from .transforms_resize import TransformResize
-from .transforms_normalize import TransformNormalize
+from .transforms_normalize_intensity import TransformNormalizeIntensity
 from .transforms_compose import TransformCompose
 from .transforms_affine import TransformAffine
 from .transforms_cast import TransformCast
 from .transforms_random_crop_resize import TransformRandomCropResize
 from .transforms_resize_modulo_pad_crop import TransformResizeModuloCropPad
+from .transforms_resample import TransformResample, random_fixed_geometry_within_geometries, find_largest_geometry

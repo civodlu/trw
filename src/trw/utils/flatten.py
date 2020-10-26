@@ -1,4 +1,4 @@
-from trw.typing import TorchTensorNCX, TorchTensorNX
+from trw.basic_typing import TorchTensorNCX, TorchTensorNX
 
 
 def flatten(x: TorchTensorNCX) -> TorchTensorNX:

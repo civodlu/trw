@@ -1,10 +1,9 @@
-from numbers import Number
 from typing import List
 
 import numpy as np
 import torch
 import torch.nn.functional as F
-from trw.typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX
+from trw.basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
 
 
 def batch_pad_minmax_numpy(
@@ -12,7 +11,7 @@ def batch_pad_minmax_numpy(
         padding_min: ShapeCX,
         padding_max: ShapeCX,
         mode: str = 'edge',
-        constant_value: Number = 0) -> NumpyTensorNCX:
+        constant_value: Numeric = 0) -> NumpyTensorNCX:
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -48,7 +47,7 @@ def batch_pad_minmax_torch(
         padding_min: ShapeCX,
         padding_max: ShapeCX,
         mode: str = 'edge',
-        constant_value: Number = 0) -> TorchTensorNCX:
+        constant_value: Numeric = 0) -> TorchTensorNCX:
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -97,7 +96,7 @@ def batch_pad_minmax(
         padding_min: ShapeCX,
         padding_max: ShapeCX,
         mode: str = 'edge',
-        constant_value: Number = 0) -> TensorNCX:
+        constant_value: Numeric = 0) -> TensorNCX:
     """
     Add padding on a numpy array of samples. This works for an arbitrary number of dimensions
 
@@ -118,7 +117,7 @@ def batch_pad_minmax(
     elif isinstance(array, torch.Tensor):
         return batch_pad_minmax_torch(array, padding_min, padding_max, mode, constant_value)
 
-    raise NotImplemented()
+    raise NotImplementedError()
 
 
 def batch_pad_minmax_joint(
@@ -126,7 +125,7 @@ def batch_pad_minmax_joint(
         padding_min: ShapeCX,
         padding_max: ShapeCX,
         mode: str = 'edge',
-        constant_value: Number = 0) -> List[TensorNCX]:
+        constant_value: Numeric = 0) -> List[TensorNCX]:
     """
     Add padding on a list of numpy or tensor array of samples. Supports arbitrary number of dimensions
 

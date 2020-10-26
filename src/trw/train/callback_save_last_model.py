@@ -1,3 +1,5 @@
+from typing import List
+
 from trw.utils import safe_lookup
 from trw.train import callback
 from trw.train import trainer
@@ -63,7 +65,7 @@ class CallbackSaveLastModel(callback.Callback):
         self.with_outputs = with_outputs
         self.is_versioned = is_versioned
         self.rolling_size = rolling_size
-        self.last_models = []
+        self.last_models: List[str] = []
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):

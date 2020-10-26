@@ -1,9 +1,9 @@
-from typing import Union, List, Tuple, Sequence
+from typing import Union, Sequence
 
 import torch
 
 
-def div_shape(shape: Sequence[int], div: float = 2) -> Sequence[int]:
+def div_shape(shape: Union[Sequence[int], int], div: int = 2) -> Union[Sequence[int], int]:
     """
     Divide the shape by a constant
 
