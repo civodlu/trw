@@ -16,4 +16,5 @@ def div_shape(shape: Union[Sequence[int], int], div: int = 2) -> Union[Sequence[
     """
     if isinstance(shape, (list, tuple, torch.Size)):
         return [s // div for s in shape]
+    assert isinstance(shape, int)
     return shape // div

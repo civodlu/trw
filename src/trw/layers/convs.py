@@ -1,12 +1,11 @@
 import copy
-import numbers
-
 import torch
+from trw.basic_typing import Activation, NestedIntSequence, ConvKernels, ConvStrides, PoolingSizes, Paddings
 from trw.layers import div_shape
-from trw.layers.blocks import BlockConvNormActivation, BlockPool
+from trw.layers.blocks import BlockConvNormActivation, BlockPool, ConvBlockType
 from trw.layers.layer_config import default_layer_config, NormType, LayerConfig
 import torch.nn as nn
-from typing import Union, Dict, Sequence, Optional, Callable, List
+from typing import Union, Dict, Sequence, Optional, List
 
 from trw.utils import flatten
 
@@ -16,7 +15,7 @@ class ModuleWithIntermediate:
     Represent a module with intermediate results
     """
     def forward_with_intermediate(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class ConvsBase(nn.Module, ModuleWithIntermediate):
@@ -26,12 +25,12 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             input_channels: int,
             *,
             channels: Sequence[int],
-            convolution_kernels: Optional[Union[int, Sequence[int]]] = 5,
-            strides: Optional[Union[int, Sequence[int]]] = 1,
-            pooling_size: Optional[Union[int, Sequence[int]]] = 2,
-            convolution_repeats: Union[int, Sequence[int]] = 1,
-            activation: Optional[nn.Module] = nn.ReLU,
-            padding: Union[str, int] = 'same',
+            convolution_kernels: ConvKernels = 5,
+            strides: ConvStrides = 1,
+            pooling_size: PoolingSizes = 2,
+            convolution_repeats: Union[int, List[int], NestedIntSequence] = 1,
+            activation: Optional[Activation] = nn.ReLU,
+            padding: Paddings = 'same',
             with_flatten: bool = False,
             dropout_probability: Optional[float] = None,
             norm_type: Optional[NormType] = None,
@@ -39,7 +38,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             pool_kwargs: Dict = {},
             activation_kwargs: Dict = {},
             last_layer_is_output: bool = False,
-            conv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+            conv_block_fn: ConvBlockType = BlockConvNormActivation,
             config: LayerConfig = default_layer_config(dimensionality=None)):
         """
         Args:
@@ -78,9 +77,9 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             strides = [strides] * nb_convs
         if not isinstance(pooling_size, list) and pooling_size is not None:
             pooling_size = [pooling_size] * nb_convs
-        if isinstance(convolution_repeats, numbers.Number):
+        if isinstance(convolution_repeats, int):
             convolution_repeats = [convolution_repeats] * nb_convs
-        if isinstance(padding, numbers.Number):
+        if isinstance(padding, int):
             padding = [padding] * nb_convs
         elif isinstance(padding, str):
             pass

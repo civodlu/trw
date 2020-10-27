@@ -19,7 +19,7 @@ class AutoencoderConvolutionalVariational(nn.Module):
     """
     def __init__(
             self,
-            input_shape: Union[List[int], Tuple[int, ...], Sequence[int]],
+            input_shape: Union[torch.Size, List[int], Tuple[int, ...]],
             encoder: nn.Module,
             decoder: nn.Module,
             z_size: int,

@@ -1,6 +1,7 @@
 from typing import List, Union, Any, Dict, Optional, Sequence, Callable
 
 import torch.nn as nn
+from trw.basic_typing import PoolingSizes, ConvStrides, ConvKernels, Activation, Paddings
 from trw.layers import BlockConvNormActivation
 from trw.layers.layer_config import NormType, default_layer_config, LayerConfig
 from trw.layers.convs import ConvsBase
@@ -8,19 +9,19 @@ from trw.layers.convs import ConvsBase
 
 def convs_2d(
         input_channels: int,
-        channels: List[int],
-        convolution_kernels: Union[int, Sequence[int]] = 5,
-        strides: Union[int, Sequence[int]] = 1,
-        pooling_size: Optional[Union[int, Sequence[int]]] = 2,
+        channels: Sequence[int],
+        convolution_kernels: ConvKernels = 5,
+        strides: ConvStrides = 1,
+        pooling_size: PoolingSizes = 2,
         convolution_repeats: Union[int, Sequence[int]] = 1,
-        activation: Any = nn.ReLU,
-        padding: Union[str, int] = 'same',
+        activation: Activation = nn.ReLU,
+        padding: Paddings = 'same',
         with_flatten: bool = False,
-        dropout_probability: float = None,
-        norm_type: NormType = None,
+        dropout_probability: Optional[float] = None,
+        norm_type: Optional[NormType] = None,
         norm_kwargs: Dict[str, Any] = {},
         pool_kwargs: Dict[str, Any] = {},
-        last_layer_is_output: bool = False,
+        last_layer_is_output: Optional[bool] = False,
         conv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
         config: LayerConfig = default_layer_config(dimensionality=None)):
     """

@@ -35,7 +35,7 @@ class DropoutType(Enum):
     AlphaDropout = 'AlphaDropout'
 
 
-def create_dropout_fn(ops: OpsConversion, dropout: DropoutType) -> Union[nn.Module, None]:
+def create_dropout_fn(ops: OpsConversion, dropout: Optional[DropoutType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and norm type
 
@@ -60,7 +60,7 @@ def create_dropout_fn(ops: OpsConversion, dropout: DropoutType) -> Union[nn.Modu
     return None
 
 
-def create_pool_fn(ops: OpsConversion, pool: PoolType) -> Union[nn.Module, None]:
+def create_pool_fn(ops: OpsConversion, pool: Optional[PoolType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and pool type
 
@@ -89,7 +89,7 @@ def create_pool_fn(ops: OpsConversion, pool: PoolType) -> Union[nn.Module, None]
     return None
 
 
-def create_norm_fn(ops: OpsConversion, norm: NormType) -> Union[nn.Module, None]:
+def create_norm_fn(ops: OpsConversion, norm: Optional[NormType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and norm type
 
@@ -149,11 +149,11 @@ class LayerConfig:
         self.dropout_kwargs = dropout_kwargs
 
         # types depends on the dimensionality
-        self.norm = None
-        self.conv = None
-        self.deconv = None
-        self.pool = None
-        self.dropout = None
+        self.norm: Optional[nn.Module] = None
+        self.conv: Optional[nn.Module] = None
+        self.deconv: Optional[nn.Module] = None
+        self.pool: Optional[nn.Module] = None
+        self.dropout: Optional[nn.Module] = None
 
     def set_dim(self, dimensionality: int):
         self.ops.set_dim(dimensionality)

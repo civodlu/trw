@@ -9,3 +9,4 @@ tensorboard
 onnx
 bokeh >= 2.1
 scipy
+typing-extensions

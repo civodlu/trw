@@ -107,4 +107,4 @@ class OpsConversion:
             self.bn_fn = nn.BatchNorm1d
 
         else:
-            raise NotImplemented()
+            raise NotImplementedError()

@@ -1,4 +1,5 @@
-from typing import Sequence, Union, Dict, Any
+from typing import Sequence, Union, Dict, Any, List
+from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
 import torch
 
@@ -54,3 +55,19 @@ Dataset = Dict[str, Split]
 
 """Represent a collection of datasets"""
 Datasets = Dict[str, Dataset]
+
+
+class Activation(Protocol):
+    """
+    Activation function
+    """
+    def __call__(self, t: torch.Tensor) -> torch.Tensor:
+        ...
+
+
+NestedIntSequence = List[Sequence[int]]
+
+ConvKernels = Union[int, List[int], NestedIntSequence]
+ConvStrides = ConvKernels
+PoolingSizes = ConvKernels
+Paddings = Union[str, int, List[int], List[str], NestedIntSequence]

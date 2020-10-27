@@ -1,8 +1,10 @@
 import torch
+from trw.basic_typing import NestedIntSequence
 from trw.layers.utils import div_shape
 from trw.layers.layer_config import LayerConfig
 import torch.nn as nn
 from typing import List, Union, Tuple, Dict, Optional, Sequence
+from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import copy
 
 
@@ -162,3 +164,30 @@ class BlockUpDeconvSkipConv(nn.Module):
         x = torch.cat([skip, x], dim=1)
         x = self.ops_conv(x)
         return x
+
+
+class ConvTransposeBlockType(Protocol):
+    def __call__(
+            self,
+            config:
+            LayerConfig,
+            prev: int,
+            current: int,
+            kernel_size: Union[int, Sequence[int], NestedIntSequence],
+            padding: Union[int, Sequence[int], NestedIntSequence],
+            stride: Union[int, Sequence[int], NestedIntSequence],
+            output_padding: Union[int, Sequence[int], NestedIntSequence]) -> nn.Module:
+        ...
+
+
+class ConvBlockType(Protocol):
+    def __call__(
+            self,
+            config:
+            LayerConfig,
+            prev: int,
+            current: int,
+            kernel_size: Union[int, Sequence[int], NestedIntSequence],
+            padding: Union[int, Sequence[int], NestedIntSequence],
+            stride: Union[int, Sequence[int], NestedIntSequence]) -> nn.Module:
+        ...
