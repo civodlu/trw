@@ -1,10 +1,13 @@
 import math
+from typing import Sequence
+
 import torch
 import torch.nn as nn
 import trw.train
+from trw.basic_typing import ShapeCX, TorchTensorNCX
 
 
-def affine_transformation_translation(t):
+def affine_transformation_translation(t: Sequence[float]) -> torch.Tensor:
     """
     Defines an affine translation for 2D or 3D data
 
@@ -26,7 +29,7 @@ def affine_transformation_translation(t):
     return tfm
 
 
-def affine_transformation_scale(s):
+def affine_transformation_scale(s: Sequence[float]) -> torch.Tensor:
     """
         Defines an affine scaling transformation
 
@@ -36,7 +39,7 @@ def affine_transformation_scale(s):
                | 0  0  Sz 0 |
                | 0  0  0  1 |
         Args:
-            t: a (Sx, Sy, Sz) or (Sx, Sy) tuple
+            s: a (Sx, Sy, Sz) or (Sx, Sy) tuple
 
         Returns:
             a transformation matrix
@@ -50,7 +53,7 @@ def affine_transformation_scale(s):
     return tfm
 
 
-def affine_transformation_rotation2d(angle_radian):
+def affine_transformation_rotation2d(angle_radian: float) -> torch.Tensor:
     """
     Defines a 2D rotation transform
     Args:
@@ -68,7 +71,7 @@ def affine_transformation_rotation2d(angle_radian):
     return rotation
 
 
-def affine_transformation_rotation_3d_x(angle_radian):
+def affine_transformation_rotation_3d_x(angle_radian: float) -> torch.Tensor:
     """
     Rotation in 3D around the x axis
 
@@ -90,7 +93,7 @@ def affine_transformation_rotation_3d_x(angle_radian):
     return rotation
 
 
-def affine_transformation_rotation_3d_y(angle_radian):
+def affine_transformation_rotation_3d_y(angle_radian: float) -> torch.Tensor:
     """
     Rotation in 3D around the y axis
 
@@ -112,7 +115,7 @@ def affine_transformation_rotation_3d_y(angle_radian):
     return rotation
 
 
-def affine_transformation_rotation_3d_z(angle_radian):
+def affine_transformation_rotation_3d_z(angle_radian: float) -> torch.Tensor:
     """
     Rotation in 3D around the y axis
 
@@ -134,7 +137,7 @@ def affine_transformation_rotation_3d_z(angle_radian):
     return rotation
 
 
-def to_voxel_space_transform(matrix, image_shape):
+def to_voxel_space_transform(matrix: torch.Tensor, image_shape: ShapeCX) -> torch.Tensor:
     """
     Express the affine transformation in image space coordinate
 
@@ -170,7 +173,12 @@ def to_voxel_space_transform(matrix, image_shape):
     return tfm
 
 
-def affine_transform(images, affine_matrices, interpolation='bilinear', padding_mode='border', align_corners=None):
+def affine_transform(
+        images: TorchTensorNCX,
+        affine_matrices: torch.Tensor,
+        interpolation: str = 'bilinear',
+        padding_mode: str = 'border',
+        align_corners: bool = None) -> TorchTensorNCX:
     """
     Transform a series of images with a series of affine transformations
 
@@ -205,7 +213,7 @@ def affine_transform(images, affine_matrices, interpolation='bilinear', padding_
     else:
         raise NotImplementedError(f'dimension not supported! Must be 2 or 3, current={dim}')
 
-    grid = nn.functional.affine_grid(affine_matrices, images.shape)
+    grid = nn.functional.affine_grid(affine_matrices, list(images.shape))
     resampled_images = trw.train.grid_sample(
         images,
         grid,

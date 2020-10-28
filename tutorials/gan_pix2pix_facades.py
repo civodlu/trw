@@ -319,15 +319,6 @@ class Outconv(nn.Module):
         return x
 
 
-
-
-
-
-
-
-
-
-
 def init_weights(net, init_type='normal', gain=0.02):
     def init_func(m):
         classname = m.__class__.__name__

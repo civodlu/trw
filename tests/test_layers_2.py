@@ -7,6 +7,7 @@ from unittest import TestCase
 
 from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional
 from trw.layers.autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
+from trw.layers.blocks import BlockRes
 from trw.train import one_hot
 
 
@@ -469,3 +470,24 @@ class TestLayers2(TestCase):
         assert recon.shape == (10, 1, 28, 28)
         assert mu.shape == (10, z_size)
         assert mu.shape == logvar.shape
+
+    def test_layer_res(self):
+        config = default_layer_config(dimensionality=2)
+        b = BlockRes(config, 8, kernel_size=7, padding='same', padding_mode='reflect')
+
+        i = torch.zeros([2, 8, 16, 16])
+        o = b(i)
+        assert o.shape == (2, 8, 16, 16)
+
+        ops_b = list(b.block_1.ops)
+        assert len(ops_b) == 3
+        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        assert ops_b[0].padding_mode == 'reflect'
+        assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
+        assert isinstance(ops_b[2], torch.nn.ReLU)
+
+        ops_b = list(b.block_2.ops)
+        assert len(ops_b) == 2
+        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        assert ops_b[0].padding_mode == 'reflect'
+        assert isinstance(ops_b[1], torch.nn.BatchNorm2d)

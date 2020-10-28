@@ -1,8 +1,11 @@
+from typing import Sequence
+
 import numpy as np
 import torch
+from trw.basic_typing import NumpyTensorNCX, TorchTensorNCX, TensorNCX
 
 
-def normalize_numpy(array, mean, std):
+def normalize_numpy(array: NumpyTensorNCX, mean: Sequence[float], std: Sequence[float]) -> NumpyTensorNCX:
     """
     Normalize a tensor image with mean and standard deviation.
 
@@ -28,7 +31,7 @@ def normalize_numpy(array, mean, std):
     return normalized
 
 
-def normalize_torch(array, mean, std):
+def normalize_torch(array: TorchTensorNCX, mean: Sequence[float], std: Sequence[float]) -> TorchTensorNCX:
     """
     Normalize a tensor image with mean and standard deviation.
 
@@ -54,7 +57,7 @@ def normalize_torch(array, mean, std):
     return normalized
 
 
-def normalize(array, mean, std):
+def normalize(array: TensorNCX, mean: Sequence[float], std: Sequence[float]) -> TensorNCX:
     """
     Normalize a tensor image with mean and standard deviation.
 
@@ -74,4 +77,4 @@ def normalize(array, mean, std):
     elif isinstance(array, torch.Tensor):
         return normalize_torch(array, mean, std)
     else:
-        raise NotImplemented()
+        raise NotImplementedError()

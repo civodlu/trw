@@ -22,7 +22,7 @@ class DownType(Protocol):
         ...
 
 
-class Down(nn.Module, ABC):
+class Down(nn.Module):
     def __init__(
             self,
             layer_config: LayerConfig,
@@ -57,7 +57,7 @@ class UpType(Protocol):
         ...
 
 
-class Up(nn.Module, ABC):
+class Up(nn.Module):
     def __init__(
             self,
             layer_config: LayerConfig,
@@ -91,7 +91,7 @@ class MiddleType(Protocol):
         ...
 
 
-class LatentConv(nn.Module, ABC):
+class LatentConv(nn.Module):
     """
     Concatenate a latent variable (possibly resized to the input shape) and apply a convolution
     """
@@ -134,7 +134,7 @@ class LatentConv(nn.Module, ABC):
         return self.ops(x)
 
 
-class UNetBase(nn.Module, ABC):
+class UNetBase(nn.Module):
     """
     Configurable UNet-like architecture
     """

@@ -20,8 +20,6 @@ def _transform_random_crop_pad(features_names, batch, padding, mode='edge', cons
     Args:
         features_names: the name of the features to be jointly random cropped
         batch: the batch to transform
-        padding: the padding to add to the feature value. If `None`, no padding added
-        constant_value: a constant value, depending on the mode selected
         padding: a sequence of shape `len(array.shape)-1` indicating the width of the
             padding to be added at the beginning and at the end of each dimension (except for dimension 0)
         mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')

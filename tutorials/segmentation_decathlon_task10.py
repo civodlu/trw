@@ -17,7 +17,12 @@ class Net(nn.Module):
         super().__init__()
         #self.norm_input = nn.InstanceNorm3d(1)
         #self.model = monai.networks.nets.UNet(3, 1, 2, channels=[64, 128, 256, 512], strides=[2, 2, 2, 1])
-        self.model = trw.layers.UNetBase(3, 1, channels=[16, 32, 64, 128, 256], output_channels=2)
+        self.model = trw.layers.UNetBase(
+            3,
+            1,
+            channels=[16, 32, 64, 128, 256],
+            output_channels=2
+        )
 
     def forward(self, batch):
         # a batch should be a dictionary of features
@@ -25,7 +30,7 @@ class Net(nn.Module):
         x = batch['image_voxels']
         #x = self.norm_input(x)
 
-        x = torch.clamp(x, -400, 400) / 800 + 0.5
+        x = (torch.clamp(x, -30.0, 162.82) - 62.18) / 32.65  # https://arxiv.org/pdf/1904.08128.pdf
         o = self.model(x)
 
         x_2d = x[:, :, x.shape[2] // 2]
@@ -101,8 +106,8 @@ if __name__ == '__main__':
 
     transform = trw.transforms.TransformResample(
         resampling_geometry=functools.partial(random_fixed_geometry_within_geometries,
-            fixed_geometry_shape=[512, 512, 64],
-            fixed_geometry_spacing=[1, 1, 5]),
+            fixed_geometry_shape=[256, 256, 96],
+            fixed_geometry_spacing=[1.55, 1.55, 3.09]),
         get_spatial_info_from_batch_name=get_spatial_info_type,
     )
 

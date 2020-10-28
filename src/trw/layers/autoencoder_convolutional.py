@@ -8,7 +8,7 @@ from trw.layers import ModuleWithIntermediate, ConvsBase, ConvsTransposeBase, cr
     default_layer_config
 
 
-class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate, ABC):
+class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
     """
     Convolutional autoencoder
 

@@ -1,8 +1,10 @@
-from typing import Union
+from typing import Union, Tuple, List
 
 import numpy as np
 import torch
 from typing import Sequence
+
+from trw.basic_typing import TensorNCX
 
 
 def _crop_5d(image, min, max):
@@ -25,7 +27,7 @@ def _crop_1d(image, min, max):
     return image[min[0]:max[0]]
 
 
-def batch_crop(images, min_index: list, max_index_exclusive: list):
+def batch_crop(images: TensorNCX, min_index: Sequence[int], max_index_exclusive: Sequence[int]) -> TensorNCX:
     """
     Crop an image
     Args:
@@ -51,10 +53,10 @@ def batch_crop(images, min_index: list, max_index_exclusive: list):
     else:
         assert 0, 'TODO implement for generic dimension'
 
-    return crop_fn(images, [0] + min_index, [len(images)] + max_index_exclusive)
+    return crop_fn(images, [0] + list(min_index), [len(images)] + list(max_index_exclusive))
 
 
-def transform_batch_random_crop_offset(array, crop_shape: Sequence[Union[None, int]]):
+def transform_batch_random_crop_offset(array: TensorNCX, crop_shape: Sequence[Union[None, int]]) -> np.ndarray:
     """
     Calculate the offsets of array to randomly crop it with shape `crop_shape`
 
@@ -69,7 +71,8 @@ def transform_batch_random_crop_offset(array, crop_shape: Sequence[Union[None, i
     assert len(crop_shape) == nb_dims, 'padding must have shape size of {}, got={}'.format(nb_dims, len(crop_shape))
     for index, size in enumerate(crop_shape):
         assert size is None or array.shape[index + 1] >= size, \
-            'crop_size is larger than array size! shape={}, crop_size={}, index={}'.format(array.shape[1:], crop_shape, index)
+            'crop_size is larger than array size! shape={}, crop_size={}, index={}'.\
+            format(array.shape[1:], crop_shape, index)
 
     # calculate the maximum offset per dimension. We can then
     # use `max_offsets` and `crop_shape` to calculate the cropping
@@ -79,6 +82,7 @@ def transform_batch_random_crop_offset(array, crop_shape: Sequence[Union[None, i
             # crop ALL the dimension
             max_offset = 0
         else:
+            assert size is not None
             max_offset = size - crop_size
         max_offsets.append(max_offset)
 
@@ -94,7 +98,11 @@ def transform_batch_random_crop_offset(array, crop_shape: Sequence[Union[None, i
     return offsets
 
 
-def transform_batch_random_crop(array, crop_shape: Sequence[Union[int, None]], offsets=None, return_offsets=False):
+def transform_batch_random_crop(
+        array: TensorNCX,
+        crop_shape: Sequence[Union[int, None]],
+        offsets: Sequence[Sequence[int]] = None,
+        return_offsets: bool = False) -> Union[TensorNCX, Tuple[TensorNCX, Sequence[Sequence[int]]]]:
     """
     Randomly crop a numpy array of samples given a target size. This works for an arbitrary number of dimensions
 
@@ -107,7 +115,7 @@ def transform_batch_random_crop(array, crop_shape: Sequence[Union[int, None]], o
         return_offsets: if `True`, returns a tuple (cropped array, offsets)
 
     Returns:
-        a cropped array
+        a cropped array and optionally the crop positions
     """
     nb_dims = len(array.shape) - 1
     nb_samples = array.shape[0]
@@ -141,7 +149,7 @@ def transform_batch_random_crop(array, crop_shape: Sequence[Union[int, None]], o
 
     cropped_array = []
     for n in range(nb_samples):
-        min_corner = offsets[n]
+        min_corner = np.asarray(offsets[n])
         cropped_array.append(crop_fn(array[n], min_corner, min_corner + crop_shape))
 
     if is_numpy:
@@ -156,7 +164,9 @@ def transform_batch_random_crop(array, crop_shape: Sequence[Union[int, None]], o
     return output
 
 
-def transform_batch_random_crop_joint(arrays, crop_shape):
+def transform_batch_random_crop_joint(
+        arrays: Sequence[TensorNCX],
+        crop_shape: Sequence[Union[None, int]]) -> List[TensorNCX]:
     """
     Randomly crop a list of numpy arrays. Apply the same cropping for each array element
 
@@ -174,7 +184,8 @@ def transform_batch_random_crop_joint(arrays, crop_shape):
     shape = arrays[0].shape
     for a in arrays[1:]:
         # number of filters may be different (e.g., segmentation map & color image)
-        assert a.shape[2:] == shape[2:], 'joint crop MUST have the same shape! Found={} expected={}'.format(a.shape, shape)
+        assert a.shape[2:] == shape[2:], 'joint crop MUST have the same shape! ' \
+                                         'Found={} expected={}'.format(a.shape, shape)
 
     offsets = transform_batch_random_crop_offset(arrays[0], crop_shape)
     cropped_arrays = [transform_batch_random_crop(a, crop_shape=crop_shape, offsets=offsets) for a in arrays]

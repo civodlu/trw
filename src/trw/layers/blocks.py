@@ -1,5 +1,5 @@
 import torch
-from trw.basic_typing import NestedIntSequence
+from trw.basic_typing import NestedIntSequence, TorchTensorNCX
 from trw.layers.utils import div_shape
 from trw.layers.layer_config import LayerConfig
 import torch.nn as nn
@@ -43,7 +43,8 @@ class BlockConvNormActivation(nn.Module):
             *,
             kernel_size: Union[None, int, Tuple[int, ...], List[int]] = None,
             padding: Union[None, int, Tuple[int, ...], List[int]] = None,
-            stride: Union[None, int, Tuple[int, ...], List[int]] = None):
+            stride: Union[None, int, Tuple[int, ...], List[int]] = None,
+            padding_mode: Union[None, str] = None):
 
         super().__init__()
 
@@ -55,6 +56,8 @@ class BlockConvNormActivation(nn.Module):
             conv_kwargs['padding'] = padding
         if stride is not None:
             conv_kwargs['stride'] = stride
+        if padding_mode is not None:
+            conv_kwargs['padding_mode'] = padding_mode
 
         _posprocess_padding(conv_kwargs)
 
@@ -86,7 +89,8 @@ class BlockDeconvNormActivation(nn.Module):
             kernel_size: Optional[Union[int, Sequence[int]]] = None,
             padding: Optional[Union[int, Sequence[int]]] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
-            stride: Optional[Union[int, Sequence[int]]] = None):
+            stride: Optional[Union[int, Sequence[int]]] = None,
+            padding_mode: Union[None, str] = None):
 
         super().__init__()
 
@@ -100,6 +104,8 @@ class BlockDeconvNormActivation(nn.Module):
             deconv_kwargs['stride'] = stride
         if output_padding is not None:
             deconv_kwargs['output_padding'] = output_padding
+        if padding_mode is not None:
+            deconv_kwargs['padding_mode'] = padding_mode
 
         _posprocess_padding(deconv_kwargs)
 
@@ -173,10 +179,13 @@ class ConvTransposeBlockType(Protocol):
             LayerConfig,
             prev: int,
             current: int,
-            kernel_size: Union[int, Sequence[int], NestedIntSequence],
-            padding: Union[int, Sequence[int], NestedIntSequence],
-            stride: Union[int, Sequence[int], NestedIntSequence],
-            output_padding: Union[int, Sequence[int], NestedIntSequence]) -> nn.Module:
+            *,
+            kernel_size: Optional[Union[int, Sequence[int]]] = None,
+            padding: Optional[Union[int, Sequence[int]]] = None,
+            output_padding: Optional[Union[int, Sequence[int]]] = None,
+            stride: Optional[Union[int, Sequence[int]]] = None,
+            padding_mode: Union[None, str] = None) -> nn.Module:
+
         ...
 
 
@@ -187,7 +196,42 @@ class ConvBlockType(Protocol):
             LayerConfig,
             prev: int,
             current: int,
+            *,
             kernel_size: Union[int, Sequence[int], NestedIntSequence],
             padding: Union[int, Sequence[int], NestedIntSequence],
-            stride: Union[int, Sequence[int], NestedIntSequence]) -> nn.Module:
+            stride: Union[int, Sequence[int], NestedIntSequence],
+            padding_mode: Union[None, str] = None) -> nn.Module:
         ...
+
+
+class BlockRes(nn.Module):
+    def __init__(
+            self,
+            config: LayerConfig,
+            channels: int,
+            *,
+            kernel_size: Union[None, int, Tuple[int, ...], List[int]] = None,
+            padding: Union[None, str, int, Tuple[int, ...], List[int]] = None,
+            padding_mode: Union[None, str] = None,
+            base_block: ConvBlockType = BlockConvNormActivation):
+        super().__init__()
+
+        config = copy.copy(config)
+        stride = 1
+        self.block_1 = base_block(
+            config, channels, channels,
+            kernel_size=kernel_size, padding=padding,
+            stride=stride, padding_mode=padding_mode)
+
+        self.activation = config.activation(**config.activation_kwargs)
+
+        config.activation = None
+        self.block_2 = base_block(
+            config, channels, channels,
+            kernel_size=kernel_size, padding=padding,
+            stride=stride, padding_mode=padding_mode)
+
+    def forward(self, x: TorchTensorNCX) -> TorchTensorNCX:
+        o = self.block_1(x)
+        o = self.block_2(o)
+        return self.activation(x + o)
