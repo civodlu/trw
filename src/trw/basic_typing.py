@@ -57,12 +57,7 @@ Dataset = Dict[str, Split]
 Datasets = Dict[str, Dataset]
 
 
-class Activation(Protocol):
-    """
-    Activation function
-    """
-    def __call__(self, t: torch.Tensor) -> torch.Tensor:
-        ...
+Activation = Any
 
 
 NestedIntSequence = List[Sequence[int]]
@@ -70,4 +65,8 @@ NestedIntSequence = List[Sequence[int]]
 ConvKernels = Union[int, List[int], NestedIntSequence]
 ConvStrides = ConvKernels
 PoolingSizes = ConvKernels
+
+Stride = Union[int, Sequence[int]]
+KernelSize = Union[int, Sequence[int]]
+Padding = Union[int, str, Sequence[int]]
 Paddings = Union[str, int, List[int], List[str], NestedIntSequence]

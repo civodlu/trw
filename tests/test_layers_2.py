@@ -5,9 +5,9 @@ import torch
 import torch.nn as nn
 from unittest import TestCase
 
-from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional
+from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional, EncoderDecoderResnet
 from trw.layers.autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
-from trw.layers.blocks import BlockRes
+from trw.layers.blocks import BlockRes, BlockConvNormActivation
 from trw.train import one_hot
 
 
@@ -491,3 +491,63 @@ class TestLayers2(TestCase):
         assert isinstance(ops_b[0], torch.nn.Conv2d)
         assert ops_b[0].padding_mode == 'reflect'
         assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
+
+    def test_encoder_decoder_res(self):
+        config = default_layer_config(
+            conv_kwargs={'padding': 'same', 'bias': False},
+            deconv_kwargs={'padding': 'same', 'bias': False}
+        )
+        I_O = functools.partial(BlockConvNormActivation, kernel_size=7)
+        model = EncoderDecoderResnet(
+            2, 3, 2,
+            encoding_channels=[16, 32, 64],
+            decoding_channels=[64, 32, 16],
+            convolution_kernel=5,
+            init_block=I_O,
+            out_block=I_O,
+            config=config,
+            activation=nn.LeakyReLU
+        )
+
+        t = torch.zeros([5, 3, 32, 64])
+        o = model(t)
+        assert o.shape == (5, 2, 32, 64)
+
+        assert len(model.initial.ops) == 3
+        assert model.initial.ops[0].kernel_size == (7, 7)
+        assert model.initial.ops[0].bias is None
+        assert isinstance(model.initial.ops[2], nn.LeakyReLU)
+
+        assert len(model.encoders) == 3
+
+        ops = model.encoders[0].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.encoders[1].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.encoders[2].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+
+        assert len(model.decoders) == 3
+        ops = model.decoders[2].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.out.ops
+        assert len(ops) == 2
+        assert ops[0].kernel_size == (7, 7)
+        assert ops[0].bias is None
+        assert isinstance(ops[1], nn.BatchNorm2d)

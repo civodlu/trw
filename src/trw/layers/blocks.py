@@ -1,9 +1,9 @@
 import torch
-from trw.basic_typing import NestedIntSequence, TorchTensorNCX
+from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
 from trw.layers.utils import div_shape
 from trw.layers.layer_config import LayerConfig
 import torch.nn as nn
-from typing import List, Union, Tuple, Dict, Optional, Sequence
+from typing import Union, Dict, Optional, Sequence
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import copy
 
@@ -12,7 +12,7 @@ class BlockPool(nn.Module):
     def __init__(
             self,
             config: LayerConfig,
-            kernel_size: Optional[Union[int, Sequence[int]]] = 2):
+            kernel_size: Optional[KernelSize] = 2):
 
         super().__init__()
 
@@ -41,10 +41,10 @@ class BlockConvNormActivation(nn.Module):
             input_channels: int,
             output_channels: int,
             *,
-            kernel_size: Union[None, int, Tuple[int, ...], List[int]] = None,
-            padding: Union[None, int, Tuple[int, ...], List[int]] = None,
-            stride: Union[None, int, Tuple[int, ...], List[int]] = None,
-            padding_mode: Union[None, str] = None):
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None):
 
         super().__init__()
 
@@ -86,11 +86,11 @@ class BlockDeconvNormActivation(nn.Module):
             input_channels: int,
             output_channels: int,
             *,
-            kernel_size: Optional[Union[int, Sequence[int]]] = None,
-            padding: Optional[Union[int, Sequence[int]]] = None,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
-            stride: Optional[Union[int, Sequence[int]]] = None,
-            padding_mode: Union[None, str] = None):
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None):
 
         super().__init__()
 
@@ -135,10 +135,10 @@ class BlockUpDeconvSkipConv(nn.Module):
             input_channels: int,
             output_channels: int,
             *,
-            kernel_size: Optional[Union[int, Sequence[int]]] = None,
-            padding: Optional[Union[int, Sequence[int]]] = None,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
-            stride: Optional[Union[int, Sequence[int]]] = None):
+            stride: Optional[Stride] = None):
         super().__init__()
 
         self.ops_deconv = BlockDeconvNormActivation(
@@ -177,14 +177,14 @@ class ConvTransposeBlockType(Protocol):
             self,
             config:
             LayerConfig,
-            prev: int,
-            current: int,
+            input_channels: int,
+            output_channels: int,
             *,
-            kernel_size: Optional[Union[int, Sequence[int]]] = None,
-            padding: Optional[Union[int, Sequence[int]]] = None,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
-            stride: Optional[Union[int, Sequence[int]]] = None,
-            padding_mode: Union[None, str] = None) -> nn.Module:
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None) -> nn.Module:
 
         ...
 
@@ -192,15 +192,14 @@ class ConvTransposeBlockType(Protocol):
 class ConvBlockType(Protocol):
     def __call__(
             self,
-            config:
-            LayerConfig,
-            prev: int,
-            current: int,
+            config: LayerConfig,
+            input_channels: int,
+            output_channels: int,
             *,
-            kernel_size: Union[int, Sequence[int], NestedIntSequence],
-            padding: Union[int, Sequence[int], NestedIntSequence],
-            stride: Union[int, Sequence[int], NestedIntSequence],
-            padding_mode: Union[None, str] = None) -> nn.Module:
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None) -> nn.Module:
         ...
 
 
@@ -210,13 +209,23 @@ class BlockRes(nn.Module):
             config: LayerConfig,
             channels: int,
             *,
-            kernel_size: Union[None, int, Tuple[int, ...], List[int]] = None,
-            padding: Union[None, str, int, Tuple[int, ...], List[int]] = None,
-            padding_mode: Union[None, str] = None,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
+            padding_mode: Optional[str] = None,
             base_block: ConvBlockType = BlockConvNormActivation):
         super().__init__()
 
         config = copy.copy(config)
+        conv_kwargs = copy.copy(config.conv_kwargs)
+        if kernel_size is not None:
+            conv_kwargs['kernel_size'] = kernel_size
+        if padding is not None:
+            conv_kwargs['padding'] = padding
+        if padding_mode is not None:
+            conv_kwargs['padding_mode'] = padding_mode
+        config.conv_kwargs = conv_kwargs
+        _posprocess_padding(conv_kwargs)
+
         stride = 1
         self.block_1 = base_block(
             config, channels, channels,

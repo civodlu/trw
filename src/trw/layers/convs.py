@@ -27,7 +27,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             channels: Sequence[int],
             convolution_kernels: ConvKernels = 5,
             strides: ConvStrides = 1,
-            pooling_size: PoolingSizes = 2,
+            pooling_size: Optional[PoolingSizes] = 2,
             convolution_repeats: Union[int, List[int], NestedIntSequence] = 1,
             activation: Optional[Activation] = nn.ReLU,
             padding: Paddings = 'same',

@@ -12,7 +12,7 @@ def convs_2d(
         channels: Sequence[int],
         convolution_kernels: ConvKernels = 5,
         strides: ConvStrides = 1,
-        pooling_size: PoolingSizes = 2,
+        pooling_size: Optional[PoolingSizes] = 2,
         convolution_repeats: Union[int, Sequence[int]] = 1,
         activation: Activation = nn.ReLU,
         padding: Paddings = 'same',
