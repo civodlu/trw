@@ -124,6 +124,8 @@ def train_loop_across_datasets(
         if not all([s for s in has_stopped_iteration_by_dataset.values()]):
 
             batch = trw.train.default_collate_fn([v for v in single_batches.values()],None)
+            # set a single batch id, else the batch is incorrectly scattered across GPUs when using torch.nn.DataParallel
+            batch['batch_id'] = i
 
             outputs = model(batch)
             if outputs is None:
@@ -138,8 +140,8 @@ def train_loop_across_datasets(
             n=0
             for dataset_name in iterators_by_dataset.keys():
                 if not has_stopped_iteration_by_dataset[dataset_name]:
-                    for i, output in enumerate(outputs.values()):
-                        output.output = outputs_values[i][single_batches_pos[n]:single_batches_pos[n+1],...]
+                    for k, output in enumerate(outputs.values()):
+                        output.output = outputs_values[k][single_batches_pos[n]:single_batches_pos[n+1],...]
                     n+=1
                     loss_terms[dataset_name] = prepare_loss_terms(outputs, single_batches[dataset_name], is_training=True)
                     loss_fn = losses[dataset_name]
