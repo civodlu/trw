@@ -100,7 +100,7 @@ class Sequence:
         from . import sequence_collate
         return sequence_collate.SequenceCollate(self, collate_fn=collate_fn, device=device)
 
-    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, worker_post_process_results_fun=None, queue_timeout=0.1, preprocess_fn=None, collate_fn=None):
+    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=0.1, collate_fn=None):
         """
         Transform a sequence using a given function.
 
@@ -122,9 +122,7 @@ class Sequence:
             function_to_run=function_to_run,
             nb_workers=nb_workers,
             max_jobs_at_once=max_jobs_at_once,
-            worker_post_process_results_fun=worker_post_process_results_fun,
             queue_timeout=queue_timeout,
-            preprocess_fn=preprocess_fn,
             collate_fn=collate_fn)
     
     def batch(self, batch_size, discard_batch_not_full=False, collate_fn=default_collate_list_of_dicts):

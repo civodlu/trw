@@ -39,6 +39,7 @@ def make_volume_torch(batch):
 
 def make_list_dicts(batch, wait_time=None):
     samples = []
+    print('sample_uid=', batch['sample_uid'])
     for n in range(10):
         sub_batch = {
             'sample_uid': batch['sample_uid'],
@@ -156,7 +157,9 @@ class TestSequenceReservoir(TestCase):
                                                     max_jobs_at_once=max_jobs_at_once)
 
         for epoch in range(nb_epochs):
+            print('sleeping')
             time.sleep(0.5)
+            print('epoch=', epoch)
             expected_reservoir_size = min(epoch * max_jobs_at_once, max_reservoir_samples)
             assert sequence.reservoir_size() >= expected_reservoir_size, 'found={}, expected={}'.format(sequence.reservoir_size(), expected_reservoir_size)
             assert sequence.reservoir_size() <= expected_reservoir_size + max_jobs_at_once, 'found={}, expected={}'.format(sequence.reservoir_size(), expected_reservoir_size)
@@ -258,7 +261,7 @@ class TestSequenceReservoir(TestCase):
         max_reservoir_replacement_size = 5
         max_jobs_at_once = 100
 
-        sampler = trw.train.SamplerRandom()
+        sampler = trw.train.SamplerSequential()
         numpy_sequence = trw.train.SequenceArray(split, sampler=sampler)
         sequence = trw.train.SequenceAsyncReservoir(numpy_sequence, max_reservoir_samples=max_reservoir_samples,
                                                     function_to_run=function_to_run_id,
@@ -269,12 +272,15 @@ class TestSequenceReservoir(TestCase):
 
         last_uids = set()
         for epoch in range(10):
+            print(f'-----epoch={epoch}')
             time.sleep(0.1)
             current_uids = set()
             for batch in sequence:
                 assert len(batch) == 1
                 uid = batch[0]['sample_uid'][0]
                 current_uids.add(uid)
+
+            print(current_uids)
             if epoch > 0:
                 d = last_uids.difference(current_uids)
                 print(d)

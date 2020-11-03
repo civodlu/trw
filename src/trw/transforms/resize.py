@@ -3,19 +3,21 @@ import torch
 import numpy as np
 import skimage.transform
 import trw.utils
+from trw.basic_typing import TorchTensorNCX, ShapeX, NumpyTensorNCX, TensorNCX
+from typing_extensions import Literal
 
 
-def resize_torch(array, size, mode):
+def resize_torch(array: TorchTensorNCX, size: ShapeX, mode: Literal['nearest', 'linear']) -> TorchTensorNCX:
     return trw.utils.upsample(array, size, mode)
 
 
-def resize_numpy(array, size, mode):
+def resize_numpy(array: NumpyTensorNCX, size: ShapeX, mode: Literal['nearest', 'linear']) -> NumpyTensorNCX:
     if mode == 'nearest':
         order = 0
     elif mode == 'linear':
         order = 1
     else:
-        raise NotImplemented('mode={} is not implemented!'.format(mode))
+        raise NotImplementedError('mode={} is not implemented!'.format(mode))
 
     resized_array = skimage.transform.resize(array, [array.shape[0], array.shape[1]] + size, order=order, anti_aliasing=False, preserve_range=True)
     if resized_array.dtype != array.dtype:
@@ -23,7 +25,7 @@ def resize_numpy(array, size, mode):
     return resized_array
 
 
-def resize(array, size, mode='linear'):
+def resize(array: TensorNCX, size: ShapeX, mode: Literal['nearest', 'linear'] = 'linear') -> TensorNCX:
     """
     Resize the array
 
@@ -40,5 +42,4 @@ def resize(array, size, mode='linear'):
     elif isinstance(array, torch.Tensor):
         return resize_torch(array, size=size, mode=mode)
     else:
-        raise NotImplemented()
-
+        raise NotImplementedError()

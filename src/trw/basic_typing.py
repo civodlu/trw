@@ -27,6 +27,9 @@ TensorNCX = Union[np.ndarray, torch.Tensor]
 """Generic Tensor as numpy or torch. Must be shaped as 2D array [N, X]"""
 TensorNX = Union[np.ndarray, torch.Tensor]
 
+"""Generic Tensor with th `N` and `C` components removed"""
+TensorX = Union[np.ndarray, torch.Tensor]
+
 
 """Torch Tensor. Must be shaped as [N, C, D, H, W, ...]"""
 TorchTensorNCX = torch.Tensor
@@ -34,12 +37,18 @@ TorchTensorNCX = torch.Tensor
 """Torch Tensor. Must be shaped as 2D array [N, X]"""
 TorchTensorNX = torch.Tensor
 
+"""Torch Tensor with th `N` and `C` components removed"""
+TorchTensorX = torch.Tensor
+
 
 """Numpy Tensor. Must be shaped as [N, C, D, H, W, ...]"""
 NumpyTensorNCX = np.ndarray
 
 """Numpy Tensor. Must be shaped as 2D array [N, X]"""
 NumpyTensorNX = np.ndarray
+
+"""Numpy Tensor with th `N` and `C` components removed"""
+NumpyTensorX = np.ndarray
 
 """Represent a dictionary of (key, value)"""
 Batch = Dict[str, Any]

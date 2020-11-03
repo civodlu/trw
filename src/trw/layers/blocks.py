@@ -166,7 +166,7 @@ class BlockUpDeconvSkipConv(nn.Module):
         assert skip.shape[1] == self.skip_channels
         assert previous.shape[1] == self.input_channels
         x = self.ops_deconv(previous)
-        assert x.shape == skip.shape
+        assert x.shape == skip.shape, f'got shape={x.shape}, expected={skip.shape}'
         x = torch.cat([skip, x], dim=1)
         x = self.ops_conv(x)
         return x

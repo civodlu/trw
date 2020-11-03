@@ -3,19 +3,20 @@ from typing import Sequence
 import torch
 from scipy.ndimage import affine_transform
 import numpy as np
-from trw.basic_typing import Numeric, Tensor, Length
+from trw.basic_typing import Numeric, Tensor, Length, NumpyTensorX, TensorX
+from typing_extensions import Literal
 
 
 def resample_np_volume_3d(
-        np_volume: np.ndarray,
+        np_volume: NumpyTensorX,
         np_volume_spacing: Length,
         np_volume_origin: Length,
         min_bb_mm: Length,
         max_bb_mm: Length,
         resampled_spacing: Length,
-        mode='constant',
+        mode: Literal['reflect', 'constant', 'nearest', 'mirror', 'wrap'] = 'constant',
         constant_value: Numeric = 0.0,
-        order=1) -> np.ndarray:
+        order=1) -> NumpyTensorX:
     """
     Resample a portion of a 3D volume (z, y, x) to a specified spacing/bounding box.
 
@@ -69,21 +70,21 @@ def resample_np_volume_3d(
 
 
 def resample_3d(
-        volume: Tensor,
+        volume: TensorX,
         np_volume_spacing: Length,
         np_volume_origin: Length,
         min_bb_mm: Length,
         max_bb_mm: Length,
         resampled_spacing: Length,
-        mode='constant',
+        mode: Literal['reflect', 'constant', 'nearest', 'mirror', 'wrap'] = 'constant',
         constant_value: Numeric = 0.0,
-        order=1) -> Tensor:
+        order=1) -> TensorX:
     """
     Resample a portion of a 3D volume (numpy array or torch.Tensor) (z, y, x) to a specified spacing/bounding box.
 
     Notes:
         if the volume is a torch.tensor, it will NOT be possible to back-propagate the gradient using this
-        method (i.e., we revert to a numpy based method to do the processing)
+        method (i.e., we revert to a numpy based function to do the processing)
 
     Args:
         volume: a 3D volume

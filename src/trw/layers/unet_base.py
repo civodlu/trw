@@ -1,6 +1,7 @@
 import copy
-from abc import ABC
-from typing import Sequence, Optional, Union, Any
+from typing import Sequence, Optional, Union, Any, List
+
+from trw.layers.convs import ModuleWithIntermediate
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 
 import torch
@@ -134,7 +135,7 @@ class LatentConv(nn.Module):
         return self.ops(x)
 
 
-class UNetBase(nn.Module):
+class UNetBase(nn.Module, ModuleWithIntermediate):
     """
     Configurable UNet-like architecture
     """
@@ -266,12 +267,7 @@ class UNetBase(nn.Module):
         config.dropout = None
         self.output = output_block_fn(config, out_init_channels, self.output_channels)
 
-    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Args:
-            x: the input image
-            latent: a latent variable appended by the middle block
-        """
+    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
         prev = self.init_block(x)
         x_n = [prev]
         for down in self.downs:
@@ -289,9 +285,22 @@ class UNetBase(nn.Module):
         else:
             prev = x_n[-1]
 
+        intermediates = []
         for skip, up in zip(reversed(x_n[:-1]), self.ups):
             prev = up(skip, prev)
+            intermediates.append(prev)
+        intermediates.append(self.output(prev))
+        return intermediates
 
-        return self.output(prev)
+    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Args:
+            x: the input image
+            latent: a latent variable appended by the middle block
+        """
+        intermediates = self.forward_with_intermediate(x, latent)
+        assert len(intermediates)
+        return intermediates[-1]
+
 
 

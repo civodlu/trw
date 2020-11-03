@@ -55,7 +55,7 @@ from .callback_reporting_layer_weights import CallbackReportingLayerWeights
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap
-from trw.train.job_executor import JobExecutor
+from trw.train.job_executor2 import JobExecutor2
 from .sequence_array import SequenceArray
 from .sequence_batch import SequenceBatch
 from .sequence_async_reservoir import SequenceAsyncReservoir

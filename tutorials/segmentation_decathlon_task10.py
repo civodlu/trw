@@ -57,6 +57,7 @@ def get_spacing_from_4x4(tfm: Tensor) -> List[float]:
     spacing = [np.linalg.norm(tfm[0:3, n]) for n in range(3)]
     return spacing
 
+
 def get_translation_from_4x4(tfm: Tensor) -> np.ndarray:
     assert tfm.shape == (4, 4)
     tfm = to_value(tfm)
@@ -83,7 +84,6 @@ def get_spatial_info_type(batch: Batch, name: str) -> SpatialInfo:
 
 
 if __name__ == '__main__':
-    datasets = trw.datasets.create_decathlon_dataset('Task10_Colon')
     nb_epochs = 400
     options = trw.train.create_default_options(num_epochs=nb_epochs)
     trainer = trw.train.Trainer(

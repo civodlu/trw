@@ -41,10 +41,7 @@ def create_default_options(logging_directory=None, num_epochs=50, device=None):
             # here goes the model parameters
         },
         'training_parameters': {
-            #'minibatch_size': 150,
             'dropout_probability': 0.5,
-            #'momentum': 0.95,
-            #'initial_learning_rate': 0.008,
             'num_epochs': num_epochs,
         },
         'workflow_options': {

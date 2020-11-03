@@ -44,7 +44,7 @@ if __name__ == '__main__':
     model, results = trainer.fit(
         options,
         inputs_fn=lambda: trw.datasets.create_mnist_dataset(
-            transforms=transforms),
+            transforms=transforms, nb_workers=2),
         run_prefix='mnist_cnn_augmentation',
         model_fn=lambda options: Net(),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=0.1))

@@ -12,6 +12,7 @@ from trw.reporting.table_sqlite import table_truncate
 from trw.train import create_or_recreate_folder, callback, find_default_dataset_and_split_names, utilities
 from trw.train.utilities import update_json_config
 from trw.train.data_parallel_extented import DataParallelExtended
+from trw.train.outputs_trw import Output
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,9 @@ def input_shape(i, root=True):
             else:
                 shapes.append(sub_shapes)
         return shapes
+
+    if isinstance(i, Output):
+        return i.output.shape
     raise NotImplementedError()
 
 

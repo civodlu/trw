@@ -25,6 +25,17 @@ def load_fake_volumes_npy(item):
     return r
 
 
+def load_fake_volumes_small_npy(item):
+    v = np.ndarray([1, 1, 2], dtype=np.float32)
+    v.fill(float(item['values']))
+
+    time.sleep(0.5)
+    r = {
+        'volume': v
+    }
+    return r
+
+
 def load_fake_volumes_torch(item):
     time_start = time.time()
     v = torch.ones([32, 32, 64], dtype=torch.float32)
@@ -96,6 +107,21 @@ def double_values(item):
 
 
 class TestSequenceMap(TestCase):
+    def test_map_async_10(self):
+        # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
+        split_np = {'values': np.arange(0, 10)}
+        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_small_npy, nb_workers=1)
+
+        time_start = time.time()
+        vs = []
+        for v in split:
+            vs.append(v['volume'].shape)
+            print('SEQUENCE Item=', v['volume'].shape)
+        time_end = time.time()
+        print('test_map_async_1.TIME=', time_end - time_start)
+        split.close()
+        assert len(vs) == 10, f'got={len(vs)}'
+
     def test_map_async_20(self):
         # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
         split_np = {'values': np.arange(100, 120)}
@@ -110,6 +136,28 @@ class TestSequenceMap(TestCase):
         split.close()
         print('test_map_async_1.TIME=', time_end - time_start)
         assert(len(vs) == 20)
+
+    def test_map_async_sequence_interrupted(self):
+        # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
+        split_np = {'values': np.arange(100, 105)}
+        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_npy, nb_workers=2)
+
+        for _ in split:
+            # interrupt the sequence: here we have jobs populated that SHOULD not be
+            # used in the next sequence iteration
+            time.sleep(0.2)
+            print('----------------BREAK----------')
+            break
+
+        time_start = time.time()
+        vs = []
+        for v in split:
+            vs.append(v['volume'].shape)
+            print(v['volume'].shape)
+        time_end = time.time()
+        split.close()
+        print('test_map_async_1.TIME=', time_end - time_start, 'nb=', len(vs))
+        assert(len(vs) == 5)
 
     def test_map_sync_multiple_items(self):
         # make sure we have iterate through each item of the returned items
@@ -156,7 +204,7 @@ class TestSequenceMap(TestCase):
         print('DONE')
 
     @staticmethod
-    def run_complex_2_map(nb_workers, nb_indices, with_wait):
+    def run_complex_2_map(nb_workers, nb_indices, with_interruption):
         # the purpose of this test is to combine 2 maps: one executing slow calls
         # (e.g., IO limited) with another one to do augmentation (e.g., CPU limited)
 
@@ -167,17 +215,18 @@ class TestSequenceMap(TestCase):
             'indices': indices,
         }
 
-        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data, nb_workers=nb_workers).map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).\
+            map(load_data, nb_workers=nb_workers).\
+            map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+
         # process creation is quite slow on windows (>0.7s), so create the processes first
         # so that creation time is not included in processing time
-        for batch in split:
-            break
+        if with_interruption:
+            for batch in split:
+                break
 
-        if with_wait:
-            # if we wait, it means we won't have jobs to be cancelled (i.e., we will have more accurate timing)
-            # else the time of the cancelled jobs will be added to the current time (i.e., `for batch in split` started
-            # many jobs)
-            time.sleep(3.0)
+            print('----------ABORTED sequence')
+            time.sleep(3)
 
         print('STARTED', datetime.datetime.now().time())
         time_start = time.time()
@@ -201,7 +250,12 @@ class TestSequenceMap(TestCase):
         total_time = time_end - time_start
         print('total_time', total_time, 'Target time=', expected_time, 'nb_jobs=', len(ids), 'nb_jobs_expected=', len(indices) * 10)
 
-        assert len(batches) == len(indices) * 10, 'nb={}'.format(len(batches))
+        print(len(ids), len(indices) * 10)
+        print(split.jobs_processed)
+        print(split.jobs_queued)
+        print(split.job_executor.jobs_queued)
+        print(split.job_executor.jobs_processed.value)
+        assert len(batches) == len(indices) * 10, f'nb_batches={len(batches)}, nb_indices={len(indices) * 10}'
         assert len(ids) == len(indices) * 10
 
         split.close()
@@ -210,16 +264,16 @@ class TestSequenceMap(TestCase):
 
 
     def test_complex_2_map__single_worker(self):
-        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_wait=True)
+        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_interruption=False)
+
+    def test_complex_2_map__single_worker_with_interruption(self):
+        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_interruption=True)
 
     def test_complex_2_map__5_worker(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=True)
-
-    def test_complex_2_map__5_worker_no_wait(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=False)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_interruption=False)
 
     def test_complex_2_map__5_worker_40(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=21, with_wait=True)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=21, with_interruption=False)
 
     def test_split_closing(self):
         # make sure we can close the processes gracefully
@@ -229,11 +283,12 @@ class TestSequenceMap(TestCase):
             'indices': indices,
         }
 
-        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data, nb_workers=4).map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).\
+            map(load_data, nb_workers=4).\
+            map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
         for batch in split:
             break
-        split.job_executer.close()
-        print('DONE')
+        split.job_executor.close()
 
     def test_job_error_0_worker(self):
         nb_indices = 40
@@ -252,7 +307,7 @@ class TestSequenceMap(TestCase):
         assert len(indices) == nb_indices - 1
 
     def test_job_error_1_worker(self):
-        nb_indices = 40
+        nb_indices = 15
         indices = np.asarray(list(range(nb_indices)))
         split = {
             'indices': indices,
@@ -262,10 +317,18 @@ class TestSequenceMap(TestCase):
         split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
             load_data_or_generate_error,
             nb_workers=1)  # .map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
-        for batch in split:
+        for batch_id, batch in enumerate(split):
             index = batch['indices'][0]
             indices.append(index)
+            with split.job_executor.jobs_processed.get_lock():
+                print('nb_queued=', split.job_executor.jobs_queued, 'nb_processed=', split.job_executor.jobs_processed.value)
+                print('(SEQUENCE))=', split.jobs_processed, 'Batchid=', batch_id)
+                print(index)
 
+        print('DONE')
+        del split
+
+        print(indices)
         assert 10 not in indices, 'index 10 should have failed!'
         assert len(indices) == nb_indices - 1
 
@@ -315,4 +378,6 @@ class TestSequenceMap(TestCase):
             index = batch['indices'][0]
             indices.append(index)
         assert 10 not in indices, 'index 10 should have failed!'
+        print(indices)
         assert len(indices) == nb_indices - 1, f'expected={nb_indices - 1}, got={len(indices)}'
+        print('Done')

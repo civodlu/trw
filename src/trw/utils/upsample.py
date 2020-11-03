@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from trw.basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX
+from trw.basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX, ShapeX
 
 
 def _upsample_int_1d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
@@ -45,7 +45,7 @@ def _upsample_int_3d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     return tensor_interp
 
 
-def upsample(tensor: TensorNCX, size: ShapeNCX, mode='linear') -> TensorNCX:
+def upsample(tensor: TensorNCX, size: ShapeX, mode='linear') -> TensorNCX:
     """
     Upsample a 1D, 2D, 3D tensor
 
