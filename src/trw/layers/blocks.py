@@ -1,3 +1,5 @@
+import warnings
+
 import torch
 from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
 from trw.layers.utils import div_shape
@@ -32,6 +34,14 @@ def _posprocess_padding(conv_kwargs: Dict) -> None:
         kernel_size = conv_kwargs.get('kernel_size')
         assert kernel_size is not None, 'missing argument `kernel_size` in convolutional arguments!'
         conv_kwargs['padding'] = div_shape(kernel_size)
+
+    # handle differences with pytorch <= 1.0
+    # where the convolution doesn't have argument `padding_mode`
+    version = torch.__version__[:3]
+    if 'padding_mode' in conv_kwargs:
+        if version == '1.0':
+            warnings.warn('convolution doesn\'t have padding_mode as argument in  pytorch <= 1.0. Argument is deleted!')
+            del conv_kwargs['padding_mode']
 
 
 class BlockConvNormActivation(nn.Module):

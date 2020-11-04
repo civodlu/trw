@@ -479,17 +479,21 @@ class TestLayers2(TestCase):
         o = b(i)
         assert o.shape == (2, 8, 16, 16)
 
+        version = torch.__version__[:3]
+
         ops_b = list(b.block_1.ops)
         assert len(ops_b) == 3
         assert isinstance(ops_b[0], torch.nn.Conv2d)
-        assert ops_b[0].padding_mode == 'reflect'
+        if version != '1.0':
+            assert ops_b[0].padding_mode == 'reflect'
         assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
         assert isinstance(ops_b[2], torch.nn.ReLU)
 
         ops_b = list(b.block_2.ops)
         assert len(ops_b) == 2
         assert isinstance(ops_b[0], torch.nn.Conv2d)
-        assert ops_b[0].padding_mode == 'reflect'
+        if version != '1.0':
+            assert ops_b[0].padding_mode == 'reflect'
         assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
 
     def test_encoder_decoder_res(self):
