@@ -64,6 +64,7 @@ Dataset = Dict[str, Split]
 
 """Represent a collection of datasets"""
 Datasets = Dict[str, Dataset]
+DatasetsInfo = Datasets
 
 
 Activation = Any

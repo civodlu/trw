@@ -234,7 +234,7 @@ def set_optimizer_learning_rate(optimizer, learning_rate):
             param_group['lr'] = learning_rate
 
 
-def transfer_batch_to_device(batch, device, non_blocking=False):
+def transfer_batch_to_device(batch, device, non_blocking=True):
     """
     Transfer the Tensors and numpy arrays to the specified device. Other types will not be moved.
 

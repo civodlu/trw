@@ -1,5 +1,6 @@
 import logging
 import collections
+import time
 from queue import Empty
 import functools
 import traceback
@@ -26,6 +27,7 @@ class SequenceMap(sequence.Sequence):
             nb_workers,
             function_to_run,
             max_jobs_at_once=None,
+            nb_pin_threads=None,
             queue_timeout=default_queue_timeout,
             collate_fn=None):
         """
@@ -40,6 +42,8 @@ class SequenceMap(sequence.Sequence):
             at once. If 0, no limit. If None, it will be set equal to the number of workers
         :param queue_timeout: the timeout used to pull results from the output queue
         :param collate_fn: a function to collate the batch of data or `None`
+        :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
+            to the main process
         """
         super().__init__(source_split)
 
@@ -65,6 +69,7 @@ class SequenceMap(sequence.Sequence):
             self.job_executor = JobExecutor2(
                 nb_workers=nb_workers,
                 function_to_run=self.function_to_run,
+                nb_pin_threads=nb_pin_threads,
                 max_queue_size_per_worker=max_jobs_at_once)
 
         self.iter_source = None
@@ -73,7 +78,9 @@ class SequenceMap(sequence.Sequence):
         self.sequence_iteration_finished = None
         self.main_thread_list = None
         self.main_thread_index = None
-        # self.time_spent_in_blocked_state = 0.0
+
+        self.debug_time_to_get_next_item = 0
+        self.debug_nb_items = 0
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
@@ -154,7 +161,6 @@ class SequenceMap(sequence.Sequence):
         return self.next_item(blocking=True)
 
     def has_background_jobs(self):
-        # self.jobs_queued != self.jobs_processed
         return not self.job_executor.is_idle()
 
     def next_item(self, blocking):
@@ -179,12 +185,22 @@ class SequenceMap(sequence.Sequence):
         def multiple_process_next():
             assert self.main_thread_list is None
             nb_background_jobs = self.has_background_jobs_previous_sequences()
+
+            # we are only done once all the jobs have been completed!
             if self.sequence_iteration_finished and \
                     nb_background_jobs == 0 and \
                     self.job_executor.pin_memory_queue.empty():
-                # we are only done once all the jobs have been completed!
+
+                # collect some useful statistics
+                if self.debug_nb_items != 0:
+                    logger.debug(f'SequenceMap={self}, nb_items_processed={self.debug_nb_items},'
+                                 f'item_processing_time_average='
+                                 f'{self.debug_time_to_get_next_item / self.debug_nb_items}')
+
+                # stop the sequence
                 raise StopIteration()
 
+            next_item_start = time.perf_counter()
             while True:
                 try:
                     items = self.job_executor.pin_memory_queue.get(True, timeout=self.queue_timeout)
@@ -198,7 +214,9 @@ class SequenceMap(sequence.Sequence):
                     self.fill_queue_all_sequences()
                     if not blocking:
                         raise StopIteration()
-
+            next_item_end = time.perf_counter()
+            self.debug_time_to_get_next_item += next_item_end - next_item_start
+            self.debug_nb_items += 1
             return items
 
         if self.job_executor is None:

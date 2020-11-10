@@ -100,7 +100,7 @@ class Sequence:
         from . import sequence_collate
         return sequence_collate.SequenceCollate(self, collate_fn=collate_fn, device=device)
 
-    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=0.1, collate_fn=None):
+    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, nb_pin_threads=None, queue_timeout=0.1, collate_fn=None):
         """
         Transform a sequence using a given function.
 
@@ -110,10 +110,10 @@ class Sequence:
         :param nb_workers: the number of workers that will process the split. If 0, no workers will be created.
         :param max_jobs_at_once: the maximum number of results that can be pushed in the result queue at once. If 0, no limit.
             If None, it will be set equal to the number of workers
-        :param worker_post_process_results_fun: a function used to post-process the worker results (executed by the worker)
         :param queue_timeout: the timeout used to pull results from the output queue
-        :param preprocess_fn: a function that will preprocess the batch just prior to sending it to the other processes
         :param collate_fn: a function to collate each batch of data
+        :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
+            to the main process
         :return: a sequence of batches
         """
         from . import sequence_map
@@ -122,6 +122,7 @@ class Sequence:
             function_to_run=function_to_run,
             nb_workers=nb_workers,
             max_jobs_at_once=max_jobs_at_once,
+            nb_pin_threads=nb_pin_threads,
             queue_timeout=queue_timeout,
             collate_fn=collate_fn)
     

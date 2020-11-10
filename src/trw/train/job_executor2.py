@@ -402,7 +402,7 @@ class JobExecutor2:
             break
 
         if len(self.processes) != 0:
-            logging.debug(f'JobExecutor={self}: shutting down workers...')
+            #logging.debug(f'JobExecutor={self}: shutting down workers...')
             [i.terminate() for i in self.processes]
 
             for i, p in enumerate(self.processes):
@@ -528,5 +528,5 @@ class JobExecutor2:
             self.job_session_id.value += 1
 
     def __del__(self):
-        logging.debug(f'JobExecutor={self}: destructor called')
+        #logging.debug(f'JobExecutor={self}: destructor called')
         self.close()

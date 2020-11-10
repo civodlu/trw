@@ -89,18 +89,18 @@ if __name__ == '__main__':
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=lambda: [
             trw.train.CallbackReportingStartServer(),
-            trw.train.CallbackReportingModelSummary(),
-            trw.train.CallbackReportingDatasetSummary(),
-            trw.train.CallbackReportingAugmentations(),
+            #trw.train.CallbackReportingModelSummary(),
+            #trw.train.CallbackReportingDatasetSummary(),
+            #trw.train.CallbackReportingAugmentations(),
         ],
         callbacks_per_epoch_fn=lambda: [
-            trw.train.CallbackLearningRateRecorder(),
+            #trw.train.CallbackLearningRateRecorder(),
             trw.train.CallbackEpochSummary(),
             trw.train.CallbackReportingRecordHistory(),
-            trw.train.CallbackReportingBestMetrics(),
+            #trw.train.CallbackReportingBestMetrics(),
             trw.train.CallbackSkipEpoch(10, [
                 trw.train.CallbackReportingExportSamples(table_name='current_samples'),
-            ], include_epoch_zero=True)
+            ], include_epoch_zero=False)
         ]
     )
 
