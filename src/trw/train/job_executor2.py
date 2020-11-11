@@ -16,8 +16,8 @@ from queue import Queue as ThreadQueue, Empty
 # Make sure we start a new process in an empty state so
 # that Windows/Linux environment behave the similarly
 import multiprocessing
-#multiprocessing = multiprocessing.get_context("spawn")
-multiprocessing = multiprocessing.get_context("fork")
+multiprocessing = multiprocessing.get_context("spawn")
+#multiprocessing = multiprocessing.get_context("fork")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
@@ -302,6 +302,7 @@ class JobExecutor2:
 
                     p = Process(
                         target=worker,
+                        name=f'JobExecutorWorker-{i}',
                         args=(
                             self.worker_input_queues[i],
                             self.worker_output_queues[i],
@@ -317,6 +318,7 @@ class JobExecutor2:
             self.pin_memory_threads = []
             for i in range(self.nb_pin_threads):
                 pin_memory_thread = threading.Thread(
+                    name=f'JobExecutorThreadResultCollector-{i}',
                     target=collect_results_to_main_process,
                     args=(
                         self.job_session_id,
@@ -395,7 +397,7 @@ class JobExecutor2:
                     sleep(0.1)
                     continue
                 else:
-                    logging.error('a job did not respond to the shutdown request in the alloted time. '
+                    logging.error('a job did not respond to the shutdown request in the allotted time. '
                                   'It could be that it needs a longer timeout or a deadlock. The processes'
                                   'will now be forced to shutdown!')
 

@@ -185,12 +185,14 @@ class Sequence:
             self,
             max_reservoir_samples,
             function_to_run,
+            *,
             min_reservoir_samples=1,
             nb_workers=1,
             max_jobs_at_once=None,
             reservoir_sampler=sampler.SamplerSequential(),
             collate_fn=remove_nested_list,
             maximum_number_of_samples_per_epoch=None,
+            nb_pin_threads=1,
             max_reservoir_replacement_size=None):
         """
         Args:
@@ -210,6 +212,7 @@ class Sequence:
                 If `None`, we will use the whole result queue. This can be useful to control explicitly how the
                 reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
                 `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
+            nb_pin_threads: number of threads dedicated to collect results from the worker queues
         """
         from . import sequence_async_reservoir
         return sequence_async_reservoir.SequenceAsyncReservoir(
@@ -221,6 +224,7 @@ class Sequence:
             reservoir_sampler=reservoir_sampler,
             collate_fn=collate_fn,
             maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch,
+            nb_pin_threads=nb_pin_threads,
             max_reservoir_replacement_size=max_reservoir_replacement_size)
 
     def fill_queue(self):

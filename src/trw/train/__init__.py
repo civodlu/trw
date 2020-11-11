@@ -52,6 +52,7 @@ from .callback_reporting_dataset_summary import CallbackReportingDatasetSummary
 from .callback_reporting_best_metrics import CallbackReportingBestMetrics
 from .callback_reporting_augmentations import CallbackReportingAugmentations
 from .callback_reporting_layer_weights import CallbackReportingLayerWeights
+from .callback_debug_processes import CallbackDebugProcesses
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap

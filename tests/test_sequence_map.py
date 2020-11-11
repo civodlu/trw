@@ -1,14 +1,26 @@
+import io
+import sys
+import threading
+import traceback
 import unittest
+from functools import partial
+from pprint import PrettyPrinter
 
 import numpy as np
 import time
 import datetime
+
+import psutil
 import trw.train
 import torch
 from unittest import TestCase
 import collections
 import os
 import copy
+
+from trw.train.callback_debug_processes import log_all_tree
+
+START_TIME = time.time()
 
 
 import matplotlib
@@ -48,11 +60,19 @@ def load_fake_volumes_torch(item):
     return r
 
 
-def load_data(item):
-    print('job | ', os.getpid(), ' | loading data |', item['indices'], datetime.datetime.now().time())
+def load_data(item, time_sleep=0.2):
     item['time_created'] = time.time()
-    time.sleep(0.2)
+    time.sleep(time_sleep)
     item['time_loaded'] = time.time()
+    #print('loading data | ', os.getpid(), item['indices'], time.time() - START_TIME)
+    return item
+
+
+def create_value(item, time_sleep=0.1):
+    assert len(item) == 1
+    time.sleep(time_sleep)
+    item[0]['value'] = item[0]['indices']
+    #print('create_value | ', os.getpid(), item[0]['indices'], time.time() - item[0]['time_created'])
     return item
 
 
@@ -381,3 +401,32 @@ class TestSequenceMap(TestCase):
         print(indices)
         assert len(indices) == nb_indices - 1, f'expected={nb_indices - 1}, got={len(indices)}'
         print('Done')
+
+    def test_reservoir_map(self):
+        # test various "workloads". Make sure no pipeline doesn't deadlock
+        np.random.seed(0)
+        for i in range(20):
+            print(f'---------- {i} -------------')
+            time_sleep_1 = np.random.uniform(0.001, 0.5)
+            time_sleep_2 = np.random.uniform(0.001, 0.5)
+            nb_jobs_at_once = int(np.random.uniform(1, 5))
+            nb_indices = int(np.random.uniform(10, 40))
+            nb_workers = int(np.random.uniform(1, 4))
+            nb_epochs = int(np.random.uniform(1, 7))
+
+            split = {
+                'indices': np.asarray(list(range(nb_indices))),
+            }
+            split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+            split = split.async_reservoir(max_reservoir_samples=nb_indices, function_to_run=partial(load_data, time_sleep=time_sleep_1), max_jobs_at_once=nb_jobs_at_once)
+            split = split.map(partial(create_value, time_sleep=time_sleep_2), nb_workers=nb_workers)
+            nb = 0
+            for epoch in range(nb_epochs):
+                print('Epoch=', epoch)
+                for b in split:
+                    if nb == 1:
+                        logs = log_all_tree()
+                        pp = PrettyPrinter(width=300)
+                        pp.pprint(logs)
+
+                    nb += 1
