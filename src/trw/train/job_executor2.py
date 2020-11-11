@@ -16,8 +16,8 @@ from queue import Queue as ThreadQueue, Empty
 # Make sure we start a new process in an empty state so
 # that Windows/Linux environment behave the similarly
 import multiprocessing
-multiprocessing = multiprocessing.get_context("spawn")
-#multiprocessing = multiprocessing.get_context("fork")
+#multiprocessing = multiprocessing.get_context("spawn")
+multiprocessing = multiprocessing.get_context("fork")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
@@ -291,7 +291,7 @@ class JobExecutor2:
             return
 
         if len(self.processes) != self.nb_workers:
-            logging.debug(f'Starting jobExecutor={self}, nb_workers={self.nb_workers}')
+            logging.debug(f'Starting jobExecutor={self}, on process={os.getpid()} nb_workers={self.nb_workers}')
             self.close()
             self.abort_event.clear()
 
@@ -312,6 +312,7 @@ class JobExecutor2:
                     p.daemon = True
                     p.start()
                     self.processes.append(p)
+                    logging.debug(f'Child process={p.pid} for jobExecutor={self}')
 
             self.pin_memory_threads = []
             for i in range(self.nb_pin_threads):
