@@ -172,6 +172,7 @@ class CallbackDebugProcesses(callback.Callback):
         # here we use a thread and not a process. The reason is that we want
         # to collect the stack trace of the threads in the main process!
         self.thread = threading.Thread(
+            name='CollectDebugInfo',
             target=_collect_data,
             args=(
                 self.main_process,
