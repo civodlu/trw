@@ -421,3 +421,22 @@ class TestSequenceMap(TestCase):
                         pp.pprint(logs)
 
                     nb += 1
+
+    def test_multiple_epochs_job_failures(self):
+        nb_indices = 20
+        nb_epochs = 50
+        indices = np.asarray(list(range(nb_indices)))
+        split = {
+            'indices': indices,
+        }
+
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        split = split.map(load_data_or_generate_error, nb_workers=5, max_jobs_at_once=2, nb_pin_threads=2)
+        for e in range(nb_epochs):
+            print(f'epoch={e}')
+            indices = []
+            for batch in split:
+                index = batch['indices'][0]
+                indices.append(index)
+            assert 10 not in indices, 'index 10 should have failed!'
+            assert len(indices) == nb_indices - 1
