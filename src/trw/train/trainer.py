@@ -840,15 +840,15 @@ class Trainer:
             logger.info('running pre-training callbacks...')
             callbacks = self.callbacks_pre_training_fn()
             for callback in callbacks:
-                callback(options, history, model, losses=losses, outputs=None, datasets=datasets,
-                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                         optimizers_fn=optimizers_fn, optimizers=optimizers)
-                #try:
-                #    callback(options, history, model, losses=losses, outputs=None,
-                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
-                #except Exception as e:
-                #    print('callback={} failed with exception={}'.format(callback, e))
-                #    logger.error('callback={} failed with exception={}'.format(callback, e))
+                #callback(options, history, model, losses=losses, outputs=None, datasets=datasets,
+                #         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                #         optimizers_fn=optimizers_fn, optimizers=optimizers)
+                try:
+                    callback(options, history, model, losses=losses, outputs=None,
+                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
+                except Exception as e:
+                    print('callback={} failed with exception={}'.format(callback, e))
+                    logger.error('callback={} failed with exception={}'.format(callback, e))
             logger.info('pre-training callbacks completed!')
 
         for epoch in range(num_epochs):
@@ -875,15 +875,15 @@ class Trainer:
 
             logger.info('callbacks started')
             for callback in callbacks_per_epoch:
-                callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                         optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                #try:
-                #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                #             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                #except Exception as e:
-                #    logger.error('callback={} failed with exception={}'.format(callback, e))
+                #callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                #         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                #         optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                try:
+                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                except Exception as e:
+                    logger.error('callback={} failed with exception={}'.format(callback, e))
 
             logger.info('callbacks epoch {} finished'.format(epoch))
 
@@ -910,15 +910,15 @@ class Trainer:
             logger.info('started post training callbacks...')
             callbacks_post_training = self.callbacks_post_training_fn()
             for callback in callbacks_post_training:
-                callback(options, history, model, losses=losses, outputs=outputs_epoch, datasets=datasets,
-                         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                         optimizers_fn=optimizers_fn)
-                #try:
-                #    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                #             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn)
-                #except Exception as e:
-                #    print('callback={} failed with exception={}'.format(callback, e))
-                #    logger.error('callback={} failed with exception={}'.format(callback, e))
+                #callback(options, history, model, losses=losses, outputs=outputs_epoch, datasets=datasets,
+                #         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                #         optimizers_fn=optimizers_fn)
+                try:
+                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn)
+                except Exception as e:
+                    print('callback={} failed with exception={}'.format(callback, e))
+                    logger.error('callback={} failed with exception={}'.format(callback, e))
 
             logger.info('finished post training callbacks...')
 

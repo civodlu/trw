@@ -222,6 +222,7 @@ class SequenceMap(sequence.Sequence):
 
                     if time.time() - report_timeout_start > self.debug_job_report_timeout:
                         print('------------------- STALLING -------------------')
+                        report_timeout_start = time.time()
                         self.job_executor.job_report()
 
                     nb_background_jobs = self.has_background_jobs_previous_sequences()

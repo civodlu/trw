@@ -58,12 +58,20 @@ def worker(
             if not abort_event.is_set():
                 if item is None:
                     if not input_queue.empty():
-                        job_session_id, item = input_queue.get()
+                        try:
+                            job_session_id, item = input_queue.get()
+                        except Exception as e:
+                            # possible exception:  `unable to open shared memory object </torch_XXX_YYYYY>
+                            # we MUST queue a `None` to specify that we received something but there was an error
+                            print(f'Exception <input_queue.get> in background worker PID={os.getpid()}, E={e}')
+                            item = None
+                            # DO continue: we want to push `None`
+
                     else:
                         sleep(wait_time)
                         continue
 
-                    if transform is not None:
+                    if transform is not None and item is not None:
                         try:
                             item = transform(item)
                             #print('Worker: processing=', item)
@@ -81,8 +89,20 @@ def worker(
                             print('-------------------------------------------------------')
                             item = None
 
-                output_queue.put((job_session_id, item))
-                item = None
+                while True:
+                    try:
+                        output_queue.put((job_session_id, item))
+                        item = None
+                        break  # success, get ready to get a new item from the queue
+
+                    except Exception as e:
+                        # exception is intercepted and skip to next job
+                        print(f'Exception <output_queue.put> in background worker '
+                              f'thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+
+                        # re-try to push on the queue!
+                        sleep(wait_time)
+                        continue
 
             else:
                 print(f'Worker={os.getpid()} Stopped (abort_event SET)!!')
@@ -95,7 +115,8 @@ def worker(
 
         except Exception as e:
             # exception is intercepted and skip to next job
-            print(f'Exception in background worker thread_id={os.getpid()}, E={e}')
+            print(f'Exception in background worker thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+            #output_queue.put((job_session_id, None))  # there was an error, we MUST send something back!
             continue
 
 
@@ -129,9 +150,9 @@ def collect_results_to_main_process(
                 if not current_queue.empty():
 
                     try:
-                        time_queue_start = perf_counter()
+                        #time_queue_start = perf_counter()
                         item_job_session_id, item = current_queue.get(timeout=wait_time)
-                        time_queue_end = perf_counter()
+                        #time_queue_end = perf_counter()
                     except Empty:
                         # even if the `current_queue` was not empty, another thread might have stolen
                         # the job result already. Just continue to the next queue
