@@ -64,13 +64,11 @@ def train_loop_across_datasets(
 
 
     total_batch_processing_time = {dataset_name:0.0 for dataset_name in datasets.keys()}
-    batch_processing_last = {dataset_name:0.0 for dataset_name in datasets.keys()}
-    loop_started = {dataset_name:0.0 for dataset_name in datasets.keys()}
     total_collate_and_postprocess = {dataset_name:0.0 for dataset_name in datasets.keys()}
     nb_samples = {dataset_name:0 for dataset_name in datasets.keys()}
 
     i = 0
-    while not all([s for s in has_stopped_iteration_by_dataset.values()]):
+    while not any([s for s in has_stopped_iteration_by_dataset.values()]):
         loss_terms = collections.OrderedDict()
         loss_across_datasets = 0
         if optimizer is not None:
@@ -80,9 +78,10 @@ def train_loop_across_datasets(
         for dataset_name in iterators_by_dataset.keys():
             if not has_stopped_iteration_by_dataset[dataset_name]:
                 if i==0:
-                    batch_processing_last[dataset_name] = time.perf_counter()
-                    loop_started[dataset_name] = time.perf_counter()
+                    loop_started = time.perf_counter()
                 try:
+                    batch_processing_start = time.perf_counter()
+
                     single_batch = next(iterators_by_dataset[dataset_name])
 
                     assert isinstance(single_batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
@@ -92,7 +91,7 @@ def train_loop_across_datasets(
                     # calculate the time for batch processing. In particular
                     # this may be significant when using large data augmentations
                     # and useful to optimize the data processing pipeline
-                    current_batch_processing = time.perf_counter() - batch_processing_last[dataset_name]
+                    current_batch_processing = time.perf_counter() - batch_processing_start
                     total_batch_processing_time[dataset_name] += current_batch_processing
 
                     total_collate_and_postprocess_start = time.perf_counter()
@@ -114,17 +113,18 @@ def train_loop_across_datasets(
                                  ' collate_and_postprocess={}, dataset_name={}, split_name={}'.format(
                         nb_samples[dataset_name],
                         total_batch_processing_time[dataset_name],
-                        loop_ended - loop_started[dataset_name],
+                        loop_ended - loop_started,
                         total_collate_and_postprocess[dataset_name],
                         dataset_name,
                         train_split_name))
 
 
 
-        if not all([s for s in has_stopped_iteration_by_dataset.values()]):
+        if not any([s for s in has_stopped_iteration_by_dataset.values()]):
 
             batch = trw.train.default_collate_fn([v for v in single_batches.values()],None)
             # set a single batch id, else the batch is incorrectly scattered across GPUs when using torch.nn.DataParallel
+            # note: when using DataParallel, batch normalization running mean and variance are updated only with data in 1-st GPU.
             batch['batch_id'] = i
 
             outputs = model(batch)
@@ -148,16 +148,7 @@ def train_loop_across_datasets(
                     loss = loss_fn(dataset_name, single_batches[dataset_name], loss_terms[dataset_name])
                     loss_across_datasets+=loss
 
-
                     loss_terms[dataset_name]['overall_loss'] = {'loss': float(trw.utils.to_value(loss))}
-
-                    if callbacks_per_batch_loss_terms is not None:
-                        for callback in callbacks_per_batch_loss_terms:
-                            callback(dataset_name, train_split_name, single_batches[dataset_name], loss_terms[dataset_name])
-
-
-                    batch_processing_last[dataset_name] = time.perf_counter()
-                    nb_samples[dataset_name] += trw.utils.len_batch(single_batches[dataset_name])
 
 
             if optimizer is not None and isinstance(loss_across_datasets, torch.Tensor):
@@ -166,6 +157,12 @@ def train_loop_across_datasets(
                     loss_across_datasets.backward()
                 else:
                     logger.warning('No backward calculated')
+
+            for dataset_name in iterators_by_dataset.keys():
+                if not has_stopped_iteration_by_dataset[dataset_name]:
+                    if callbacks_per_batch_loss_terms is not None:
+                        for callback in callbacks_per_batch_loss_terms:
+                            callback(dataset_name, train_split_name, single_batches[dataset_name], loss_terms[dataset_name])
 
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
             if optimizer is not None:
@@ -178,6 +175,24 @@ def train_loop_across_datasets(
                     loss_term_cleanup(loss_terms[dataset_name])
 
                     all_loss_terms_by_dataset[dataset_name].append(loss_terms[dataset_name])
+
+            for dataset_name in iterators_by_dataset.keys():
+                if not has_stopped_iteration_by_dataset[dataset_name]:
+                    nb_samples[dataset_name] += trw.utils.len_batch(single_batches[dataset_name])
+
+        else:
+
+            for dataset_name in iterators_by_dataset.keys():
+                if not has_stopped_iteration_by_dataset[dataset_name]:
+                    logger.debug('nb_samples={}, train_loop total_batch_processing_time={}, loop_time={},'
+                                 ' collate_and_postprocess={}, dataset_name={}, split_name={}'.format(
+                        nb_samples[dataset_name],
+                        total_batch_processing_time[dataset_name],
+                        loop_ended - loop_started,
+                        total_collate_and_postprocess[dataset_name],
+                        dataset_name,
+                        train_split_name))
+
 
         i+=1
 

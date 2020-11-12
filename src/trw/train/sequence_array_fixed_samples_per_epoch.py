@@ -49,8 +49,6 @@ class SequenceArrayFixedSamplesPerEpoch(SequenceArray):
         raise NotImplementedError()
 
     def __iter__(self):
-        # make sure the sampler is copied so that we can have multiple iterators of the
-        # same sequence
         return SequenceArrayFixedSamplesPerEpochIterator(self)
 
 
