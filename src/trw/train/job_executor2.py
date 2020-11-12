@@ -1,6 +1,7 @@
 import copy
 import io
 import os
+import sys
 import threading
 import traceback
 
@@ -115,7 +116,7 @@ def collect_results_to_main_process(
     while True:
         try:
             if abort_event.is_set():
-                print(f'Thread={threading.get_ident()}, shutdown!')
+                print(f'Thread={threading.get_ident()}, (abort_event set) shutdown!')
                 return
 
             # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
@@ -487,6 +488,29 @@ class JobExecutor2:
         """
         with self.jobs_processed.get_lock():
             return self.jobs_processed.value == self.jobs_queued
+
+    def job_report(self, f=sys.stdout):
+        """
+        Summary of the executor state. Useful for debugging.
+        """
+        f.write(f'JobExecutor={self}, Main process={os.getpid()}, main thread={threading.get_ident()}\n')
+        f.write(f'NbProcesses={len(self.processes)}, NbThreads={len(self.pin_memory_threads)}\n')
+        for p in self.processes:
+            f.write(f'  worker PID={p.pid}, is_alive={p.is_alive()}\n')
+
+        for i, q in enumerate(self.worker_input_queues):
+            f.write(f'  worker_input_queue {i} is_empty={q.empty()}, is_full={q.full()}\n')
+
+        for i, q in enumerate(self.worker_output_queues):
+            f.write(f'  worker_output_queue {i} is_empty={q.empty()}, is_full={q.full()}\n')
+
+        q = self.pin_memory_queue
+        f.write(f'  pin_memory_queue is_empty={q.empty()}, is_full={q.full()}\n')
+
+        for t in self.pin_memory_threads:
+            f.write(f'  thread IDENT={t.ident}, is_alive={t.is_alive()}\n')
+
+        f.write(f'nb_jobs_received={self.jobs_queued}, nb_jobs_processed={self.jobs_processed.value}, job_session_id={self.job_session_id.value}\n')
 
     def reset(self):
         """

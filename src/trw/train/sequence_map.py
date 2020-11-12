@@ -29,6 +29,7 @@ class SequenceMap(sequence.Sequence):
             max_jobs_at_once=None,
             nb_pin_threads=None,
             queue_timeout=default_queue_timeout,
+            debug_job_report_timeout=30.0,
             collate_fn=None):
         """
         Transform a sequence using a given function.
@@ -44,6 +45,8 @@ class SequenceMap(sequence.Sequence):
         :param collate_fn: a function to collate the batch of data or `None`
         :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
             to the main process
+        :param debug_job_report_timeout: timeout after which if no job were processed a job report will be
+            printed (e.g., to debug pipeline stalling)
         """
         super().__init__(source_split)
 
@@ -56,6 +59,7 @@ class SequenceMap(sequence.Sequence):
             self.function_to_run = function_to_run
         self.queue_timeout = queue_timeout
         self.collate_fn = collate_fn
+        self.debug_job_report_timeout = debug_job_report_timeout
 
         logger.info(f'SequenceMap created={self}, nb_workers={nb_workers}, max_jobs_at_once={max_jobs_at_once}')
 
@@ -200,6 +204,7 @@ class SequenceMap(sequence.Sequence):
                 # stop the sequence
                 raise StopIteration()
 
+            report_timeout_start = time.time()
             next_item_start = time.perf_counter()
             while True:
                 try:
@@ -214,6 +219,21 @@ class SequenceMap(sequence.Sequence):
                     self.fill_queue_all_sequences()
                     if not blocking:
                         raise StopIteration()
+
+                    if time.time() - report_timeout_start > self.debug_job_report_timeout:
+                        print('------------------- STALLING -------------------')
+                        self.job_executor.job_report()
+
+                    nb_background_jobs = self.has_background_jobs_previous_sequences()
+
+                    # we are only done once all the jobs have been completed!
+                    if self.sequence_iteration_finished and \
+                            nb_background_jobs == 0 and \
+                            self.job_executor.pin_memory_queue.empty():
+                        print('--------------- IDLE STOP ----------------')
+                        raise StopIteration()
+
+
             next_item_end = time.perf_counter()
             self.debug_time_to_get_next_item += next_item_end - next_item_start
             self.debug_nb_items += 1

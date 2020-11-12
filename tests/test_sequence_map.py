@@ -130,6 +130,7 @@ class TestSequenceMap(TestCase):
             print('SEQUENCE Item=', v['volume'].shape)
         time_end = time.time()
         print('test_map_async_1.TIME=', time_end - time_start)
+        split.job_executor.job_report()
         split.close()
         assert len(vs) == 10, f'got={len(vs)}'
 
@@ -396,7 +397,7 @@ class TestSequenceMap(TestCase):
     def test_reservoir_map(self):
         # test various "workloads". Make sure no pipeline doesn't deadlock
         np.random.seed(0)
-        for i in range(20):
+        for i in range(10):
             print(f'---------- {i} -------------')
             time_sleep_1 = np.random.uniform(0.001, 0.5)
             time_sleep_2 = np.random.uniform(0.001, 0.5)
