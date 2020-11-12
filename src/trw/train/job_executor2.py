@@ -1,4 +1,5 @@
 import copy
+import io
 import os
 import threading
 import traceback
@@ -71,9 +72,11 @@ def worker(
                             # job failed. we MUST send the `None` so that jobs queued
                             # and jobs processed match.
                             print('-------------- ERROR in worker function --------------')
-                            print(f'Exception in background worker thread_id={os.getpid()}, E={e}')
+                            print(f'Exception in background worker PID={os.getpid()}, E={e}')
                             print('-------------- first job will be aborted --------------')
-                            traceback.print_exc()
+                            string_io = io.StringIO()
+                            traceback.print_exc(file=string_io)
+                            print(string_io.getvalue())
                             print('-------------------------------------------------------')
                             item = None
 

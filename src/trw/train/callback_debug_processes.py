@@ -15,7 +15,6 @@ from trw.utils import optional_import
 
 psutil = optional_import('psutil')
 
-import psutil
 from trw.train import callback
 
 
