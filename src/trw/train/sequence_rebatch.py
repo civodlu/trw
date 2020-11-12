@@ -44,7 +44,7 @@ class SequenceReBatch(sequence.Sequence):
     """
     This sequence will normalize the batch size of an underlying sequence
 
-    If the underlying sequence batch is too large, it will be split in multiple cases. Conversely,
+    If the underlying sequence batch is too large, it will be split in multiple batches. Conversely,
     if the size of the batch is too small, it several batches will be merged until we reach the expected batch size.
     """
     def __init__(self, source_split, batch_size, discard_batch_not_full=False, collate_fn=sequence.default_collate_list_of_dicts):

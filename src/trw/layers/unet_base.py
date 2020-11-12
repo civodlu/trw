@@ -1,16 +1,29 @@
 import copy
-from abc import ABC
-from numbers import Number
-from typing import Sequence, Callable, Optional, Union, Any
+from typing import Sequence, Optional, Union, Any, List
+
+from trw.layers.convs import ModuleWithIntermediate
+from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 
 import torch
 import torch.nn as nn
 from trw.utils import upsample
-from trw.layers.blocks import BlockConvNormActivation, BlockUpDeconvSkipConv
+from trw.layers.blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType
 from trw.layers.layer_config import LayerConfig, default_layer_config
 
 
-class Down(nn.Module, ABC):
+class DownType(Protocol):
+    def __call__(
+            self,
+            layer_config: LayerConfig,
+            bloc_level: int,
+            input_channels: int,
+            output_channels: int,
+            block: nn.Module,
+            **kwargs) -> nn.Module:
+        ...
+
+
+class Down(nn.Module):
     def __init__(
             self,
             layer_config: LayerConfig,
@@ -32,7 +45,20 @@ class Down(nn.Module, ABC):
         return self.ops(x)
 
 
-class Up(nn.Module, ABC):
+class UpType(Protocol):
+    def __call__(
+            self,
+            layer_config: LayerConfig,
+            bloc_level: int,
+            skip_channels: int,
+            input_channels: int,
+            output_channels: int,
+            block: nn.Module,
+            **kwargs) -> nn.Module:
+        ...
+
+
+class Up(nn.Module):
     def __init__(
             self,
             layer_config: LayerConfig,
@@ -53,13 +79,26 @@ class Up(nn.Module, ABC):
         return self.ops(skip, previous)
 
 
-class LatentConv(nn.Module, ABC):
+class MiddleType(Protocol):
+    def __call__(
+            self,
+            layer_config: LayerConfig,
+            bloc_level: int,
+            input_channels: int,
+            output_channels: int,
+            latent_channels: Optional[int],
+            block: nn.Module,
+            **kwargs) -> nn.Module:
+        ...
+
+
+class LatentConv(nn.Module):
     """
     Concatenate a latent variable (possibly resized to the input shape) and apply a convolution
     """
     def __init__(
             self,
-            config: LayerConfig,
+            layer_config: LayerConfig,
             bloc_level: int,
             input_channels: int,
             output_channels: int,
@@ -75,26 +114,28 @@ class LatentConv(nn.Module, ABC):
             latent_channels = 0
 
         # local copy for local configuration
-        config = copy.copy(config)
+        layer_config = copy.copy(layer_config)
         for key, value in block_kwargs.items():
-            config.conv_kwargs[key] = value
+            layer_config.conv_kwargs[key] = value
 
-        self.dim = config.ops.dim
-        self.ops = block(config, input_channels + latent_channels, output_channels)
+        self.dim = layer_config.ops.dim
+        self.ops = block(layer_config, input_channels + latent_channels, output_channels)
 
-    def forward(self, x: torch.Tensor, latent: torch.Tensor = None) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
         if latent is not None:
             assert latent.shape[1] == self.latent_channels
             assert len(latent.shape) == self.dim + 2
             if latent.shape[2:] != x.shape[2:]:
                 # we need to resize the latent variable
                 latent = upsample(latent, x.shape[2:], mode='linear')
+                assert latent is not None
+
             x = torch.cat([latent, x], dim=1)
 
         return self.ops(x)
 
 
-class UNetBase(nn.Module, ABC):
+class UNetBase(nn.Module, ModuleWithIntermediate):
     """
     Configurable UNet-like architecture
     """
@@ -104,15 +145,15 @@ class UNetBase(nn.Module, ABC):
             input_channels: int,
             channels: Sequence[int],
             output_channels: int,
-            down_block_fn: Callable[[LayerConfig, int, int, int, int, nn.Module], nn.Module] = Down,
-            up_block_fn: Callable[[LayerConfig, int, int, int, nn.Module], nn.Module] = Up,
-            init_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
-            middle_block_fn: Callable[[LayerConfig, int, int, int, nn.Module], nn.Module] = LatentConv,
-            output_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+            down_block_fn: DownType = Down,
+            up_block_fn: UpType = Up,
+            init_block_fn: ConvBlockType = BlockConvNormActivation,
+            middle_block_fn: MiddleType = LatentConv,
+            output_block_fn: ConvBlockType = BlockConvNormActivation,
             init_block_channels: Optional[int] = None,
             latent_channels: Optional[int] = None,
             kernel_size: Optional[int] = 3,
-            strides: Optional[Union[int, Sequence[int]]] = 2,
+            strides: Union[int, Sequence[int]] = 2,
             activation: Optional[Any] = None,
             config: LayerConfig = default_layer_config(dimensionality=None)
     ):
@@ -151,15 +192,10 @@ class UNetBase(nn.Module, ABC):
         self.output_channels = output_channels
         self.latent_channels = latent_channels
 
-        if isinstance(strides, Number):
+        if isinstance(strides, int):
             strides = [strides] * len(channels)
         assert len(strides) == len(channels), f'expected one stride per channel-layer.' \
                                               f'Got={len(strides)} expected={len(channels)}'
-
-        self.init_block = None
-        self.downs = None
-        self.ups = None
-        self.middle_block = None
 
         if latent_channels is not None:
             assert middle_block_fn is not None
@@ -178,6 +214,7 @@ class UNetBase(nn.Module, ABC):
         else:
             out_init_channels = self.init_block_channels
         self.init_block = init_block_fn(config, self.input_channels, out_init_channels, stride=1)
+        assert self.init_block is not None
 
         # down blocks
         input_channels = out_init_channels
@@ -188,7 +225,7 @@ class UNetBase(nn.Module, ABC):
         # middle blocks
         if middle_block_fn is not None:
             self.middle_block = middle_block_fn(
-                config=config,
+                config,
                 bloc_level=len(self.channels),
                 input_channels=skip_channels,
                 output_channels=skip_channels,
@@ -230,12 +267,7 @@ class UNetBase(nn.Module, ABC):
         config.dropout = None
         self.output = output_block_fn(config, out_init_channels, self.output_channels)
 
-    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
-        """
-        Args:
-            x: the input image
-            latent: a latent variable appended by the middle block
-        """
+    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
         prev = self.init_block(x)
         x_n = [prev]
         for down in self.downs:
@@ -253,9 +285,22 @@ class UNetBase(nn.Module, ABC):
         else:
             prev = x_n[-1]
 
+        intermediates = []
         for skip, up in zip(reversed(x_n[:-1]), self.ups):
             prev = up(skip, prev)
+            intermediates.append(prev)
+        intermediates.append(self.output(prev))
+        return intermediates
 
-        return self.output(prev)
+    def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
+        """
+        Args:
+            x: the input image
+            latent: a latent variable appended by the middle block
+        """
+        intermediates = self.forward_with_intermediate(x, latent)
+        assert len(intermediates)
+        return intermediates[-1]
+
 
 

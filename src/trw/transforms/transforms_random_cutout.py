@@ -41,7 +41,7 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
         """
         assert isinstance(cutout_size, tuple) or callable(cutout_size), 'must be a tuple or a callable!'
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,

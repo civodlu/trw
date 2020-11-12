@@ -1,11 +1,12 @@
 import collections
 import numbers
-from typing import Sequence, Union, Optional, Any, Dict, Callable
+from typing import Sequence, Union, Optional, Any, Dict, Callable, List
 
 import torch
 import torch.nn as nn
-from trw.layers import OpsConversion, div_shape, ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
-from trw.layers.blocks import BlockDeconvNormActivation
+from trw.basic_typing import NestedIntSequence
+from trw.layers import div_shape, ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
+from trw.layers.blocks import BlockDeconvNormActivation, ConvTransposeBlockType
 import copy
 
 from .crop_or_pad import crop_or_pad_fun
@@ -23,9 +24,9 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
             input_channels: int,
             channels: Sequence[int],
             *,
-            convolution_kernels: Union[int, Sequence[int]] = 5,
-            strides: Union[int, Sequence[int]] = 2,
-            paddings: Optional[Union[str, int, Sequence[int]]] = None,
+            convolution_kernels: Union[int, List[int], NestedIntSequence] = 5,
+            strides: Union[int, List[int], NestedIntSequence] = 2,
+            paddings: Optional[Union[str, int, List[int], NestedIntSequence]] = None,
             activation: Any = nn.ReLU,
             activation_kwargs: Dict = {},
             dropout_probability: Optional[float] = None,
@@ -33,7 +34,7 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
             norm_kwargs: Dict = {},
             last_layer_is_output: bool = False,
             squash_function: Optional[Callable[[torch.Tensor], torch.Tensor]] = None,
-            deconv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockDeconvNormActivation,
+            deconv_block_fn: ConvTransposeBlockType = BlockDeconvNormActivation,
             config: LayerConfig = default_layer_config(dimensionality=None),
             target_shape: Optional[Sequence[int]] = None):
         """

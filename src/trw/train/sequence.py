@@ -100,7 +100,7 @@ class Sequence:
         from . import sequence_collate
         return sequence_collate.SequenceCollate(self, collate_fn=collate_fn, device=device)
 
-    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, worker_post_process_results_fun=None, queue_timeout=0.1, preprocess_fn=None, collate_fn=None):
+    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, nb_pin_threads=None, queue_timeout=0.1, collate_fn=None):
         """
         Transform a sequence using a given function.
 
@@ -110,10 +110,10 @@ class Sequence:
         :param nb_workers: the number of workers that will process the split. If 0, no workers will be created.
         :param max_jobs_at_once: the maximum number of results that can be pushed in the result queue at once. If 0, no limit.
             If None, it will be set equal to the number of workers
-        :param worker_post_process_results_fun: a function used to post-process the worker results (executed by the worker)
         :param queue_timeout: the timeout used to pull results from the output queue
-        :param preprocess_fn: a function that will preprocess the batch just prior to sending it to the other processes
         :param collate_fn: a function to collate each batch of data
+        :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
+            to the main process
         :return: a sequence of batches
         """
         from . import sequence_map
@@ -122,9 +122,8 @@ class Sequence:
             function_to_run=function_to_run,
             nb_workers=nb_workers,
             max_jobs_at_once=max_jobs_at_once,
-            worker_post_process_results_fun=worker_post_process_results_fun,
+            nb_pin_threads=nb_pin_threads,
             queue_timeout=queue_timeout,
-            preprocess_fn=preprocess_fn,
             collate_fn=collate_fn)
     
     def batch(self, batch_size, discard_batch_not_full=False, collate_fn=default_collate_list_of_dicts):
@@ -186,12 +185,14 @@ class Sequence:
             self,
             max_reservoir_samples,
             function_to_run,
+            *,
             min_reservoir_samples=1,
             nb_workers=1,
             max_jobs_at_once=None,
             reservoir_sampler=sampler.SamplerSequential(),
             collate_fn=remove_nested_list,
             maximum_number_of_samples_per_epoch=None,
+            nb_pin_threads=1,
             max_reservoir_replacement_size=None):
         """
         Args:
@@ -211,6 +212,7 @@ class Sequence:
                 If `None`, we will use the whole result queue. This can be useful to control explicitly how the
                 reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
                 `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
+            nb_pin_threads: number of threads dedicated to collect results from the worker queues
         """
         from . import sequence_async_reservoir
         return sequence_async_reservoir.SequenceAsyncReservoir(
@@ -222,6 +224,7 @@ class Sequence:
             reservoir_sampler=reservoir_sampler,
             collate_fn=collate_fn,
             maximum_number_of_samples_per_epoch=maximum_number_of_samples_per_epoch,
+            nb_pin_threads=nb_pin_threads,
             max_reservoir_replacement_size=max_reservoir_replacement_size)
 
     def fill_queue(self):

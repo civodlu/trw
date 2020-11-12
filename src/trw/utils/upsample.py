@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from trw.typing import ShapeNCX, TensorNCX, TorchTensorNCX
+from trw.basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX, ShapeX
 
 
 def _upsample_int_1d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
@@ -45,7 +45,7 @@ def _upsample_int_3d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     return tensor_interp
 
 
-def upsample(tensor: TensorNCX, size: ShapeNCX, mode='linear') -> TensorNCX:
+def upsample(tensor: TensorNCX, size: ShapeX, mode='linear') -> TensorNCX:
     """
     Upsample a 1D, 2D, 3D tensor
 
@@ -80,7 +80,7 @@ def upsample(tensor: TensorNCX, size: ShapeNCX, mode='linear') -> TensorNCX:
         elif len(tensor.shape) == 5:
             return _upsample_int_3d(tensor, size)
         else:
-            raise NotImplemented('dimension not implemented!')
+            raise NotImplementedError('dimension not implemented!')
 
     if mode == 'linear':
         align_corners = True

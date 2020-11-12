@@ -1,8 +1,8 @@
-from typing import Dict, Any, Callable, List
+from typing import Sequence, Callable, List
 
 import numpy as np
 import torch
-from trw.typing import Batch
+from trw.basic_typing import Batch
 
 
 class Transform:
@@ -44,20 +44,21 @@ class TransformBatchWithCriteria(Transform):
             return batch
 
 
-def criteria_is_array_3_or_above(batch: Batch) -> List[str]:
+def criteria_is_array_4_or_above(batch: Batch) -> Sequence[str]:
     """
-    Return `True` if the feature is a numpy or torch array dim >= 3
+    Return `True` if the feature is a numpy or torch array dim >= 4, typically all
+    n-d images, n >= 2
     """
     features = []
     for feature_name, feature_value in batch.items():
-        if isinstance(feature_value, np.ndarray) and len(feature_value.shape) >= 3:
+        if isinstance(feature_value, np.ndarray) and len(feature_value.shape) >= 4:
             features.append(feature_name)
-        elif isinstance(feature_value, torch.Tensor) and len(feature_value.shape) >= 3:
+        elif isinstance(feature_value, torch.Tensor) and len(feature_value.shape) >= 4:
             features.append(feature_name)
     return features
 
 
-def criteria_feature_name(batch: Batch, feature_names: List[str]) -> List[str]:
+def criteria_feature_name(batch: Batch, feature_names: Sequence[str]) -> Sequence[str]:
     """
     Return `True` if the feature name belongs to a given set of names
     """

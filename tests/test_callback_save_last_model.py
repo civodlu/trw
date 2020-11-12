@@ -4,6 +4,8 @@ import torch.nn as nn
 import tempfile
 import glob
 import os
+import numpy as np
+from trw.train.callback_save_last_model import exclude_large_embeddings
 
 
 class ModelDense(nn.Module):
@@ -87,3 +89,31 @@ class TestCallbackSaveLastModel(TestCase):
 
         models = glob.glob(os.path.join(logging_directory, '*.model'))
         assert len(models) == 1
+
+    def test_post_process_outputs(self):
+        callback = trw.train.CallbackSaveLastModel(post_process_outputs=exclude_large_embeddings)
+
+        model = ModelDense()
+        logging_directory = tempfile.mkdtemp()
+        options = trw.train.create_default_options(logging_directory=logging_directory)
+
+        outputs = {
+            'dataset1': {
+                'split1': {
+                    'output1': {
+                        'output': np.zeros([1, 20000]),
+                        'output_ref': trw.train.outputs_trw.OutputEmbedding(np.zeros([10, 1]))
+                    }
+                }
+            }
+        }
+        callback(options, [outputs], model, None, outputs, None, {'info': 'dummy'}, None)
+
+        # metric was not good enough. Do not save!
+        models = glob.glob(os.path.join(logging_directory, '*.model'))
+        assert len(models) == 1
+        assert os.path.basename(models[0]) == 'last.model'
+
+        _, results_reloaded = trw.train.Trainer.load_model(models[0], with_result=True)
+        # the embedding value should be stripped
+        assert len(results_reloaded['outputs']['dataset1']['split1']['output1']) == 0

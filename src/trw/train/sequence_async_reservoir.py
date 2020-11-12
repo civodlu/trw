@@ -1,6 +1,7 @@
-import trw.train.job_executor
+import math
+
+import trw.train.job_executor2
 from trw.train import sequence
-from trw.train import sequence_map
 
 import collections
 from queue import Empty
@@ -36,9 +37,20 @@ class SequenceAsyncReservoir(sequence.Sequence):
     This sequence can be interrupted (e.g., after a certain number of batches have been returned). When the sequence
     is restarted, the reservoir will not be emptied.
     """
-    def __init__(self, source_split, max_reservoir_samples, function_to_run, min_reservoir_samples=1, nb_workers=1,
-                 max_jobs_at_once=None, reservoir_sampler=None, collate_fn=sequence.remove_nested_list,
-                 maximum_number_of_samples_per_epoch=None, max_reservoir_replacement_size=None):
+    def __init__(
+            self,
+            source_split,
+            max_reservoir_samples,
+            function_to_run,
+            *,
+            min_reservoir_samples=1,
+            nb_workers=1,
+            max_jobs_at_once=None,
+            reservoir_sampler=None,
+            collate_fn=sequence.remove_nested_list,
+            maximum_number_of_samples_per_epoch=None,
+            nb_pin_threads=1,
+            max_reservoir_replacement_size=None):
         """
         Args:
             source_split: the source split to iterate
@@ -58,6 +70,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
                 If `None`, we will use the whole result queue. This can be useful to control explicitly how the
                 reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
                 `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
+            nb_pin_threads: number of threads dedicated to collect results from the worker queues
         """
         super().__init__(source_split)
         self.max_reservoir_samples = max_reservoir_samples
@@ -88,12 +101,12 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # before blocking
             max_jobs_at_once = nb_workers
 
-        self.job_executer = trw.train.job_executor.JobExecutor(
+        self.job_executer = trw.train.job_executor2.JobExecutor2(
             nb_workers=nb_workers,
             function_to_run=self.function_to_run,
-            max_jobs_at_once=max_jobs_at_once,
-            worker_post_process_results_fun=None,
-            output_queue_size=max_jobs_at_once)
+            max_queue_size_pin_thread_per_worker=math.ceil(float(max_jobs_at_once) / nb_pin_threads),
+            nb_pin_threads=nb_pin_threads,
+            max_queue_size_per_worker=max_jobs_at_once // nb_workers)
 
         self.maximum_number_of_samples_per_epoch = maximum_number_of_samples_per_epoch
         self.number_samples_generated = 0
@@ -145,14 +158,15 @@ class SequenceAsyncReservoir(sequence.Sequence):
         """
         nb_queued = 0
         try:
-            while not self.job_executer.input_queue.full():
+            while not self.job_executer.is_full():
                 i = self.iter_source.next_item(blocking=False)
                 nb_queued += 1
 
                 time_blocked_start = time.perf_counter()
-                self.job_executer.input_queue.put(i)
+                self.job_executer.put(i)
                 time_blocked_end = time.perf_counter()
                 self.perf_sending.add(time_blocked_end - time_blocked_start)
+                #print('RESERVOIR_QUEUE_FILL job_executer.put')
         except StopIteration:
             # we are done! Reset the input iterator
             self.iter_source = self.source_split.__iter__()
@@ -167,10 +181,10 @@ class SequenceAsyncReservoir(sequence.Sequence):
         nb_samples_replaced = 0
 
         # retrieve the results from the output queue and fill the reservoir
-        while not self.job_executer.output_queue.empty():
+        while not self.job_executer.pin_memory_queue.empty():
             try:
                 time_blocked_start = time.perf_counter()
-                items = self.job_executer.output_queue.get()
+                items = self.job_executer.pin_memory_queue.get()
                 if items is None:
                     # the job failed!
                     continue

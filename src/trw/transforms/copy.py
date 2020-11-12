@@ -1,8 +1,9 @@
 import numpy as np
 import torch
+from trw.basic_typing import Tensor
 
 
-def copy(array):
+def copy(array: Tensor) -> Tensor:
     """
     Copy an array
 
@@ -17,4 +18,4 @@ def copy(array):
     elif isinstance(array, torch.Tensor):
         return array.clone()
     else:
-        raise NotImplemented()
+        raise NotImplementedError()

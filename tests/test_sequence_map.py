@@ -1,14 +1,17 @@
-import unittest
-
+from functools import partial
+from pprint import PrettyPrinter
 import numpy as np
 import time
 import datetime
 import trw.train
 import torch
 from unittest import TestCase
-import collections
 import os
 import copy
+
+from trw.train.callback_debug_processes import log_all_tree
+
+START_TIME = time.time()
 
 
 import matplotlib
@@ -19,6 +22,17 @@ def load_fake_volumes_npy(item):
     v = np.ndarray([32, 32, 64], dtype=np.float32)
     v.fill(float(item['values']))
 
+    r = {
+        'volume': v
+    }
+    return r
+
+
+def load_fake_volumes_small_npy(item):
+    v = np.ndarray([1, 1, 2], dtype=np.float32)
+    v.fill(float(item['values']))
+
+    time.sleep(0.5)
     r = {
         'volume': v
     }
@@ -37,11 +51,19 @@ def load_fake_volumes_torch(item):
     return r
 
 
-def load_data(item):
-    print('job | ', os.getpid(), ' | loading data |', item['indices'], datetime.datetime.now().time())
+def load_data(item, time_sleep=0.2):
     item['time_created'] = time.time()
-    time.sleep(0.2)
+    time.sleep(time_sleep)
     item['time_loaded'] = time.time()
+    #print('loading data | ', os.getpid(), item['indices'], time.time() - START_TIME)
+    return item
+
+
+def create_value(item, time_sleep=0.1):
+    assert len(item) == 1
+    time.sleep(time_sleep)
+    item[0]['value'] = item[0]['indices']
+    #print('create_value | ', os.getpid(), item[0]['indices'], time.time() - item[0]['time_created'])
     return item
 
 
@@ -96,6 +118,21 @@ def double_values(item):
 
 
 class TestSequenceMap(TestCase):
+    def test_map_async_10(self):
+        # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
+        split_np = {'values': np.arange(0, 10)}
+        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_small_npy, nb_workers=1)
+
+        time_start = time.time()
+        vs = []
+        for v in split:
+            vs.append(v['volume'].shape)
+            print('SEQUENCE Item=', v['volume'].shape)
+        time_end = time.time()
+        print('test_map_async_1.TIME=', time_end - time_start)
+        split.close()
+        assert len(vs) == 10, f'got={len(vs)}'
+
     def test_map_async_20(self):
         # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
         split_np = {'values': np.arange(100, 120)}
@@ -110,6 +147,28 @@ class TestSequenceMap(TestCase):
         split.close()
         print('test_map_async_1.TIME=', time_end - time_start)
         assert(len(vs) == 20)
+
+    def test_map_async_sequence_interrupted(self):
+        # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
+        split_np = {'values': np.arange(100, 105)}
+        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_npy, nb_workers=2)
+
+        for _ in split:
+            # interrupt the sequence: here we have jobs populated that SHOULD not be
+            # used in the next sequence iteration
+            time.sleep(0.2)
+            print('----------------BREAK----------')
+            break
+
+        time_start = time.time()
+        vs = []
+        for v in split:
+            vs.append(v['volume'].shape)
+            print(v['volume'].shape)
+        time_end = time.time()
+        split.close()
+        print('test_map_async_1.TIME=', time_end - time_start, 'nb=', len(vs))
+        assert(len(vs) == 5)
 
     def test_map_sync_multiple_items(self):
         # make sure we have iterate through each item of the returned items
@@ -156,7 +215,7 @@ class TestSequenceMap(TestCase):
         print('DONE')
 
     @staticmethod
-    def run_complex_2_map(nb_workers, nb_indices, with_wait):
+    def run_complex_2_map(nb_workers, nb_indices, with_interruption):
         # the purpose of this test is to combine 2 maps: one executing slow calls
         # (e.g., IO limited) with another one to do augmentation (e.g., CPU limited)
 
@@ -167,17 +226,18 @@ class TestSequenceMap(TestCase):
             'indices': indices,
         }
 
-        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data, nb_workers=nb_workers).map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).\
+            map(load_data, nb_workers=nb_workers).\
+            map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+
         # process creation is quite slow on windows (>0.7s), so create the processes first
         # so that creation time is not included in processing time
-        for batch in split:
-            break
+        if with_interruption:
+            for batch in split:
+                break
 
-        if with_wait:
-            # if we wait, it means we won't have jobs to be cancelled (i.e., we will have more accurate timing)
-            # else the time of the cancelled jobs will be added to the current time (i.e., `for batch in split` started
-            # many jobs)
-            time.sleep(3.0)
+            print('----------ABORTED sequence')
+            time.sleep(3)
 
         print('STARTED', datetime.datetime.now().time())
         time_start = time.time()
@@ -201,7 +261,12 @@ class TestSequenceMap(TestCase):
         total_time = time_end - time_start
         print('total_time', total_time, 'Target time=', expected_time, 'nb_jobs=', len(ids), 'nb_jobs_expected=', len(indices) * 10)
 
-        assert len(batches) == len(indices) * 10, 'nb={}'.format(len(batches))
+        print(len(ids), len(indices) * 10)
+        print(split.jobs_processed)
+        print(split.jobs_queued)
+        print(split.job_executor.jobs_queued)
+        print(split.job_executor.jobs_processed.value)
+        assert len(batches) == len(indices) * 10, f'nb_batches={len(batches)}, nb_indices={len(indices) * 10}'
         assert len(ids) == len(indices) * 10
 
         split.close()
@@ -210,16 +275,16 @@ class TestSequenceMap(TestCase):
 
 
     def test_complex_2_map__single_worker(self):
-        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_wait=True)
+        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_interruption=False)
+
+    def test_complex_2_map__single_worker_with_interruption(self):
+        TestSequenceMap.run_complex_2_map(1, nb_indices=10, with_interruption=True)
 
     def test_complex_2_map__5_worker(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=True)
-
-    def test_complex_2_map__5_worker_no_wait(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_wait=False)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=10, with_interruption=False)
 
     def test_complex_2_map__5_worker_40(self):
-        TestSequenceMap.run_complex_2_map(5, nb_indices=21, with_wait=True)
+        TestSequenceMap.run_complex_2_map(5, nb_indices=21, with_interruption=False)
 
     def test_split_closing(self):
         # make sure we can close the processes gracefully
@@ -229,11 +294,12 @@ class TestSequenceMap(TestCase):
             'indices': indices,
         }
 
-        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(load_data, nb_workers=4).map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).\
+            map(load_data, nb_workers=4).\
+            map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
         for batch in split:
             break
-        split.job_executer.close()
-        print('DONE')
+        split.job_executor.close()
 
     def test_job_error_0_worker(self):
         nb_indices = 40
@@ -252,7 +318,7 @@ class TestSequenceMap(TestCase):
         assert len(indices) == nb_indices - 1
 
     def test_job_error_1_worker(self):
-        nb_indices = 40
+        nb_indices = 15
         indices = np.asarray(list(range(nb_indices)))
         split = {
             'indices': indices,
@@ -262,10 +328,18 @@ class TestSequenceMap(TestCase):
         split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential()).map(
             load_data_or_generate_error,
             nb_workers=1)  # .map(run_augmentations, nb_workers=1, max_jobs_at_once=None)
-        for batch in split:
+        for batch_id, batch in enumerate(split):
             index = batch['indices'][0]
             indices.append(index)
+            with split.job_executor.jobs_processed.get_lock():
+                print('nb_queued=', split.job_executor.jobs_queued, 'nb_processed=', split.job_executor.jobs_processed.value)
+                print('(SEQUENCE))=', split.jobs_processed, 'Batchid=', batch_id)
+                print(index)
 
+        print('DONE')
+        del split
+
+        print(indices)
         assert 10 not in indices, 'index 10 should have failed!'
         assert len(indices) == nb_indices - 1
 
@@ -315,4 +389,54 @@ class TestSequenceMap(TestCase):
             index = batch['indices'][0]
             indices.append(index)
         assert 10 not in indices, 'index 10 should have failed!'
+        print(indices)
         assert len(indices) == nb_indices - 1, f'expected={nb_indices - 1}, got={len(indices)}'
+        print('Done')
+
+    def test_reservoir_map(self):
+        # test various "workloads". Make sure no pipeline doesn't deadlock
+        np.random.seed(0)
+        for i in range(20):
+            print(f'---------- {i} -------------')
+            time_sleep_1 = np.random.uniform(0.001, 0.5)
+            time_sleep_2 = np.random.uniform(0.001, 0.5)
+            nb_jobs_at_once = int(np.random.uniform(1, 5))
+            nb_indices = int(np.random.uniform(10, 40))
+            nb_workers = int(np.random.uniform(1, 4))
+            nb_epochs = int(np.random.uniform(1, 7))
+
+            split = {
+                'indices': np.asarray(list(range(nb_indices))),
+            }
+            split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+            split = split.async_reservoir(max_reservoir_samples=nb_indices, function_to_run=partial(load_data, time_sleep=time_sleep_1), max_jobs_at_once=nb_jobs_at_once)
+            split = split.map(partial(create_value, time_sleep=time_sleep_2), nb_workers=nb_workers)
+            nb = 0
+            for epoch in range(nb_epochs):
+                print('Epoch=', epoch)
+                for b in split:
+                    if nb == 1:
+                        logs = log_all_tree()
+                        pp = PrettyPrinter(width=300)
+                        pp.pprint(logs)
+
+                    nb += 1
+
+    def test_multiple_epochs_job_failures(self):
+        nb_indices = 20
+        nb_epochs = 50
+        indices = np.asarray(list(range(nb_indices)))
+        split = {
+            'indices': indices,
+        }
+
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        split = split.map(load_data_or_generate_error, nb_workers=5, max_jobs_at_once=2, nb_pin_threads=2)
+        for e in range(nb_epochs):
+            print(f'epoch={e}')
+            indices = []
+            for batch in split:
+                index = batch['indices'][0]
+                indices.append(index)
+            assert 10 not in indices, 'index 10 should have failed!'
+            assert len(indices) == nb_indices - 1

@@ -1,15 +1,19 @@
+from typing import Sequence, List, Union, Callable
+
 import numpy as np
 import torch
+from trw.basic_typing import Tensor, Numeric, TensorNCX, ShapeCX
+from typing_extensions import Protocol
 
 
-def cutout_value_fn_constant(image, value):
+def cutout_value_fn_constant(image: Tensor, value: Numeric) -> None:
     """
     Replace all image as a constant value
     """
     image[:] = value
 
 
-def cutout_random_ui8_torch(image: torch.Tensor, min_value=0, max_value=255):
+def cutout_random_ui8_torch(image: torch.Tensor, min_value: Numeric = 0, max_value: Numeric = 255) -> None:
     """
     Replace the image content as a constant value
     """
@@ -19,7 +23,7 @@ def cutout_random_ui8_torch(image: torch.Tensor, min_value=0, max_value=255):
     image[:] = color
 
 
-def cutout_random_size(min_size, max_size):
+def cutout_random_size(min_size: Sequence[int], max_size: Sequence[int]) -> List[int]:
     """
     Return a random size within the specified bounds.
 
@@ -34,15 +38,21 @@ def cutout_random_size(min_size, max_size):
     return [np.random.randint(low=min_value, high=max_value + 1) for min_value, max_value in zip(min_size, max_size)]
 
 
-def cutout(image, cutout_size, cutout_value_fn):
+class CutOutType(Protocol):
+    def __call__(self, image: TensorNCX) -> None:
+        ...
+
+
+def cutout(image: TensorNCX, cutout_size: Union[ShapeCX, Callable[[], ShapeCX]], cutout_value_fn: CutOutType) -> None:
     """
     Remove a part of the image randomly
 
     Args:
-        array: a :class:`numpy.ndarray` or :class:`torch.Tensor` n-dimensional array. Samples are stored on axis 0
+        image: a :class:`numpy.ndarray` or :class:`torch.Tensor` n-dimensional array. Samples are stored on axis 0
         cutout_size: the cutout_size of the regions to be occluded or a callable function taking no argument
             and returning a tuple representing the shape of the region to be occluded (without the ``N`` component)
-        cutout_value_fn: the function value used for occlusion. Must take as argument `image` and modify directly the image
+        cutout_value_fn: the function value used for occlusion. Must take as argument `image` and modify
+            directly the image
 
     Returns:
         None
@@ -79,4 +89,4 @@ def cutout(image, cutout_size, cutout_value_fn):
             offsets[2]:offsets[2] + cutout_size[2],
             offsets[3]:offsets[3] + cutout_size[3]])
     else:
-        raise NotImplemented()
+        raise NotImplementedError()

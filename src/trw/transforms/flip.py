@@ -1,9 +1,12 @@
+from typing import Sequence, List, Optional
+
 import numpy as np
 import torch
+from trw.basic_typing import Tensor, TensorNCX
 from trw.transforms.stack import stack
 
 
-def flip(array, axis):
+def flip(array: Tensor, axis: int) -> Tensor:
     """
     Flip an axis of an array
 
@@ -19,10 +22,14 @@ def flip(array, axis):
     elif isinstance(array, torch.Tensor):
         return torch.flip(array, [axis])
     else:
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
-def transform_batch_random_flip(array, axis, flip_probability=0.5, flip_choices=None):
+def transform_batch_random_flip(
+        array: TensorNCX,
+        axis: int,
+        flip_probability: Optional[float] = 0.5,
+        flip_choices: Sequence[bool] = None) -> TensorNCX:
     """
     Randomly flip an image with a given probability
 
@@ -51,7 +58,10 @@ def transform_batch_random_flip(array, axis, flip_probability=0.5, flip_choices=
     return stack(samples)
 
 
-def transform_batch_random_flip_joint(arrays, axis, flip_probability=0.5):
+def transform_batch_random_flip_joint(
+        arrays: List[TensorNCX],
+        axis: int,
+        flip_probability: float = 0.5) -> List[TensorNCX]:
     """
     Randomly flip a joint images with a given probability
 

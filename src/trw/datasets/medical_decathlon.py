@@ -110,11 +110,10 @@ def create_decathlon_dataset(
         root: str = None,
         transform_train: Transform = None,
         transform_valid: Transform = None,
-        nb_workers: int = 2,
+        nb_workers: int = 4,
         valid_ratio: float = 0.2,
         batch_size: int = 1,
-        remove_patient_transform=False,
-        reservoir_size: int = 20):
+        remove_patient_transform=False):
     """
     Create a task of the medical decathlon dataset.
 
@@ -126,10 +125,9 @@ def create_decathlon_dataset(
         root: the root folder where the data will be created and possibly downloaded
         transform_train: a function that take a batch of training data and return a transformed batch
         transform_valid: a function that take a batch of valid data and return a transformed batch
-        nb_workers: the number of worker in each reservoir
+        nb_workers: the number of workers used for the preprocessing
         valid_ratio: the ratio of validation data
         batch_size: the batch size
-        reservoir_size: the maximum number of samples stored in the reservoir
         remove_patient_transform: if ``True``, remove the affine transformation attached to the voxels
 
     Returns:
@@ -158,7 +156,11 @@ def create_decathlon_dataset(
     ])
     load_data_train = functools.partial(_load_case_adaptor, dataset=dataset, transform_fn=transform_train)
     sequence_train = SequenceArray(data_train, sampler=sampler_train, sample_uid_name='sample_uid')
-    sequence_train = sequence_train.async_reservoir(function_to_run=load_data_train, min_reservoir_samples=reservoir_size, max_reservoir_samples=reservoir_size, nb_workers=nb_workers, max_reservoir_replacement_size=10, max_jobs_at_once=20)
+    sequence_train = sequence_train.map(
+        function_to_run=load_data_train,
+        nb_workers=nb_workers,
+        max_jobs_at_once=4
+    )
     sequence_train = sequence_train.collate()
 
     sampler_valid = SamplerSequential(batch_size=batch_size)
@@ -168,7 +170,11 @@ def create_decathlon_dataset(
 
     load_data_valid = functools.partial(_load_case_adaptor, dataset=dataset, transform_fn=transform_valid)
     sequence_valid = SequenceArray(data_valid, sampler=sampler_valid, sample_uid_name='sample_uid')
-    sequence_valid = sequence_valid.map(functools.partial(load_data_valid, dataset=dataset))
+    sequence_valid = sequence_valid.map(
+        functools.partial(load_data_valid, dataset=dataset),
+        nb_workers=nb_workers,
+        max_jobs_at_once=4
+    )
     sequence_valid = sequence_valid.collate()
 
     dataset = collections.OrderedDict([

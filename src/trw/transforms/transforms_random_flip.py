@@ -29,7 +29,7 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
         """
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,

@@ -355,7 +355,7 @@ class TestTransform(TestCase):
         mean = np.mean(images, axis=(0, 2, 3))
         std = np.std(images, axis=(0, 2, 3))
 
-        transformer = trw.transforms.TransformNormalize(mean=mean, std=std)
+        transformer = trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
         transformed_batch = transformer(batch)
         normalized_images = transformed_batch['images']
 
@@ -377,7 +377,7 @@ class TestTransform(TestCase):
         mean = np.mean(images.numpy(), axis=(0, 2, 3), dtype=np.float32)
         std = np.std(images.numpy(), axis=(0, 2, 3), dtype=np.float32)
 
-        transformer = trw.transforms.TransformNormalize(mean=mean, std=std)
+        transformer = trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
         transformed_batch = transformer(batch)
         normalized_images = transformed_batch['images']
 
@@ -393,8 +393,8 @@ class TestTransform(TestCase):
         }
 
         transforms = [
-            trw.transforms.TransformNormalize(mean=[np.float32(10), np.float32(10), np.float32(10)], std=[np.float32(1), np.float32(1), np.float32(1)]),
-            trw.transforms.TransformNormalize(mean=[np.float32(100), np.float32(100), np.float32(100)], std=[np.float32(1), np.float32(1), np.float32(1)]),
+            trw.transforms.TransformNormalizeIntensity(mean=[np.float32(10), np.float32(10), np.float32(10)], std=[np.float32(1), np.float32(1), np.float32(1)]),
+            trw.transforms.TransformNormalizeIntensity(mean=[np.float32(100), np.float32(100), np.float32(100)], std=[np.float32(1), np.float32(1), np.float32(1)]),
         ]
 
         transformer = trw.transforms.TransformCompose(transforms)

@@ -181,13 +181,6 @@ def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weig
     return loss
 
 
-def segmentation_output_postprocessing(mask_pb):
-    """
-    Post-process the mask probability of the segmentation into discrete segmentation map
-    """
-    return torch.unsqueeze(torch.argmax(mask_pb))
-
-
 class OutputClassification(Output):
     """
     Classification output
@@ -318,7 +311,7 @@ class OutputClassification2(Output):
             criterion_fn=lambda: nn.CrossEntropyLoss(reduction='none'),
             collect_output=True,
             collect_only_non_training_output=False,
-            metrics=metrics.default_classification_metrics(),
+            metrics: List[metrics.Metric] = metrics.default_classification_metrics(),
             loss_reduction=torch.mean,
             weights=None,
             per_voxel_weights=None,
@@ -451,7 +444,7 @@ class OutputSegmentation2(OutputClassification2):
             criterion_fn: Callable[[], Any] = LossDiceMulticlass,
             collect_output: bool = False,
             collect_only_non_training_output: bool = False,
-            metrics: Callable[[], List[metrics.Metric]] = metrics.default_segmentation_metrics(),
+            metrics: List[metrics.Metric] = metrics.default_segmentation_metrics(),
             loss_reduction: Callable[[torch.Tensor], torch.Tensor] = torch.mean,
             weights=None,
             per_voxel_weights=None,

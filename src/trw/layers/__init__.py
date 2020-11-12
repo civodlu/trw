@@ -1,6 +1,6 @@
 from .ops_conversion import OpsConversion
 from .layer_config import LayerConfig, default_layer_config, NormType
-from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpDeconvSkipConv, BlockPool
+from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpDeconvSkipConv, BlockPool, BlockRes
 
 from .utils import div_shape
 from .flatten import Flatten
@@ -20,4 +20,4 @@ from .autoencoder_convolutional import AutoencoderConvolutional
 from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
 from .autoencoder_convolutional_variational_conditional import AutoencoderConvolutionalVariationalConditional
 from .gan import Gan, GanDataPool
-
+from .encoder_decoder_resnet import EncoderDecoderResnet

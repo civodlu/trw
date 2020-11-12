@@ -3,11 +3,12 @@ from typing import Sequence, Union, Optional, Any, Dict, Callable, Tuple, List
 
 import torch
 import torch.nn as nn
+from trw.basic_typing import NestedIntSequence, Activation
 from trw.layers import ModuleWithIntermediate, ConvsBase, ConvsTransposeBase, crop_or_pad_fun, NormType, LayerConfig, \
     default_layer_config
 
 
-class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate, ABC):
+class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
     """
     Convolutional autoencoder
 
@@ -23,11 +24,11 @@ class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate, ABC):
             encoder_channels: Sequence[int],
             decoder_channels: Sequence[int],
             convolution_kernels: Optional[Union[int, Sequence[int]]] = 5,
-            encoder_strides: Union[int, Sequence[int]] = 1,
-            decoder_strides: Union[int, Sequence[int]] = 2,
-            pooling_size: Optional[Union[int, Sequence[int]]] = 2,
+            encoder_strides: Union[int, List[int], NestedIntSequence] = 1,
+            decoder_strides: Union[int, List[int], NestedIntSequence] = 2,
+            pooling_size: Optional[Union[int, List[int], NestedIntSequence]] = 2,
             convolution_repeats: Union[int, Sequence[int]] = 1,
-            activation: Any = nn.ReLU,
+            activation: Optional[Activation] = nn.ReLU,
             dropout_probability: Optional[float] = None,
             norm_type: NormType = NormType.BatchNorm,
             norm_kwargs: Dict = {},

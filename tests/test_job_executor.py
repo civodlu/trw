@@ -1,7 +1,8 @@
+import time
+
 import trw
 from unittest import TestCase
 
-import trw.train.job_executor
 
 keep_ids = set()
 
@@ -31,42 +32,23 @@ class TestJobExecutor(TestCase):
         """
         Process a series of jobs. Make sure all jobs are processed exactly once
         """
-        executor = trw.train.job_executor.JobExecutor(nb_workers=2, function_to_run=fn_to_run_add_msg, max_jobs_at_once=0)
+        executor = trw.train.job_executor2.JobExecutor2(nb_workers=2, function_to_run=fn_to_run_add_msg)
 
         # post jobs
         for i in range(10):
-            executor.input_queue.put({'job': i})
+            success = False
+            while not success:
+                success = executor.put({'job': i})
+                time.sleep(0.05)
 
         jobs_processes = set()
         nb_samples = 0
         while nb_samples < 10:
-            r = executor.output_queue.get()
+            r = executor.pin_memory_queue.get()
             jobs_processes.add(r['job'])
-            print(r)
+            print('RESULT=', r)
             assert r['message'] == 'done'
             nb_samples += 1
 
         executor.close()
         assert len(jobs_processes) == 10
-
-    def test_job_executor_with_postprocessing(self):
-        """
-        Make sure we can send and receive message from and to the worker directly
-        """
-        executor = trw.train.job_executor.JobExecutor(nb_workers=1, function_to_run=fn_to_run_identity, worker_post_process_results_fun=post_process_results_fun)
-
-        # send a direct message to the worker
-        executor.channel_main_to_worker.send('test')
-
-        # post a job
-        executor.input_queue.put('test')
-
-        # wait for the worker and retrieve result
-        result = executor.output_queue.get()
-        self.assertTrue(result == 'test')
-
-        worker_msg = executor.channel_worker_to_main.recv()
-        self.assertTrue(worker_msg == 'added test')
-
-        executor.close()
-        assert len(keep_ids) == 0  # the set is not shared between children and parent

@@ -5,8 +5,9 @@ import torch
 import torch.nn as nn
 from unittest import TestCase
 
-from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional
+from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional, EncoderDecoderResnet
 from trw.layers.autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
+from trw.layers.blocks import BlockRes, BlockConvNormActivation
 from trw.train import one_hot
 
 
@@ -196,7 +197,7 @@ class TestLayers2(TestCase):
         assert len(children_00) == 3
         assert isinstance(children_00[0], nn.Conv3d)
         assert children_00[0].weight.shape[1] == 2
-        assert children_00[0].stride == (2, 2, 2)
+        assert children_00[0].stride == (1, 1, 1)
         assert isinstance(children_00[1], nn.InstanceNorm3d)
         assert isinstance(children_00[2], nn.LeakyReLU)
 
@@ -204,7 +205,7 @@ class TestLayers2(TestCase):
         assert len(children_01) == 3
         assert isinstance(children_01[0], nn.Conv3d)
         assert children_01[0].weight.shape[1] == 4
-        assert children_01[0].stride == (1, 1, 1)
+        assert children_01[0].stride == (2, 2, 2)
         assert isinstance(children_01[1], nn.InstanceNorm3d)
         assert isinstance(children_01[2], nn.LeakyReLU)
 
@@ -221,7 +222,7 @@ class TestLayers2(TestCase):
         assert len(children_10) == 3
         assert isinstance(children_10[0], nn.Conv3d)
         assert children_10[0].weight.shape[1] == 4
-        assert children_10[0].stride == (2, 2, 2)
+        assert children_10[0].stride == (1, 1, 1)
         assert isinstance(children_10[1], nn.InstanceNorm3d)
         assert isinstance(children_10[2], nn.LeakyReLU)
 
@@ -229,7 +230,7 @@ class TestLayers2(TestCase):
         assert len(children_11) == 3
         assert isinstance(children_11[0], nn.Conv3d)
         assert children_11[0].weight.shape[1] == 8
-        assert children_11[0].stride == (1, 1, 1)
+        assert children_11[0].stride == (2, 2, 2)
         assert isinstance(children_11[1], nn.InstanceNorm3d)
         assert isinstance(children_11[2], nn.LeakyReLU)
 
@@ -245,14 +246,14 @@ class TestLayers2(TestCase):
         children_20 = list(net.layers[2][0].ops)
         assert len(children_20) == 3
         assert isinstance(children_20[0], nn.Conv3d)
-        assert children_20[0].stride == (2, 2, 2)
+        assert children_20[0].stride == (1, 1, 1)
         assert isinstance(children_20[1], nn.InstanceNorm3d)
         assert isinstance(children_20[2], nn.LeakyReLU)
 
         children_21 = list(net.layers[2][1].ops)
         assert len(children_21) == 1
         assert isinstance(children_21[0], nn.Conv3d)
-        assert children_11[0].stride == (1, 1, 1)
+        assert children_11[0].stride == (2, 2, 2)
 
         children_22 = net.layers[2][2].op
         assert isinstance(children_22, nn.MaxPool3d)
@@ -469,3 +470,88 @@ class TestLayers2(TestCase):
         assert recon.shape == (10, 1, 28, 28)
         assert mu.shape == (10, z_size)
         assert mu.shape == logvar.shape
+
+    def test_layer_res(self):
+        config = default_layer_config(dimensionality=2)
+        b = BlockRes(config, 8, kernel_size=7, padding='same', padding_mode='reflect')
+
+        i = torch.zeros([2, 8, 16, 16])
+        o = b(i)
+        assert o.shape == (2, 8, 16, 16)
+
+        version = torch.__version__[:3]
+
+        ops_b = list(b.block_1.ops)
+        assert len(ops_b) == 3
+        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        if version != '1.0':
+            assert ops_b[0].padding_mode == 'reflect'
+        assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
+        assert isinstance(ops_b[2], torch.nn.ReLU)
+
+        ops_b = list(b.block_2.ops)
+        assert len(ops_b) == 2
+        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        if version != '1.0':
+            assert ops_b[0].padding_mode == 'reflect'
+        assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
+
+    def test_encoder_decoder_res(self):
+        config = default_layer_config(
+            conv_kwargs={'padding': 'same', 'bias': False},
+            deconv_kwargs={'padding': 'same', 'bias': False}
+        )
+        I_O = functools.partial(BlockConvNormActivation, kernel_size=7)
+        model = EncoderDecoderResnet(
+            2, 3, 2,
+            encoding_channels=[16, 32, 64],
+            decoding_channels=[64, 32, 16],
+            convolution_kernel=5,
+            init_block=I_O,
+            out_block=I_O,
+            config=config,
+            activation=nn.LeakyReLU
+        )
+
+        t = torch.zeros([5, 3, 32, 64])
+        o = model(t)
+        assert o.shape == (5, 2, 32, 64)
+
+        assert len(model.initial.ops) == 3
+        assert model.initial.ops[0].kernel_size == (7, 7)
+        assert model.initial.ops[0].bias is None
+        assert isinstance(model.initial.ops[2], nn.LeakyReLU)
+
+        assert len(model.encoders) == 3
+
+        ops = model.encoders[0].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.encoders[1].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.encoders[2].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+
+        assert len(model.decoders) == 3
+        ops = model.decoders[2].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.out.ops
+        assert len(ops) == 2
+        assert ops[0].kernel_size == (7, 7)
+        assert ops[0].bias is None
+        assert isinstance(ops[1], nn.BatchNorm2d)

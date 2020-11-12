@@ -1,5 +1,5 @@
 import torch.nn.functional as F
-from trw.typing import TorchTensorNCX
+from trw.basic_typing import TorchTensorNCX
 
 
 def global_max_pooling_2d(tensor: TorchTensorNCX) -> TorchTensorNCX:

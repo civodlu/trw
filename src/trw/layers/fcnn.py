@@ -1,5 +1,5 @@
 import copy
-from typing import Dict, Optional, Sequence, Union, List, Tuple
+from typing import Dict, Optional, Sequence, Union, Tuple
 
 import torch
 import torch.nn as nn
@@ -45,7 +45,7 @@ class FullyConvolutional(nn.Module):
             activation=nn.ReLU,
             nb_classes: Optional[int] = None,
             concat_mode: str = 'add',
-            conv_filters: Optional[Sequence[int]] =None,
+            conv_filters: Optional[Sequence[int]] = None,
             norm_type: NormType = NormType.BatchNorm,
             norm_kwargs: Dict = {},
             activation_kwargs: Dict = {},
@@ -92,8 +92,6 @@ class FullyConvolutional(nn.Module):
             strides = [strides] * nb_convs
         assert isinstance(base_model, ModuleWithIntermediate), 'it must be a model that returns intermediate results!'
         assert concat_mode in ('add', 'concatenate')
-        if concat_mode == 'concatenate':
-            assert conv_filters is not None
 
         # generic 2D/3D or nD once pytorch supports it
         assert len(convolution_kernels) == len(strides)
@@ -112,8 +110,10 @@ class FullyConvolutional(nn.Module):
             ops = deconv_block_fn(config=config, input_channels=prev_filter, output_channels=current_filter, kernel_size=kernel, stride=stride, padding=padding, output_padding=output_padding)
             groups_deconv.append(ops)
 
-            if concat_mode == 'concatenate' and layer_n + 1 < len(conv_filters):
-                current_filter += conv_filters[::-1][layer_n + 1]
+            if concat_mode == 'concatenate':
+                assert conv_filters is not None
+                if layer_n + 1 < len(conv_filters):
+                    current_filter += conv_filters[::-1][layer_n + 1]
 
             prev_filter = current_filter
 
@@ -126,7 +126,7 @@ class FullyConvolutional(nn.Module):
         score, _ = self.forward_with_intermediate(x)
         return score
 
-    def forward_with_intermediate(self, x: torch.Tensor) -> Tuple[torch.Tensor, List[torch.Tensor]]:
+    def forward_with_intermediate(self, x: torch.Tensor) -> Tuple[torch.Tensor, Sequence[torch.Tensor]]:
         intermediates_orig = self.base_model.forward_with_intermediate(x)
 
         if self.conv_filters is not None:
@@ -160,7 +160,7 @@ class FullyConvolutional(nn.Module):
                 elif self.concat_mode == 'concatenate':
                     score = torch.cat([intermediates[n + 1], score], dim=1)
                 else:
-                    raise NotImplemented(f'mode={self.concat_mode}')
+                    raise NotImplementedError(f'mode={self.concat_mode}')
 
         if self.nb_classes is not None:
             score = self.classifier(score)

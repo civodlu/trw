@@ -42,7 +42,7 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
     """
     def __init__(self, crop_size, criteria_fn=None, resize_mode='linear'):
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,
@@ -51,4 +51,4 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
                 crop_size=crop_size,
                 resize_mode=resize_mode)
          )
-        self.criteria_fn = transforms.criteria_is_array_3_or_above
+        self.criteria_fn = transforms.criteria_is_array_4_or_above

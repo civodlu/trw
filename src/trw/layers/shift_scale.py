@@ -30,8 +30,8 @@ class ShiftScale(nn.Module):
             standard_deviation:
         """
         super().__init__()
-        self.mean = mean
-        self.standard_deviation = standard_deviation
+        self.mean = torch.tensor(mean)
+        self.standard_deviation = torch.tensor(standard_deviation)
         self.output_dtype = output_dtype
     
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -1,4 +1,4 @@
-from typing import Union, Sequence, List
+from typing import Union, Sequence, List, Tuple
 
 import torch.nn as nn
 import torch
@@ -19,7 +19,7 @@ class AutoencoderConvolutionalVariationalConditional(nn.Module):
     """
     def __init__(
             self,
-            input_shape: Union[Sequence[int], List[int]],
+            input_shape: Union[torch.Size, List[int], Tuple[int, ...]],
             encoder: nn.Module,
             decoder: nn.Module,
             z_size: int,

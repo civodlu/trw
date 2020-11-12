@@ -17,3 +17,4 @@ from . import layers
 from . import hparams
 from . import simple_layers
 from . import arch
+from . import basic_typing

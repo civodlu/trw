@@ -1,7 +1,7 @@
 from enum import Enum
 import torch.nn as nn
 from trw.layers.ops_conversion import OpsConversion
-from typing import Union, Dict, Any
+from typing import Union, Dict, Any, Optional
 
 
 class NormType(Enum):
@@ -35,7 +35,7 @@ class DropoutType(Enum):
     AlphaDropout = 'AlphaDropout'
 
 
-def create_dropout_fn(ops: OpsConversion, dropout: DropoutType) -> Union[nn.Module, None]:
+def create_dropout_fn(ops: OpsConversion, dropout: Optional[DropoutType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and norm type
 
@@ -60,7 +60,7 @@ def create_dropout_fn(ops: OpsConversion, dropout: DropoutType) -> Union[nn.Modu
     return None
 
 
-def create_pool_fn(ops: OpsConversion, pool: PoolType) -> Union[nn.Module, None]:
+def create_pool_fn(ops: OpsConversion, pool: Optional[PoolType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and pool type
 
@@ -89,7 +89,7 @@ def create_pool_fn(ops: OpsConversion, pool: PoolType) -> Union[nn.Module, None]
     return None
 
 
-def create_norm_fn(ops: OpsConversion, norm: NormType) -> Union[nn.Module, None]:
+def create_norm_fn(ops: OpsConversion, norm: Optional[NormType]) -> Optional[nn.Module]:
     """
     Create the norm function from the ops and norm type
 
@@ -125,13 +125,13 @@ class LayerConfig:
     def __init__(
             self,
             ops: OpsConversion,
-            norm_type: Union[NormType, None] = NormType.BatchNorm,
+            norm_type: Optional[NormType] = NormType.BatchNorm,
             norm_kwargs: Dict = {},
-            pool_type: Union[PoolType, None] = PoolType.MaxPool,
+            pool_type: Optional[PoolType] = PoolType.MaxPool,
             pool_kwargs: Dict = {},
-            activation: Any = nn.ReLU,
+            activation: Optional[Any] = nn.ReLU,
             activation_kwargs: Dict = {},
-            dropout_type: DropoutType = DropoutType.Dropout1d,
+            dropout_type: Optional[DropoutType] = DropoutType.Dropout1d,
             dropout_kwargs: Dict = {},
             conv_kwargs: Dict = {'padding': 'same'},
             deconv_kwargs: Dict = {'padding': 'same'}):
@@ -149,11 +149,11 @@ class LayerConfig:
         self.dropout_kwargs = dropout_kwargs
 
         # types depends on the dimensionality
-        self.norm = None
-        self.conv = None
-        self.deconv = None
-        self.pool = None
-        self.dropout = None
+        self.norm: Optional[nn.Module] = None
+        self.conv: Optional[nn.Module] = None
+        self.deconv: Optional[nn.Module] = None
+        self.pool: Optional[nn.Module] = None
+        self.dropout: Optional[nn.Module] = None
 
     def set_dim(self, dimensionality: int):
         self.ops.set_dim(dimensionality)
@@ -165,14 +165,14 @@ class LayerConfig:
 
 
 def default_layer_config(
-        dimensionality: Union[int, None] = None,
-        norm_type: Union[NormType, None] = NormType.BatchNorm,
+        dimensionality: Optional[int] = None,
+        norm_type: Optional[NormType] = NormType.BatchNorm,
         norm_kwargs: Dict = {},
-        pool_type: Union[PoolType, None] = PoolType.MaxPool,
+        pool_type: Optional[PoolType] = PoolType.MaxPool,
         pool_kwargs: Dict = {},
-        activation: Any = nn.ReLU,
+        activation: Optional[Any] = nn.ReLU,
         activation_kwargs: Dict = {},
-        dropout_type: DropoutType = DropoutType.Dropout1d,
+        dropout_type: Optional[DropoutType] = DropoutType.Dropout1d,
         dropout_kwargs: Dict = {},
         conv_kwargs: Dict = {'padding': 'same'},
         deconv_kwargs: Dict = {'padding': 'same'}) -> LayerConfig:

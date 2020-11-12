@@ -26,8 +26,13 @@ def gather_extended(outputs, target_device, dim=0):
         #
         if isinstance(out, Output):
             # TODO need to be extensible! create a trw.train.output.gather function
+            # TODO merge metrics too!
             outputs_t = [o.output for o in outputs]
             out.output = gather_map(outputs_t)
+
+            if hasattr(out, 'output_truth'):
+                output_truth = [o.output_truth for o in outputs]
+                out.output_truth = gather_map(output_truth)
             return out
         #
         # end modification

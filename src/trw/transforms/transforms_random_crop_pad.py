@@ -7,7 +7,7 @@ from typing import Optional, Callable, List
 import trw.utils
 from trw.transforms import transforms
 from trw.transforms import crop
-from trw.typing import ShapeCX, Batch
+from trw.basic_typing import ShapeCX, Batch, Numeric
 
 
 def _transform_random_crop_pad(features_names, batch, padding, mode='edge', constant_value=0, shape=None):
@@ -20,8 +20,6 @@ def _transform_random_crop_pad(features_names, batch, padding, mode='edge', cons
     Args:
         features_names: the name of the features to be jointly random cropped
         batch: the batch to transform
-        padding: the padding to add to the feature value. If `None`, no padding added
-        constant_value: a constant value, depending on the mode selected
         padding: a sequence of shape `len(array.shape)-1` indicating the width of the
             padding to be added at the beginning and at the end of each dimension (except for dimension 0)
         mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')
@@ -69,21 +67,21 @@ class TransformRandomCropPad(transforms.TransformBatchWithCriteria):
         criteria_fn: function applied on each feature. If satisfied, the feature will be transformed, if not
             the original feature is returned
         mode: `numpy.pad` mode. Currently supported are ('constant', 'edge', 'symmetric')
-        size: the size of the cropped image. If `None`, same size as input image
+        shape: the size of the cropped image. If `None`, same size as input image
 
     Returns:
         a randomly cropped batch
     """
     def __init__(
             self,
-            padding: ShapeCX,
+            padding: Optional[ShapeCX],
             criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
             mode: str = 'edge',
-            constant_value: Number = 0,
-            shape: ShapeCX = None):
+            constant_value: Numeric = 0,
+            shape: Optional[ShapeCX] = None):
 
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,
@@ -94,5 +92,5 @@ class TransformRandomCropPad(transforms.TransformBatchWithCriteria):
                 constant_value=constant_value,
                 shape=shape)
          )
-        self.criteria_fn = transforms.criteria_is_array_3_or_above
+        self.criteria_fn = transforms.criteria_is_array_4_or_above
 

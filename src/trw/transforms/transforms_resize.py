@@ -26,14 +26,14 @@ class TransformResize(transforms.TransformBatchWithCriteria):
     def __init__(self, size, criteria_fn=None, mode='linear'):
         """
         Args:
-            size: the size to reshape to. Excluing the sample and filter
+            size: the size to reshape to. Excluding the sample and filter
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
             mode: the resampling method. Can be `linear` or `nearest`
         """
         assert isinstance(size, list), 'must be a list!'
 
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,

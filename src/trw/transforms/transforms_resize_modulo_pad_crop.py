@@ -7,7 +7,7 @@ from typing import Callable, Union, List
 from trw.transforms import transforms
 from trw.transforms import crop
 import numpy as np
-from trw.typing import ShapeX, Batch
+from trw.basic_typing import ShapeX, Batch
 from trw.utils import batch_pad_minmax_joint
 
 
@@ -98,7 +98,7 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
             padding_constant_value: int = 0):
 
         if criteria_fn is None:
-            criteria_fn = transforms.criteria_is_array_3_or_above
+            criteria_fn = transforms.criteria_is_array_4_or_above
 
         super().__init__(
             criteria_fn=criteria_fn,
@@ -109,4 +109,4 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
                 padding_constant_value=padding_constant_value,
                 multiple_of=multiple_of)
          )
-        self.criteria_fn = transforms.criteria_is_array_3_or_above
+        self.criteria_fn = transforms.criteria_is_array_4_or_above

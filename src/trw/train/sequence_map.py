@@ -1,10 +1,11 @@
 import logging
 import collections
+import time
 from queue import Empty
 import functools
 import traceback
 from trw.train import sequence
-from trw.train.job_executor import JobExecutor, default_queue_timeout
+from trw.train.job_executor2 import JobExecutor2, default_queue_timeout
 
 
 logger = logging.getLogger(__name__)
@@ -20,7 +21,15 @@ def single_function_to_run(batch, function_to_run):
 
 
 class SequenceMap(sequence.Sequence):
-    def __init__(self, source_split, nb_workers, function_to_run, max_jobs_at_once=None, worker_post_process_results_fun=None, queue_timeout=default_queue_timeout, preprocess_fn=None, collate_fn=None, ):
+    def __init__(
+            self,
+            source_split,
+            nb_workers,
+            function_to_run,
+            max_jobs_at_once=None,
+            nb_pin_threads=None,
+            queue_timeout=default_queue_timeout,
+            collate_fn=None):
         """
         Transform a sequence using a given function.
 
@@ -29,13 +38,12 @@ class SequenceMap(sequence.Sequence):
         :param source_split: the input sequence
         :param function_to_run: the mapping function
         :param nb_workers: the number of workers that will process the split. If 0, no workers will be created.
-        :param max_jobs_at_once: the maximum number of results that can be pushed in the result queue at once. If 0, no limit.
-            If None, it will be set equal to the number of workers
-        :param worker_post_process_results_fun: a function used to post-process the worker results
+        :param max_jobs_at_once: the maximum number of results that can be pushed in the result queue per process
+            at once. If 0, no limit. If None, it will be set equal to the number of workers
         :param queue_timeout: the timeout used to pull results from the output queue
-        :param preprocess_fn: a function that will preprocess the batch just prior to sending it to the other processes. If `None`,
-            no preprocessing performed
         :param collate_fn: a function to collate the batch of data or `None`
+        :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
+            to the main process
         """
         super().__init__(source_split)
 
@@ -47,28 +55,32 @@ class SequenceMap(sequence.Sequence):
         else:
             self.function_to_run = function_to_run
         self.queue_timeout = queue_timeout
-        self.preprocess_fn = preprocess_fn
         self.collate_fn = collate_fn
 
-        logger.info('SequenceMap created={}, nb_workers={}, max_jobs_at_once={}'.format(self, nb_workers, max_jobs_at_once))
+        logger.info(f'SequenceMap created={self}, nb_workers={nb_workers}, max_jobs_at_once={max_jobs_at_once}')
 
-        self.job_executer = None
+        self.job_executor = None
         if nb_workers != 0:
             if max_jobs_at_once is None:
                 # default: each worker can push at least one item
                 # before blocking
                 max_jobs_at_once = nb_workers
 
-            self.job_executer = JobExecutor(
+            self.job_executor = JobExecutor2(
                 nb_workers=nb_workers,
                 function_to_run=self.function_to_run,
-                max_jobs_at_once=max_jobs_at_once,
-                worker_post_process_results_fun=worker_post_process_results_fun)
+                nb_pin_threads=nb_pin_threads,
+                max_queue_size_per_worker=max_jobs_at_once)
 
         self.iter_source = None
         self.jobs_processed = None
         self.jobs_queued = None
-        # self.time_spent_in_blocked_state = 0.0
+        self.sequence_iteration_finished = None
+        self.main_thread_list = None
+        self.main_thread_index = None
+
+        self.debug_time_to_get_next_item = 0
+        self.debug_nb_items = 0
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
@@ -78,7 +90,6 @@ class SequenceMap(sequence.Sequence):
             subsampled_source,
             nb_workers=0,
             function_to_run=self.function_to_run,
-            preprocess_fn=self.preprocess_fn,
             collate_fn=self.collate_fn)
 
     def subsample(self, nb_samples):
@@ -89,34 +100,31 @@ class SequenceMap(sequence.Sequence):
             subsampled_source,
             nb_workers=0,
             function_to_run=self.function_to_run,
-            preprocess_fn=self.preprocess_fn,
             collate_fn=self.collate_fn)
 
     def fill_queue(self):
         try:
-            while not self.job_executer.input_queue.full():
+            while not self.job_executor.is_full():
                 i = self.iter_source.next_item(blocking=False)
-                if self.preprocess_fn is not None:
-                    i = self.preprocess_fn(i, source=self)
-
                 self.jobs_queued += 1
-                self.job_executer.input_queue.put(i)
+                self.job_executor.put(i)
         except StopIteration:
             # we are done!
-            pass
+            self.sequence_iteration_finished = True
 
     def initializer(self):
         """
         Initialize the sequence to iterate through batches
         """
-        if self.job_executer is not None:
-            self.job_executer.reset()
+        if self.job_executor is not None:
+            self.job_executor.reset()
 
         self.jobs_processed = 0
         self.jobs_queued = 0
 
         self.main_thread_list = None
         self.main_thread_index = None
+        self.sequence_iteration_finished = False
 
     def __next_local(self, next_fn):
         """
@@ -153,14 +161,12 @@ class SequenceMap(sequence.Sequence):
         return self.next_item(blocking=True)
 
     def has_background_jobs(self):
-        return self.jobs_queued != self.jobs_processed
+        return not self.job_executor.is_idle()
 
     def next_item(self, blocking):
         def single_process_next():
             while True:
                 i = self.iter_source.__next__()
-                if self.preprocess_fn is not None:
-                    i = self.preprocess_fn(i, source=self)
 
                 try:
                     items = self.function_to_run(i)
@@ -177,28 +183,43 @@ class SequenceMap(sequence.Sequence):
                 return items
 
         def multiple_process_next():
+            assert self.main_thread_list is None
             nb_background_jobs = self.has_background_jobs_previous_sequences()
-            if nb_background_jobs == 0:
-                # we are only done once all the jobs have been completed!
+
+            # we are only done once all the jobs have been completed!
+            if self.sequence_iteration_finished and \
+                    nb_background_jobs == 0 and \
+                    self.job_executor.pin_memory_queue.empty():
+
+                # collect some useful statistics
+                if self.debug_nb_items != 0:
+                    logger.debug(f'SequenceMap={self}, nb_items_processed={self.debug_nb_items},'
+                                 f'item_processing_time_average='
+                                 f'{self.debug_time_to_get_next_item / self.debug_nb_items}')
+
+                # stop the sequence
                 raise StopIteration()
 
+            next_item_start = time.perf_counter()
             while True:
                 try:
-                    items = self.job_executer.output_queue.get(True, timeout=self.queue_timeout)
-                    self.jobs_processed += 1
+                    items = self.job_executor.pin_memory_queue.get(True, timeout=self.queue_timeout)
                     if items is None:
                         continue  # the job has failed, get the next item!
-                    # ok, we are nood now!
+                    self.jobs_processed += 1
+                    # ok, we are good now!
                     break
-                except (Empty, KeyboardInterrupt):
+                except Empty:
                     # no job available, make sure the worker of the other pools are not starved
                     self.fill_queue_all_sequences()
                     if not blocking:
                         raise StopIteration()
-
+            next_item_end = time.perf_counter()
+            self.debug_time_to_get_next_item += next_item_end - next_item_start
+            self.debug_nb_items += 1
             return items
 
-        if self.job_executer is None:
+        if self.job_executor is None:
             # use the main thread for the processing. In this case we need to mimic the behaviour
             # of the pool (i.e., if the `function_to_run` returns a list, we need to process one
             # item at a time
@@ -221,6 +242,6 @@ class SequenceMap(sequence.Sequence):
         """
         Finish and join the existing pool processes
         """
-        if self.job_executer is not None:
-            self.job_executer.close()
+        if self.job_executor is not None:
+            self.job_executor.close()
 
