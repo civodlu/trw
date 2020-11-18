@@ -181,6 +181,17 @@ class Sequence:
             collate_fn=collate_fn,
         )
 
+    def max_samples(self, max_samples):
+        """
+        Virtual resize of the sequence. The sequence will terminate when a certain number
+            of samples produced has been reached. Restart the sequence where it was stopped.
+
+        Args:
+            max_samples: the number of samples this sequence will produce before stopping
+        """
+        from . import sequence_max_samples
+        return sequence_max_samples.SequenceMaxSamples(self, max_samples)
+
     def async_reservoir(
             self,
             max_reservoir_samples,

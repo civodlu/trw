@@ -1,4 +1,4 @@
-from typing import Sequence, Union, Dict, Any, List
+from typing import Sequence, Union, Dict, Any, List, Optional
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
 import torch
@@ -74,7 +74,7 @@ NestedIntSequence = List[Sequence[int]]
 
 ConvKernels = Union[int, List[int], NestedIntSequence]
 ConvStrides = ConvKernels
-PoolingSizes = ConvKernels
+PoolingSizes = Optional[ConvKernels]
 
 Stride = Union[int, Sequence[int]]
 KernelSize = Union[int, Sequence[int]]

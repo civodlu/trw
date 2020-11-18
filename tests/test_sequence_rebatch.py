@@ -15,6 +15,17 @@ def make_data(size):
     return d
 
 
+def batch_none(batch, batch_id=0):
+    if batch['sample_uid'][0] == batch_id:
+        return None
+    return batch
+
+def batch_empty(batch, batch_id=0):
+    if batch['sample_uid'][0] == batch_id:
+        return {}
+    return batch
+
+
 class TestSequenceReBatch(TestCase):
     def test_simple_no_overflow_and_full_batch(self):
         d = make_data(60)
@@ -115,4 +126,41 @@ class TestSequenceReBatch(TestCase):
 
         self.assertTrue(nb_batches == 9)
         self.assertTrue(total_samples == 85)
-        print('DONE')
+
+    def test_none(self):
+        """
+        Make sure we can handle `None` or empty batches. This can be
+        useful for non-deterministic sequences
+        """
+        d = make_data(20)
+        sequence = trw.train.SequenceArray(d, sampler=trw.train.SamplerSequential(batch_size=1))
+        sequence = sequence.map(batch_none)
+        sequence = sequence.rebatch(1)
+
+        nb_batches = 0
+        total_samples = 0
+        for b in sequence:
+            nb_batches += 1
+            total_samples += trw.utils.len_batch(b)
+
+        assert nb_batches == 19
+        assert total_samples == 19
+
+    def test_empty(self):
+        """
+        Make sure we can handle `None` or empty batches. This can be
+        useful for non-deterministic sequences
+        """
+        d = make_data(20)
+        sequence = trw.train.SequenceArray(d, sampler=trw.train.SamplerSequential(batch_size=1))
+        sequence = sequence.map(batch_empty)
+        sequence = sequence.rebatch(1)
+
+        nb_batches = 0
+        total_samples = 0
+        for b in sequence:
+            nb_batches += 1
+            total_samples += trw.utils.len_batch(b)
+
+        assert nb_batches == 19
+        assert total_samples == 19

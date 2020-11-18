@@ -149,7 +149,7 @@ logger = logging.getLogger(__name__)
 
 
 class CallbackDebugProcesses(callback.Callback):
-    def __init__(self, filename='process_stack_dumps', frequency_seconds=10.0, timeout=10, delayed_init=True):
+    def __init__(self, filename='process_stack_dumps', frequency_seconds=10.0, timeout=10.0, delayed_init=True):
         super().__init__()
 
         self.main_process = os.getpid()
@@ -218,11 +218,7 @@ class CallbackDebugProcesses(callback.Callback):
                 # error!
                 break
 
-        if self.thread.is_alive:
-            logger.info('Process is still alive, terminating!')
-            self.thread.terminate()
-
-        self.thread.join_thread()
+        self.thread.join(timeout=self.timeout)
         self.thread = None
 
     def __del__(self):

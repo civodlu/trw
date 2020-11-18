@@ -89,6 +89,11 @@ class SequenceReBatch(sequence.Sequence):
                     # if not, get the next batch
                     batch = self.iter_source.__next__()
 
+                if batch is None or len(batch) == 0:
+                    # for some reason, the batch is empty
+                    # get a new one!
+                    continue
+
                 nb_samples = trw.utils.len_batch(batch)
                 if total_nb_samples + nb_samples == self.batch_size:
                     # here we are good!

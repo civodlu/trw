@@ -116,7 +116,6 @@ def worker(
         except Exception as e:
             # exception is intercepted and skip to next job
             print(f'Exception in background worker thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
-            #output_queue.put((job_session_id, None))  # there was an error, we MUST send something back!
             continue
 
 
@@ -153,6 +152,7 @@ def collect_results_to_main_process(
                         #time_queue_start = perf_counter()
                         item_job_session_id, item = current_queue.get(timeout=wait_time)
                         #time_queue_end = perf_counter()
+
                     except Empty:
                         # even if the `current_queue` was not empty, another thread might have stolen
                         # the job result already. Just continue to the next queue
