@@ -78,6 +78,23 @@ class TestLayers2(TestCase):
         o = denses(torch.zeros([10, 1]))
         assert o.shape == (10, 16)
 
+    def test_layer_denses_not_last_output(self):
+        denses = trw.layers.denses([1, 8, 16], dropout_probability=0.1, activation=nn.LeakyReLU, last_layer_is_output=False)
+        layers = list(denses)
+        assert len(layers) == 9
+        assert isinstance(layers[0], trw.layers.Flatten)
+        assert isinstance(layers[1], nn.Linear)
+        assert isinstance(layers[2], nn.BatchNorm1d)
+        assert isinstance(layers[3], nn.LeakyReLU)
+        assert isinstance(layers[4], nn.Dropout)
+        assert isinstance(layers[5], nn.Linear)
+        assert isinstance(layers[6], nn.BatchNorm1d)
+        assert isinstance(layers[7], nn.LeakyReLU)
+        assert isinstance(layers[8], nn.Dropout)
+
+        o = denses(torch.zeros([10, 1]))
+        assert o.shape == (10, 16)
+
     def test_conv_3d(self):
         layers = trw.layers.convs_3d(1, [2, 3, 4])
         assert len(layers.layers) == 3

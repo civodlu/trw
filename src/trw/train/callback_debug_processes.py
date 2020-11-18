@@ -8,7 +8,6 @@ import multiprocessing as mp
 import logging
 import time
 import traceback
-from numbers import Number
 from pprint import PrettyPrinter
 
 from trw.utils import optional_import
@@ -62,28 +61,35 @@ def log_process(process):
     proc_infos['threads'] = [threadid for threadid in process.threads()]
     proc_infos['memory'] = memory_info
 
-    resources = [
-        ('RLIMIT_AS', psutil.RLIMIT_AS),
-        ('RLIMIT_CORE', psutil.RLIMIT_CORE),
-        ('RLIMIT_CPU', psutil.RLIMIT_CPU),
-        ('RLIMIT_DATA', psutil.RLIMIT_DATA),
-        ('RLIMIT_FSIZE', psutil.RLIMIT_FSIZE),
-        ('RLIMIT_MEMLOCK', psutil.RLIMIT_MEMLOCK),
-        ('RLIMIT_NOFILE', psutil.RLIMIT_NOFILE),
-        ('RLIMIT_NPROC', psutil.RLIMIT_NPROC),
-        ('RLIMIT_RSS', psutil.RLIMIT_RSS),
-        ('RLIMIT_STACK', psutil.RLIMIT_STACK),
-    ]
+    try:
+        # this is Linux specific
+        resources = [
+            ('RLIMIT_AS', psutil.RLIMIT_AS),
+            ('RLIMIT_CORE', psutil.RLIMIT_CORE),
+            ('RLIMIT_CPU', psutil.RLIMIT_CPU),
+            ('RLIMIT_DATA', psutil.RLIMIT_DATA),
+            ('RLIMIT_FSIZE', psutil.RLIMIT_FSIZE),
+            ('RLIMIT_MEMLOCK', psutil.RLIMIT_MEMLOCK),
+            ('RLIMIT_NOFILE', psutil.RLIMIT_NOFILE),
+            ('RLIMIT_NPROC', psutil.RLIMIT_NPROC),
+            ('RLIMIT_RSS', psutil.RLIMIT_RSS),
+            ('RLIMIT_STACK', psutil.RLIMIT_STACK),
+        ]
 
-    resource_soft_hard_limits = collections.OrderedDict()
-    for resource_name, resource in resources:
-        try:
-            l = process.rlimit(resource)
-            resource_soft_hard_limits[resource_name] = l
-        except OSError:
-            pass
+        resource_soft_hard_limits = collections.OrderedDict()
+        for resource_name, resource in resources:
+            try:
+                l = process.rlimit(resource)
+                resource_soft_hard_limits[resource_name] = l
+            except OSError:
+                pass
 
-    proc_infos['rlimits'] = resource_soft_hard_limits
+        proc_infos['rlimits'] = resource_soft_hard_limits
+
+    except AttributeError:
+        # platform not supporting these resources?
+        pass
+
     proc_infos['status'] = process.status()
 
     return proc_infos
@@ -120,20 +126,37 @@ def log_all_tree(pid=None):
 
 
 def _collect_data(main_process, filename, frequency_seconds, abort_event):
+    last_time_collected = time.time()
     while True:
         try:
             if abort_event.is_set():
+                print(f'Thread={threading.get_ident()}, (abort_event set) shutdown (from CallbackDebugProcesses)!')
                 return
+
+            t = time.time()
+            if t - last_time_collected >= frequency_seconds:
+                # should collect the data
+                last_time_collected = t
+            else:
+                # it is not time yet to collect the data!
+                # here we use a short sleep so that when `abort_event` is
+                # set, we can quickly exit the process!
+                time.sleep(0.5)
+                #print('---------CHECKING')
+                continue
 
             # here we MUST collect stats on the MAIN process, the one that
             # instantiated the callback
+            #print('-----------STARTED')
+            #time_start = time.time()
             logs = log_all_tree(main_process)
+            #print('-----------ENDED TIME TO LOG=', time.time() - time_start)
+
             with open(filename, 'w') as f:
                 f.write(f'Time={datetime.datetime.now()}\n')
                 f.write(f'Logging from Process={os.getpid()}\n')
                 pp = PrettyPrinter(width=200, stream=f)
                 pp.pprint(logs)
-            time.sleep(frequency_seconds)
 
         except KeyboardInterrupt:
             abort_event.set()
@@ -141,7 +164,8 @@ def _collect_data(main_process, filename, frequency_seconds, abort_event):
             return
         except Exception as e:
             # exception is intercepted and skip to next job
-            print(f'CollectDataThread={threading.get_ident()} Exception in background worker thread_id={os.getpid()}, E={e}')
+            print(f'CollectDataThread={threading.get_ident()} '
+                  f'Exception in background worker thread_id={os.getpid()}, E={e}')
             continue
 
 
@@ -192,6 +216,7 @@ class CallbackDebugProcesses(callback.Callback):
     def close(self):
         logger.info('shutting down processes!')
         self.abort_event.set()
+        logger.info('CallbackDebugProcesses: abort_event.set()')
 
         if self.thread is None:
             return
@@ -202,6 +227,7 @@ class CallbackDebugProcesses(callback.Callback):
             return
 
         # give some time to the process to shutdown normally
+        """
         shutdown_time_start = time.perf_counter()
         while True:
             if not self.thread.is_alive():
@@ -212,14 +238,17 @@ class CallbackDebugProcesses(callback.Callback):
                 time.sleep(0.1)
                 continue
             else:
-                logging.error('a job (_collect_data) did not respond to the shutdown request in the allotted time. '
-                              'It could be that it needs a longer timeout or a deadlock. The processes'
+                logging.error(f'a job (_collect_data={self.thread.ident}) did not respond to the shutdown '
+                              'request in the allotted time. It could be that it needs '
+                              'a longer timeout or a deadlock. The processes'
                               'will now be forced to shutdown!')
                 # error!
                 break
 
-        self.thread.join(timeout=self.timeout)
+        #self.thread.join(timeout=self.timeout)
         self.thread = None
+        """
+        logging.info('CallbackDebugProcesses shutdown completed!')
 
     def __del__(self):
         self.close()

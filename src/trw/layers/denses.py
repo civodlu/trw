@@ -45,9 +45,8 @@ def denses(
         next = sizes[n + 1]
 
         ops.append(nn.Linear(current, next))
-        if n + 2 == len(sizes):
-            if not last_layer_is_output:
-                ops.append(activation(**config.activation_kwargs))
+        if n + 2 == len(sizes) and last_layer_is_output:
+            pass
 
         else:
             if config.norm_type is not None:

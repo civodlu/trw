@@ -20,6 +20,10 @@ logger = logging.getLogger(__name__)
 def input_shape(i, root=True):
     if isinstance(i, collections.Mapping):
         return 'Dict'
+
+    if i is None:
+        return 'None'
+
     elif isinstance(i, torch.Tensor):
         shape = tuple(i.shape)
 
@@ -41,6 +45,7 @@ def input_shape(i, root=True):
 
     if isinstance(i, Output):
         return i.output.shape
+
     raise NotImplementedError()
 
 
