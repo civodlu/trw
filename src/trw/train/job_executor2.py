@@ -393,7 +393,7 @@ class JobExecutor2:
 
         """
         # notify all the threads and processes to be shut down
-        print('Setting `abort_event` to interrupt Processes and threads!')
+        print('Setting `abort_event` to interrupt Processes and threads! (JobExecutor)')
         self.abort_event.set()
 
         if os.getpid() != self.main_process:

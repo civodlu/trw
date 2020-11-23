@@ -137,6 +137,69 @@ class BlockDeconvNormActivation(nn.Module):
         return self.ops(x)
 
 
+class BlockUpsampleNnConvNormActivation(nn.Module):
+    """
+    The standard approach of producing images with deconvolution — despite its successes! — 
+    has some conceptually simple issues that lead to checkerboard artifacts in produced images.
+
+    This is an alternative block using nearest neighbor upsampling + convolution.
+
+    See Also:
+        https://distill.pub/2016/deconv-checkerboard/
+
+    """
+    def __init__(
+            self,
+            config: LayerConfig,
+            input_channels: int,
+            output_channels: int,
+            *,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
+            # unused, just to follow the other upsampling interface
+            output_padding: Optional[Union[int, Sequence[int]]] = None,
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None):
+
+        super().__init__()
+
+        # local override of the default config
+        conv_kwargs = copy.copy(config.conv_kwargs)
+        if kernel_size is not None:
+            conv_kwargs['kernel_size'] = kernel_size
+        if padding is not None:
+            conv_kwargs['padding'] = padding
+        # stride is used in the upsampling
+        if padding_mode is not None:
+            conv_kwargs['padding_mode'] = padding_mode
+
+        if stride is None:
+            stride = config.deconv_kwargs.get('stride')
+
+        assert stride is not None
+
+        _posprocess_padding(conv_kwargs)
+
+        ops = []
+        if stride != 1:
+            # if stride is 1, don't upsample!
+            ops.append(config.ops.upsample_fn(scale_factor=stride))
+
+        ops.append(config.conv(in_channels=input_channels,
+                               out_channels=output_channels,
+                               **conv_kwargs))
+
+        if config.norm is not None:
+            ops.append(config.norm(num_features=output_channels, **config.norm_kwargs))
+
+        if config.activation is not None:
+            ops.append(config.activation(**config.activation_kwargs))
+        self.ops = nn.Sequential(*ops)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.ops(x)
+
+
 class BlockUpDeconvSkipConv(nn.Module):
     def __init__(
             self,

@@ -139,7 +139,7 @@ class SequenceMap(sequence.Sequence):
         """
         if self.main_thread_list is None:
             items = None
-            while items is None:
+            while items is None or len(items) == 0:
                 items = next_fn()
 
             is_sequence = isinstance(items, collections.Sequence) and not isinstance(items, collections.Mapping)
@@ -198,7 +198,7 @@ class SequenceMap(sequence.Sequence):
                 # collect some useful statistics
                 if self.debug_nb_items != 0:
                     logger.debug(f'SequenceMap={self}, nb_items_processed={self.debug_nb_items},'
-                                 f'item_processing_time_average='
+                                 f'item_overhead_sequence_time_average='
                                  f'{self.debug_time_to_get_next_item / self.debug_nb_items}')
 
                 # stop the sequence

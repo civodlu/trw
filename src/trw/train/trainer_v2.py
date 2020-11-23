@@ -2,6 +2,7 @@ import logging
 import os
 import pickle
 import sqlite3
+import traceback
 
 import torch
 from trw.train import default_sum_all_losses, utilities
@@ -247,6 +248,7 @@ class TrainerV2:
                              optimizers_fn=optimizers_fn, optimizers=optimizers)
                 except Exception as e:
                     print('callback={} failed with exception={}'.format(callback, e))
+                    traceback.print_exc()
                     logger.error('callback={} failed with exception={}'.format(callback, e))
             logger.info('pre-training callbacks completed!')
 

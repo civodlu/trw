@@ -5,9 +5,10 @@ import torch
 import torch.nn as nn
 from unittest import TestCase
 
-from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional, EncoderDecoderResnet
+from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional, EncoderDecoderResnet, \
+    NormType
 from trw.layers.autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
-from trw.layers.blocks import BlockRes, BlockConvNormActivation
+from trw.layers.blocks import BlockRes, BlockConvNormActivation, BlockUpsampleNnConvNormActivation
 from trw.train import one_hot
 
 
@@ -572,3 +573,40 @@ class TestLayers2(TestCase):
         assert ops[0].kernel_size == (7, 7)
         assert ops[0].bias is None
         assert isinstance(ops[1], nn.BatchNorm2d)
+
+    def test_encoder_decoder_res_k4(self):
+        config = default_layer_config(
+            conv_kwargs={'padding': 'same', 'bias': False},
+            deconv_kwargs={'padding': 'same', 'bias': False}
+        )
+        I_O = functools.partial(BlockConvNormActivation, kernel_size=7)
+        model = EncoderDecoderResnet(
+            2, 3, 2,
+            encoding_channels=[16, 32, 64],
+            decoding_channels=[64, 32, 16],
+            convolution_kernel=4,
+            init_block=I_O,
+            out_block=I_O,
+            config=config,
+            decoding_block=BlockUpsampleNnConvNormActivation,
+            activation=nn.LeakyReLU
+        )
+
+        t = torch.zeros([5, 3, 32, 64])
+        o = model(t)
+        assert o.shape == (5, 2, 32, 64)
+
+    def test_upsample_nn(self):
+        config = default_layer_config(dimensionality=3, norm_type=NormType.InstanceNorm)
+        block = BlockUpsampleNnConvNormActivation(config, 2, 4, kernel_size=3, stride=(1, 2, 3))
+
+        i = torch.zeros([10, 2, 4, 5, 6], dtype=torch.float32)
+        o = block(i)
+        assert o.shape == (10, 4, 4 * 1, 5 * 2, 6 * 3)
+
+        ops = list(block.ops)
+        assert len(ops) == 4
+        assert isinstance(ops[0], nn.Upsample)
+        assert isinstance(ops[1], nn.Conv3d)
+        assert isinstance(ops[2], nn.InstanceNorm3d)
+        assert isinstance(ops[3], nn.ReLU)

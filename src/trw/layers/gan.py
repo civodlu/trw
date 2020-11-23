@@ -181,7 +181,10 @@ class Gan(nn.Module):
         assert isinstance(o, tuple) and len(o) == 2, 'must return a tuple (torch.Tensor, dict of outputs)'
         images_fake_orig, generator_outputs = o
         images_real = self.real_image_from_batch_fn(batch)
-        assert type(images_real) == type(images_fake_orig), 'return must be of the same type!'
+        assert type(images_real) == type(images_fake_orig) or \
+            (isinstance(images_fake_orig, list) and type(images_fake_orig[0]) == type(images_real)), \
+            'return must be of the same type!'
+
         if isinstance(images_fake_orig, collections.Sequence) and not isinstance(images_fake_orig, torch.Tensor):
             assert isinstance(images_fake_orig[0], torch.Tensor), 'if list, elements must be tensors!'
 
@@ -219,7 +222,12 @@ class Gan(nn.Module):
             batch_fake, images_fake = self.image_pool.get_data(batch_fake, images_fake_orig)
         else:
             images_fake = images_fake_orig
-        discriminator_outputs_fake = self.discriminator(batch_fake, images_fake.detach(), is_real=False)
+
+        if isinstance(images_fake, list):
+            fake = [i.detach() for i in images_fake]
+        else:
+            fake = images_fake.detach()
+        discriminator_outputs_fake = self.discriminator(batch_fake, fake, is_real=False)
 
         # extend the real, fake label to the size of the discriminator output (e.g., PatchGan)
         discriminator_loss_fake = self.loss_from_outputs_fn(discriminator_outputs_fake, batch_fake, is_training=True)

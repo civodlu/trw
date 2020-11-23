@@ -1,14 +1,33 @@
 import torch.nn as nn
 import functools
 
+from typing_extensions import Literal
+
+
+def upsample_mode(mode: Literal['nearest', 'linear'], dim: int):
+    if mode == 'linear':
+        if dim == 1:
+            return functools.partial(nn.Upsample, mode='linear')
+        elif dim == 2:
+            return functools.partial(nn.Upsample, mode='bilinear')
+        elif dim == 3:
+            return functools.partial(nn.Upsample, mode='trilinear')
+        else:
+            raise ValueError(f'mode not implemented for mode={mode}, dim={dim}')
+    elif mode == 'nearest':
+        return functools.partial(nn.Upsample, mode='nearest')
+    else:
+        raise ValueError(f'mode not implemented={mode}')
+
 
 class OpsConversion:
     """
     Helper to create standard N-d operations
     """
-    def __init__(self):
+    def __init__(self, upsample_mode: Literal['nearest', 'linear'] = 'nearest'):
         self.dim = None
         self.group_norm_fn = None
+        self.upsample_mode = upsample_mode
         try:
             self.group_norm_fn = nn.GroupNorm
         except:
@@ -53,6 +72,8 @@ class OpsConversion:
     def set_dim(self, dim: int):
         self.dim = dim
 
+        self.upsample_fn = upsample_mode(self.upsample_mode, dim=dim)
+
         if dim == 3:
             self.conv_fn = nn.Conv3d
             self.decon_fn = nn.ConvTranspose3d
@@ -68,7 +89,6 @@ class OpsConversion:
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool3d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool3d
             self.dropout_fn = nn.Dropout3d
-            self.upsample_fn = functools.partial(nn.Upsample, mode='trilinear')
 
             self.instance_norm = nn.InstanceNorm3d
             self.bn_fn = nn.BatchNorm3d
@@ -88,7 +108,6 @@ class OpsConversion:
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool2d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool2d
             self.dropout_fn = nn.Dropout2d
-            self.upsample_fn = functools.partial(nn.Upsample, mode='bilinear')
             self.instance_norm = nn.InstanceNorm2d
             self.bn_fn = nn.BatchNorm2d
 
@@ -102,7 +121,6 @@ class OpsConversion:
             self.adaptative_max_pool_fn = nn.AdaptiveMaxPool1d
             self.adaptative_avg_pool_fn = nn.AdaptiveAvgPool1d
             self.dropout_fn = nn.Dropout
-            self.upsample_fn = functools.partial(nn.Upsample, mode='linear')
             self.instance_norm = nn.InstanceNorm1d
             self.bn_fn = nn.BatchNorm1d
 
