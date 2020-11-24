@@ -19,8 +19,8 @@ from queue import Queue as ThreadQueue, Empty
 # Make sure we start a new process in an empty state so
 # that Windows/Linux environment behave the similarly
 import multiprocessing
-multiprocessing = multiprocessing.get_context("spawn")
-#multiprocessing = multiprocessing.get_context("fork")
+#multiprocessing = multiprocessing.get_context("spawn")
+multiprocessing = multiprocessing.get_context("fork")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
