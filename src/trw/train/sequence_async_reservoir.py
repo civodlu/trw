@@ -184,7 +184,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
         while not self.job_executer.pin_memory_queue.empty():
             try:
                 time_blocked_start = time.perf_counter()
-                items = self.job_executer.pin_memory_queue.get()
+                metadata, items = self.job_executer.pin_memory_queue.get()
                 if items is None:
                     # the job failed!
                     continue

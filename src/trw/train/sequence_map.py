@@ -20,6 +20,16 @@ def single_function_to_run(batch, function_to_run):
     return batch
 
 
+class Metadata:
+    def __init__(self):
+        # indicates how long it takes to get the
+        self.time_to_get_next_batch = 0
+        self.nb_batches = 0
+        self.time_processing = 0
+        self.time_pinning = 0
+        self.time_start = time.perf_counter()
+
+
 class SequenceMap(sequence.Sequence):
     def __init__(
             self,
@@ -83,8 +93,8 @@ class SequenceMap(sequence.Sequence):
         self.main_thread_list = None
         self.main_thread_index = None
 
-        self.debug_time_to_get_next_item = 0
-        self.debug_nb_items = 0
+        # keep track of important statistics
+        self.debug_metadata = None
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         subsampled_source = self.source_split.subsample_uids(uids, uids_name, new_sampler)
@@ -196,10 +206,18 @@ class SequenceMap(sequence.Sequence):
                     self.job_executor.pin_memory_queue.empty():
 
                 # collect some useful statistics
-                if self.debug_nb_items != 0:
-                    logger.debug(f'SequenceMap={self}, nb_items_processed={self.debug_nb_items},'
-                                 f'item_overhead_sequence_time_average='
-                                 f'{self.debug_time_to_get_next_item / self.debug_nb_items}')
+                if self.debug_metadata.nb_batches != 0:
+                    logger.debug(
+                        f'SequenceMap={self}, nb_batches_processed={self.debug_metadata.nb_batches},'
+                        f'sequence_time={time.perf_counter() - self.debug_metadata.time_start}, '
+                        f'total_sequence_overhead={self.debug_metadata.time_to_get_next_batch}, '
+                        f'overhead_sequence_time_by_batch='
+                        f'{self.debug_metadata.time_to_get_next_batch / self.debug_metadata.nb_batches}, '
+                        f'average_job_processing_time='
+                        f'{self.debug_metadata.time_processing / self.debug_metadata.nb_batches}, '
+                        f'average_batch_pin_time='
+                        f'{self.debug_metadata.time_pinning / self.debug_metadata.nb_batches}, '
+                    )
 
                 # stop the sequence
                 raise StopIteration()
@@ -208,7 +226,7 @@ class SequenceMap(sequence.Sequence):
             next_item_start = time.perf_counter()
             while True:
                 try:
-                    items = self.job_executor.pin_memory_queue.get(True, timeout=self.queue_timeout)
+                    metadata, items = self.job_executor.pin_memory_queue.get(True, timeout=self.queue_timeout)
                     if items is None:
                         continue  # the job has failed, get the next item!
                     self.jobs_processed += 1
@@ -234,10 +252,11 @@ class SequenceMap(sequence.Sequence):
                         print('--------------- IDLE STOP ----------------')
                         raise StopIteration()
 
-
             next_item_end = time.perf_counter()
-            self.debug_time_to_get_next_item += next_item_end - next_item_start
-            self.debug_nb_items += 1
+            self.debug_metadata.nb_batches += 1
+            self.debug_metadata.time_to_get_next_batch += next_item_end - next_item_start
+            self.debug_metadata.time_processing += metadata.job_processing_finished - metadata.job_created
+            self.debug_metadata.time_pinning += metadata.job_pin_thread_received - metadata.job_results_queued
             return items
 
         if self.job_executor is None:
@@ -257,6 +276,7 @@ class SequenceMap(sequence.Sequence):
     def __iter__(self):
         self.initializer()
         self.iter_source = self.source_split.__iter__()
+        self.debug_metadata = Metadata()
         return self
 
     def close(self):

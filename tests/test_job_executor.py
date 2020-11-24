@@ -44,7 +44,7 @@ class TestJobExecutor(TestCase):
         jobs_processes = set()
         nb_samples = 0
         while nb_samples < 10:
-            r = executor.pin_memory_queue.get()
+            metadata, r = executor.pin_memory_queue.get()
             jobs_processes.add(r['job'])
             print('RESULT=', r)
             assert r['message'] == 'done'

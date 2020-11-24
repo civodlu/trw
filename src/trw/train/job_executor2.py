@@ -3,6 +3,7 @@ import io
 import os
 import sys
 import threading
+import time
 import traceback
 
 from time import sleep, perf_counter
@@ -24,6 +25,19 @@ from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
 default_queue_timeout = 0.1
+
+
+class JobMetadata:
+    def __init__(self, job_session_id):
+        self.job_created = time.perf_counter()
+        self.job_processing_finished = None
+        self.job_results_queued = None
+
+        # pinning thread
+        self.job_pin_thread_received = None
+        self.job_pin_thread_queued = None
+
+        self.job_session_id = job_session_id
 
 
 def worker(
@@ -51,6 +65,7 @@ def worker(
     np.random.seed(seed)
     item = None
     job_session_id = None
+    job_metadata = None
     print(f'Worker={os.getpid()} Started!!')
     while True:
         try:
@@ -60,6 +75,7 @@ def worker(
                     if not input_queue.empty():
                         try:
                             job_session_id, item = input_queue.get()
+                            job_metadata = JobMetadata(job_session_id=job_session_id)
                         except Exception as e:
                             # possible exception:  `unable to open shared memory object </torch_XXX_YYYYY>
                             # we MUST queue a `None` to specify that we received something but there was an error
@@ -74,6 +90,7 @@ def worker(
                     if transform is not None and item is not None:
                         try:
                             item = transform(item)
+                            job_metadata.job_processing_finished = time.perf_counter()
                             #print('Worker: processing=', item)
                         except Exception as e:
                             # exception is intercepted and skip to next job
@@ -91,7 +108,8 @@ def worker(
 
                 while True:
                     try:
-                        output_queue.put((job_session_id, item))
+                        job_metadata.job_results_queued = time.perf_counter()
+                        output_queue.put((job_metadata, item))
                         item = None
                         break  # success, get ready to get a new item from the queue
 
@@ -150,7 +168,9 @@ def collect_results_to_main_process(
 
                     try:
                         #time_queue_start = perf_counter()
-                        item_job_session_id, item = current_queue.get(timeout=wait_time)
+                        job_metadata, item = current_queue.get(timeout=wait_time)
+                        item_job_session_id = job_metadata.job_session_id
+                        job_metadata.job_pin_thread_received = time.perf_counter()
                         #time_queue_end = perf_counter()
 
                     except Empty:
@@ -195,7 +215,8 @@ def collect_results_to_main_process(
 
             if not output_queue.full():
                 #print(f'Pinning thread output queue filled! item={item}')
-                output_queue.put(item)
+                job_metadata.job_pin_thread_queued = time.perf_counter()
+                output_queue.put((job_metadata, item))
 
                 item_job_session_id = None
                 with jobs_queued.get_lock():
@@ -485,9 +506,16 @@ class JobExecutor2:
             True if the batch was successfully appended, False otherwise.
         """
         if self.nb_workers == 0:
+            # if no asynchronous worker used, put the result
+            # directly on the pin queue
             batch_in = copy.deepcopy(data)
+            job_metadata = JobMetadata(job_session_id=0)
             batch_out = self.function_to_run(batch_in)
-            self.pin_memory_queue.put(batch_out)
+            job_metadata.job_processing_finished = time.perf_counter()
+            job_metadata.job_results_queued = job_metadata.job_processing_finished
+            job_metadata.job_pin_thread_received = job_metadata.job_processing_finished
+            job_metadata.job_pin_thread_queued = job_metadata.job_processing_finished
+            self.pin_memory_queue.put((job_metadata, batch_out))
             self.jobs_queued += 1
             return True
         else:
