@@ -34,7 +34,9 @@ def data_summary(datasets, max_nb_samples=None):
     std_column = []
     nb_batches_column = []
     for dataset_name, dataset in datasets.items():
+        logger.info(f'logging dataset={dataset_name}')
         for split_name, split in dataset.items():
+            logger.info(f'logging split={split_name}')
             nb_samples = 0
             features_stats = collections.defaultdict(collections.OrderedDict)
             nb_batches = 0
@@ -82,6 +84,10 @@ def data_summary(datasets, max_nb_samples=None):
                 mean_column.append(features_stat['mean'])
                 std_column.append(features_stat['std'])
                 nb_batches_column.append(nb_batches)
+
+            logger.info(f'logging split={split_name} done!')
+
+        logger.info(f'logging dataset={dataset_name} done!')
 
     return collections.OrderedDict([
         ('dataset', dataset_column),
