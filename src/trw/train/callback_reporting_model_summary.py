@@ -46,7 +46,8 @@ def input_shape(i, root=True):
     if isinstance(i, Output):
         return i.output.shape
 
-    raise NotImplementedError()
+    # unknown node (e.g., custom output in a model)
+    return 'UKN'
 
 
 def model_summary_base(model, batch):
@@ -96,6 +97,8 @@ def model_summary_base(model, batch):
     for layer, values in summary.items():
         total_params += values["nb_params"]
         outputs = values["output_shape"]
+        if isinstance(outputs, torch.Size):
+            outputs = [outputs]
         if not isinstance(outputs, str):
             for output in outputs:
                 if not isinstance(output, str):

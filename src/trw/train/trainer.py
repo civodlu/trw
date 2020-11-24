@@ -1,4 +1,6 @@
 import sqlite3
+import traceback
+from io import StringIO
 
 import torch
 import torch.optim
@@ -847,8 +849,11 @@ class Trainer:
                     callback(options, history, model, losses=losses, outputs=None,
                              datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
                 except Exception as e:
-                    print('callback={} failed with exception={}'.format(callback, e))
-                    logger.error('callback={} failed with exception={}'.format(callback, e))
+                    f = StringIO()
+                    traceback.print_exc(file=f)
+                    print(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
+                    logger.error(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
+
             logger.info('pre-training callbacks completed!')
 
         for epoch in range(num_epochs):
