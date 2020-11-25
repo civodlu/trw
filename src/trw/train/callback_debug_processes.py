@@ -4,13 +4,13 @@ import io
 import os
 import sys
 import threading
-import multiprocessing as mp
 import logging
 import time
 import traceback
 from pprint import PrettyPrinter
 
 from trw.utils import optional_import
+from trw.utils.graceful_killer import GracefulKiller
 
 psutil = optional_import('psutil')
 
@@ -178,7 +178,7 @@ class CallbackDebugProcesses(callback.Callback):
 
         self.main_process = os.getpid()
         self.filename = filename + f'_{self.main_process}.txt'
-        self.abort_event = mp.Event()
+        self.abort_event = GracefulKiller.abort_event
         self.frequency_seconds = frequency_seconds
         self.timeout = timeout
         self.thread = None

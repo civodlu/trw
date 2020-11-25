@@ -19,8 +19,11 @@ from queue import Queue as ThreadQueue, Empty
 # Make sure we start a new process in an empty state so
 # that Windows/Linux environment behave the similarly
 import multiprocessing
-#multiprocessing = multiprocessing.get_context("spawn")
-multiprocessing = multiprocessing.get_context("fork")
+
+from trw.utils.graceful_killer import GracefulKiller
+
+multiprocessing = multiprocessing.get_context("spawn")
+#multiprocessing = multiprocessing.get_context("fork")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
@@ -291,7 +294,7 @@ class JobExecutor2:
         self.function_to_run = function_to_run
         self.nb_workers = nb_workers
 
-        self.abort_event = Event()
+        self.abort_event = GracefulKiller.abort_event
         self.main_process = os.getpid()
 
         if nb_pin_threads is None:
@@ -451,7 +454,7 @@ class JobExecutor2:
             break
 
         if len(self.processes) != 0:
-            #logging.debug(f'JobExecutor={self}: shutting down workers...')
+            logging.debug(f'JobExecutor={self}: shutting down workers...')
             [i.terminate() for i in self.processes]
 
             for i, p in enumerate(self.processes):
