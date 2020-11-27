@@ -341,7 +341,8 @@ class JobExecutor2:
 
         if len(self.processes) != self.nb_workers:
             logging.debug(f'Starting jobExecutor={self}, on process={os.getpid()} nb_workers={self.nb_workers}')
-            self.close()
+            if len(self.processes) > 0 or len(self.pin_memory_threads) > 0:
+                self.close()
             self.abort_event.clear()
 
             with threadpool_limits(limits=1, user_api='blas'):
