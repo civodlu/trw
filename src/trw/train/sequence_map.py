@@ -37,7 +37,6 @@ class SequenceMap(sequence.Sequence):
             nb_workers,
             function_to_run,
             max_jobs_at_once=None,
-            nb_pin_threads=None,
             queue_timeout=default_queue_timeout,
             debug_job_report_timeout=30.0,
             collate_fn=None):
@@ -53,8 +52,6 @@ class SequenceMap(sequence.Sequence):
             at once. If 0, no limit. If None, it will be set equal to the number of workers
         :param queue_timeout: the timeout used to pull results from the output queue
         :param collate_fn: a function to collate the batch of data or `None`
-        :param nb_pin_threads: the number of threads to be used to collect the data from the worker process
-            to the main process
         :param debug_job_report_timeout: timeout after which if no job were processed a job report will be
             printed (e.g., to debug pipeline stalling)
         """
@@ -83,7 +80,6 @@ class SequenceMap(sequence.Sequence):
             self.job_executor = JobExecutor2(
                 nb_workers=nb_workers,
                 function_to_run=self.function_to_run,
-                nb_pin_threads=nb_pin_threads,
                 max_queue_size_per_worker=max_jobs_at_once)
 
         self.iter_source = None

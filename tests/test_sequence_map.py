@@ -432,7 +432,7 @@ class TestSequenceMap(TestCase):
         }
 
         split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
-        split = split.map(load_data_or_generate_error, nb_workers=5, max_jobs_at_once=2, nb_pin_threads=2)
+        split = split.map(load_data_or_generate_error, nb_workers=5, max_jobs_at_once=2)
         for e in range(nb_epochs):
             print(f'epoch={e}')
             indices = []

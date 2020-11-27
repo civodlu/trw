@@ -143,17 +143,14 @@ def worker(
 def collect_results_to_main_process(
         job_session_id: Value,
         jobs_queued: Value,
-        worker_output_queues: List[Queue],
+        worker_output_queue: Queue,
         output_queue: ThreadQueue,
         abort_event: Event,
         wait_time: float) -> None:
 
     assert output_queue is not None
-    nb_workers = len(worker_output_queues)
     item = None
     item_job_session_id = None
-    queue_ctr = 0
-    nb_try = 0
     while True:
         try:
             if abort_event.is_set():
@@ -163,15 +160,10 @@ def collect_results_to_main_process(
             # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
             # again later
             if item is None and item_job_session_id is None:
-                nb_try += 1
-                queue_ctr = (queue_ctr + 1) % nb_workers
-                current_queue = worker_output_queues[queue_ctr]
-
-                if not current_queue.empty():
-
+                if not worker_output_queue.empty():
                     try:
                         #time_queue_start = perf_counter()
-                        job_metadata, item = current_queue.get(timeout=wait_time)
+                        job_metadata, item = worker_output_queue.get(timeout=wait_time)
                         item_job_session_id = job_metadata.job_session_id
                         job_metadata.job_pin_thread_received = time.perf_counter()
                         #time_queue_end = perf_counter()
@@ -196,12 +188,7 @@ def collect_results_to_main_process(
                         continue
 
                 else:
-                    # check the other queues
-                    if nb_try >= nb_workers + 1:
-                        # we have tried too many times and there was
-                        # no job to process. Sleep for a while
-                        sleep(wait_time)
-                        nb_try = 0
+                    sleep(wait_time)
                     continue
 
             if item is None and item_job_session_id is None:
@@ -263,8 +250,7 @@ class JobExecutor2:
             function_to_run: Callable[[Batch], Batch],
             max_queue_size_per_worker: int = 2,
             max_queue_size_pin_thread_per_worker: int = 3,
-            nb_pin_threads: Optional[int] = None,
-            wait_time: float = 0.02,
+            wait_time: float = 0.01,
             wait_until_processes_start: bool = True):
         """
 
@@ -278,10 +264,6 @@ class JobExecutor2:
             max_queue_size_pin_thread_per_worker: define the maximum number of results available on the main
                 process (i.e., larger queue size will improve performance but will require more memory
                 to store the results).
-            nb_pin_threads: the number of threads dedicated to collect the jobs processed by different processes.
-                Data copy from the worker process to main process takes time, in particular for large data. It
-                is advantageous to have multiple threads that copy these results to the main process. If `None`,
-                nb_workers // 2 threads will be used
             wait_time: the default wait time for a process or thread to sleep if no job is available
             wait_until_processes_start: if True, the main process will wait until the worker processes and
                 pin threads are fully running
@@ -296,12 +278,6 @@ class JobExecutor2:
 
         self.abort_event = GracefulKiller.abort_event
         self.main_process = os.getpid()
-
-        if nb_pin_threads is None:
-            self.nb_pin_threads = max(1, nb_workers // 2)
-        else:
-            self.nb_pin_threads = nb_pin_threads
-        assert self.nb_pin_threads >= 1, 'must have at least one thread to collect the processed jobs!'
 
         self.worker_control = 0
         self.worker_input_queues = []
@@ -365,15 +341,17 @@ class JobExecutor2:
                     self.processes.append(p)
                     logging.debug(f'Child process={p.pid} for jobExecutor={self}')
 
+            # allocate one thread per process to move the data from the process memory space
+            # to the main process memory
             self.pin_memory_threads = []
-            for i in range(self.nb_pin_threads):
+            for i in range(self.nb_workers):
                 pin_memory_thread = threading.Thread(
                     name=f'JobExecutorThreadResultCollector-{i}',
                     target=collect_results_to_main_process,
                     args=(
                         self.job_session_id,
                         self.jobs_processed,
-                        self.worker_output_queues,
+                        self.worker_output_queues[i],
                         self.pin_memory_queue,
                         self.abort_event,
                         self.wait_time

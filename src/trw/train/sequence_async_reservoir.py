@@ -49,7 +49,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
             reservoir_sampler=None,
             collate_fn=sequence.remove_nested_list,
             maximum_number_of_samples_per_epoch=None,
-            nb_pin_threads=1,
             max_reservoir_replacement_size=None):
         """
         Args:
@@ -70,7 +69,6 @@ class SequenceAsyncReservoir(sequence.Sequence):
                 If `None`, we will use the whole result queue. This can be useful to control explicitly how the
                 reservoir is updated and depend less on the speed of hardware. Note that to have an effect,
                 `max_jobs_at_once` should be greater than `max_reservoir_replacement_size`.
-            nb_pin_threads: number of threads dedicated to collect results from the worker queues
         """
         super().__init__(source_split)
         self.max_reservoir_samples = max_reservoir_samples
@@ -104,8 +102,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
         self.job_executer = trw.train.job_executor2.JobExecutor2(
             nb_workers=nb_workers,
             function_to_run=self.function_to_run,
-            max_queue_size_pin_thread_per_worker=math.ceil(float(max_jobs_at_once) / nb_pin_threads),
-            nb_pin_threads=nb_pin_threads,
+            max_queue_size_pin_thread_per_worker=max_jobs_at_once,
             max_queue_size_per_worker=max_jobs_at_once // nb_workers)
 
         self.maximum_number_of_samples_per_epoch = maximum_number_of_samples_per_epoch
