@@ -8,6 +8,8 @@ import torch
 from .analysis_plots import auroc
 import torch.nn as nn
 
+# TODO discard samples where weight is <= 0 for all the metrics
+
 
 class Metric:
     """
@@ -100,7 +102,17 @@ class MetricClassificationError(Metric):
     def __call__(self, outputs):
         truth = trw.utils.to_value(outputs.get('output_truth'))
         found = trw.utils.to_value(outputs.get('output'))
+        weights = trw.utils.to_value(outputs.get('weights'))
         if truth is not None and found is not None:
+            if weights is not None:
+                min_weight = weights.min()
+                if min_weight <= 0:
+                    # if we have invalid indices (i.e., weights <= 0),
+                    # discard these samples
+                    valid_samples = np.where(weights > 0)
+                    truth = truth[valid_samples]
+                    found = found[valid_samples]
+
             return collections.OrderedDict([
                 ('nb_trues', np.sum(found == truth)),
                 ('total', truth.size),  # for multi-dimension, use the size! (e.g., patch discriminator, segmentation)

@@ -163,7 +163,7 @@ class TrainerV2:
         if len(logging.root.handlers) == 0:
             # there is no logger configured, so add a basic one
             logging.basicConfig(
-                filename=os.path.join(options['workflow_options']['logging_directory'], 'logging.txt'),
+                filename=os.path.join(options['workflow_options']['logging_directory'], 'trainer_logging.txt'),
                 format='%(asctime)s %(levelname)s %(name)s %(message)s',
                 level=logging.DEBUG,
                 filemode='w')
@@ -283,9 +283,11 @@ class TrainerV2:
                              datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
                              optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
                 except Exception as e:
-                    logger.error('callback={} failed with exception={}'.format(callback, e))
+                    f = StringIO()
+                    traceback.print_exc(file=f)
+                    logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
 
-            logger.info('callbacks epoch {} finished'.format(epoch))
+            logger.info(f'callbacks epoch {epoch} finished')
 
         # finally run the post-training callbacks
         outputs_epoch = None
@@ -314,8 +316,10 @@ class TrainerV2:
                              datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
                              optimizers_fn=optimizers_fn)
                 except Exception as e:
-                    print('callback={} failed with exception={}'.format(callback, e))
-                    logger.error('callback={} failed with exception={}'.format(callback, e))
+                    f = StringIO()
+                    traceback.print_exc(file=f)
+                    print(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
+                    logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
 
             logger.info('finished post training callbacks...')
 

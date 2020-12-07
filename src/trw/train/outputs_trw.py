@@ -416,6 +416,7 @@ class OutputClassification2(Output):
         # TODO label smoothing
         loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
+        loss_term['weights'] = weights
         loss_term[Output.output_ref_tag] = self  # keep a back reference
         loss_term['metrics_results'] = extract_metrics(self.metrics, loss_term)
         return loss_term

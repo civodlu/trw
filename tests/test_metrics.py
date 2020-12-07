@@ -32,6 +32,23 @@ class TestMetrics(TestCase):
         assert abs(history['classification error'] - 0.33333) < 1e-4
         assert abs(history['loss'] - 0.33333 * 100) < 1e-2
 
+    def test_classification_accuracy_with_0_weight(self):
+        """
+        When we have weights, if weights == 0, these samples should be discarded
+        to calculate the statistics
+        """
+        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0], [100.0, 0.0]], dtype=float))
+        target_values = torch.from_numpy(np.asarray([1, 0, 1], dtype=np.int64))
+        target_weights = torch.from_numpy(np.asarray([0, 0.1, 0.1], dtype=np.float32))
+
+        o = trw.train.OutputClassification2(input_values, output_truth=target_values, weights=target_weights)
+        r = o.evaluate_batch({'input_values': input_values}, is_training=False)
+        history = r['metrics_results']
+
+        history = trw.train.trainer.aggregate_list_of_metrics([history])
+        assert abs(history['classification error'] - 0.5) < 1e-4
+        assert abs(history['loss'] - 0.33333 * 100 * 0.1) < 1e-2
+
     def test_classification_sensitivity_1_specificity_0(self):
         #                         Confusion Matrix
         #  -----------------------------------------------------------------
