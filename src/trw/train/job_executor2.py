@@ -367,7 +367,7 @@ class JobExecutor2:
                 self.pin_memory_threads.append(pin_memory_thread)
                 #pin_memory_thread.daemon = True
                 pin_memory_thread.start()
-                print(f'Thread={threading.get_ident()}, thread started')
+                print(f'Thread={pin_memory_thread.ident}, thread started')
 
             self.worker_control = 0
 
