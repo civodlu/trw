@@ -285,6 +285,44 @@ class TestLayers2(TestCase):
         assert isinstance(block.ops[1], nn.BatchNorm2d)
         assert isinstance(block.ops[2], nn.ReLU)
 
+    def test_conv_block_4_isotropic_kernel(self):
+        """
+        with padding == 4, we need additional asymmetric padding
+        """
+        conf = trw.layers.default_layer_config(2)
+        block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=4)
+        assert len(block.ops) == 4
+        assert isinstance(block.ops[0], nn.ConstantPad2d)
+        assert block.ops[0].padding == (2, 1, 2, 1)
+
+        assert isinstance(block.ops[1], nn.Conv2d)
+        assert block.ops[1].weight.shape == (8, 1, 4, 4)
+        assert isinstance(block.ops[2], nn.BatchNorm2d)
+        assert isinstance(block.ops[3], nn.ReLU)
+
+        i = torch.zeros([4, 1, 6, 6])
+        o = block(i)
+        assert o.shape == (4, 8, 6, 6)
+
+    def test_conv_block_4_anisotropic_kernel(self):
+        """
+        with padding == 4, we need additional asymmetric padding
+        """
+        conf = trw.layers.default_layer_config(2)
+        block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=(4, 6))
+        assert len(block.ops) == 4
+        assert isinstance(block.ops[0], nn.ConstantPad2d)
+        assert block.ops[0].padding == (3, 2, 2, 1)
+
+        assert isinstance(block.ops[1], nn.Conv2d)
+        assert block.ops[1].weight.shape == (8, 1, 4, 6)
+        assert isinstance(block.ops[2], nn.BatchNorm2d)
+        assert isinstance(block.ops[3], nn.ReLU)
+
+        i = torch.zeros([2, 1, 10, 10])
+        o = block(i)
+        assert o.shape == (2, 8, 10, 10)
+
     def test_convs_transpose(self):
         model = trw.layers.ConvsTransposeBase(2, input_channels=1, channels=[4, 8, 16], last_layer_is_output=True, dropout_probability=0.1)
         i = torch.zeros([5, 1, 3, 3])

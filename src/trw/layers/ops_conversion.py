@@ -68,6 +68,7 @@ class OpsConversion:
         self.upsample_fn = None
         self.instance_norm = None
         self.bn_fn = None
+        self.constant_padding = None
 
     def set_dim(self, dim: int):
         self.dim = dim
@@ -92,6 +93,7 @@ class OpsConversion:
 
             self.instance_norm = nn.InstanceNorm3d
             self.bn_fn = nn.BatchNorm3d
+            self.constant_padding = nn.ConstantPad3d
 
         elif dim == 2:
             self.conv_fn = nn.Conv2d
@@ -110,6 +112,7 @@ class OpsConversion:
             self.dropout_fn = nn.Dropout2d
             self.instance_norm = nn.InstanceNorm2d
             self.bn_fn = nn.BatchNorm2d
+            self.constant_padding = nn.ConstantPad2d
 
         elif dim == 1:
             self.conv_fn = nn.Conv1d
@@ -123,6 +126,7 @@ class OpsConversion:
             self.dropout_fn = nn.Dropout
             self.instance_norm = nn.InstanceNorm1d
             self.bn_fn = nn.BatchNorm1d
+            self.constant_padding = nn.ConstantPad1d
 
         else:
             raise NotImplementedError()

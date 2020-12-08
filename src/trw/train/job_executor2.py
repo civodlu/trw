@@ -47,7 +47,8 @@ def worker(
         input_queue: Queue,
         output_queue: Queue,
         transform: Callable[[Batch], Batch],
-        abort_event: Event,
+        global_abort_event: Event,
+        local_abort_event: Event,
         wait_time: float,
         seed: int) -> None:
     """
@@ -57,7 +58,8 @@ def worker(
         input_queue: the queue to listen to
         output_queue:  the queue to output the results
         transform: the transform to be applied on each data queued
-        abort_event: specify when the jobs need to shutdown
+        global_abort_event: specify when the jobs need to shutdown
+        local_abort_event: specify when the jobs need to shutdown but only for a given job executor
         wait_time: process will sleep this amount of time when input queue is empty
         seed: an int to seed random generators
 
@@ -69,11 +71,11 @@ def worker(
     item = None
     job_session_id = None
     job_metadata = None
-    print(f'Worker={os.getpid()} Started!!')
+    #print(f'Worker={os.getpid()} Started!!')
     while True:
         try:
             #print('Worker: Retrieving job')
-            if not abort_event.is_set():
+            if not global_abort_event.is_set() and not local_abort_event.is_set():
                 if item is None:
                     if not input_queue.empty():
                         try:
@@ -130,7 +132,7 @@ def worker(
                 return
 
         except KeyboardInterrupt:
-            abort_event.set()
+            global_abort_event.set()
             print(f'Worker={os.getpid()} Stopped (KeyboardInterrupt)!!')
             return
 
@@ -145,7 +147,8 @@ def collect_results_to_main_process(
         jobs_queued: Value,
         worker_output_queue: Queue,
         output_queue: ThreadQueue,
-        abort_event: Event,
+        global_abort_event: Event,
+        local_abort_event: Event,
         wait_time: float) -> None:
 
     assert output_queue is not None
@@ -153,7 +156,7 @@ def collect_results_to_main_process(
     item_job_session_id = None
     while True:
         try:
-            if abort_event.is_set():
+            if global_abort_event.is_set() or local_abort_event.is_set():
                 print(f'Thread={threading.get_ident()}, (abort_event set) shutdown!')
                 return
 
@@ -219,11 +222,11 @@ def collect_results_to_main_process(
                 continue
         except KeyboardInterrupt:
             print(f'Thread={threading.get_ident()}, thread shut down (KeyboardInterrupt)')
-            abort_event.set()
+            global_abort_event.set()
             raise KeyboardInterrupt
         except Exception as e:
             print(f'Thread={threading.get_ident()}, thread shut down (Exception)')
-            abort_event.set()
+            local_abort_event.set()
             raise e
 
 
@@ -268,7 +271,6 @@ class JobExecutor2:
             wait_until_processes_start: if True, the main process will wait until the worker processes and
                 pin threads are fully running
         """
-        print(f'JobExecutor2 started on process={os.getpid()}')
         self.wait_until_processes_start = wait_until_processes_start
         self.wait_time = wait_time
         self.max_queue_size_pin_thread_per_worker = max_queue_size_pin_thread_per_worker
@@ -276,7 +278,9 @@ class JobExecutor2:
         self.function_to_run = function_to_run
         self.nb_workers = nb_workers
 
-        self.abort_event = GracefulKiller.abort_event
+        self.global_abort_event = GracefulKiller.abort_event
+        self.local_abort_event = Event()
+
         self.main_process = os.getpid()
 
         self.worker_control = 0
@@ -316,10 +320,11 @@ class JobExecutor2:
             return
 
         if len(self.processes) != self.nb_workers:
+            print(f'Starting jobExecutor={self}, on process={os.getpid()} nb_workers={self.nb_workers}')
             logging.debug(f'Starting jobExecutor={self}, on process={os.getpid()} nb_workers={self.nb_workers}')
             if len(self.processes) > 0 or len(self.pin_memory_threads) > 0:
                 self.close()
-            self.abort_event.clear()
+            self.local_abort_event.clear()
 
             with threadpool_limits(limits=1, user_api='blas'):
                 for i in range(self.nb_workers): #maxsize = 0
@@ -333,12 +338,14 @@ class JobExecutor2:
                             self.worker_input_queues[i],
                             self.worker_output_queues[i],
                             self.function_to_run,
-                            self.abort_event,
+                            self.global_abort_event,
+                            self.local_abort_event,
                             self.wait_time, i
                         ))
-                    p.daemon = True
+                    #p.daemon = True
                     p.start()
                     self.processes.append(p)
+                    print(f'Worker={p.pid} started!')
                     logging.debug(f'Child process={p.pid} for jobExecutor={self}')
 
             # allocate one thread per process to move the data from the process memory space
@@ -353,12 +360,14 @@ class JobExecutor2:
                         self.jobs_processed,
                         self.worker_output_queues[i],
                         self.pin_memory_queue,
-                        self.abort_event,
+                        self.global_abort_event,
+                        self.local_abort_event,
                         self.wait_time
                     ))
                 self.pin_memory_threads.append(pin_memory_thread)
-                pin_memory_thread.daemon = True
+                #pin_memory_thread.daemon = True
                 pin_memory_thread.start()
+                print(f'Thread={threading.get_ident()}, thread started')
 
             self.worker_control = 0
 
@@ -395,14 +404,15 @@ class JobExecutor2:
                 before using `terminate()`
 
         """
-        # notify all the threads and processes to be shut down
-        print('Setting `abort_event` to interrupt Processes and threads! (JobExecutor)')
-        self.abort_event.set()
 
         if os.getpid() != self.main_process:
             logging.error(f'attempting to close the executor from a '
                           f'process={os.getpid()} that did not create it! ({self.main_process})')
             return
+
+        # notify all the threads and processes to be shut down
+        print('Setting `abort_event` to interrupt Processes and threads! (JobExecutor)')
+        self.local_abort_event.set()
 
         # give some time to the threads/processes to shutdown normally
         shutdown_time_start = perf_counter()

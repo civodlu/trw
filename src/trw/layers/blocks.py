@@ -1,13 +1,16 @@
+import collections
 import warnings
 
 import torch
+from docutils.nodes import warning
 from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
 from trw.layers.utils import div_shape
 from trw.layers.layer_config import LayerConfig
 import torch.nn as nn
-from typing import Union, Dict, Optional, Sequence
+from typing import Union, Dict, Optional, Sequence, List
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import copy
+import numpy as np
 
 
 class BlockPool(nn.Module):
@@ -28,12 +31,58 @@ class BlockPool(nn.Module):
         return self.op(x)
 
 
-def _posprocess_padding(conv_kwargs: Dict) -> None:
+def _posprocess_padding(config: LayerConfig, conv_kwargs: Dict, ops: List[nn.Module]) -> None:
+    """
+    Note:
+        conv_kwargs will be modified in-place. Make a copy before!
+    """
+    padding_same = False
     padding = conv_kwargs.get('padding')
     if padding is not None and padding == 'same':
+        padding_same = True
         kernel_size = conv_kwargs.get('kernel_size')
         assert kernel_size is not None, 'missing argument `kernel_size` in convolutional arguments!'
-        conv_kwargs['padding'] = div_shape(kernel_size)
+        padding = div_shape(kernel_size)
+        conv_kwargs['padding'] = padding
+
+    # if the padding is even, it needs to be asymmetric: one side has less padding
+    # than the other. Here we need to add an additional ops to perform the padding
+    # since we can't do it in the convolution
+    if padding is not None:
+        if isinstance(padding, int):
+            padding = [padding] * config.ops.dim
+        else:
+            assert isinstance(padding, collections.Sequence)
+
+        kernel_size = conv_kwargs.get('kernel_size')
+        if isinstance(kernel_size, int):
+            kernel_size = [kernel_size] * config.ops.dim
+        assert len(kernel_size) == len(padding)
+
+        is_even = 1 - np.mod(kernel_size, 2)
+        if padding_same and any(is_even):
+            # make sure we don't have conflicting padding info:
+            # here we do not support all the possible options: if kernel is even
+            # no problem but if we use even kernel, <nn.functional.pad> doesn't support all combinations.
+            # this will need to be revisited when we have more support.
+            padding_mode = conv_kwargs.get('padding_mode')
+            if padding_mode is not None:
+                if padding_mode != 'zeros':
+                    warnings.warn(f'padding mode={padding_mode} is not supported with even padding!')
+
+            #  there is even padding, add special padding op
+            full_padding = []
+            for k, p in zip(kernel_size, padding):
+                left = k // 2
+                right = p - left // 2
+                # we need to reverse the dimensions, so reverse also the left/right components
+                # and then reverse the whole sequence
+                full_padding += [right, left]
+
+            ops.append(config.ops.constant_padding(padding=tuple(full_padding[::-1]), value=0))
+            # we have explicitly added padding, so now set to
+            # convolution padding to none
+            conv_kwargs['padding'] = 0
 
     # handle differences with pytorch <= 1.0
     # where the convolution doesn't have argument `padding_mode`
@@ -69,14 +118,14 @@ class BlockConvNormActivation(nn.Module):
         if padding_mode is not None:
             conv_kwargs['padding_mode'] = padding_mode
 
-        _posprocess_padding(conv_kwargs)
+        ops = []
+        _posprocess_padding(config, conv_kwargs, ops)
 
-        ops = [
-            config.conv(
-                in_channels=input_channels,
-                out_channels=output_channels,
-                **conv_kwargs),
-        ]
+        conv = config.conv(
+            in_channels=input_channels,
+            out_channels=output_channels,
+            **conv_kwargs)
+        ops.append(conv)
 
         if config.norm is not None:
             ops.append(config.norm(num_features=output_channels, **config.norm_kwargs))
@@ -117,14 +166,14 @@ class BlockDeconvNormActivation(nn.Module):
         if padding_mode is not None:
             deconv_kwargs['padding_mode'] = padding_mode
 
-        _posprocess_padding(deconv_kwargs)
+        ops = []
+        _posprocess_padding(config, deconv_kwargs, ops)
 
-        ops = [
-            config.deconv(
-                in_channels=input_channels,
-                out_channels=output_channels,
-                **deconv_kwargs),
-        ]
+        deconv = config.deconv(
+            in_channels=input_channels,
+            out_channels=output_channels,
+            **deconv_kwargs)
+        ops.append(deconv)
 
         if config.norm is not None:
             ops.append(config.norm(num_features=output_channels, **config.norm_kwargs))
@@ -178,13 +227,12 @@ class BlockUpsampleNnConvNormActivation(nn.Module):
 
         assert stride is not None
 
-        _posprocess_padding(conv_kwargs)
-
         ops = []
         if stride != 1:
             # if stride is 1, don't upsample!
             ops.append(config.ops.upsample_fn(scale_factor=stride))
 
+        _posprocess_padding(config, conv_kwargs, ops)
         ops.append(config.conv(in_channels=input_channels,
                                out_channels=output_channels,
                                **conv_kwargs))
@@ -297,7 +345,8 @@ class BlockRes(nn.Module):
         if padding_mode is not None:
             conv_kwargs['padding_mode'] = padding_mode
         config.conv_kwargs = conv_kwargs
-        _posprocess_padding(conv_kwargs)
+
+        # DO NOT use _posprocess_padding here. This is specific to a convolution!
 
         stride = 1
         self.block_1 = base_block(
