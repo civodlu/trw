@@ -2,7 +2,6 @@ import collections
 import warnings
 
 import torch
-from docutils.nodes import warning
 from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
 from trw.layers.utils import div_shape
 from trw.layers.layer_config import LayerConfig

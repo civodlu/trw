@@ -37,7 +37,7 @@ class TestMetrics(TestCase):
         When we have weights, if weights == 0, these samples should be discarded
         to calculate the statistics
         """
-        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0], [100.0, 0.0]], dtype=float))
+        input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0], [100.0, 0.0]], dtype=np.float32))
         target_values = torch.from_numpy(np.asarray([1, 0, 1], dtype=np.int64))
         target_weights = torch.from_numpy(np.asarray([0, 0.1, 0.1], dtype=np.float32))
 
