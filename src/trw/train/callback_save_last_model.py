@@ -29,7 +29,7 @@ class ModelWithLowestMetric:
         self.lowest_metric = lowest_metric
 
 
-def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Datasets:
+def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Optional[Datasets]:
     """
     Remove from the outputs embeddings larger than a specified threshold.
 
@@ -40,6 +40,9 @@ def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Da
     Returns:
         outputs
     """
+    if outputs is None:
+        return outputs
+
     for dataset_name, dataset in outputs.items():
         for split_name, split in dataset.items():
             # first collect the outputs to be discarded
