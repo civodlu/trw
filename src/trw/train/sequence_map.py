@@ -1,3 +1,4 @@
+import io
 import logging
 import collections
 import time
@@ -236,8 +237,12 @@ class SequenceMap(sequence.Sequence):
 
                     if time.time() - report_timeout_start > self.debug_job_report_timeout:
                         print('------------------- STALLING -------------------')
+                        f = io.StringIO()
+                        self.job_executor.job_report(f=f)
+                        logger.error('------------------- STALLING -------------------')
+                        logger.error(f.getvalue())
                         report_timeout_start = time.time()
-                        self.job_executor.job_report()
+                        print(f.getvalue())
 
                     nb_background_jobs = self.has_background_jobs_previous_sequences()
 
