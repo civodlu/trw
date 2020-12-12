@@ -176,11 +176,11 @@ def collect_results_to_main_process(
                         # the job result already. Just continue to the next queue
                         continue
 
-                    #except RuntimeError as e:
-                    #    print(f'collect_results_to_main_process Queue={threading.get_ident()} GET error={e}')
-                    #    # the queue was sending something but failed
-                    #    # discard this data and continue
-                    #    item = None
+                    except RuntimeError as e:
+                        print(f'collect_results_to_main_process Queue={threading.get_ident()} GET error={e}')
+                        # the queue was sending something but failed
+                        # discard this data and continue
+                        item = None
 
                     #print('PINNING item_job_session_id=', item_job_session_id, ' current=', job_session_id.value, 'ITEM=', item)
 
