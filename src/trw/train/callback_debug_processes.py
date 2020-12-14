@@ -7,6 +7,7 @@ import threading
 import logging
 import time
 import traceback
+from multiprocessing import Event
 from pprint import PrettyPrinter
 
 from trw.utils import optional_import
@@ -178,7 +179,7 @@ class CallbackDebugProcesses(callback.Callback):
 
         self.main_process = os.getpid()
         self.filename = filename + f'_{self.main_process}.txt'
-        self.abort_event = GracefulKiller.abort_event
+        self.abort_event = Event()
         self.frequency_seconds = frequency_seconds
         self.timeout = timeout
         self.thread = None
