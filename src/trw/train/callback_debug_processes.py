@@ -179,7 +179,7 @@ class CallbackDebugProcesses(callback.Callback):
 
         self.main_process = os.getpid()
         self.filename = filename + f'_{self.main_process}.txt'
-        self.abort_event = Event()
+        self.abort_event = GracefulKiller.abort_event
         self.frequency_seconds = frequency_seconds
         self.timeout = timeout
         self.thread = None

@@ -10,7 +10,7 @@ from trw.train import default_sum_all_losses, utilities
 from trw.train.trainer import default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_post_training_callbacks, trainer_callbacks_per_batch, epoch_train_eval, create_losses_fn, strip_unpickable
 from trw.utils import safe_lookup
-
+from trw.utils.graceful_killer import GracefulKiller
 
 logger = logging.getLogger(__name__)
 
@@ -147,6 +147,9 @@ class TrainerV2:
         :param with_final_evaluation: if True, once the model is fitted, evaluate all the data again in eval mode
         :return: a tuple `model, result`
         """
+        # reset the abort state
+        GracefulKiller.abort_event.clear()
+
         # set up our log path. This is where all the analysis of the model will be exported
         if log_path is None:
             log_path = os.path.join(
