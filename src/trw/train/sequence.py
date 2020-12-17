@@ -311,6 +311,9 @@ class Sequence:
         """
         raise NotImplemented()
 
+    def close(self):
+        raise NotImplemented()
+
 
 class SequenceIterator(abc.Iterator):
     def __init__(self):
@@ -335,7 +338,11 @@ class SequenceIterator(abc.Iterator):
         """
         return self.__next__()
 
-
+    def close(self):
+        """
+        Special method to close and clean the resources of the sequence
+        """
+        pass
 
 
 

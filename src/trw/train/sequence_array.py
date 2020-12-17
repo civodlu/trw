@@ -104,6 +104,9 @@ class SequenceArray(sequence.Sequence):
         # same sequence
         return SequenceIteratorArray(self, copy.deepcopy(self.sampler))
 
+    def close(self):
+        pass
+
 
 class SequenceIteratorArray(sequence.SequenceIterator):
     """
@@ -132,3 +135,6 @@ class SequenceIteratorArray(sequence.SequenceIterator):
             indices,
             self.base_sequence.transforms,
             self.base_sequence.use_advanced_indexing)
+
+    def close(self):
+        pass

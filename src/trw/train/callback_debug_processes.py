@@ -205,7 +205,7 @@ class CallbackDebugProcesses(callback.Callback):
                 self.abort_event)
         )
 
-        self.thread.daemon = True
+        self.thread.daemon = False
         self.thread.start()
         logger.info(f'process to collect data started! PID={self.thread.ident}, main_process={self.main_process}')
 

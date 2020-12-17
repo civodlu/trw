@@ -47,3 +47,6 @@ class SequenceAdaptorTorch(Sequence):
     def subsample(self, nb_samples):
         # we can't perform subsample, so return the original dataset
         return SequenceAdaptorTorch(torch_dataloader=self.torch_dataloader)
+
+    def close(self):
+        pass

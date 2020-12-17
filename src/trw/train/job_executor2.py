@@ -9,7 +9,7 @@ import traceback
 from time import sleep, perf_counter
 
 from threadpoolctl import threadpool_limits
-from typing import Callable, List, Optional
+from typing import Callable
 
 from trw.basic_typing import Batch
 import logging
@@ -28,6 +28,18 @@ from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
 default_queue_timeout = 0.1
+
+
+def flush_queue(queue):
+    if queue is None:
+        return
+    try:
+        while not queue.empty():
+            print('Flushing queue item, queue=', queue)
+            _ = queue.get(timeout=1.0)
+            print('Flushing queue item, DONE queue=', queue)
+    except Exception as e:
+        print('Exception intercepted=', e, type(queue))
 
 
 class JobMetadata:
@@ -49,6 +61,7 @@ def worker(
         transform: Callable[[Batch], Batch],
         global_abort_event: Event,
         local_abort_event: Event,
+        synchronized_stop: Event,
         wait_time: float,
         seed: int) -> None:
     """
@@ -62,6 +75,8 @@ def worker(
         local_abort_event: specify when the jobs need to shutdown but only for a given job executor
         wait_time: process will sleep this amount of time when input queue is empty
         seed: an int to seed random generators
+        synchronized_stop: the workers will NOT exit the process until this event is set to ensure
+            the correct order of destruction of workers/threads/queues
 
     Returns:
         None
@@ -71,10 +86,8 @@ def worker(
     item = None
     job_session_id = None
     job_metadata = None
-    #print(f'Worker={os.getpid()} Started!!')
     while True:
         try:
-            #print('Worker: Retrieving job')
             if not global_abort_event.is_set() and not local_abort_event.is_set():
                 if item is None:
                     if not input_queue.empty():
@@ -96,7 +109,6 @@ def worker(
                         try:
                             item = transform(item)
                             job_metadata.job_processing_finished = time.perf_counter()
-                            #print('Worker: processing=', item)
                         except Exception as e:
                             # exception is intercepted and skip to next job
                             # here we send the `None` result anyway to specify the
@@ -128,13 +140,16 @@ def worker(
                         continue
 
             else:
+                flush_queue(input_queue)
+                print(f'Worker={os.getpid()} Stopping (abort_event SET)!!')
+                synchronized_stop.wait()
                 print(f'Worker={os.getpid()} Stopped (abort_event SET)!!')
                 return
 
         except KeyboardInterrupt:
-            global_abort_event.set()
-            print(f'Worker={os.getpid()} Stopped (KeyboardInterrupt)!!')
-            return
+            # the main thread will handle the keyboard interrupt
+            # using synchronized shutdown of the workers
+            continue
 
         except Exception as e:
             # exception is intercepted and skip to next job
@@ -148,6 +163,7 @@ def collect_results_to_main_process(
         worker_output_queue: Queue,
         output_queue: ThreadQueue,
         global_abort_event: Event,
+        synchronized_stop: Event,
         local_abort_event: Event,
         wait_time: float) -> None:
 
@@ -157,6 +173,10 @@ def collect_results_to_main_process(
     while True:
         try:
             if global_abort_event.is_set() or local_abort_event.is_set():
+                flush_queue(worker_output_queue)
+                flush_queue(output_queue)
+                print(f'Thread={threading.get_ident()}, (abort_event set) shuting down!')
+                synchronized_stop.wait()
                 print(f'Thread={threading.get_ident()}, (abort_event set) shutdown!')
                 return
 
@@ -165,11 +185,9 @@ def collect_results_to_main_process(
             if item is None and item_job_session_id is None:
                 if not worker_output_queue.empty():
                     try:
-                        #time_queue_start = perf_counter()
                         job_metadata, item = worker_output_queue.get(timeout=wait_time)
                         item_job_session_id = job_metadata.job_session_id
                         job_metadata.job_pin_thread_received = time.perf_counter()
-                        #time_queue_end = perf_counter()
 
                     except Empty:
                         # even if the `current_queue` was not empty, another thread might have stolen
@@ -182,15 +200,12 @@ def collect_results_to_main_process(
                         # discard this data and continue
                         item = None
 
-                    #print('PINNING item_job_session_id=', item_job_session_id, ' current=', job_session_id.value, 'ITEM=', item)
-
                     if item is None:
                         # this job FAILED so there is no result to queue. Yet, we increment the
                         # job counter since this is used to monitor if the executor is
                         # idle
                         with jobs_queued.get_lock():
                             jobs_queued.value += 1
-                            #print(f'PUSH NONE ---- jobs_queued={jobs_queued.value}')
 
                         # fetch a new job result!
                         item_job_session_id = None
@@ -213,27 +228,25 @@ def collect_results_to_main_process(
                 continue
 
             if not output_queue.full():
-                #print(f'Pinning thread output queue filled! item={item}')
                 job_metadata.job_pin_thread_queued = time.perf_counter()
                 output_queue.put((job_metadata, item))
 
                 item_job_session_id = None
                 with jobs_queued.get_lock():
                     jobs_queued.value += 1
-                    #print(f'PUSH JOB={item} ---- jobs_queued={jobs_queued.value}')
 
                 item = None
             else:
                 sleep(wait_time)
                 continue
         except KeyboardInterrupt:
-            print(f'Thread={threading.get_ident()}, thread shut down (KeyboardInterrupt)')
-            global_abort_event.set()
-            raise KeyboardInterrupt
+            # the main thread will handle the keyboard interrupt
+            # using synchronized shutdown of the workers
+            continue
         except Exception as e:
-            print(f'Thread={threading.get_ident()}, thread shut down (Exception)')
-            local_abort_event.set()
-            raise e
+            print(f'Thread={threading.get_ident()}, thread shuting down (Exception)')
+            global_abort_event.set()  # critical issue, stop everything!
+            continue
 
 
 class JobExecutor2:
@@ -250,8 +263,15 @@ class JobExecutor2:
     threads is almost free).
 
     Notes:
-        This class was designed for maximum speed and not reproducibility in mind.
-        The processed of jobs will not keep their ordering.
+        - This class was designed for maximum speed and not reproducibility in mind.
+            The processed of jobs will not keep their ordering.
+        - the proper destruction of the job executor is the most difficult part with risk of process
+          hangs or memory leaks:
+            - first threads and processes are signaled to stop their processing and avoid pushing results to queues
+            - queues are emptied to avoid memory leaks (in case of abrupt termination)
+            - queues are joined
+            - processes are joined
+            - threads are joined
     """
     def __init__(
             self,
@@ -286,8 +306,9 @@ class JobExecutor2:
 
         self.global_abort_event = GracefulKiller.abort_event
         self.local_abort_event = Event()
+        self.synchronized_stop = Event()
 
-        self.main_process = os.getpid()
+        self.main_thread = threading.get_ident()
 
         self.worker_control = 0
         self.worker_input_queues = []
@@ -317,6 +338,12 @@ class JobExecutor2:
         Returns:
 
         """
+
+        # reset the events
+        self.global_abort_event.clear()
+        self.local_abort_event.clear()
+        self.synchronized_stop.clear()
+
         if self.pin_memory_queue is None:
             self.pin_memory_queue = ThreadQueue(self.max_queue_size_pin_thread_per_worker * self.nb_workers)
 
@@ -346,9 +373,10 @@ class JobExecutor2:
                             self.function_to_run,
                             self.global_abort_event,
                             self.local_abort_event,
+                            self.synchronized_stop,
                             self.wait_time, i
                         ))
-                    #p.daemon = True
+                    p.daemon = False
                     p.start()
                     self.processes.append(p)
                     print(f'Worker={p.pid} started!')
@@ -368,10 +396,11 @@ class JobExecutor2:
                         self.pin_memory_queue,
                         self.global_abort_event,
                         self.local_abort_event,
+                        self.synchronized_stop,
                         self.wait_time
                     ))
                 self.pin_memory_threads.append(pin_memory_thread)
-                #pin_memory_thread.daemon = True
+                pin_memory_thread.daemon = False
                 pin_memory_thread.start()
                 print(f'Thread={pin_memory_thread.ident}, thread started')
 
@@ -410,15 +439,39 @@ class JobExecutor2:
                 before using `terminate()`
 
         """
-
-        if os.getpid() != self.main_process:
+        if threading.get_ident() != self.main_thread:
             logging.error(f'attempting to close the executor from a '
-                          f'process={os.getpid()} that did not create it! ({self.main_process})')
+                          f'thread={threading.get_ident()} that did not create it! ({self.main_thread})')
             return
 
         # notify all the threads and processes to be shut down
-        print('Setting `abort_event` to interrupt Processes and threads! (JobExecutor)')
+        logging.info(f'Setting `abort_event` to interrupt Processes and threads! (JobExecutor={self})')
         self.local_abort_event.set()
+
+        # First, stop the queue BEFORE the threads/processes, else the
+        # data may be corrupted and process may be terminated
+        # we also need to remove all data on the queues
+        for i, p in enumerate(self.processes):
+            logging.info(f'closing worker input queue[{i}]')
+            flush_queue(self.worker_input_queues[i])
+            self.worker_input_queues[i].close()
+            logging.info(f'joining worker input queue[{i}]')
+            self.worker_input_queues[i].join_thread()
+            logging.info(f'closing worker input queue[{i}] DONE')
+
+            logging.info(f'closing worker output queue[{i}]')
+            flush_queue(self.worker_output_queues[i])
+            self.worker_output_queues[i].close()
+            self.worker_output_queues[i].join_thread()
+
+        logging.info(f'flushing pin_memory_queue')
+        flush_queue(self.pin_memory_queue)
+        logging.info(f'flushing pin_memory_queue dones!')
+
+        # we are in good shape to close the workers & threads,
+        # send the signal!
+        logging.info(f'Synchronized_stop')
+        self.synchronized_stop.set()
 
         # give some time to the threads/processes to shutdown normally
         shutdown_time_start = perf_counter()
@@ -448,29 +501,37 @@ class JobExecutor2:
             # done normal shutdown or timeout
             break
 
+        logging.info(f'Synchronized_stop step 2')
+
         if len(self.processes) != 0:
             logging.debug(f'JobExecutor={self}: shutting down workers...')
             [i.terminate() for i in self.processes]
+            logging.debug(f'JobExecutor={self}: workers terminated')
 
             for i, p in enumerate(self.processes):
-                self.worker_input_queues[i].close()
-                self.worker_input_queues[i].join_thread()
-
-                self.worker_output_queues[i].close()
-                self.worker_output_queues[i].join_thread()
+                logging.debug(f'JobExecutor={self}: worker={p} joining')
+                p.join()
+                logging.debug(f'JobExecutor={self}: worker={p} joined')
 
             self.worker_input_queues = []
             self.worker_output_queues = []
             self.processes = []
+            logging.debug(f'workers cleaning done!')
 
         if len(self.pin_memory_threads) > 0:
+            logging.debug(f'cleaning threads')
             for thread in self.pin_memory_threads:
+                logging.debug(f'joining thread={thread.ident}')
                 thread.join()
+                logging.debug(f'joined thread={thread.ident}')
                 del thread
             self.pin_memory_threads = []
 
             del self.pin_memory_queue
             self.pin_memory_queue = None
+            logging.debug(f'cleaning threads done!')
+
+        logging.debug(f'close done! (job_executor={self})')
 
     def is_full(self) -> bool:
         """
@@ -572,26 +633,6 @@ class JobExecutor2:
         # multi-threading. Instead, all tasks queued are executed
         # and we use a `job_session_id` to figure out the jobs to be
         # discarded
-        """
-        # empty the various queues
-        try:
-            for input_queue in self.worker_input_queues:
-                while not input_queue.empty():
-                    input_queue.get()
-        except EOFError:  # in case the other process was already terminated
-            pass
-
-        try:
-            for output_queue in self.worker_output_queues:
-                while not output_queue.empty():
-                    output_queue.get()
-        except EOFError:  # in case the other process was already terminated
-            pass
-            
-        with self.jobs_processed.get_lock():
-            self.jobs_processed.value = 0
-        self.jobs_queued = 0
-        """
 
         # empty the current queue results, they are not valid anymore!
         try:

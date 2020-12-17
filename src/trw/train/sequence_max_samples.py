@@ -66,3 +66,7 @@ class SequenceMaxSamples(sequence.Sequence):
             # first time this sequence is called: start the underlying sequence if it was.
             self.iter_source = self.source_split.__iter__()
         return self
+
+    def close(self):
+        if self.iter_source is not None:
+            self.iter_source.close()

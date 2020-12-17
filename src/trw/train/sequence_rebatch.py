@@ -126,3 +126,8 @@ class SequenceReBatch(sequence.Sequence):
     def __iter__(self):
         self.iter_source = self.source_split.__iter__()
         return self
+
+    def close(self):
+        if self.iter_source is not None:
+            self.iter_source.close()
+

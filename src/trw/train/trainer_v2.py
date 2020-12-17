@@ -202,129 +202,145 @@ class TrainerV2:
             # to orchestrate the calls of sub-models
             assert 'forward' in dir(model)
 
-        # migrate the model to the specified device
-        device = options['workflow_options']['device']
+        try:
+            # migrate the model to the specified device
+            device = options['workflow_options']['device']
 
-        logger.info('model moved to device={}'.format(device))
-        model.to(device)
+            logger.info('model moved to device={}'.format(device))
+            model.to(device)
 
-        # instantiate the optimizer and scheduler
-        logger.info('creating optimizers...')
-        if optimizers_fn is not None:
-            optimizers, schedulers = optimizers_fn(datasets, model)
-            logger.info('optimizers created successfully!')
-        else:
-            logger.info('optimizer fn is None! No optimizer created.')
-            optimizers, schedulers = None, None
+            # instantiate the optimizer and scheduler
+            logger.info('creating optimizers...')
+            if optimizers_fn is not None:
+                optimizers, schedulers = optimizers_fn(datasets, model)
+                logger.info('optimizers created successfully!')
+            else:
+                logger.info('optimizer fn is None! No optimizer created.')
+                optimizers, schedulers = None, None
 
-        logger.info('creating losses...')
-        losses = loss_creator(datasets, losses_fn)
-        logger.info('losses created successfully!')
+            logger.info('creating losses...')
+            losses = loss_creator(datasets, losses_fn)
+            logger.info('losses created successfully!')
 
-        num_epochs = options['training_parameters']['num_epochs']
+            num_epochs = options['training_parameters']['num_epochs']
 
-        if isinstance(optimizers, tuple):
-            assert len(optimizers) == 2, 'expected tuple(optimizer, scheduler)'
-            optimizers, schedulers = optimizers
+            if isinstance(optimizers, tuple):
+                assert len(optimizers) == 2, 'expected tuple(optimizer, scheduler)'
+                optimizers, schedulers = optimizers
 
-        callbacks_per_epoch = []
-        if self.callbacks_per_epoch is not None:
-            callbacks_per_epoch += self.callbacks_per_epoch
+            callbacks_per_epoch = []
+            if self.callbacks_per_epoch is not None:
+                callbacks_per_epoch += self.callbacks_per_epoch
 
-        callbacks_per_batch = []
-        if self.trainer_callbacks_per_batch is not None:
-            callbacks_per_batch.append(self.trainer_callbacks_per_batch)
-        if self.callbacks_per_batch is not None:
-            callbacks_per_batch += self.callbacks_per_batch
+            callbacks_per_batch = []
+            if self.trainer_callbacks_per_batch is not None:
+                callbacks_per_batch.append(self.trainer_callbacks_per_batch)
+            if self.callbacks_per_batch is not None:
+                callbacks_per_batch += self.callbacks_per_batch
 
-        callbacks_per_batch_loss_terms = []
-        if self.callbacks_per_batch_loss_terms is not None:
-            callbacks_per_batch_loss_terms += self.callbacks_per_batch_loss_terms
-        logger.info('callbacks created successfully!')
+            callbacks_per_batch_loss_terms = []
+            if self.callbacks_per_batch_loss_terms is not None:
+                callbacks_per_batch_loss_terms += self.callbacks_per_batch_loss_terms
+            logger.info('callbacks created successfully!')
 
-        # run the callbacks  before training
-        if self.callbacks_pre_training is not None:
-            logger.info('running pre-training callbacks...')
-            for callback in self.callbacks_pre_training:
-                try:
-                    callback(options, history, model, losses=losses, outputs=None,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                             optimizers_fn=optimizers_fn, optimizers=optimizers)
-                except Exception as e:
-                    f = StringIO()
-                    traceback.print_exc(file=f)
-                    print(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
-                    logger.error(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
-            logger.info('pre-training callbacks completed!')
+            # run the callbacks  before training
+            if self.callbacks_pre_training is not None:
+                logger.info('running pre-training callbacks...')
+                for callback in self.callbacks_pre_training:
+                    try:
+                        callback(options, history, model, losses=losses, outputs=None,
+                                 datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                                 optimizers_fn=optimizers_fn, optimizers=optimizers)
+                    except Exception as e:
+                        f = StringIO()
+                        traceback.print_exc(file=f)
+                        print(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
+                        logger.error(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
+                logger.info('pre-training callbacks completed!')
 
-        for epoch in range(num_epochs):
-            logger.info('started training epoch {}'.format(epoch))
-            run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
+            for epoch in range(num_epochs):
+                logger.info('started training epoch {}'.format(epoch))
+                run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
 
-            outputs_epoch, history_epoch = self.run_epoch_fn(
-                options,
-                datasets,
-                optimizers,
-                model,
-                losses,
-                schedulers,
-                history,
-                callbacks_per_batch,
-                callbacks_per_batch_loss_terms,
-                run_eval=run_eval,
-                force_eval_mode=False)
-            history.append(history_epoch)
+                outputs_epoch, history_epoch = self.run_epoch_fn(
+                    options,
+                    datasets,
+                    optimizers,
+                    model,
+                    losses,
+                    schedulers,
+                    history,
+                    callbacks_per_batch,
+                    callbacks_per_batch_loss_terms,
+                    run_eval=run_eval,
+                    force_eval_mode=False)
+                history.append(history_epoch)
 
-            logger.info('finished training epoch {}'.format(epoch))
+                logger.info('finished training epoch {}'.format(epoch))
 
-            last_epoch = epoch + 1 == num_epochs
+                last_epoch = epoch + 1 == num_epochs
 
-            logger.info('callbacks started')
-            for callback in callbacks_per_epoch:
-                try:
-                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                except Exception as e:
-                    f = StringIO()
-                    traceback.print_exc(file=f)
-                    logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
+                logger.info('callbacks started')
+                for callback in callbacks_per_epoch:
+                    try:
+                        callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                                 datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                                 optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                    except Exception as e:
+                        f = StringIO()
+                        traceback.print_exc(file=f)
+                        logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
 
-            logger.info(f'callbacks epoch {epoch} finished')
+                logger.info(f'callbacks epoch {epoch} finished')
 
-        # finally run the post-training callbacks
-        outputs_epoch = None
-        if with_final_evaluation:
-            logger.info('started final evaluation...')
-            outputs_epoch, history_epoch = self.run_epoch_fn(
-                options,
-                datasets,
-                None,
-                model,
-                losses,
-                None,
-                history,
-                callbacks_per_batch,
-                callbacks_per_batch_loss_terms,
-                run_eval=True,
-                force_eval_mode=True)
-            logger.info('finished final evaluation...')
-            history.append(history_epoch)
+            # finally run the post-training callbacks
+            outputs_epoch = None
+            if with_final_evaluation:
+                logger.info('started final evaluation...')
+                outputs_epoch, history_epoch = self.run_epoch_fn(
+                    options,
+                    datasets,
+                    None,
+                    model,
+                    losses,
+                    None,
+                    history,
+                    callbacks_per_batch,
+                    callbacks_per_batch_loss_terms,
+                    run_eval=True,
+                    force_eval_mode=True)
+                logger.info('finished final evaluation...')
+                history.append(history_epoch)
 
-        if self.callbacks_post_training is not None:
-            logger.info('started post training callbacks...')
-            for callback in self.callbacks_post_training:
-                try:
-                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                             optimizers_fn=optimizers_fn)
-                except Exception as e:
-                    f = StringIO()
-                    traceback.print_exc(file=f)
-                    print(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
-                    logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
+            if self.callbacks_post_training is not None:
+                logger.info('started post training callbacks...')
+                for callback in self.callbacks_post_training:
+                    try:
+                        callback(options, history, model, losses=losses, outputs=outputs_epoch,
+                                 datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
+                                 optimizers_fn=optimizers_fn)
+                    except Exception as e:
+                        f = StringIO()
+                        traceback.print_exc(file=f)
+                        print(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
+                        logger.error(f'callback={callback} failed with exception={e}.\n Stack={f.getvalue()}')
 
-            logger.info('finished post training callbacks...')
+                logger.info('finished post training callbacks...')
+
+        except KeyboardInterrupt as e:
+            logger.info('KeyboardInterrupt received. closing datasets explicitly to ensure proper resource release')
+            # make sure the datasets are closed properly: threads and processes
+            # are stopped in a controlled manner to avoid memory leaks
+            for dataset_name, dataset in datasets.items():
+                for split_name, split in dataset.items():
+                    logger.info(f'closing dataset={dataset_name} split={split_name}')
+                    print('----- CLOSING=', dataset_name + '_' + split_name)
+                    split.close()
+                    logger.info(f'closed dataset={dataset_name} split={split_name}!')
+
+            # resource are released, just continue the shutdown
+            logger.info(f'datasets all closed!')
+            raise e
 
         # increment the number of runs
         options['workflow_options']['trainer_run'] += 1
