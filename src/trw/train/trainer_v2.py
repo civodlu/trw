@@ -202,6 +202,7 @@ class TrainerV2:
             # to orchestrate the calls of sub-models
             assert 'forward' in dir(model)
 
+        outputs_epoch = None
         try:
             # migrate the model to the specified device
             device = options['workflow_options']['device']
@@ -294,7 +295,6 @@ class TrainerV2:
                 logger.info(f'callbacks epoch {epoch} finished')
 
             # finally run the post-training callbacks
-            outputs_epoch = None
             if with_final_evaluation:
                 logger.info('started final evaluation...')
                 outputs_epoch, history_epoch = self.run_epoch_fn(
@@ -329,6 +329,8 @@ class TrainerV2:
 
         except KeyboardInterrupt as e:
             logger.info('KeyboardInterrupt received. closing datasets explicitly to ensure proper resource release')
+            GracefulKiller.abort_event.set()
+
             # make sure the datasets are closed properly: threads and processes
             # are stopped in a controlled manner to avoid memory leaks
             for dataset_name, dataset in datasets.items():
@@ -340,7 +342,6 @@ class TrainerV2:
 
             # resource are released, just continue the shutdown
             logger.info(f'datasets all closed!')
-            raise e
 
         # increment the number of runs
         options['workflow_options']['trainer_run'] += 1
