@@ -258,10 +258,11 @@ class BlockUpDeconvSkipConv(nn.Module):
             kernel_size: Optional[KernelSize] = None,
             padding: Optional[Padding] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
+            deconv_block=BlockDeconvNormActivation,
             stride: Optional[Stride] = None):
         super().__init__()
 
-        self.ops_deconv = BlockDeconvNormActivation(
+        self.ops_deconv = deconv_block(
             config,
             input_channels=input_channels,
             output_channels=output_channels,
