@@ -329,14 +329,12 @@ class TrainerV2:
 
         except KeyboardInterrupt as e:
             logger.info('KeyboardInterrupt received. closing datasets explicitly to ensure proper resource release')
-            GracefulKiller.abort_event.set()
 
             # make sure the datasets are closed properly: threads and processes
             # are stopped in a controlled manner to avoid memory leaks
             for dataset_name, dataset in datasets.items():
                 for split_name, split in dataset.items():
                     logger.info(f'closing dataset={dataset_name} split={split_name}')
-                    print('----- CLOSING=', dataset_name + '_' + split_name)
                     split.close()
                     logger.info(f'closed dataset={dataset_name} split={split_name}!')
 
