@@ -295,7 +295,7 @@ class Sequence:
         Returns:
             a subsampled `Sequence`
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         """
@@ -309,10 +309,10 @@ class Sequence:
         Returns:
             a subsampled `Sequence`
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def close(self):
-        raise NotImplemented()
+        raise NotImplementedError()
 
 
 class SequenceIterator(abc.Iterator):
@@ -325,7 +325,7 @@ class SequenceIterator(abc.Iterator):
         Returns:
             The next batch of data
         """
-        raise NotImplemented()
+        raise NotImplementedError()
 
     def next_item(self, blocking):
         """

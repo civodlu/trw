@@ -1,7 +1,7 @@
 from trw.train import sequence
 
 
-class SequenceBatch(sequence.Sequence):
+class SequenceBatch(sequence.Sequence, sequence.SequenceIterator):
     """
     Group several samples into a single data batch
     """

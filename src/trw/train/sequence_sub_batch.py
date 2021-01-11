@@ -4,7 +4,7 @@ from trw.train import sequence
 from trw.train import sequence_rebatch
 
 
-class SequenceSubBatch(sequence.Sequence):
+class SequenceSubBatch(sequence.Sequence, sequence.SequenceIterator):
     """
     This sequence will split batches in smaller batches if the underlying sequence batch is too large.
 

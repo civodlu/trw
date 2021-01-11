@@ -1,6 +1,9 @@
 from unittest import TestCase
 import trw
 import os
+
+from trw.train.analysis_plots import gallery
+
 import utils
 import numpy as np
 
@@ -115,3 +118,17 @@ class TestPlots(TestCase):
         assert cm[0, 0] == tn
         assert cm[1, 0] == fn
         assert cm[0, 1] == fp
+
+    def test_gallery(self):
+        images = [
+            # variably sized images
+            [np.zeros([64, 64, 3]), np.zeros([64, 64, 3]), np.zeros([64, 64, 3])],
+            [np.zeros([32, 64, 3]), np.zeros([32, 64, 3]), np.zeros([32, 64, 3])],
+        ]
+        x_axis_text = ['X0', 'X1', 'X2']
+        y_axis_text = ['Y0', 'Y1']
+        title = 'Gallery of empty images'
+        root = utils.root_output
+        save_path = os.path.join(root, 'empty_gallery.png')
+        gallery(images, x_axis_text, y_axis_text, title, save_path)
+        assert os.path.exists(save_path)

@@ -14,7 +14,7 @@ class ModuleWithIntermediate:
     """
     Represent a module with intermediate results
     """
-    def forward_with_intermediate(self, x: torch.Tensor) -> Sequence[torch.Tensor]:
+    def forward_with_intermediate(self, x: torch.Tensor, **kwargs) -> Sequence[torch.Tensor]:
         raise NotImplementedError()
 
 

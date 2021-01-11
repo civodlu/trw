@@ -61,7 +61,7 @@ class CallbackReportingStartServer(callback.Callback):
                                        self.show_app,
                                        handlers,
                                        self.port))
-            process.daemon = False
+            process.daemon = True
             self.server_process = process
             self.server_process.start()
             logger.info(f'creating reporting server Done! PID={process.pid}')

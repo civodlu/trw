@@ -41,12 +41,32 @@ class LossDiceMulticlass(nn.Module):
     
     If multi-class, compute the loss for each class then average the losses
     """
-    def __init__(self, normalization_fn=nn.Sigmoid, eps=0.00001, return_dice_by_class=False):
+    def __init__(self, normalization_fn=nn.Sigmoid, eps=0.001, return_dice_by_class=False, smooth=1.0):
+        """
+
+        Args:
+            normalization_fn: apply a normalization function on the `output` in the forward method. This
+                should  normalize the output to from logits to probability (i.e. range [0..1])
+            eps: epsilon to avoid division by zero
+            return_dice_by_class: if True, returns the (numerator, cardinality) by class and by sample from
+                the dice can be calculated, else returns the per sample dice loss `1 - average(dice by class)`
+            smooth: a smoothing factor
+
+        Notes:
+        * if return_dice_by_class is True, to calculate dice by class by sample:
+            dice_by_class_by_sample = (numerator / cardinality).numpy()  # axis 0: sample, axis 1: class
+            average_dice_by_class = dice_by_class_by_sample.mean(axis=0) # axis 0: average dice by class
+
+        * To calculate metrics (and not loss for optimization), smooth==0 and probably a
+            smaller eps (e.g., eps=1e-7)
+
+        """
         super().__init__()
 
         self.eps = eps
         self.normalization = None
         self.return_dice_by_class = return_dice_by_class
+        self.smooth = smooth
 
         if normalization_fn is not None:
             self.normalization = normalization_fn()
@@ -60,7 +80,7 @@ class LossDiceMulticlass(nn.Module):
 
         Returns:
             if return_dice_by_class is False, return 1 - dice score suitable for optimization.
-            Else, return the average dice score by class
+            Else, return the (numerator, cardinality) by class and by sample
         """
         assert len(output.shape) > 2
         assert len(output.shape) == len(target.shape), 'output: must have W x C x d0 x ... x dn shape and ' \
@@ -69,24 +89,26 @@ class LossDiceMulticlass(nn.Module):
         assert target.shape[1] == 1, 'segmentation must have a single channel!'
 
         if self.normalization is not None:
-            output = self.normalization(output)
+            proba = self.normalization(output)
+        else:
+            proba = output
 
         # for each class (including background!), create a mask
         # so that class N is encoded as one hot at dimension 1
-        encoded_target = one_hot(target[:, 0], output.shape[1], dtype=output.dtype)
+        encoded_target = one_hot(target[:, 0], proba.shape[1], dtype=proba.dtype)
         
-        intersection = output * encoded_target
-        indices_to_sum = tuple(range(2, len(output.shape)))
-        numerator = 2 * intersection.sum(indices_to_sum)
-        denominator = output + encoded_target
-        denominator = denominator.sum(indices_to_sum) + self.eps
+        intersection = proba * encoded_target
+        indices_to_sum = tuple(range(2, len(proba.shape)))
+        numerator = 2 * intersection.sum(indices_to_sum) + self.smooth
+        cardinality = proba + encoded_target
+        cardinality = cardinality.sum(indices_to_sum) + self.eps + self.smooth
 
         if not self.return_dice_by_class:
-            # average over classes (1 loss per sample)
-            average_loss_per_channel = (1 - numerator / denominator).mean(dim=1)
+            # loss per samples (classes are averaged)
+            average_loss_per_channel = (1 - numerator / cardinality).mean(dim=1)
             return average_loss_per_channel
         else:
-            return (numerator / denominator).mean(dim=0)  # average over samples
+            return numerator, cardinality
 
 
 class LossCrossEntropyCsiMulticlass(nn.Module):

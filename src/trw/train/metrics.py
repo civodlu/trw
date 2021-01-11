@@ -131,13 +131,32 @@ class MetricClassificationError(Metric):
 class MetricSegmentationDice(Metric):
     """
     Calculate the average dice score of a segmentation map 'output_truth' and class
-    segmentation probabilities 'output_raw'.
+    segmentation logits 'output_raw'.
 
     Notes:
-        nn.Sigmoid function will be applied on the output to force a range [0..1] of the output.
+        * by default, nn.Sigmoid function will be applied on the output to force a range [0..1] of the output
+
+        * the aggregation will aggregate all the foregrounds/backgrounds THEN calculate the dice (but NOT average
+            of dices). Using this aggregation, it is possible to calculate the true dice on a partitioned input
+            (e.g., 3D segmentations, we often use sub-volumes)
     """
-    def __init__(self, dice_fn=losses.LossDiceMulticlass(normalization_fn=nn.Sigmoid, return_dice_by_class=True)):
+    def __init__(
+            self,
+            dice_fn=losses.LossDiceMulticlass(
+                normalization_fn=nn.Sigmoid,
+                return_dice_by_class=True,
+                smooth=0),
+            aggregate_by_uid=False):
+        """
+
+        Args:
+            dice_fn: the function to calculate the dice score of each class
+            aggregate_by_uid: if True, the dice scores will be aggregated first by UID. This can be useful
+                when the metrics is calculated from pieces of the input data and we want to calculate a dice per
+                case
+        """
         self.dice_fn = dice_fn
+        self.aggregate_by_uid = aggregate_by_uid
 
     def __call__(self, outputs):
         # keep the torch variable. We want to use GPU if available since it can
@@ -152,27 +171,41 @@ class MetricSegmentationDice(Metric):
 
         assert len(found.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
         with torch.no_grad():
-            dice_by_class = trw.utils.to_value(self.dice_fn(found, truth))
+            numerator, cardinality = self.dice_fn(found, truth)
 
         return {
-            'dice_by_class': dice_by_class
+            # sum the samples: we have to do this to support variably sized
+            # batch size
+            'numerator': trw.utils.to_value(numerator).sum(axis=0),
+            'cardinality': trw.utils.to_value(cardinality).sum(axis=0),
         }
 
     def aggregate_metrics(self, metric_by_batch):
-        sum_dices = metric_by_batch[0]['dice_by_class'].copy()
-        for m in metric_by_batch[1:]:
-            sum_dices += m['dice_by_class']
-
         nb_batches = len(metric_by_batch)
         if nb_batches > 0:
+            # aggregate all the patches at once to calculate the global dice (and not average of dices)
+            numerator = metric_by_batch[0]['numerator'].copy()
+            cardinality = metric_by_batch[0]['cardinality'].copy()
+            assert len(numerator.shape) == 1
+            assert numerator.shape == cardinality.shape
+            for m in metric_by_batch[1:]:
+                numerator += m['numerator']
+                cardinality += m['cardinality']
+
             # calculate the dice score by class
-            one_minus_dice = 1 - sum_dices / len(metric_by_batch)
+            eps = 1e-5  # avoid div by 0
+            dice = numerator / (cardinality + eps)
+
+            # to keep consistent with the other metrics
+            # calculate the `1 - metric`
+            one_minus_dice = 1 - dice
             r = collections.OrderedDict()
-            for c in range(len(sum_dices)):
+            for c in range(len(dice)):
                 r[f'1-dice[class={c}]'] = one_minus_dice[c]
             r['1-dice'] = np.average(one_minus_dice)
             return r
 
+        # empty, so assume the worst
         return {'1-dice': 1}
 
 

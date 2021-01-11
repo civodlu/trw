@@ -6,7 +6,7 @@ import torch
 import collections
 
 
-class SequenceMaxSamples(sequence.Sequence):
+class SequenceMaxSamples(sequence.Sequence, sequence.SequenceIterator):
     """
     Virtual resize of the sequence. The sequence will terminate when a certain number
         of samples produced has been reached. Restart the sequence where it was stopped.

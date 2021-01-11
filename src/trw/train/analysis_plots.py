@@ -1,6 +1,7 @@
 """
 Defines the main plots and reports used for the analysis of our models
 """
+from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -40,6 +41,49 @@ def auroc(trues, found_1_scores):
     fpr, tpr, thresholds = sklearn.metrics.roc_curve(y_true=trues, y_score=found_1_scores, pos_label=None)
     roc_auc = sklearn.metrics.auc(fpr, tpr)
     return roc_auc
+
+
+def gallery(
+        images_y_then_x: List[List[np.ndarray]],
+        x_axis_text: List[str],
+        y_axis_text: List[str],
+        title: Optional[str] = None,
+        save_path: Optional[str] = None):
+    """
+    Create a gallery of images
+
+    Args:
+        images_y_then_x: an array of y * x images
+        x_axis_text: the text for each x
+        y_axis_text: the text for each y
+        title: the title of the gallery
+        save_path: where to save the fixuge
+
+    Returns:
+        a figure
+    """
+
+    fig, axes_all = plt.subplots(nrows=len(images_y_then_x), ncols=len(images_y_then_x[0]))
+    fig.subplots_adjust(top=0.90, bottom=0.05, right=0.95, left=0.05, hspace=0.01, wspace=0.01)
+    for y, (axes_x, images_x) in enumerate(zip(axes_all, images_y_then_x)):
+        for x, (ax, i) in enumerate(zip(axes_x, images_x)):
+            ax.imshow(i)
+
+            ax.set_xticks([])
+            ax.set_yticks([])
+
+            if x == 0:
+                ax.set_ylabel(y_axis_text[y])
+            if y + 1 == len(images_y_then_x):
+                ax.set_xlabel(x_axis_text[x])
+
+    if title is not None:
+        fig.suptitle(title)
+
+    if save_path is not None:
+        fig.savefig(save_path)
+
+    return fig
 
 
 def export_figure(path, name, maximum_length=259, dpi=300):

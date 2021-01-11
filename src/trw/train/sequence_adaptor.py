@@ -1,9 +1,9 @@
-from trw.train import Sequence
+from trw.train import sequence
 import collections
 from torch.utils import data
 
 
-class SequenceAdaptorTorch(Sequence):
+class SequenceAdaptorTorch(sequence.Sequence, sequence.SequenceIterator):
     """
     Adapt a `torch.utils.data.DataLoader` to a `trw.train.Sequence` interface
 

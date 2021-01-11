@@ -40,7 +40,7 @@ def split_in_2_batches(batch: collections.Mapping, first_batch_size: int):
     return batch_1, batch_2
 
 
-class SequenceReBatch(sequence.Sequence):
+class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
     """
     This sequence will normalize the batch size of an underlying sequence
 

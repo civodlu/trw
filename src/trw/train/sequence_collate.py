@@ -2,7 +2,7 @@ from trw.train import collate
 from trw.train import sequence
 
 
-class SequenceCollate(sequence.Sequence):
+class SequenceCollate(sequence.Sequence, sequence.SequenceIterator):
     """
     Group the data into a sequence of dictionary of torch.Tensor
 

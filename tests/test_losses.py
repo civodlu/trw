@@ -54,7 +54,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1], dtype=np.float32).reshape((1, 2, 5, 6)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
         l = loss(t1, t2)
 
         # calculate the mask intersection
@@ -110,7 +110,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([sample_0, sample_1], dtype=np.float32).reshape((2, 2, 2, 3)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((2, 1, 2, 3)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
         l = loss(t1, t2)
         assert len(l.shape) == 1
         assert l.shape[0] == 2
@@ -182,7 +182,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 5, 6)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
         l = loss(t1, t2)
 
         # calculate the mask intersection
@@ -242,9 +242,10 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 4, 3)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 4, 3)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
-        l = loss(t1, t2)
-        assert abs(float(l.sum()) - 3) < 1e-3
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=1e-7)
+        numerator, cardinality = loss(t1, t2)
+        l = (numerator / cardinality).numpy().sum()
+        assert abs(float(l.sum()) - 3) < 1e-5
 
     def test_dice_by_class_2samples(self):
         e1_found_channel0 = [
@@ -285,30 +286,37 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([e1_found_channel0, e1_found_channel1, e2_found_channel0, e2_found_channel1], dtype=np.float32).reshape((2, 2, 4, 3)))
         t2 = torch.from_numpy(np.asarray([targets, targets], dtype=np.int64)).unsqueeze(1)
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True)
-        l = loss(t1, t2).numpy()
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=0)
+        numerator, cardinality = loss(t1, t2)
+        dice_by_class_by_sample = (numerator / cardinality).numpy()
+        average_dice_by_class = dice_by_class_by_sample.mean(axis=0)
 
         expected_dice_class0 = [2 * 9 / (9 + 10), 2 * 9 / (9 + 9)]
         expected_dice_class1 = [2 * 2 / (2 + 3), 2 * 3 / (3 + 3)]
-        assert abs(l[0] - (sum(expected_dice_class0) / 2)) < 1e-5
-        assert abs(l[1] - (sum(expected_dice_class1) / 2)) < 1e-5
+        assert abs(average_dice_by_class[0] - (sum(expected_dice_class0) / 2)) < 1e-5
+        assert abs(average_dice_by_class[1] - (sum(expected_dice_class1) / 2)) < 1e-5
 
         # test jointly the metric
         output = {
             'output_truth': t2,
             'output_raw': t1
         }
-        metric = MetricSegmentationDice(dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True))
+        metric = MetricSegmentationDice(dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=0))
         metric_values = metric(output)
-        assert np.abs(metric_values['dice_by_class'] - l).max() < 1e-4
+
+        assert np.abs(metric_values['numerator'] - numerator.numpy().sum(axis=0)).max() < 1e-4
+        assert np.abs(metric_values['cardinality'] - cardinality.numpy().sum(axis=0)).max() < 1e-4
 
         # test aggregated batches
         aggregated_metric_values = metric.aggregate_metrics([metric_values, metric_values])
 
-        average_dice = (1 - l).mean()
-        assert abs(average_dice - aggregated_metric_values['1-dice']) < 1e-5
-        assert abs((1 - l)[0] - aggregated_metric_values['1-dice[class=0]']) < 1e-5
-        assert abs((1 - l)[1] - aggregated_metric_values['1-dice[class=1]']) < 1e-5
+        one_minus_dice_class_0 = float(1 - sum(numerator[:, 0]) / sum(cardinality[:, 0]))
+        one_minus_dice_class_1 = float(1 - sum(numerator[:, 1]) / sum(cardinality[:, 1]))
+        one_minus_dice = float(one_minus_dice_class_0 + one_minus_dice_class_1) / 2.0
+
+        assert abs(one_minus_dice - aggregated_metric_values['1-dice']) < 1e-5
+        assert abs(one_minus_dice_class_0 - aggregated_metric_values['1-dice[class=0]']) < 1e-5
+        assert abs(one_minus_dice_class_1 - aggregated_metric_values['1-dice[class=1]']) < 1e-5
 
     def test_focal_loss_binary_id(self):
         # in this configuration, the cross entropy loss and the focal loss MUST be identical
