@@ -76,7 +76,7 @@ def add_classification_strings_from_output(dataset_name, split_name, output, dat
     is_classification = False
     output_ref = output.get('output_ref')
     if output_ref is not None:
-        is_classification = isinstance(output_ref, O.OutputClassification)
+        is_classification = isinstance(output_ref, (O.OutputClassification, O.OutputClassification2))
 
     if is_classification:
         # special handling of the classification node: add class names in string too so it is easier

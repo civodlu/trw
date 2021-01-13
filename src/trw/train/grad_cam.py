@@ -91,7 +91,7 @@ class GradCam:
                 selected_output = model_outputs
             else:
                 for output_name, output in model_outputs.items():
-                    if isinstance(output, outputs_trw.OutputClassification):
+                    if isinstance(output, (outputs_trw.OutputClassification, outputs_trw.OutputClassification2)):
                         selected_output = self.post_process_output(output)
                         selected_output_name = output_name
                         break

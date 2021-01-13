@@ -35,7 +35,7 @@ def expand_classification_mapping(batch, loss_term_name, loss_term, classificati
         suffix: the suffix appended to output or target name
     """
     output_ref = loss_term.get('output_ref')
-    if isinstance(output_ref, outputs_trw.OutputClassification):
+    if isinstance(output_ref, (outputs_trw.OutputClassification, outputs_trw.OutputClassification2)):
         target_name = output_ref.classes_name
         if target_name is not None and classification_mappings is not None:
             mapping = classification_mappings.get(target_name)

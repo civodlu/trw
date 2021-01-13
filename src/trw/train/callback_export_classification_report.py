@@ -49,7 +49,7 @@ class CallbackExportClassificationReport(callback.Callback):
             for split_name, split in dataset.items():
                 for output_name, output in split.items():
                     ref = output.get('output_ref')
-                    if not isinstance(ref, trf_outputs.OutputClassification):
+                    if not isinstance(ref, (trf_outputs.OutputClassification, trf_outputs.OutputClassification2)):
                         continue
                     logger.info('output_classification found={}, dataset={}, split={}'.format(output_name, dataset_name, split_name))
 

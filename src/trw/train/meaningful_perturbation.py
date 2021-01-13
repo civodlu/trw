@@ -154,7 +154,7 @@ class MeaningfulPerturbation:
         outputs = self.model(inputs)
         if target_class_name is None and isinstance(outputs, collections.Mapping):
             for output_name, output in outputs.items():
-                if isinstance(output, outputs_trw.OutputClassification):
+                if isinstance(output, (outputs_trw.OutputClassification, outputs_trw.OutputClassification2)):
                     logger.info('output found={}'.format(output_name))
                     target_class_name = output_name
                     break
