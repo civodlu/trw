@@ -3,6 +3,7 @@ import trw.train
 import numpy as np
 import torch
 import sklearn
+from trw.train.metrics import MetricSegmentationDice
 
 
 class TestMetrics(TestCase):
@@ -231,4 +232,3 @@ class TestMetrics(TestCase):
 
         expected_f1 = 2 * tp / (2 * tp + fp + fn)
         assert abs(1 - one_minus_f1['1-f1[binary]'] - expected_f1) <= 1e-4
-

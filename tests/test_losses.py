@@ -318,6 +318,59 @@ class TestLosses(TestCase):
         assert abs(one_minus_dice_class_0 - aggregated_metric_values['1-dice[class=0]']) < 1e-5
         assert abs(one_minus_dice_class_1 - aggregated_metric_values['1-dice[class=1]']) < 1e-5
 
+    def test_dice_by_uid(self):
+        # randomly generate background/foreground & truth
+        # make sure analysis by sub-volume lead to the same dice as
+        # full volume
+        def generate_foreground(size=32):
+            foreground = np.zeros([1, 1, size, size], dtype=np.long)
+            min_bb = np.random.random_integers(0, size - 6, size=[2])
+            max_bb = np.random.random_integers(6, size, size=[2])
+            foreground[0, 0, min_bb[0]:max_bb[0], min_bb[0]:max_bb[0]] = 1
+            return torch.from_numpy(foreground)
+
+        np.random.seed(1)
+        nb_samples = 10
+
+        # calculate the dice on whole data
+        truth_output = []
+        metric = MetricSegmentationDice(
+            dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=1e-5))
+        metric_intermediates = []
+        for n in range(nb_samples):
+            truth = generate_foreground()
+            foreground = generate_foreground()
+            output = torch.cat([1 - foreground.float(), foreground.float()], dim=1)
+            truth_output.append((truth, output))
+            i = metric({'output_truth': truth, 'output_raw': output})
+            metric_intermediates.append(i)
+        metric_result_full_data = metric.aggregate_metrics(metric_intermediates)
+
+        # now recalculate using sub-data blocks. If we calculate the dice by UID, we MUST find the
+        # same results
+        metric_by_uid = MetricSegmentationDice(
+            dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=1e-5))
+        metric_by_uid_intermediates = []
+        bloc_size = 8
+        for uid, (truth, output) in enumerate(truth_output):
+            nb_blocs = np.asarray(truth.shape[2:]) // bloc_size
+            for dy in range(nb_blocs[0]):
+                for dx in range(nb_blocs[1]):
+                    min_bb = np.asarray([dy, dx]) * bloc_size
+                    max_bb = min_bb + bloc_size
+                    sub_output = output[:, :, min_bb[0]:max_bb[0], min_bb[1]:max_bb[1]]
+                    sub_truth = truth[:, :, min_bb[0]:max_bb[0], min_bb[1]:max_bb[1]]
+                    i = metric_by_uid({'output_truth': sub_truth, 'output_raw': sub_output, 'uid': [uid]})
+                    metric_by_uid_intermediates.append(i)
+
+        metric_result_sub = metric.aggregate_metrics(metric_by_uid_intermediates)
+
+        # should get the same results!
+        for name, value in metric_result_full_data.items():
+            value_sub = metric_result_sub[name]
+            assert abs(value_sub - value) < 1e-6
+            print(value_sub - value)
+
     def test_focal_loss_binary_id(self):
         # in this configuration, the cross entropy loss and the focal loss MUST be identical
         targets = torch.from_numpy(np.asarray([0, 1, 1, 0, 1], dtype=np.int64))

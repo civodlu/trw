@@ -163,6 +163,7 @@ class MetricSegmentationDice(Metric):
         # be slow use numpy for this
         truth = outputs.get('output_truth')
         found = outputs.get('output_raw')
+        uid = outputs.get('uid')
 
         #assert found.min() >= 0, 'Unexpected value: `output` must be in range [0..1]'
 
@@ -176,25 +177,71 @@ class MetricSegmentationDice(Metric):
         return {
             # sum the samples: we have to do this to support variably sized
             # batch size
-            'numerator': trw.utils.to_value(numerator).sum(axis=0),
-            'cardinality': trw.utils.to_value(cardinality).sum(axis=0),
+            'numerator': trw.utils.to_value(numerator),
+            'cardinality': trw.utils.to_value(cardinality),
+            'uid': uid
         }
+
+    @staticmethod
+    def _aggregate_dices(metric_by_batch):
+        eps = 1e-5  # avoid div by 0
+
+        # aggregate all the patches at once to calculate the global dice (and not average of dices)
+        numerator = metric_by_batch[0]['numerator'].copy()
+        cardinality = metric_by_batch[0]['cardinality'].copy()
+        assert len(numerator.shape) == 2, 'must be NxC matrix'
+        assert numerator.shape == cardinality.shape
+
+        numerator = numerator.sum(axis=0)
+        cardinality = cardinality.sum(axis=0)
+        for m in metric_by_batch[1:]:
+            numerator += m['numerator'].sum(axis=0)
+            cardinality += m['cardinality'].sum(axis=0)
+        # calculate the dice score by class
+        dice = numerator / (cardinality + eps)
+        return dice
+
+    @staticmethod
+    def _aggregate_dices_by_uid(metric_by_batch):
+        eps = 1e-5  # avoid div by 0
+
+        # group the dice's (numerator, denominator) by UID
+        num_card_by_uid = {}
+        for m in metric_by_batch:
+            numerators = m['numerator']
+            cardinalitys = m['cardinality']
+            nb_samples = len(numerators)
+            uids = m.get('uid')
+            if uids is None:
+                uids = ['missing'] * nb_samples
+            assert len(numerators) == len(cardinalitys)
+            assert len(numerators) == len(uids)
+            for numerator, cardinality, uid in zip(numerators, cardinalitys, uids):
+                numerator_cardinality = num_card_by_uid.get(uid)
+                if numerator_cardinality is None:
+                    num_card_by_uid[uid] = [numerator, cardinality]
+                else:
+                    numerator_cardinality[0] += numerator
+                    numerator_cardinality[1] += cardinality
+
+        # then calculate the average dice by UID
+        dice_sum = 0
+        for uid, (numerator, cardinality) in num_card_by_uid.items():
+            # if cardinality[class] == 0, then numerator[class] == 0
+            # so it is ok to just add `eps` when cardinality == 0 to avoid
+            # div by 0
+            dice = numerator / (cardinality + eps)
+            dice_sum += dice
+
+        return dice_sum / len(num_card_by_uid)
 
     def aggregate_metrics(self, metric_by_batch):
         nb_batches = len(metric_by_batch)
         if nb_batches > 0:
-            # aggregate all the patches at once to calculate the global dice (and not average of dices)
-            numerator = metric_by_batch[0]['numerator'].copy()
-            cardinality = metric_by_batch[0]['cardinality'].copy()
-            assert len(numerator.shape) == 1
-            assert numerator.shape == cardinality.shape
-            for m in metric_by_batch[1:]:
-                numerator += m['numerator']
-                cardinality += m['cardinality']
-
-            # calculate the dice score by class
-            eps = 1e-5  # avoid div by 0
-            dice = numerator / (cardinality + eps)
+            if not self.aggregate_by_uid:
+                dice = MetricSegmentationDice._aggregate_dices(metric_by_batch)
+            else:
+                dice = MetricSegmentationDice._aggregate_dices_by_uid(metric_by_batch)
 
             # to keep consistent with the other metrics
             # calculate the `1 - metric`

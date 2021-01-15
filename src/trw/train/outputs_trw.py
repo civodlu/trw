@@ -308,6 +308,7 @@ class OutputClassification2(Output):
             self,
             output,
             output_truth,
+            *,
             criterion_fn=lambda: nn.CrossEntropyLoss(reduction='none'),
             collect_output=True,
             collect_only_non_training_output=False,
@@ -318,6 +319,7 @@ class OutputClassification2(Output):
             loss_scaling=1.0,
             output_postprocessing=functools.partial(torch.argmax, dim=1),  # =1 as we export the class
             maybe_optional=False,
+            classes_name='unknown',
             sample_uid_name=default_sample_uid_name):
         """
 
@@ -339,6 +341,8 @@ class OutputClassification2(Output):
                 truth is not part of the batch
             sample_uid_name (str): if not None, collect the sample UID
             per_voxel_weights: a per voxel weighting that will be passed to criterion_fn
+            classes_name: the name of the class. This is used only to map a class ID to a string (e.g., for the
+                classification report)
         """
         super().__init__(
             output=output,
@@ -354,6 +358,7 @@ class OutputClassification2(Output):
         self.weights = weights
         self.per_voxel_weights = per_voxel_weights
         self.maybe_optional = maybe_optional
+        self.classes_name = classes_name
 
         if self.per_voxel_weights is not None:
             assert self.per_voxel_weights.shape[2:] == self.output.shape[2:]
