@@ -304,8 +304,8 @@ class TestLosses(TestCase):
         metric = MetricSegmentationDice(dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=0))
         metric_values = metric(output)
 
-        assert np.abs(metric_values['numerator'] - numerator.numpy().sum(axis=0)).max() < 1e-4
-        assert np.abs(metric_values['cardinality'] - cardinality.numpy().sum(axis=0)).max() < 1e-4
+        assert np.abs(metric_values['numerator'].sum(axis=0) - numerator.numpy().sum(axis=0)).max() < 1e-4
+        assert np.abs(metric_values['cardinality'].sum(axis=0) - cardinality.numpy().sum(axis=0)).max() < 1e-4
 
         # test aggregated batches
         aggregated_metric_values = metric.aggregate_metrics([metric_values, metric_values])
