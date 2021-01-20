@@ -323,9 +323,9 @@ class TestLosses(TestCase):
         # make sure analysis by sub-volume lead to the same dice as
         # full volume
         def generate_foreground(size=32):
-            foreground = np.zeros([1, 1, size, size], dtype=np.long)
-            min_bb = np.random.random_integers(0, size - 6, size=[2])
-            max_bb = np.random.random_integers(6, size, size=[2])
+            foreground = np.zeros([1, 1, size, size], dtype=np.int64)
+            min_bb = np.random.randint(0, size - 6, size=[2], dtype=np.int64)
+            max_bb = np.random.randint(6, size, size=[2], dtype=np.int64)
             foreground[0, 0, min_bb[0]:max_bb[0], min_bb[0]:max_bb[0]] = 1
             return torch.from_numpy(foreground)
 
