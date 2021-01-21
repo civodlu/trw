@@ -377,23 +377,24 @@ def epoch_train_eval(
         eval_loop_fn=eval_loop,
         train_loop_fn=train_loop):
     """
-    Orchestrate the train and evaluation loops
 
-    :param options:
-    :param datasets:
-    :param optimizers: if None, no optimization will be performed on the train split else a dictionary of
-        optimizers (on for each dataset)
-    :param model:
-    :param losses:
-    :param schedulers:
-    :param history:
-    :param callbacks_per_batch:
-    :param callbacks_per_batch_loss_terms:
-    :param run_eval: if True, run the evaluation
-    :param eval_loop_fn: the eval function to be used
-    :param train_loop_fn: the train function to be used
-    :param force_eval_mode: if ``True``, the train split will be evaluated using the eval loop instead of train loop.
-    :return:
+    Args:
+        options:
+        datasets:
+        optimizers:
+        model:
+        losses:
+        schedulers:
+        history:
+        callbacks_per_batch:
+        callbacks_per_batch_loss_terms:
+        run_eval:
+        force_eval_mode:
+        eval_loop_fn:
+        train_loop_fn:
+
+    Returns:
+
     """
     device = options['workflow_options']['device']
     train_split_name = options['workflow_options']['train_split']
@@ -599,7 +600,8 @@ class Trainer:
             callbacks_pre_training_fn=default_pre_training_callbacks,
             callbacks_post_training_fn=default_post_training_callbacks,
             trainer_callbacks_per_batch=trainer_callbacks_per_batch,
-            run_epoch_fn=epoch_train_eval):
+            run_epoch_fn=epoch_train_eval,
+            skip_eval_epoch_0=True):
         """
         Args:
             callbacks_per_batch_fn: functor returning a list of callbacks. Call back must be
@@ -620,7 +622,8 @@ class Trainer:
 
             trainer_callbacks_per_batch: Postprocessing step to be run on the batches
 
-            run_epoch_fn: the function to be used to perform training and evaluation
+            run_epoch_fn: the function to be used to perform training and
+            skip_eval_epoch_0: if ``True``, validation/test will not be run for epoch 0
         """
 
         self.callbacks_per_batch_fn = callbacks_per_batch_fn
@@ -630,6 +633,7 @@ class Trainer:
         self.callbacks_per_batch_loss_terms_fn = callbacks_per_batch_loss_terms_fn
         self.trainer_callbacks_per_batch = trainer_callbacks_per_batch
         self.run_epoch_fn = run_epoch_fn
+        self.skip_eval_epoch_0 = skip_eval_epoch_0
 
     @staticmethod
     def save_model(model, result, path, pickle_module=pickle):
@@ -858,7 +862,7 @@ class Trainer:
 
         for epoch in range(num_epochs):
             logger.info('started training epoch {}'.format(epoch))
-            run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
+            run_eval = (not self.skip_eval_epoch_0 and epoch == 0) or (epoch + 1) % eval_every_X_epoch == 0
 
             outputs_epoch, history_epoch = self.run_epoch_fn(
                 options,

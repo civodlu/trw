@@ -43,5 +43,5 @@ class SequenceCollate(sequence.Sequence, sequence.SequenceIterator):
         return self
 
     def close(self):
-        if self.iter_source is not None:
-            self.iter_source.close()
+        if self.source_split is not None:
+            self.source_split.close()

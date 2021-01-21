@@ -25,9 +25,20 @@ class TrainerV2:
             callbacks_pre_training=default_pre_training_callbacks(),
             callbacks_post_training=default_post_training_callbacks(),
             trainer_callbacks_per_batch=trainer_callbacks_per_batch,
-            run_epoch_fn=epoch_train_eval):
+            run_epoch_fn=epoch_train_eval,
+            skip_eval_epoch_0=True):
+        """
 
-
+        Args:
+            callbacks_per_batch:
+            callbacks_per_batch_loss_terms:
+            callbacks_per_epoch:
+            callbacks_pre_training:
+            callbacks_post_training:
+            trainer_callbacks_per_batch:
+            run_epoch_fn:
+            skip_eval_epoch_0: if ``True``, validation/test will not be run for epoch 0
+        """
         self.callbacks_per_batch = callbacks_per_batch
         self.callbacks_per_epoch = callbacks_per_epoch
         self.callbacks_pre_training = callbacks_pre_training
@@ -35,6 +46,7 @@ class TrainerV2:
         self.callbacks_per_batch_loss_terms = callbacks_per_batch_loss_terms
         self.trainer_callbacks_per_batch = trainer_callbacks_per_batch
         self.run_epoch_fn = run_epoch_fn
+        self.skip_eval_epoch_0 = skip_eval_epoch_0
 
     @staticmethod
     def save_model(model, result, path, pickle_module=pickle):
@@ -187,6 +199,18 @@ class TrainerV2:
         # instantiate the datasets, model, optimizers and losses
         logger.info('started Trainer.fit(). Options={}'.format(options))
 
+        def clean_up():
+            # increment the number of runs
+            options['workflow_options']['trainer_run'] += 1
+
+            logger.info('removing logging handlers...')
+            logging.root.removeHandler(handler)
+
+            logger.info('training completed!')
+
+            sql.commit()
+            sql.close()
+
         datasets_infos = None  # TODO REFACTOR THIS
         assert datasets is not None, '`datasets` is None!'
         if isinstance(datasets, tuple):
@@ -261,7 +285,7 @@ class TrainerV2:
 
             for epoch in range(num_epochs):
                 logger.info('started training epoch {}'.format(epoch))
-                run_eval = epoch == 0 or (epoch + 1) % eval_every_X_epoch == 0
+                run_eval = (epoch == 0 and not self.skip_eval_epoch_0) or (epoch + 1) % eval_every_X_epoch == 0
 
                 outputs_epoch, history_epoch = self.run_epoch_fn(
                     options,
@@ -340,17 +364,12 @@ class TrainerV2:
 
             # resource are released, just continue the shutdown
             logger.info(f'datasets all closed!')
+            clean_up()
 
-        # increment the number of runs
-        options['workflow_options']['trainer_run'] += 1
+            # since the resources are released, we can now re-raise the exception
+            raise e
 
-        logger.info('removing logging handlers...')
-        logging.root.removeHandler(handler)
-
-        logger.info('training completed!')
-
-        sql.commit()
-        sql.close()
+        clean_up()
 
         return model, {
             'history': history,

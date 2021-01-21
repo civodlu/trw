@@ -441,3 +441,31 @@ class TestSequenceMap(TestCase):
                 indices.append(index)
             assert 10 not in indices, 'index 10 should have failed!'
             assert len(indices) == nb_indices - 1
+
+    def test_close(self):
+        # make sure the .close() closes the job executor
+        # with all it associated resource
+        indices = np.asarray(list(range(20)))
+        split = {
+            'indices': indices,
+        }
+
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        split_map = split.map(partial(load_data, time_sleep=0), nb_workers=1)
+        split = split_map.max_samples(1)
+        split = split.rebatch(1)
+        split = split.sub_batch(1)
+        split = split.collate()
+
+        all_items = []
+        for n in range(len(indices)):
+            for i in split:
+                all_items.append(i['indices'][0])
+
+        assert len(all_items) == len(indices)
+        for i, item in enumerate(all_items):
+            assert int(item) == i
+
+        assert not split_map.job_executor.synchronized_stop.is_set()
+        split.close()
+        assert split_map.job_executor.synchronized_stop.is_set()

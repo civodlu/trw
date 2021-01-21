@@ -287,6 +287,6 @@ class SequenceMap(sequence.Sequence):
         if self.job_executor is not None:
             self.job_executor.close()
 
-        if self.iter_source is not None:
-            self.iter_source.close()
+        if self.source_split is not None:
+            self.source_split.close()
 

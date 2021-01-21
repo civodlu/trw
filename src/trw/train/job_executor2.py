@@ -470,7 +470,7 @@ class JobExecutor2:
 
         # we are in good shape to close the workers & threads,
         # send the signal!
-        logging.info(f'Synchronized_stop')
+        logging.info(f'Synchronized_stop, executor={self}')
         self.synchronized_stop.set()
 
         # give some time to the threads/processes to shutdown normally
