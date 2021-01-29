@@ -18,6 +18,9 @@ ShapeCX = Sequence[int]
 """Shape expressed as [D, H, W, ...] components"""
 ShapeX = Sequence[int]
 
+"""Shape expressed as [N, D, H, W, ...] components (the component `C` is removed)"""
+ShapeNX = Sequence[int]
+
 """Generic Tensor as numpy or torch"""
 Tensor = Union[np.ndarray, torch.Tensor]
 

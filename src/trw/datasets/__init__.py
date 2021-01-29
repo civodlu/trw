@@ -1,7 +1,7 @@
 from .mnist import create_mnist_dataset
 from .mnist_cluttered import create_mnist_cluttered_datasset
 from .cifar10 import create_cifar10_dataset
-from .voc2012 import create_segmentation_voc2012_dataset
+from .voc import create_voc_detection_dataset, create_voc_segmentation_dataset
 from .cityscapes import create_cityscapes_dataset
 from .facades import create_facades_dataset
 from .tiny_imagenet import TinyImageNet, create_tiny_imagenet_dataset
