@@ -405,7 +405,7 @@ class OutputClassification2(Output):
             # average the per-sample loss
             weighted_losses = flatten(weighted_losses).mean(dim=1)
 
-        assert trw.utils.len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
+        assert truth.shape[0] == losses.shape[0], 'loos must have 1 element per sample'
 
         loss_term['output_raw'] = self.output
         output_postprocessed = self.output_postprocessing(self.output)
@@ -416,7 +416,9 @@ class OutputClassification2(Output):
         loss_term['output_truth'] = truth
 
         if self.sample_uid_name is not None and self.sample_uid_name in batch:
-            loss_term['uid'] = trw.utils.to_value(batch[self.sample_uid_name])
+            uid = trw.utils.to_value(batch[self.sample_uid_name])
+            assert len(uid) == len(truth), f'1 UID for 1 sample! Got={len(uid)} for samples={len(truth)}'
+            loss_term['uid'] = uid
 
         # TODO label smoothing
         loss_term['losses'] = weighted_losses

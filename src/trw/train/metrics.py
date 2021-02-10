@@ -314,11 +314,21 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
         output_raw = outputs.get('output_raw')
         if output_raw is None:
             return None
-        if len(output_raw.shape) != 2 or output_raw.shape[1] != 2:
+
+        # here we MUST have binary classification problem
+        # so make sure the `C` == 2
+        if len(output_raw.shape) < 2 or output_raw.shape[1] != 2:
             return None
 
         truth = trw.utils.to_value(outputs.get('output_truth'))
         found = trw.utils.to_value(outputs.get('output'))
+        if truth.shape != found.shape:
+            # shape must be the same, else something is wrong!
+            return None
+
+        # make it a 1D tensor
+        truth = truth.reshape((-1))
+        found = found.reshape((-1))
         if truth is not None and found is not None:
             cm = metrics.confusion_matrix(y_pred=found, y_true=truth)
             if len(cm) == 2:

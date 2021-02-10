@@ -45,7 +45,9 @@ def log_and_print(msg):
     :return:
     """
     logger.debug(msg)
-    print(msg)
+    # make sure we flush the output to have reliable reading
+    # in case the output is redirected to a file (e.g., SLURM job)
+    print(msg, flush=True)
 
 
 def log_console(msg):
@@ -54,7 +56,10 @@ def log_console(msg):
     :param msg:
     :return:
     """
-    print(msg)
+
+    # make sure we flush the output to have reliable reading
+    # in case the output is redirected to a file (e.g., SLURM job)
+    print(msg, flush=True)
 
 
 from trw.utils import to_value, recursive_dict_update

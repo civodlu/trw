@@ -6,6 +6,8 @@ import torchvision
 import trw
 import xml.etree.ElementTree as ET
 from . import utils
+import numpy as np
+import torch
 
 
 def _load_image_and_mask(batch, transform, normalize_0_1=True):
@@ -57,24 +59,80 @@ def _parse_voc_xml(node):
     return voc_dict
 
 
+OBJECT_CLASS_MAPPING = {
+    'person': 0,
+    'bird': 1,
+    'cat': 2,
+    'cow': 3,
+    'dog': 4,
+    'horse': 5,
+    'sheep': 6,
+    'aeroplane': 7,
+    'bicycle': 8,
+    'boat': 9,
+    'bus': 10,
+    'car': 11,
+    'motorbike': 12,
+    'train': 13,
+    'bottle': 14,
+    'chair': 15,
+    'diningtable': 16,
+    'pottedplant': 17,
+    'sofa': 18,
+    'tvmonitor': 19
+}
+
+
 def _load_image_and_bb(batch, transform, normalize_0_1=True):
     images = []
     annotations = []
+    sizes_cyx = []
+    object_class_by_image = []
+    object_bb_yx_by_image = []
+    image_paths = []
 
     for image_path, annotation_path in zip(batch['images'], batch['annotations']):
+        image_paths.append(image_path)
         image = utils.pic_to_tensor(Image.open(image_path).convert('RGB'))
         if normalize_0_1:
             image = image.float() / 255.0
         images.append(image)
 
-        annotation = _parse_voc_xml(ET.parse(annotation_path).getroot())
+        annotation = _parse_voc_xml(ET.parse(annotation_path).getroot())['annotation']
         annotations.append(annotation)
 
+        s = annotation['size']
+        sizes_cyx.append((
+            int(s['depth']),
+            int(s['height']),
+            int(s['width'])))
+
+        o_classes = []
+        o_bb = []
+        for o in annotation['object']:
+            o_classes.append(OBJECT_CLASS_MAPPING[o['name']])
+            box = o['bndbox']
+            o_bb.append([
+                float(box['ymin']),
+                float(box['xmin']),
+                float(box['ymax']),
+                float(box['xmax'])])
+        object_class_by_image.append(torch.from_numpy(np.asarray(o_classes, dtype=np.int64)))
+
+        # typically handled on CPU, so keep it as numpy
+        object_bb_yx_by_image.append(np.asarray(o_bb, dtype=np.float32))
+
+    image_scale = np.ones([len(images)], dtype=np.float32)
+
     batch = {
-        'image_path': image_path,
+        'image_path': image_paths,
         'sample_uid': batch['sample_uid'],
-        'images': trw.transforms.stack(images),
-        'annotations': annotations
+        'images': images,
+        'image_scale': image_scale,
+        'annotations': annotations,
+        'sizes_cyx': sizes_cyx,
+        'object_class_by_image': object_class_by_image,
+        'object_bb_yx_by_image': object_bb_yx_by_image
     }
 
     if transform is not None:
@@ -168,13 +226,14 @@ def create_voc_detection_dataset(
         transform_train=None,
         transform_valid=None,
         nb_workers=2,
+        batch_size=1,
         year='2012'):
     """
     PASCAL VOC detection challenge
 
     Notes:
         - Batch size is always `1` since we need to sample from the image various anchors,
-          locations depending on the task (so each sample should be postprocessed by a custom
+          locations depending on the task (so each sample should be post-processed by a custom
           transform)
     """
     if root is None:
@@ -199,7 +258,7 @@ def create_voc_detection_dataset(
     train_sequence = trw.train.SequenceArray({
         'images': train_dataset.images,
         'annotations': train_dataset.annotations
-    }, trw.train.SamplerRandom(batch_size=1))
+    }, trw.train.SamplerRandom(batch_size=batch_size))
     train_sequence = train_sequence.map(functools.partial(_load_image_and_bb, transform=transform_train),
                                         nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
 
@@ -209,13 +268,13 @@ def create_voc_detection_dataset(
     valid_sequence = trw.train.SequenceArray({
         'images': valid_dataset.images,
         'annotations': valid_dataset.annotations,
-    }, trw.train.SamplerSequential(batch_size=1))
-    valid_sequence = valid_sequence.map(functools.partial(_load_image_and_mask, transform=transform_valid),
+    }, trw.train.SamplerSequential(batch_size=batch_size))
+    valid_sequence = valid_sequence.map(functools.partial(_load_image_and_bb, transform=transform_valid),
                                         nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
 
     return {
         f'voc{year}_detect': collections.OrderedDict([
-            ('train', train_sequence.collate()),
-            ('valid', valid_sequence.collate()),
+            ('train', train_sequence),
+            ('valid', valid_sequence),
         ])
     }
