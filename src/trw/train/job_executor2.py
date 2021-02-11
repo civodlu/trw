@@ -97,7 +97,7 @@ def worker(
                         except Exception as e:
                             # possible exception:  `unable to open shared memory object </torch_XXX_YYYYY>
                             # we MUST queue a `None` to specify that we received something but there was an error
-                            print(f'Exception <input_queue.get> in background worker PID={os.getpid()}, E={e}')
+                            print(f'Exception <input_queue.get> in background worker PID={os.getpid()}, E={e}', flush=True)
                             item = None
                             # DO continue: we want to push `None`
 
@@ -120,7 +120,7 @@ def worker(
                             string_io = io.StringIO()
                             traceback.print_exc(file=string_io)
                             print(string_io.getvalue())
-                            print('-------------------------------------------------------')
+                            print('-------------------------------------------------------', flush=True)
                             item = None
 
                 while True:
@@ -133,7 +133,7 @@ def worker(
                     except Exception as e:
                         # exception is intercepted and skip to next job
                         print(f'Exception <output_queue.put> in background worker '
-                              f'thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+                              f'thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}', flush=True)
 
                         # re-try to push on the queue!
                         sleep(wait_time)
@@ -141,9 +141,9 @@ def worker(
 
             else:
                 flush_queue(input_queue)
-                print(f'Worker={os.getpid()} Stopping (abort_event SET)!!')
+                print(f'Worker={os.getpid()} Stopping (abort_event SET)!!', flush=True)
                 synchronized_stop.wait()
-                print(f'Worker={os.getpid()} Stopped (abort_event SET)!!')
+                print(f'Worker={os.getpid()} Stopped (abort_event SET)!!', flush=True)
                 return
 
         except KeyboardInterrupt:
@@ -153,8 +153,16 @@ def worker(
 
         except Exception as e:
             # exception is intercepted and skip to next job
+            print('-------------- ERROR in worker function --------------')
             print(f'Exception in background worker thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+            print('-------------- Error detail --------------')
+            string_io = io.StringIO()
+            traceback.print_exc(file=string_io)
+            print(string_io.getvalue())
+            print('-------------------------------------------------------', flush=True)
             continue
+
+    print(f'worker unreachable! thread_id={os.getpid()}', flush=True)
 
 
 def collect_results_to_main_process(
@@ -175,9 +183,9 @@ def collect_results_to_main_process(
             if global_abort_event.is_set() or local_abort_event.is_set():
                 flush_queue(worker_output_queue)
                 flush_queue(output_queue)
-                print(f'Thread={threading.get_ident()}, (abort_event set) shuting down!')
+                print(f'Thread={threading.get_ident()}, (abort_event set) shuting down!', flush=True)
                 synchronized_stop.wait()
-                print(f'Thread={threading.get_ident()}, (abort_event set) shutdown!')
+                print(f'Thread={threading.get_ident()}, (abort_event set) shutdown!', flush=True)
                 return
 
             # if we don't have an item we need to fetch it first. If the queue we want to get it from it empty, try
@@ -195,7 +203,7 @@ def collect_results_to_main_process(
                         continue
 
                     except RuntimeError as e:
-                        print(f'collect_results_to_main_process Queue={threading.get_ident()} GET error={e}')
+                        print(f'collect_results_to_main_process Queue={threading.get_ident()} GET error={e}', flush=True)
                         # the queue was sending something but failed
                         # discard this data and continue
                         item = None
@@ -244,10 +252,12 @@ def collect_results_to_main_process(
             # using synchronized shutdown of the workers
             continue
         except Exception as e:
-            print(f'Thread={threading.get_ident()},     thread shuting down (Exception)')
+            print(f'Thread={threading.get_ident()},     thread shuting down (Exception)', flush=True)
             traceback.print_exc(file=sys.stdout)
             global_abort_event.set()  # critical issue, stop everything!
             continue
+
+    print(f'collect_results_to_main_process unreachable! thread_id={os.getpid()}', flush=True)
 
 
 class JobExecutor2:
