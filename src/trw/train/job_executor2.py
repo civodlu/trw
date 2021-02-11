@@ -253,7 +253,9 @@ def collect_results_to_main_process(
             continue
         except Exception as e:
             print(f'Thread={threading.get_ident()},     thread shuting down (Exception)', flush=True)
+            print('------------ Exception Traceback --------------')
             traceback.print_exc(file=sys.stdout)
+            print('-----------------------------------------------', flush=True)
             global_abort_event.set()  # critical issue, stop everything!
             continue
 
