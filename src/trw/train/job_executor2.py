@@ -244,7 +244,8 @@ def collect_results_to_main_process(
             # using synchronized shutdown of the workers
             continue
         except Exception as e:
-            print(f'Thread={threading.get_ident()}, thread shuting down (Exception)')
+            print(f'Thread={threading.get_ident()},     thread shuting down (Exception)')
+            traceback.print_exc(file=sys.stdout)
             global_abort_event.set()  # critical issue, stop everything!
             continue
 
