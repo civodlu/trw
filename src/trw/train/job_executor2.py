@@ -162,6 +162,16 @@ def worker(
             print('-------------------------------------------------------', flush=True)
             continue
 
+        except:
+            print('-------------- ERROR (ANY) in worker function --------------')
+            print(f'Exception in background worker thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+            print('-------------- Error detail --------------')
+            string_io = io.StringIO()
+            traceback.print_exc(file=string_io)
+            print(string_io.getvalue())
+            print('-------------------------------------------------------', flush=True)
+            global_abort_event.set()   # critical issue, stop everything!
+
     print(f'worker unreachable! thread_id={os.getpid()}', flush=True)
 
 
@@ -203,7 +213,13 @@ def collect_results_to_main_process(
                         continue
 
                     except RuntimeError as e:
-                        print(f'collect_results_to_main_process Queue={threading.get_ident()} GET error={e}', flush=True)
+                        print(f'collect_results_to_main_process (RuntimeError) Queue={threading.get_ident()} GET error={e}', flush=True)
+                        # the queue was sending something but failed
+                        # discard this data and continue
+                        item = None
+
+                    except ConnectionError as e:
+                        print(f'collect_results_to_main_process (ConnectionError) Queue={threading.get_ident()} GET error={e}', flush=True)
                         # the queue was sending something but failed
                         # discard this data and continue
                         item = None
@@ -252,7 +268,7 @@ def collect_results_to_main_process(
             # using synchronized shutdown of the workers
             continue
         except Exception as e:
-            print(f'Thread={threading.get_ident()},     thread shuting down (Exception)', flush=True)
+            print(f'Thread={threading.get_ident()}, thread shuting down (Exception)', flush=True)
             print('------------ Exception Traceback --------------')
             traceback.print_exc(file=sys.stdout)
             print('-----------------------------------------------', flush=True)
