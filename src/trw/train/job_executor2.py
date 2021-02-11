@@ -163,14 +163,15 @@ def worker(
             continue
 
         except:
+            # critical issue, stop everything!
             print('-------------- ERROR (ANY) in worker function --------------')
-            print(f'Exception in background worker thread_id={os.getpid()}, E={e}, ITEM={item}, id={job_session_id}')
+            print(f'Exception in background worker thread_id={os.getpid()}, ITEM={item}, id={job_session_id}')
             print('-------------- Error detail --------------')
             string_io = io.StringIO()
             traceback.print_exc(file=string_io)
             print(string_io.getvalue())
             print('-------------------------------------------------------', flush=True)
-            global_abort_event.set()   # critical issue, stop everything!
+            global_abort_event.set()
 
     print(f'worker unreachable! thread_id={os.getpid()}', flush=True)
 
