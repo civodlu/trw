@@ -672,7 +672,8 @@ class JobExecutor2:
                 # most likely, the job was killed during the processing,
                 # so increment the job counters to fake a result
                 with self.jobs_processed.get_lock():
-                    self.jobs_processed.value += 1
+                    # there may be a max of 2 results lost, so to be safe, increase by 2
+                    self.jobs_processed.value += 2
 
     def job_report(self, f=sys.stdout):
         """
