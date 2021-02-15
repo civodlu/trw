@@ -81,7 +81,6 @@ def worker(
     Returns:
         None
     """
-
     np.random.seed(seed)
     item = None
     job_session_id = None
@@ -310,7 +309,8 @@ class JobExecutor2:
             max_queue_size_per_worker: int = 2,
             max_queue_size_pin_thread_per_worker: int = 3,
             wait_time: float = 0.01,
-            wait_until_processes_start: bool = True):
+            wait_until_processes_start: bool = True,
+            restart_crashed_worker: bool = True):
         """
 
         Args:
@@ -326,6 +326,8 @@ class JobExecutor2:
             wait_time: the default wait time for a process or thread to sleep if no job is available
             wait_until_processes_start: if True, the main process will wait until the worker processes and
                 pin threads are fully running
+            restart_crashed_worker: if True, the worker will be restarted. The worker's crashed job result will
+                be lost
         """
         self.wait_until_processes_start = wait_until_processes_start
         self.wait_time = wait_time
@@ -344,6 +346,8 @@ class JobExecutor2:
         self.worker_input_queues = []
         self.worker_output_queues = []
         self.processes = []
+        self.process_alive_check_time = time.perf_counter()
+        self.restart_crashed_worker = restart_crashed_worker
 
         self.jobs_processed = Value('i', 0)
         self.jobs_queued = 0
@@ -389,31 +393,13 @@ class JobExecutor2:
                 self.close()
             self.local_abort_event.clear()
 
-            with threadpool_limits(limits=1, user_api='blas'):
-                for i in range(self.nb_workers): #maxsize = 0
-                    self.worker_input_queues.append(Queue(maxsize=self.max_queue_size_per_worker))
-                    self.worker_output_queues.append(Queue(self.max_queue_size_per_worker))
+            # first create the worker input/output queues
+            for i in range(self.nb_workers):  # maxsize = 0
+                self.worker_input_queues.append(Queue(maxsize=self.max_queue_size_per_worker))
+                self.worker_output_queues.append(Queue(self.max_queue_size_per_worker))
 
-                    p = Process(
-                        target=worker,
-                        name=f'JobExecutorWorker-{i}',
-                        args=(
-                            self.worker_input_queues[i],
-                            self.worker_output_queues[i],
-                            self.function_to_run,
-                            self.global_abort_event,
-                            self.local_abort_event,
-                            self.synchronized_stop,
-                            self.wait_time, i
-                        ))
-                    p.daemon = False
-                    p.start()
-                    self.processes.append(p)
-                    print(f'Worker={p.pid} started!')
-                    logging.debug(f'Child process={p.pid} for jobExecutor={self}')
-
-            # allocate one thread per process to move the data from the process memory space
-            # to the main process memory
+            # allocate one thread per process to move the data from the
+            # process memory space to the main process memory
             self.pin_memory_threads = []
             for i in range(self.nb_workers):
                 pin_memory_thread = threading.Thread(
@@ -433,6 +419,27 @@ class JobExecutor2:
                 pin_memory_thread.daemon = False
                 pin_memory_thread.start()
                 print(f'Thread={pin_memory_thread.ident}, thread started')
+
+            # make sure a single process can use only one thread
+            with threadpool_limits(limits=1, user_api='blas'):
+                for i in range(self.nb_workers):
+                    p = Process(
+                        target=worker,
+                        name=f'JobExecutorWorker-{i}',
+                        args=(
+                            self.worker_input_queues[i],
+                            self.worker_output_queues[i],
+                            self.function_to_run,
+                            self.global_abort_event,
+                            self.local_abort_event,
+                            self.synchronized_stop,
+                            self.wait_time, i
+                        ))
+                    p.daemon = False
+                    p.start()
+                    self.processes.append(p)
+                    print(f'Worker={p.pid} started!')
+                    logging.debug(f'Child process={p.pid} for jobExecutor={self}')
 
             self.worker_control = 0
 
@@ -458,6 +465,7 @@ class JobExecutor2:
                         logging.error('the worker processes/pin threads were too slow to start!')
 
                 break
+
         logging.debug(f'jobExecutor ready={self}')
 
     def close(self, timeout: float = 10) -> None:
@@ -624,8 +632,47 @@ class JobExecutor2:
         Returns:
             True if the executor is not currently processing jobs
         """
+
         with self.jobs_processed.get_lock():
-            return self.jobs_processed.value == self.jobs_queued
+            is_idle = self.jobs_processed.value == self.jobs_queued
+
+        if self.restart_crashed_worker:
+            current_time = time.perf_counter()
+            delta = current_time - self.process_alive_check_time
+            if delta > 0.5:
+                self.process_alive_check_time = current_time
+                self._check_process_killed_and_restart()
+
+        return is_idle
+
+    def _check_process_killed_and_restart(self):
+        """
+        Verify the workers are alive. If not, restart new process.
+        """
+        for n, w in enumerate(self.processes):
+            if not w.is_alive():
+                logging.error(f'worker={w.pid} crashed. Attempting to restart a new worker!')
+                p = Process(
+                    target=worker,
+                    name=f'JobExecutorWorker-{n}',
+                    args=(
+                        self.worker_input_queues[n],
+                        self.worker_output_queues[n],
+                        self.function_to_run,
+                        self.global_abort_event,
+                        self.local_abort_event,
+                        self.synchronized_stop,
+                        self.wait_time, n
+                    ))
+                p.daemon = False
+                p.start()
+                self.processes[n] = p
+                logging.info(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}')
+
+                # most likely, the job was killed during the processing,
+                # so increment the job counters to fake a result
+                with self.jobs_processed.get_lock():
+                    self.jobs_processed.value += 1
 
     def job_report(self, f=sys.stdout):
         """

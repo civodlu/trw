@@ -41,13 +41,17 @@ def load_fake_volumes_small_npy(item):
 
 def load_fake_volumes_torch(item):
     time_start = time.time()
+    print('torch_fake_before')
     v = torch.ones([32, 32, 64], dtype=torch.float32)
+    print('torch_fake_created')
     v.fill_(float(item['values']))
+    print('torch_fake_filled')
     time_end = time.time()
     print('torch_construction_time=', time_end - time_start)
     r = {
         'volume': v
     }
+    print('torch_fake_done!')
     return r
 
 
@@ -395,7 +399,7 @@ class TestSequenceMap(TestCase):
         print('Done')
 
     def test_reservoir_map(self):
-        # test various "workloads". Make sure no pipeline doesn't deadlock
+        # test various "workloads". Make sure pipeline doesn't deadlock
         np.random.seed(0)
         for i in range(10):
             print(f'---------- {i} -------------')
@@ -469,3 +473,38 @@ class TestSequenceMap(TestCase):
         assert not split_map.job_executor.synchronized_stop.is_set()
         split.close()
         assert split_map.job_executor.synchronized_stop.is_set()
+
+    def test_jobexecutor_process_killed(self):
+        """
+        Simulate a crash of a job executor process,
+        we expect the job executor to restart a new process
+        and continue the processing, possibly losing one job result
+        """
+        indices = np.asarray(list(range(5)))
+        split = {
+            'indices': indices,
+        }
+
+        split = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        split_map = split.map(partial(load_data, time_sleep=1), nb_workers=1)
+        time.sleep(2.0)
+
+        print('Starting sequence [process will be killed]')
+        b_list = []
+        for b_n, b in enumerate(split_map):
+            if b_n == 1:
+                print('killing process...')
+                time.sleep(0.1)
+                split_map.job_executor.processes[0].terminate()
+            b_list.append(b)
+            print(b)
+        assert len(b_list) == len(indices) - 1
+
+        print('Starting sequence [no error]')
+        b_list = []
+        for b_n, b in enumerate(split_map):
+            b_list.append(b)
+            print(b)
+        assert len(b_list) == len(indices)
+
+        print('sequence done!')
