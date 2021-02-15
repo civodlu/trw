@@ -183,6 +183,7 @@ def collect_results_to_main_process(
         global_abort_event: Event,
         synchronized_stop: Event,
         local_abort_event: Event,
+        stop_event: Event,
         wait_time: float) -> None:
 
     assert output_queue is not None
@@ -190,6 +191,10 @@ def collect_results_to_main_process(
     item_job_session_id = None
     while True:
         try:
+            if stop_event.is_set():
+                print(f'Thread={threading.get_ident()}, (stop_event set) shuting down!', flush=True)
+                return
+
             if global_abort_event.is_set() or local_abort_event.is_set():
                 flush_queue(worker_output_queue)
                 flush_queue(output_queue)
@@ -354,6 +359,7 @@ class JobExecutor2:
 
         self.pin_memory_threads = []
         self.pin_memory_queue = None
+        self.pin_memory_thread_stop_events = []
 
         # we can't cancel jobs, so instead record a session ID. If session of
         # the worker and current session ID do not match
@@ -401,7 +407,11 @@ class JobExecutor2:
             # allocate one thread per process to move the data from the
             # process memory space to the main process memory
             self.pin_memory_threads = []
+            self.pin_memory_thread_stop_events = []
             for i in range(self.nb_workers):
+                stop_event = Event()
+                self.pin_memory_thread_stop_events.append(stop_event)
+
                 pin_memory_thread = threading.Thread(
                     name=f'JobExecutorThreadResultCollector-{i}',
                     target=collect_results_to_main_process,
@@ -413,6 +423,7 @@ class JobExecutor2:
                         self.global_abort_event,
                         self.local_abort_event,
                         self.synchronized_stop,
+                        stop_event,
                         self.wait_time
                     ))
                 self.pin_memory_threads.append(pin_memory_thread)
@@ -652,6 +663,14 @@ class JobExecutor2:
         for n, w in enumerate(self.processes):
             if not w.is_alive():
                 logging.error(f'worker={w.pid} crashed. Attempting to restart a new worker!')
+                # Often, if a process crashed, the queue are also in an incorrect state
+                # so restart the queues just in case these two are related
+                self.worker_output_queues[n] = Queue(self.max_queue_size_per_worker)
+
+                # kill the thread that collect the results
+                # TODO
+
+                # restart the worker process
                 p = Process(
                     target=worker,
                     name=f'JobExecutorWorker-{n}',
@@ -668,12 +687,48 @@ class JobExecutor2:
                 p.start()
                 self.processes[n] = p
                 logging.info(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}')
+                print(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}',
+                      file=sys.stderr,
+                      flush=True)
+
+                # shutdown the pinning thread
+                # 1) notify the thread using `pin_memory_thread_stop_events`
+                # 2) wait for the termination
+                self.pin_memory_thread_stop_events[n].set()
+                stop_event = Event()
+                self.pin_memory_thread_stop_events[n] = stop_event
+                self.pin_memory_threads[n].join(timeout=5.0)
+                if self.pin_memory_threads[n].isAlive():
+                    logging.error(f'thread={self.pin_memory_threads[n].ident} did not respond to shutdown!')
+                    print(f'thread={self.pin_memory_threads[n].ident} did not respond to shutdown!',
+                          file=sys.stderr,
+                          flush=True)
+
+                # restart the pinning thread process
+                pin_memory_thread = threading.Thread(
+                    name=f'JobExecutorThreadResultCollector-{n}',
+                    target=collect_results_to_main_process,
+                    args=(
+                        self.job_session_id,
+                        self.jobs_processed,
+                        self.worker_output_queues[n],
+                        self.pin_memory_queue,
+                        self.global_abort_event,
+                        self.local_abort_event,
+                        self.synchronized_stop,
+                        stop_event,
+                        self.wait_time
+                    ))
+                self.pin_memory_threads[n] = pin_memory_thread
+                pin_memory_thread.daemon = False
+                pin_memory_thread.start()
+                print(f'Thread={pin_memory_thread.ident}, pinning thread re-started')
 
                 # most likely, the job was killed during the processing,
                 # so increment the job counters to fake a result
                 with self.jobs_processed.get_lock():
-                    # there may be a max of 2 results lost, so to be safe, increase by 2
-                    self.jobs_processed.value += 2
+                    # we may have lost a maximum of queue size results
+                    self.jobs_processed.value += self.max_queue_size_per_worker
 
     def job_report(self, f=sys.stdout):
         """
