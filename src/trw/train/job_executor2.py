@@ -18,7 +18,7 @@ from queue import Queue as ThreadQueue, Empty
 
 # Make sure we start a new process in an empty state so
 # that Windows/Linux environment behave the similarly
-import multiprocessing
+from torch import multiprocessing
 
 from trw.utils.graceful_killer import GracefulKiller
 
@@ -409,6 +409,8 @@ class JobExecutor2:
             self.pin_memory_threads = []
             self.pin_memory_thread_stop_events = []
             for i in range(self.nb_workers):
+                # stop event is used to notify the pinning thread
+                # to stop its processing (e.g., so that it could be restarted)
                 stop_event = Event()
                 self.pin_memory_thread_stop_events.append(stop_event)
 
@@ -658,7 +660,7 @@ class JobExecutor2:
 
     def _check_process_killed_and_restart(self):
         """
-        Verify the workers are alive. If not, restart new process.
+        Verify the workers are alive. If not, restart a new process.
         """
         for n, w in enumerate(self.processes):
             if not w.is_alive():
@@ -667,33 +669,31 @@ class JobExecutor2:
                 # so restart the queues just in case these two are related
                 self.worker_output_queues[n] = Queue(self.max_queue_size_per_worker)
 
-                # kill the thread that collect the results
-                # TODO
-
                 # restart the worker process
-                p = Process(
-                    target=worker,
-                    name=f'JobExecutorWorker-{n}',
-                    args=(
-                        self.worker_input_queues[n],
-                        self.worker_output_queues[n],
-                        self.function_to_run,
-                        self.global_abort_event,
-                        self.local_abort_event,
-                        self.synchronized_stop,
-                        self.wait_time, n
-                    ))
-                p.daemon = False
-                p.start()
-                self.processes[n] = p
-                logging.info(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}')
-                print(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}',
-                      file=sys.stderr,
-                      flush=True)
+                with threadpool_limits(limits=1, user_api='blas'):
+                    p = Process(
+                        target=worker,
+                        name=f'JobExecutorWorker-{n}',
+                        args=(
+                            self.worker_input_queues[n],
+                            self.worker_output_queues[n],
+                            self.function_to_run,
+                            self.global_abort_event,
+                            self.local_abort_event,
+                            self.synchronized_stop,
+                            self.wait_time, n
+                        ))
+                    p.daemon = False
+                    p.start()
+                    self.processes[n] = p
+                    logging.info(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}')
+                    print(f'worker={w.pid} crashed and successfully restarted with pid={p.pid}',
+                          file=sys.stderr,
+                          flush=True)
 
                 # shutdown the pinning thread
                 # 1) notify the thread using `pin_memory_thread_stop_events`
-                # 2) wait for the termination
+                # 2) wait for the termination of the thread
                 self.pin_memory_thread_stop_events[n].set()
                 stop_event = Event()
                 self.pin_memory_thread_stop_events[n] = stop_event

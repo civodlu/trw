@@ -98,6 +98,7 @@ class TabsDynamicData(BokehUi):
         data, types, type_categories, alias = get_data_normalize_and_alias(options, connection, name)
         tabs = creator_fn(options, name, role, data, types, type_categories)
         tabs_ui = []
+
         for tab in tabs:
             assert isinstance(tab, BokehUi), 'must be a ``BokehUi`` based!'
             tabs_ui.append(tab.get_ui())
@@ -138,6 +139,6 @@ class TabsDynamicData(BokehUi):
                     for tab in tabs:
                         tab.update_data(options, name, data, types, type_categories)
         except sqlite3.OperationalError as e:
-            logger.warning(f'TabsDynamicData={self} could not be updated. Excpetion={e}. '
+            logger.warning(f'TabsDynamicData={self} could not be updated. Exception={e}. '
                            f'``database is locked`` can be ignored if another process is '
                            f'currently populating the database')

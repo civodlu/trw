@@ -89,7 +89,7 @@ def export_as_image(batch, feature_name, name, sample_id, export_root, feature_a
     samples = trw.utils.to_value(batch[feature_name])
     # an image MUST have a filter component, else we could confuse
     # if as a 2D array that we want to export in a text file
-    if not isinstance(samples, list) or not isinstance(samples[sample_id], np.ndarray) or len(samples[sample_id].shape) < 3:
+    if not isinstance(samples, list) or len(samples) == 0 or not isinstance(samples[sample_id], np.ndarray) or len(samples[sample_id].shape) < 3:
         return False, None
     rgb = as_rgb_image(samples[sample_id])
     if rgb is None:
@@ -181,13 +181,27 @@ def export_as_text(batch, feature_name, name, sample_id, export_root, feature_at
     return True, None
 
 
+def convert_tuple_to_list(batch, feature_name, name, sample_id, export_root, feature_attributes):
+    samples = batch[feature_name]
+    if isinstance(samples, list) and len(samples) > 0 and isinstance(samples[0], tuple):
+        samples = [list(s) for s in samples]
+        batch[feature_name] = samples
+    if isinstance(samples, tuple):
+        batch[feature_name] = list(samples)
+
+    # here we just transform the type, we still
+    # want to process the values of the transform so return
+    # `False`, even though it was processed
+    return False, None
+
+
 def export_sample(
         export_root,
         table_stream,
         base_name,
         batch,
         sample_ids=None,
-        export_fns=[export_as_image, export_as_npy, export_as_text],
+        export_fns=[convert_tuple_to_list, export_as_image, export_as_npy, export_as_text],
         name_expansions=['epoch', 'batch', 'split', 'dataset'],
         ):
     r"""

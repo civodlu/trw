@@ -60,25 +60,25 @@ def _parse_voc_xml(node):
 
 
 OBJECT_CLASS_MAPPING = {
-    'person': 0,
-    'bird': 1,
-    'cat': 2,
-    'cow': 3,
-    'dog': 4,
-    'horse': 5,
-    'sheep': 6,
-    'aeroplane': 7,
-    'bicycle': 8,
-    'boat': 9,
-    'bus': 10,
-    'car': 11,
-    'motorbike': 12,
-    'train': 13,
-    'bottle': 14,
-    'chair': 15,
-    'diningtable': 16,
-    'pottedplant': 17,
-    'sofa': 18,
+    'aeroplane': 0,
+    'bicycle': 1,
+    'bird': 2,
+    'boat': 3,
+    'bottle': 4,
+    'bus': 5,
+    'car': 6,
+    'cat': 7,
+    'chair': 8,
+    'cow': 9,
+    'diningtable': 10,
+    'dog': 11,
+    'horse': 12,
+    'motorbike': 13,
+    'person': 14,
+    'pottedplant': 15,
+    'sheep': 16,
+    'sofa': 17,
+    'train': 18,
     'tvmonitor': 19
 }
 
@@ -89,6 +89,7 @@ def _load_image_and_bb(batch, transform, normalize_0_1=True):
     sizes_cyx = []
     object_class_by_image = []
     object_bb_yx_by_image = []
+    label_difficulty_by_image = []
     image_paths = []
 
     for image_path, annotation_path in zip(batch['images'], batch['annotations']):
@@ -109,15 +110,18 @@ def _load_image_and_bb(batch, transform, normalize_0_1=True):
 
         o_classes = []
         o_bb = []
+        o_difficult = []
         for o in annotation['object']:
             o_classes.append(OBJECT_CLASS_MAPPING[o['name']])
             box = o['bndbox']
+            o_difficult.append(int(o['difficult']))
             o_bb.append([
                 float(box['ymin']),
                 float(box['xmin']),
                 float(box['ymax']),
                 float(box['xmax'])])
         object_class_by_image.append(torch.from_numpy(np.asarray(o_classes, dtype=np.int64)))
+        label_difficulty_by_image.append(torch.tensor(o_difficult, dtype=torch.long))
 
         # typically handled on CPU, so keep it as numpy
         object_bb_yx_by_image.append(np.asarray(o_bb, dtype=np.float32))
@@ -132,6 +136,7 @@ def _load_image_and_bb(batch, transform, normalize_0_1=True):
         'annotations': annotations,
         'sizes_cyx': sizes_cyx,
         'object_class_by_image': object_class_by_image,
+        'label_difficulty_by_image': label_difficulty_by_image,
         'object_bb_yx_by_image': object_bb_yx_by_image
     }
 
@@ -204,7 +209,7 @@ def create_voc_segmentation_dataset(
 
     # valid split
     valid_dataset = torchvision.datasets.VOCSegmentation(
-        root=path, image_set='train', transform=None, download=download, year=year)
+        root=path, image_set='val', transform=None, download=download, year=year)
     valid_sequence = trw.train.SequenceArray({
         'images': valid_dataset.images,
         'masks': valid_dataset.masks,
@@ -227,7 +232,11 @@ def create_voc_detection_dataset(
         transform_valid=None,
         nb_workers=2,
         batch_size=1,
-        year='2012'):
+        data_subsampling_fraction_train=1.0,
+        data_subsampling_fraction_valid=1.0,
+        train_split='train',
+        valid_split='val',
+        year='2007'):
     """
     PASCAL VOC detection challenge
 
@@ -244,17 +253,36 @@ def create_voc_detection_dataset(
         # else default a standard folder
         root = './data'
 
-    path = os.path.join(root, f'VOC{year}')
+    #path = os.path.join(root, f'VOC{year}')  # TODO
+    path = root
 
     download = False
     try:
         # test if we have access to the data. If this fails, it means we need to download it!
-        torchvision.datasets.VOCDetection(root=path, image_set='val', transform=None, download=False, year=year)
+        torchvision.datasets.VOCDetection(
+            root=path,
+            image_set=train_split,
+            transform=None,
+            download=False,
+            year=year
+        )
     except:
         download = True
 
     train_dataset = torchvision.datasets.VOCDetection(
-        root=path, image_set='train', transform=None, download=download, year=year)
+        root=path,
+        image_set=train_split,
+        transform=None,
+        download=download,
+        year=year)
+
+    if data_subsampling_fraction_train < 1.0:
+        # resample the data if required
+        nb_train = int(len(train_dataset.images) * data_subsampling_fraction_train)
+        indices = np.random.choice(len(train_dataset.images), nb_train, replace=False)
+        train_dataset.images = np.asarray(train_dataset.images)[indices].tolist()
+        train_dataset.annotations = np.asarray(train_dataset.annotations)[indices].tolist()
+
     train_sequence = trw.train.SequenceArray({
         'images': train_dataset.images,
         'annotations': train_dataset.annotations
@@ -264,7 +292,19 @@ def create_voc_detection_dataset(
 
     # valid split
     valid_dataset = torchvision.datasets.VOCDetection(
-        root=path, image_set='train', transform=None, download=download, year=year)
+        root=path,
+        image_set=valid_split,
+        transform=None,
+        download=download,
+        year=year)
+
+    if data_subsampling_fraction_valid < 1.0:
+        # resample the data if required
+        nb_valid = int(len(valid_dataset.images) * data_subsampling_fraction_valid)
+        indices = np.random.choice(len(valid_dataset.images), nb_valid, replace=False)
+        valid_dataset.images = np.asarray(valid_dataset.images)[indices].tolist()
+        valid_dataset.annotations = np.asarray(valid_dataset.annotations)[indices].tolist()
+
     valid_sequence = trw.train.SequenceArray({
         'images': valid_dataset.images,
         'annotations': valid_dataset.annotations,

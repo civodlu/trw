@@ -37,7 +37,7 @@ class CallbackReportingStartServer(callback.Callback):
             self,
             reporting_options=create_default_reporting_options(embedded=True, config={}),
             show_app=True,
-            port=None,
+            port=0,
             keep_alive_until_client_disconnect=True):
         self.server_process = None
         self.reporting_options = reporting_options
