@@ -56,7 +56,7 @@ def per_epoch_fn():
         trw.train.CallbackSkipEpoch(
             nb_epochs=10,
             callbacks=[trw.train.CallbackReportingExportSamples(
-                table_name='random_samples',
+                table_name='current_samples',
                 max_samples=5,
                 split_exclusions=['train'])]),
     ]

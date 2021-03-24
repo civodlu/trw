@@ -418,6 +418,7 @@ class TestReporting(TestCase):
         def creator_fn(name, role):
             nonlocal header_updated
             header_updated = True
+            return Panel()
 
         dynamic_header = TabsDynamicHeader(doc, options, connection, creator_fn)
         doc.execute()

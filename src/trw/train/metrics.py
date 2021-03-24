@@ -1,6 +1,7 @@
 import numpy as np
 import trw
 import trw.utils
+from sklearn.metrics import confusion_matrix
 from trw.train import losses
 from sklearn import metrics
 import collections
@@ -9,6 +10,46 @@ from .analysis_plots import auroc
 import torch.nn as nn
 
 # TODO discard samples where weight is <= 0 for all the metrics
+
+
+def fast_confusion_matrix(
+        y: torch.Tensor,
+        y_pred: torch.Tensor,
+        num_classes: int,
+        ignore_y_out_of_range: bool = False,
+        device=torch.device('cpu')) -> torch.Tensor:
+    """
+    Compute confusion matrix to evaluate the accuracy of a classification.
+
+    By definition a confusion matrix :math:`C` is such that :math:`C_{i, j}`
+    is equal to the number of observations known to be in group :math:`i` and
+    predicted to be in group :math:`j`.
+
+    Thus in binary classification, the count of true negatives is
+    :math:`C_{0,0}`, false negatives is :math:`C_{1,0}`, true positives is
+    :math:`C_{1,1}` and false positives is :math:`C_{0,1}`.
+
+    Similar to :func:`sklearn.metrics.confusion_matrix`
+
+    Args:
+        y_pred: prediction (tensor of integers)
+        y: tensor of integers
+        num_classes: the number of classes
+        ignore_y_out_of_range: if `True`, indices of `y` greater than `num_classes` will be ignored
+        device: device where to perform the calculation
+    """
+    assert y_pred.shape == y.shape
+    y_pred = y_pred.flatten().to(device)
+    y = y.flatten().to(device)
+
+    if ignore_y_out_of_range:
+        target_mask = (y >= 0) & (y < num_classes)
+        y = y[target_mask]
+        y_pred = y_pred[target_mask]
+
+    indices = num_classes * y + y_pred
+    m = torch.bincount(indices, minlength=num_classes ** 2).reshape(num_classes, num_classes)
+    return m
 
 
 class Metric:
@@ -320,8 +361,8 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
         if len(output_raw.shape) < 2 or output_raw.shape[1] != 2:
             return None
 
-        truth = trw.utils.to_value(outputs.get('output_truth'))
-        found = trw.utils.to_value(outputs.get('output'))
+        truth = outputs.get('output_truth')
+        found = outputs.get('output')
         if truth.shape != found.shape:
             # shape must be the same, else something is wrong!
             return None
@@ -330,7 +371,9 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
         truth = truth.reshape((-1))
         found = found.reshape((-1))
         if truth is not None and found is not None:
-            cm = metrics.confusion_matrix(y_pred=found, y_true=truth)
+            with torch.no_grad():
+                cm = fast_confusion_matrix(y_pred=found, y=truth, num_classes=output_raw.shape[1]).numpy()
+
             if len(cm) == 2:
                 # special case: only binary classification
                 tn, fp, fn, tp = cm.ravel()
@@ -422,6 +465,7 @@ def default_segmentation_metrics():
     return [
         MetricLoss(),
         MetricSegmentationDice(),
+        MetricClassificationBinarySensitivitySpecificity(),
     ]
 
 

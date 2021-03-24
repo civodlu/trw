@@ -1,9 +1,11 @@
+import time
 from unittest import TestCase
 import trw.train
 import numpy as np
 import torch
 import sklearn
-from trw.train.metrics import MetricSegmentationDice
+from sklearn.metrics import confusion_matrix
+from trw.train.metrics import fast_confusion_matrix, MetricClassificationBinarySensitivitySpecificity
 
 
 class TestMetrics(TestCase):
@@ -232,3 +234,44 @@ class TestMetrics(TestCase):
 
         expected_f1 = 2 * tp / (2 * tp + fp + fn)
         assert abs(1 - one_minus_f1['1-f1[binary]'] - expected_f1) <= 1e-4
+
+    def test_fast_histogram(self):
+        # verify the fast histogram has exactly the same
+        # results as sklearn
+        torch.random.manual_seed(0)
+        for n in range(1000):
+            nb_samples = int(np.random.uniform(2, 500))
+            nb_classes = int(np.random.uniform(2, 10))
+
+            found0 = torch.randint(0, nb_classes, [nb_samples])
+            expected0 = torch.randint(0, nb_classes, [nb_samples])
+
+            cm_sk = confusion_matrix(found0.numpy(), expected0.numpy(), labels=list(range(nb_classes)))
+            cm = fast_confusion_matrix(found0, expected0, nb_classes)
+            assert abs(cm_sk - cm.numpy()).max() == 0
+
+    def test_sensitivity_specificity_seg(self):
+        found0 = torch.tensor([[[
+            [0, 0, 1],
+            [1, 1, 1],
+            [0, 0, 1],
+        ]]])
+
+        expected0 = torch.tensor([[[
+            [0, 1, 1],
+            [0, 1, 0],
+            [0, 0, 0],
+        ]]])
+
+        metric = MetricClassificationBinarySensitivitySpecificity()
+        v0 = metric({'output_truth': expected0, 'output': found0, 'output_raw': torch.zeros([1, 2, 3, 3])})
+        r = metric.aggregate_metrics([v0])
+
+        # TP = 2
+        # FP = 3
+        # TN = 3
+        # FN = 1
+        expected_sensitivity = 2.0 / 3.0
+        expected_specificity = 3.0 / (3.0 + 3.0)
+        assert abs(r['1-sensitivity'] - (1 - expected_sensitivity)) < 1e-5
+        assert abs(r['1-specificity'] - (1 - expected_specificity)) < 1e-5

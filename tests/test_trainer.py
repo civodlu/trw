@@ -31,6 +31,7 @@ def create_simple_regression():
     }
     return datasets
 
+
 def create_random_input():
     """
     Create a simple dataset where output = input_1 * 2.0
@@ -225,7 +226,7 @@ class TestTrainer(TestCase):
     def test_serialize_module(self):
         # make sure we can serialize and deserialize module with something else than pickle
         model = ModelSimpleRegression()
-        model.w[:] = 42
+        model.w.data[:] = 42
 
         try:
             import dill

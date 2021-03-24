@@ -378,7 +378,7 @@ class TestLosses(TestCase):
         alpha = np.asarray([1.0, 1.0], dtype=np.float32)
 
         loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=0.0)
-        loss_focal = loss_focal_fn(outputs, targets)
+        loss_focal = loss_focal_fn(outputs, targets.unsqueeze(dim=1))
 
         loss_ce_fn = torch.nn.CrossEntropyLoss(reduction='none')
         loss_ce = loss_ce_fn(outputs, targets)
@@ -393,7 +393,7 @@ class TestLosses(TestCase):
         alpha = torch.from_numpy(np.asarray([1.0, 1.0], dtype=np.float32))
 
         loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=10.0)
-        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets))
+        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets.unsqueeze(dim=1)))
         assert len(loss_focal) == len(targets)
 
         ce_loss = trw.utils.to_value(torch.nn.CrossEntropyLoss(reduction='none')(outputs, targets))
@@ -412,7 +412,7 @@ class TestLosses(TestCase):
         outputs = torch.ones([10, 3, 5, 5], dtype=torch.float32)
 
         loss_focal_fn = trw.train.LossFocalMulticlass(gamma=1.0)
-        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets))
+        loss_focal = trw.utils.to_value(loss_focal_fn(outputs, targets.unsqueeze(dim=1)))
         assert len(loss_focal) == len(targets)
 
     def test_triplet_loss(self):

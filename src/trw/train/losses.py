@@ -4,7 +4,7 @@ import numpy as np
 import torch.nn.functional as F
 
 
-def one_hot(targets, num_classes, dtype=torch.float32):
+def one_hot(targets, num_classes, dtype=torch.float32, device=None):
     """
     Encode the targets (an tensor of integers representing a class)
     as one hot encoding.
@@ -17,10 +17,14 @@ def one_hot(targets, num_classes, dtype=torch.float32):
         num_classes: the total number of classes
         targets: a N-dimensional integral tensor (e.g., 1D for classification, 2D for 2D segmentation map...)
         dtype: the type of the output tensor
+        device: the device of the one-hot encoded tensor. If `None`, use the target's device
 
     Returns:
         a one hot encoding of a N-dimentional integral tensor
     """
+    if device is None:
+        device = targets.device
+
     nb_samples = len(targets)
     if len(targets.shape) == 2:
         # 2D target (e.g., classification)
@@ -30,7 +34,7 @@ def one_hot(targets, num_classes, dtype=torch.float32):
         encoded_shape = tuple([nb_samples, num_classes] + list(targets.shape[1:]))
 
     with torch.no_grad():
-        encoded_target = torch.zeros(encoded_shape, dtype=dtype, device=targets.device)
+        encoded_target = torch.zeros(encoded_shape, dtype=dtype, device=device)
         encoded_target.scatter_(1, targets.unsqueeze(1), 1)
     return encoded_target
 
@@ -46,7 +50,7 @@ class LossDiceMulticlass(nn.Module):
 
         Args:
             normalization_fn: apply a normalization function on the `output` in the forward method. This
-                should  normalize the output to from logits to probability (i.e. range [0..1])
+                should  normalize the output from logits to probability (i.e. range [0..1])
             eps: epsilon to avoid division by zero
             return_dice_by_class: if True, returns the (numerator, cardinality) by class and by sample from
                 the dice can be calculated, else returns the per sample dice loss `1 - average(dice by class)`
@@ -151,7 +155,7 @@ class LossFocalMulticlass(nn.Module):
                                putting more focus on hard, misclassiﬁed examples
     """
 
-    def __init__(self, alpha=None, gamma=2):
+    def __init__(self, alpha=None, gamma=2, reduction='mean'):
         super().__init__()
         if alpha is None:
             self.alpha = None
@@ -165,10 +169,14 @@ class LossFocalMulticlass(nn.Module):
             assert alpha.shape[0] > 1
 
         self.gamma = gamma
+        self.reduction = reduction
+        assert reduction in (None, 'mean')
 
     def forward(self, outputs, targets):
-        assert len(outputs.shape) == len(targets.shape) + 1, 'output: must have W x C x d0 x ... x dn shape and ' \
-                                                            'target: must have W x d0 x ... x dn shape'
+        assert len(outputs.shape) == len(targets.shape), 'output: must have W x C x d0 x ... x dn shape and ' \
+                                                         'target: must have W x 1 x d0 x ... x dn shape'
+        assert targets.shape[1] == 1, '`C` must be size 1'
+        targets = targets.squeeze(1)
 
         if self.alpha is not None:
             assert len(self.alpha) == outputs.shape[1], 'there must be one alpha weight by class!'
@@ -181,7 +189,13 @@ class LossFocalMulticlass(nn.Module):
 
         # for segmentation maps, make sure we average all values by sample
         nb_samples = len(outputs)
-        return focal_loss.view((nb_samples, -1)).mean(dim=1)
+
+        if self.reduction == 'mean':
+            return focal_loss.view((nb_samples, -1)).mean(dim=1)
+        elif self.reduction is None:
+            return focal_loss
+        else:
+            raise ValueError()
 
 
 class LossTriplets(nn.Module):

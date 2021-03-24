@@ -18,6 +18,9 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
         a torch.Tensor if of type numpy.ndarray else, the input type
     """
     tensor = values
+    if isinstance(values, (list, np.ndarray, torch.Tensor)) and len(values) == 0:
+        return []
+
     if isinstance(values, list) and isinstance(values[0], torch.Tensor):
         if len(values) == 1:
             # no need to concatenate if we have only a single element!

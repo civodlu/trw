@@ -1,3 +1,4 @@
+from bokeh.models import Panel
 from bokeh.models.widgets import Tabs
 import os
 from trw.reporting.bokeh_ui import BokehUi
@@ -59,4 +60,5 @@ class TabsDynamicHeader(BokehUi):
     def update_new_tables(self, name_roles, creator_fn):
         for name, role in name_roles:
             panel = creator_fn(name, role)
+            assert isinstance(panel, Panel)
             self.tabs.tabs.append(panel)
