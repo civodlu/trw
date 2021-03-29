@@ -1,4 +1,5 @@
 import copy
+from numbers import Number
 from typing import Sequence, Optional, Union, Any, List
 
 from trw.layers.convs import ModuleWithIntermediate
@@ -9,6 +10,7 @@ import torch.nn as nn
 from trw.utils import upsample
 from trw.layers.blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType
 from trw.layers.layer_config import LayerConfig, default_layer_config
+import numpy as np
 
 
 class DownType(Protocol):
@@ -248,13 +250,21 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
                 out_channels = skip_channels
 
             stride = strides[len(strides) - i - 1]
+            if isinstance(stride, Number):
+                stride_minus_one = stride - 1
+            else:
+                assert len(stride) == config.ops.dim, f'expected dim={config.ops.dim}' \
+                                                      f'for `stride` but got={len(stride)}'
+                stride_minus_one = tuple(np.asarray(stride))
+                stride = tuple(stride)
+
             self.ups.append(up_block_fn(
                 config,
                 len(self.channels) - i - 1,
                 skip_channels=skip_channels,
                 input_channels=input_channels,
                 output_channels=out_channels,
-                output_padding=stride - 1,
+                output_padding=stride_minus_one,
                 stride=stride))
             input_channels = skip_channels
 

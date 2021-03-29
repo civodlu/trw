@@ -1,5 +1,6 @@
 import collections
 import warnings
+from numbers import Number
 
 import torch
 from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
@@ -227,7 +228,7 @@ class BlockUpsampleNnConvNormActivation(nn.Module):
         assert stride is not None
 
         ops = []
-        if stride != 1:
+        if (isinstance(stride, Number) and stride != 1) or (max(stride) != 1 or min(stride) != 1):
             # if stride is 1, don't upsample!
             ops.append(config.ops.upsample_fn(scale_factor=stride))
 

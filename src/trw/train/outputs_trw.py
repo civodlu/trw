@@ -371,7 +371,7 @@ class OutputClassification2(Output):
         assert truth is not None, 'truth is `None` use `maybe_optional` to True'
         assert len(truth) == len(self.output), f'expected len output ({len(self.output)}) == len truth ({len(truth)})!'
         assert isinstance(truth, torch.Tensor), 'feature must be a torch.Tensor!'
-        assert truth.dtype == torch.long, 'the truth vector must be a `long` type feature'
+        assert truth.dtype == torch.long, f'the truth vector must be a `long` type feature, got={truth.dtype}'
 
         # make sure the class is not out of bound. This is a very common mistake!
         # max_index = int(torch.max(truth).cpu().numpy())
