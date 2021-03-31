@@ -187,6 +187,7 @@ def train_loop(
         split_name,
         split,
         optimizer,
+        per_step_scheduler,
         model,
         loss_fn,
         history,
@@ -205,6 +206,7 @@ def train_loop(
         split_name: the name of the split
         split: a dictionary of feature name and values
         optimizer: an optimizer to optimize the model
+        per_step_scheduler: scheduler to be applied per-batch
         model: the model to be optimized
         loss_fn: the loss function
         history: a list of history step
@@ -244,6 +246,7 @@ def train_loop(
             if optimizer is not None:
                 optimizer.zero_grad()
 
+            assert model.training
             outputs = model(batch)
             if outputs is None:
                 # skip this batch
@@ -263,11 +266,22 @@ def train_loop(
             
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
-                    callback(dataset_name, split_name, batch, loss_terms)
+                    callback(
+                        dataset_name=dataset_name,
+                        split_name=split_name,
+                        batch=batch,
+                        loss_terms=loss_terms,
+                        model=model,
+                        optimizer=optimizer,
+                        per_step_scheduler=per_step_scheduler
+                    )
 
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
             if optimizer is not None:
                 optimizer.step()
+
+            if per_step_scheduler is not None:
+                per_step_scheduler.step()
 
             # once we are done, we want to perform some cleanup. For example, we do NOT want to keep CUDA based
             # tensors in the output so we can run clean up to transfer CUDA based memory to numpy
@@ -340,7 +354,12 @@ def eval_loop(
 
                 if callbacks_per_batch_loss_terms is not None:
                     for callback in callbacks_per_batch_loss_terms:
-                        callback(dataset_name, split_name, batch, loss_terms)
+                        callback(
+                            dataset_name=dataset_name,
+                            split_name=split_name,
+                            batch=batch,
+                            loss_terms=loss_terms,
+                            model=model)
                         
                 # clean the loss terms (e.g., free memory)
                 loss_term_cleanup(loss_terms)
@@ -369,6 +388,7 @@ def epoch_train_eval(
         model,
         losses,
         schedulers,
+        per_step_schedulers,
         history,
         callbacks_per_batch,
         callbacks_per_batch_loss_terms,
@@ -385,6 +405,7 @@ def epoch_train_eval(
         model:
         losses:
         schedulers:
+        per_step_schedulers:
         history:
         callbacks_per_batch:
         callbacks_per_batch_loss_terms:
@@ -409,6 +430,10 @@ def epoch_train_eval(
         if schedulers is not None:
             scheduler = schedulers.get(dataset_name)
 
+        per_step_scheduler = None
+        if per_step_schedulers is not None:
+            per_step_scheduler = per_step_schedulers.get(dataset_name)
+
         dataset_history = collections.OrderedDict()
         dataset_outputs = collections.OrderedDict()
         for split_name, split in dataset.items():
@@ -424,6 +449,7 @@ def epoch_train_eval(
                     split_name,
                     split,
                     optimizer,
+                    per_step_scheduler,
                     model,
                     loss_fn,
                     history,
@@ -806,11 +832,11 @@ class Trainer:
         # instantiate the optimizer and scheduler
         logger.info('creating optimizers...')
         if optimizers_fn is not None:
-            optimizers, schedulers = optimizers_fn(datasets, model)
+            optimizers, schedulers, per_step_schedulers = optimizers_fn(datasets, model)
             logger.info('optimizers created successfully!')
         else:
             logger.info('optimizer fn is None! No optimizer created.')
-            optimizers, schedulers = None, None
+            optimizers, schedulers, per_step_schedulers = None, None, None
 
         logger.info('creating losses...')
         losses = loss_creator(datasets, losses_fn)
@@ -819,8 +845,8 @@ class Trainer:
         num_epochs = options['training_parameters']['num_epochs']
 
         if isinstance(optimizers, tuple):
-            assert len(optimizers) == 2, 'expected tuple(optimizer, scheduler)'
-            optimizers, schedulers = optimizers
+            assert len(optimizers) == 3, 'expected tuple(optimizer, scheduler)'
+            optimizers, schedulers, per_step_schedulers = optimizers
 
         history = []
 
@@ -871,6 +897,7 @@ class Trainer:
                 model,
                 losses,
                 schedulers,
+                per_step_schedulers,
                 history,
                 callbacks_per_batch,
                 callbacks_per_batch_loss_terms,
@@ -906,6 +933,7 @@ class Trainer:
                 None,
                 model,
                 losses,
+                None,
                 None,
                 history,
                 callbacks_per_batch,

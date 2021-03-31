@@ -13,9 +13,11 @@ from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossC
 from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
+from .trainer_v2 import TrainerV2
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, \
     create_scheduler_step_lr, create_adam_optimizers_fn, \
-    create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn
+    create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn, \
+    create_sgd_optimizers_scheduler_one_cycle_lr_fn
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
 from .callback import Callback

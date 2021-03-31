@@ -2,6 +2,8 @@ import functools
 import torch
 import collections
 
+from trw.utils import torch_requires
+
 
 def create_scheduler_step_lr(optimizer, step_size=30, gamma=0.1):
     """
@@ -18,7 +20,7 @@ def create_scheduler_step_lr(optimizer, step_size=30, gamma=0.1):
     return torch.optim.lr_scheduler.StepLR(optimizer, step_size=step_size, gamma=gamma)
 
 
-def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
+def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None, per_step_scheduler_fn=None):
     """
     Create an optimizer and scheduler
 
@@ -30,16 +32,18 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
         datasets: a dictionary of dataset
         model: the model. Should be a `Module` or a `ModuleDict`
         optimizer_fn: the functor to instantiate the optimizer
-        scheduler_fn: the functor to instantiate the scheduler. May be None, in that case
-            there will be no scheduler
-
-    Returns:
-        a dict of optimizers, one per dataset
+        scheduler_fn: the functor to instantiate the scheduler to be run by epoch. May
+            be None, in that case there will be no schedule
+        per_step_scheduler_fn: the functor to instantiate scheduler to be run per-step (batch)
     """
 
+    per_step_schedulers = None
     schedulers = None
     if scheduler_fn is not None:
         schedulers = collections.OrderedDict()
+    if per_step_scheduler_fn is not None:
+        per_step_schedulers = collections.OrderedDict()
+
     optimizers = collections.OrderedDict()
     for dataset_name in datasets.keys():
         if isinstance(model, torch.nn.ModuleDict):
@@ -52,11 +56,15 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None):
 
         optimizers[dataset_name] = optimizer
 
-        if schedulers is not None:
+        if schedulers is not None and optimizer is not None:
             scheduler = scheduler_fn(optimizer)
             schedulers[dataset_name] = scheduler
 
-    return optimizers, schedulers
+        if per_step_schedulers is not None and optimizer is not None:
+            per_step_scheduler = per_step_scheduler_fn(optimizer)
+            per_step_schedulers[dataset_name] = per_step_scheduler
+
+    return optimizers, schedulers, per_step_schedulers
 
 
 def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, betas=(0.9, 0.999), scheduler_fn=None):
@@ -107,7 +115,7 @@ def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, 
     )
 
 
-def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, nesterov=False, scheduler_fn=None):
+def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weight_decay=0, nesterov=False, scheduler_fn=None, per_step_scheduler_fn=None):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with optional scheduler
 
@@ -129,7 +137,10 @@ def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weigh
         momentum=momentum,
         weight_decay=weight_decay,
         nesterov=nesterov)
-    return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
+    return create_optimizers_fn(datasets, model,
+                                optimizer_fn=optimizer_fn,
+                                scheduler_fn=scheduler_fn,
+                                per_step_scheduler_fn=per_step_scheduler_fn)
 
 
 def create_sgd_optimizers_scheduler_step_lr_fn(
@@ -165,4 +176,62 @@ def create_sgd_optimizers_scheduler_step_lr_fn(
         weight_decay=weight_decay,
         scheduler_fn=scheduler_fn,
         momentum=momentum,
+        nesterov=nesterov)
+
+
+@torch_requires(min_version='1.3')
+def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
+        datasets,
+        model,
+        max_learning_rate,
+        epochs,
+        steps_per_epoch,
+        additional_scheduler_kwargs=None,
+        weight_decay=0,
+        learning_rate_start_div_factor=25,
+        learning_rate_end_div_factor=10000,
+        nesterov=False):
+    """
+        Create a Stochastic gradient descent optimizer for each of the dataset with step learning rate scheduler
+
+        Args:
+            datasets: a dictionary of dataset
+            model: a model to optimize
+            max_learning_rate: the maximum learning rate
+            epochs: The number of epochs to train for
+            steps_per_epoch: The number of steps per epoch
+            learning_rate_start_div_factor: defines the initial learning rate for the first step as
+                initial_learning = learning_rate_start_multiplier * max_learning_rate
+            learning_rate_end_div_factor: defines the initial learning rate for the first step as
+                learning_end_start_multiplier * initial_learning
+            additional_scheduler_kwargs: additional arguments provided to the scheduler
+            weight_decay: the weight decay
+            nesterov: enables Nesterov momentum
+            momentum: the momentum of the SGD
+
+        Returns:
+            An optimizer with a step scheduler
+        """
+    scheduler_kwargs = {
+        'div_factor': learning_rate_start_div_factor,
+        'final_div_factor': learning_rate_end_div_factor
+    }
+    if scheduler_kwargs is not None:
+        scheduler_kwargs = {**scheduler_kwargs, **additional_scheduler_kwargs}
+
+    scheduler_fn = lambda optimizer: torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=max_learning_rate,
+            steps_per_epoch=steps_per_epoch,
+            epochs=epochs,
+            **scheduler_kwargs
+        )
+
+    return create_sgd_optimizers_fn(
+        datasets,
+        model,
+        learning_rate=0,  # the scheduler will entirely manage the learning rate
+        weight_decay=weight_decay,
+        per_step_scheduler_fn=scheduler_fn,
+        momentum=0,  # the scheduler will entirely manage the learning rate
         nesterov=nesterov)

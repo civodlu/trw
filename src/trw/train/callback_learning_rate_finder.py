@@ -258,20 +258,21 @@ class CallbackLearningRateFinder(callback.Callback):
             # we do NOT want to modify our model or optimizer so make a copy
             # we restart from the original model to better isolate the learning rate effect
             #model_copy = copy.deepcopy(model)
-            optimizers, _ = optimizers_fn(datasets, model_copy)
+            optimizers, _, _ = optimizers_fn(datasets, model_copy)
             optimizer = optimizers.get(self.dataset_name)
             assert optimizer is not None, 'optimizer can\'t be found for dataset={}'.format(self.dataset_name)
             utilities.set_optimizer_learning_rate(optimizer, learning_rate)
 
             callback_stop_epoch.reset()
             all_loss_terms = trainer.train_loop(
-                device,
-                self.dataset_name,
-                self.split_name,
-                split,
-                optimizer,
-                model_copy,
-                losses[self.dataset_name],
+                device=device,
+                dataset_name=self.dataset_name,
+                split_name=self.split_name,
+                split=split,
+                optimizer=optimizer,
+                per_step_scheduler=None,
+                model=model_copy,
+                loss_fn=losses[self.dataset_name],
                 history=None,
                 callbacks_per_batch=callbacks_per_batch,
                 callbacks_per_batch_loss_terms=None)

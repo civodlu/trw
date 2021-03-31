@@ -57,7 +57,7 @@ def get_first_output_of_interest(outputs, dataset_name, split_name, output_of_in
 def export_samples_v2(dataset_name, split_name, device, split, model, losses, root, datasets_infos, max_samples, callbacks_per_batch):
     nb_exported_samples = 0
     
-    def per_batch_export_fn(dataset_name, split_name, batch, loss_terms):
+    def per_batch_export_fn(dataset_name, split_name, batch, loss_terms, **kwargs):
         nonlocal nb_exported_samples
         nonlocal max_samples
         nonlocal root

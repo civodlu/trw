@@ -237,21 +237,17 @@ class TrainerV2:
             # instantiate the optimizer and scheduler
             logger.info('creating optimizers...')
             if optimizers_fn is not None:
-                optimizers, schedulers = optimizers_fn(datasets, model)
+                optimizers, schedulers, per_step_scheduler_fn = optimizers_fn(datasets, model)
                 logger.info('optimizers created successfully!')
             else:
                 logger.info('optimizer fn is None! No optimizer created.')
-                optimizers, schedulers = None, None
+                optimizers, schedulers, per_step_scheduler_fn = None, None, None
 
             logger.info('creating losses...')
             losses = loss_creator(datasets, losses_fn)
             logger.info('losses created successfully!')
 
             num_epochs = options['training_parameters']['num_epochs']
-
-            if isinstance(optimizers, tuple):
-                assert len(optimizers) == 2, 'expected tuple(optimizer, scheduler)'
-                optimizers, schedulers = optimizers
 
             callbacks_per_epoch = []
             if self.callbacks_per_epoch is not None:
@@ -294,6 +290,7 @@ class TrainerV2:
                     model,
                     losses,
                     schedulers,
+                    per_step_scheduler_fn,
                     history,
                     callbacks_per_batch,
                     callbacks_per_batch_loss_terms,
@@ -321,16 +318,18 @@ class TrainerV2:
             # finally run the post-training callbacks
             if with_final_evaluation:
                 logger.info('started final evaluation...')
+
                 outputs_epoch, history_epoch = self.run_epoch_fn(
-                    options,
-                    datasets,
-                    None,
-                    model,
-                    losses,
-                    None,
-                    history,
-                    callbacks_per_batch,
-                    callbacks_per_batch_loss_terms,
+                    options=options,
+                    datasets=datasets,
+                    optimizers=None,
+                    model=model,
+                    losses=losses,
+                    schedulers=None,
+                    per_step_schedulers=None,
+                    history=history,
+                    callbacks_per_batch=callbacks_per_batch,
+                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms,
                     run_eval=True,
                     force_eval_mode=True)
                 logger.info('finished final evaluation...')

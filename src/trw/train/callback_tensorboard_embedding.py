@@ -202,7 +202,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
                 if is_batch_vector(feature_values, batch_size):
                     embedding[full_name].append(trw.utils.to_value(feature_values))
 
-        def collect_embedding(dataset_name, split_name, batch, loss_terms, embedding, embedding_name, image_name):
+        def collect_embedding(dataset_name, split_name, batch, loss_terms, embedding, embedding_name, image_name, **kwargs):
             batch_size = trw.utils.len_batch(batch)
 
             embedding_values = loss_terms.get(embedding_name)

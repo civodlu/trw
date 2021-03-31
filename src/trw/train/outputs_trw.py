@@ -374,11 +374,13 @@ class OutputClassification2(Output):
         assert truth.dtype == torch.long, f'the truth vector must be a `long` type feature, got={truth.dtype}'
 
         # make sure the class is not out of bound. This is a very common mistake!
-        # max_index = int(torch.max(truth).cpu().numpy())
-        # min_index = int(torch.min(truth).cpu().numpy())
-        # assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
-        #                                         f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
-        # assert min_index >= 0, f'incorrect index! got={min_index}'
+        """
+        max_index = int(torch.max(truth).cpu().numpy())
+        min_index = int(torch.min(truth).cpu().numpy())
+        assert max_index < self.output.shape[1], f'index out of bound. Got={max_index}, ' \
+                                                 f'maximum={self.output.shape[1]}. Make sure the input data is correct.'
+        assert min_index >= 0, f'incorrect index! got={min_index}'
+        """
 
         criterion_args = {}
         if self.per_voxel_weights is not None:

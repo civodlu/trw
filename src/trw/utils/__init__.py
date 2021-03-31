@@ -16,6 +16,7 @@ from .batch_pad import batch_pad, batch_pad_joint, batch_pad_torch, batch_pad_nu
 from .batch_pad_minmax import batch_pad_minmax, batch_pad_minmax_joint, batch_pad_minmax_numpy, batch_pad_minmax_torch
 from .safe_filename import safe_filename
 from .optional_import import optional_import
+from .requires import torch_requires
 
 
 def collect_hierarchical_module_name(base_name, model, module_to_name=None):

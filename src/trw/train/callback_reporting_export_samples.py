@@ -76,7 +76,8 @@ def callbacks_per_loss_term(
         epoch,
         sql_table,
         format,
-        select_fn):
+        select_fn,
+        **kwargs):
     # process the exclusion
     if dataset_name in dataset_exclusions:
         raise StopIteration()

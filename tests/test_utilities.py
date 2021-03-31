@@ -6,6 +6,7 @@ import numpy as np
 import trw.utils
 import torch.nn as nn
 import torch.nn.functional as F
+from trw.utils import torch_requires
 
 
 class Cnn(nn.Module):
@@ -289,3 +290,30 @@ class TestUtilities(TestCase):
         except Exception:
             exception_raised = True
         assert exception_raised
+
+    def test_torch_requires_1_0(self):
+        @torch_requires(min_version='1.0')
+        def anything():
+            return 42
+
+        r = anything()
+        assert r == 42
+
+    def test_torch_requires_999_0(self):
+        @torch_requires(min_version='999.0')
+        def anything():
+            return 42
+
+        try:
+            r = anything()
+            assert False, 'should throw an exception'
+        except RuntimeError as e:
+            pass
+
+    def test_torch_requires_999_0_silent(self):
+        @torch_requires(min_version='999.0', silent_fail=True)
+        def anything():
+            return 42
+
+        r = anything()
+        assert r is None

@@ -201,7 +201,7 @@ class TestTrainer(TestCase):
         def callback_batch(dataset_name, split_name, batch):
             batch['test_name'] = 'test_value'
 
-        def callback_batch_loss_terms(dataset_name, split_name, batch, loss_terms):
+        def callback_batch_loss_terms(dataset_name, split_name, batch, loss_terms, **kwargs):
             all_batches.append(batch)
             all_loss_terms.append(loss_terms)
 
