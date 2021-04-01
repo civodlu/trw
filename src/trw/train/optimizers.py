@@ -216,6 +216,8 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
         'div_factor': learning_rate_start_div_factor,
         'final_div_factor': learning_rate_end_div_factor
     }
+    if additional_scheduler_kwargs is None:
+        additional_scheduler_kwargs = {}
     if scheduler_kwargs is not None:
         scheduler_kwargs = {**scheduler_kwargs, **additional_scheduler_kwargs}
 
@@ -230,8 +232,8 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
     return create_sgd_optimizers_fn(
         datasets,
         model,
-        learning_rate=0,  # the scheduler will entirely manage the learning rate
+        learning_rate=1.0,  # the scheduler will entirely manage the learning rate
         weight_decay=weight_decay,
         per_step_scheduler_fn=scheduler_fn,
-        momentum=0,  # the scheduler will entirely manage the learning rate
+        momentum=1.0,  # the scheduler will entirely manage the momentum
         nesterov=nesterov)
