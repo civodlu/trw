@@ -648,3 +648,20 @@ class TestLayers2(TestCase):
         assert isinstance(ops[1], nn.Conv3d)
         assert isinstance(ops[2], nn.InstanceNorm3d)
         assert isinstance(ops[3], nn.ReLU)
+
+    def test_deep_supervision(self):
+        backbone = trw.layers.UNetBase(dim=2, input_channels=3, channels=[2, 4, 8], output_channels=2)
+        deep_supervision = trw.layers.DeepSupervision(
+            backbone,
+            [3, 8, 16],
+        )
+
+        i = torch.zeros([1, 3, 8, 16], dtype=torch.float32)
+        t = torch.zeros([1, 1, 8, 16], dtype=torch.long)
+        outputs = deep_supervision(i, t)
+        assert len(outputs) == 2
+        assert isinstance(outputs[0], trw.train.OutputSegmentation2)
+        assert outputs[0].output.shape == (1, 2, 8, 16)
+        assert isinstance(outputs[1], trw.train.OutputSegmentation2)
+        assert outputs[1].output.shape == (1, 2, 8, 16)
+

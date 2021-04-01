@@ -21,3 +21,4 @@ from .autoencoder_convolutional_variational import AutoencoderConvolutionalVaria
 from .autoencoder_convolutional_variational_conditional import AutoencoderConvolutionalVariationalConditional
 from .gan import Gan, GanDataPool
 from .encoder_decoder_resnet import EncoderDecoderResnet
+from .deep_supervision import DeepSupervision
