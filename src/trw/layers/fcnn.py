@@ -165,4 +165,5 @@ class FullyConvolutional(nn.Module):
         if self.nb_classes is not None:
             score = self.classifier(score)
 
+        assert score is not None
         return score, intermediates_orig

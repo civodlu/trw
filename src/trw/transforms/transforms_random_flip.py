@@ -1,6 +1,9 @@
 import collections
 
 import functools
+from typing import Optional, Callable, List
+
+from trw.basic_typing import Batch
 from trw.transforms import transforms
 from trw.transforms.flip import transform_batch_random_flip_joint
 
@@ -21,7 +24,10 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
     """
     Randomly flip the axis of selected features
     """
-    def __init__(self, axis, flip_probability=0.5, criteria_fn=None):
+    def __init__(self,
+                 axis: int,
+                 flip_probability: float = 0.5,
+                 criteria_fn: Optional[Callable[[Batch], List[str]]] = None):
         """
         Args:
             axis: the axis to flip

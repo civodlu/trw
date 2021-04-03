@@ -2,11 +2,10 @@ import functools
 from numbers import Number
 from typing import Optional, Callable, List, Sequence
 
+from trw.basic_typing import Batch
 from trw.transforms import transforms
 from trw.transforms.normalize import normalize
 import collections
-
-from trw.typing import Batch
 
 
 def _transform_normalize(features_names, batch, mean, std):

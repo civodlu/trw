@@ -1,6 +1,7 @@
 import collections
 
 import functools
+from typing import List
 
 from trw.transforms import transforms
 from trw.transforms.resize import resize
@@ -23,7 +24,7 @@ class TransformResize(transforms.TransformBatchWithCriteria):
     """
     Resize a tensor to a fixed size
     """
-    def __init__(self, size, criteria_fn=None, mode='linear'):
+    def __init__(self, size: List[int], criteria_fn=None, mode='linear'):
         """
         Args:
             size: the size to reshape to. Excluding the sample and filter

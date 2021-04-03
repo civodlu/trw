@@ -1,10 +1,13 @@
+from typing import Optional
+
 import torch.nn as nn
 import functools
 
-from typing_extensions import Literal
+from trw.basic_typing import ModuleCreator
+from typing_extensions import Literal, Protocol
 
 
-def upsample_mode(mode: Literal['nearest', 'linear'], dim: int):
+def upsample_mode(mode: Literal['nearest', 'linear'], dim: int) -> ModuleCreator:
     if mode == 'linear':
         if dim == 1:
             return functools.partial(nn.Upsample, mode='linear')
@@ -25,8 +28,8 @@ class OpsConversion:
     Helper to create standard N-d operations
     """
     def __init__(self, upsample_mode: Literal['nearest', 'linear'] = 'nearest'):
-        self.dim = None
-        self.group_norm_fn = None
+        self.dim: Optional[int] = None
+        self.group_norm_fn: Optional[ModuleCreator] = None
         self.upsample_mode = upsample_mode
         try:
             self.group_norm_fn = nn.GroupNorm
@@ -45,30 +48,30 @@ class OpsConversion:
         except:
             pass
 
-        self.lrn_fn = nn.LocalResponseNorm
+        self.lrn_fn: Optional[ModuleCreator] = nn.LocalResponseNorm
 
-        self.conv_fn = None
-        self.decon_fn = None
+        self.conv_fn: Optional[ModuleCreator] = None
+        self.decon_fn: Optional[ModuleCreator] = None
 
-        self.max_pool_fn = None
-        self.avg_pool_fn = None
-        self.fractional_max_pool_fn = None
-        self.adaptative_max_pool_fn = None
-        self.adaptative_avg_pool_fn = None
+        self.max_pool_fn: Optional[ModuleCreator] = None
+        self.avg_pool_fn: Optional[ModuleCreator] = None
+        self.fractional_max_pool_fn: Optional[ModuleCreator] = None
+        self.adaptative_max_pool_fn: Optional[ModuleCreator] = None
+        self.adaptative_avg_pool_fn: Optional[ModuleCreator] = None
 
-        self.dropout_fn = None
-        self.dropout1d_fn = nn.Dropout
+        self.dropout_fn: Optional[ModuleCreator] = None
+        self.dropout1d_fn: Optional[ModuleCreator] = nn.Dropout
 
-        self.alpha_dropout = None
+        self.alpha_dropout: Optional[ModuleCreator] = None
         try:
             self.alpha_dropout = nn.AlphaDropout
         except:
             pass
 
-        self.upsample_fn = None
-        self.instance_norm = None
-        self.bn_fn = None
-        self.constant_padding = None
+        self.upsample_fn: Optional[ModuleCreator] = None
+        self.instance_norm: Optional[ModuleCreator] = None
+        self.bn_fn: Optional[ModuleCreator] = None
+        self.constant_padding: Optional[ModuleCreator] = None
 
     def set_dim(self, dim: int):
         self.dim = dim

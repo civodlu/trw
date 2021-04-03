@@ -57,6 +57,7 @@ def _posprocess_padding(config: LayerConfig, conv_kwargs: Dict, ops: List[nn.Mod
         kernel_size = conv_kwargs.get('kernel_size')
         if isinstance(kernel_size, int):
             kernel_size = [kernel_size] * config.ops.dim
+        assert kernel_size is not None
         assert len(kernel_size) == len(padding)
 
         is_even = 1 - np.mod(kernel_size, 2)
@@ -118,7 +119,7 @@ class BlockConvNormActivation(nn.Module):
         if padding_mode is not None:
             conv_kwargs['padding_mode'] = padding_mode
 
-        ops = []
+        ops: List[nn.Module] = []
         _posprocess_padding(config, conv_kwargs, ops)
 
         conv = config.conv(
@@ -166,7 +167,7 @@ class BlockDeconvNormActivation(nn.Module):
         if padding_mode is not None:
             deconv_kwargs['padding_mode'] = padding_mode
 
-        ops = []
+        ops: List[nn.Module] = []
         _posprocess_padding(config, deconv_kwargs, ops)
 
         deconv = config.deconv(

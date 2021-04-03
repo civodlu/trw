@@ -2,6 +2,7 @@ from typing import Sequence, Union, Dict, Any, List, Optional
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
 import torch
+import torch.nn as nn
 
 """Generic numeric type"""
 Numeric = Union[int, float]
@@ -83,3 +84,7 @@ Stride = Union[int, Sequence[int]]
 KernelSize = Union[int, Sequence[int]]
 Padding = Union[int, str, Sequence[int]]
 Paddings = Union[str, int, List[int], List[str], NestedIntSequence]
+
+
+class ModuleCreator(Protocol):
+    def __call__(self, *args, **kwargs) -> nn.Module: ...

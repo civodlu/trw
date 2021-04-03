@@ -1,6 +1,9 @@
 import collections
 
 import functools
+from typing import Optional, Callable, List, Union
+
+from trw.basic_typing import Batch, ShapeX, ShapeCX, TensorNCX
 from trw.transforms import transforms
 from trw.transforms import cutout_function
 from trw.transforms.copy import copy
@@ -29,9 +32,12 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
     """
     def __init__(
             self,
-            cutout_size,
-            criteria_fn=None,
-            cutout_value_fn=functools.partial(cutout_function.cutout_value_fn_constant, value=0)):
+            cutout_size: Union[ShapeCX, Callable[[], ShapeCX]],
+            criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+            cutout_value_fn: Callable[[TensorNCX], None] = functools.partial(
+                cutout_function.cutout_value_fn_constant,
+                value=0)
+    ):
         """
         Args:
             cutout_size: the size of the regions to occlude or a callable function with no argument returning

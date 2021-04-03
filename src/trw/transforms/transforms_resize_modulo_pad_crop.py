@@ -9,6 +9,7 @@ from trw.transforms import crop
 import numpy as np
 from trw.basic_typing import ShapeX, Batch
 from trw.utils import batch_pad_minmax_joint
+from typing_extensions import Literal
 
 
 def _transform_resize_modulo_crop_pad(
@@ -91,10 +92,8 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
             self,
             multiple_of: Union[int, ShapeX],
             criteria_fn: Callable[[Batch], List[str]] = None,
-            #mode: Literal['crop', 'pad'] = 'crop',  # TODO python 3.8
-            mode: str = 'crop',
-            #padding_mode: Literal['edge', 'constant', 'symmetric'] = 'edge',  # TODO python 3.8
-            padding_mode: str = 'constant',
+            mode: Literal['crop', 'pad'] = 'crop',
+            padding_mode: Literal['edge', 'constant', 'symmetric'] = 'constant',
             padding_constant_value: int = 0):
 
         if criteria_fn is None:

@@ -77,7 +77,9 @@ class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
         encoded_x = self.encoder(x)
         return encoded_x
 
-    def forward_with_intermediate(self, x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward_with_intermediate(self, x: torch.Tensor, **kwargs) -> Tuple[torch.Tensor, torch.Tensor]:
+        assert len(kwargs) == 0, f'unsupported arguments={kwargs}'
+
         encoded_x = self.encoder(x)
         decoded_x = self.decoder(encoded_x)
 

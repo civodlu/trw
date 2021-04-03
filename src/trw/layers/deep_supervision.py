@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, Sequence, Optional
+from typing import Callable, Sequence, Optional, List
 
 import torch
 import torch.nn as nn
@@ -7,12 +7,14 @@ import torch.nn as nn
 from trw.basic_typing import ShapeCX, TorchTensorNCX, TensorNCX
 from trw.train import Output, get_device, OutputSegmentation2
 from trw.transforms import resize
-from typing_extensions import Literal
+from typing_extensions import Literal, Protocol
 
 from .layer_config import LayerConfig, default_layer_config
 from .convs import ModuleWithIntermediate
 from .blocks import ConvBlockType, BlockConvNormActivation
 import numpy as np
+
+from trw.train import Output
 
 
 def adaptative_weighting(outputs: Sequence[TorchTensorNCX]) -> np.ndarray:
@@ -21,6 +23,16 @@ def adaptative_weighting(outputs: Sequence[TorchTensorNCX]) -> np.ndarray:
     """
     elements = np.asarray([np.prod(o.shape[2:]) for o in outputs], dtype=np.float32)
     return elements / elements.max()
+
+
+def select_third_to_last_skip_before_last(s: Sequence[TorchTensorNCX]) -> Sequence[TorchTensorNCX]:
+    assert len(s) >= 4
+    last: TorchTensorNCX = s[-1]
+    return list(s[1:-2]) + [last]  # typing: convert to list so that we have operator `+`
+
+
+class OutputCreator(Protocol):
+    def __call__(self, output: TensorNCX, output_truth: TensorNCX, loss_scaling: float) -> Output: ...
 
 
 class DeepSupervision(nn.Module):
@@ -41,9 +53,9 @@ class DeepSupervision(nn.Module):
             self,
             backbone: ModuleWithIntermediate,
             input_target_shape: ShapeCX,
-            output_creator: Callable[[TorchTensorNCX, TensorNCX], Output] = OutputSegmentation2,
+            output_creator: OutputCreator = OutputSegmentation2,
             output_block: ConvBlockType = BlockConvNormActivation,
-            select_outputs_fn: Callable[[Sequence[TorchTensorNCX]], Sequence[TorchTensorNCX]] = lambda s: s[1:-2] + [s[-1]],
+            select_outputs_fn: Callable[[Sequence[TorchTensorNCX]], Sequence[TorchTensorNCX]] = select_third_to_last_skip_before_last,
             resize_mode: Literal['nearest', 'linear'] = 'linear',
             weighting_fn: Optional[Callable[[Sequence[TorchTensorNCX]], Sequence[float]]] = adaptative_weighting,
             config: LayerConfig = default_layer_config(dimensionality=None)):
@@ -106,7 +118,7 @@ class DeepSupervision(nn.Module):
         self.output_creator = output_creator
         self.resize_mode = resize_mode
 
-    def forward(self, x, target, latent=None):
+    def forward(self, x: torch.Tensor, target: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
         os = self.backbone.forward_with_intermediate(x, latent=latent)
 
         outputs = []

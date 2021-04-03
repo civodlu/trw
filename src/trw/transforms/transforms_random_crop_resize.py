@@ -1,9 +1,13 @@
 import collections
 
 import functools
+from typing import Optional, Callable, List, Sequence
+
+from trw.basic_typing import Batch, ShapeX
 from trw.transforms import transforms
 from trw.transforms import crop
 from trw.transforms import resize
+from typing_extensions import Literal
 
 
 def _transform_random_crop_resize(features_names, batch, crop_size, resize_mode):
@@ -31,7 +35,7 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
     Randomly crop a tensor and resize to its original shape.
 
     Args:
-        shape: a sequence of size `len(array.shape)-2` indicating the width of crop, excluding
+        crop_size: a sequence of size `len(array.shape)-2` indicating the width of crop, excluding
             the ``N`` and ``C`` components
         criteria_fn: function applied on each feature. If satisfied, the feature will be transformed, if not
             the original feature is returned
@@ -40,7 +44,11 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
     Returns:
         a transformed batch
     """
-    def __init__(self, crop_size, criteria_fn=None, resize_mode='linear'):
+    def __init__(self,
+                 crop_size: ShapeX,
+                 criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+                 resize_mode: Literal['nearest', 'linear', 'none'] = 'linear'):
+
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_4_or_above
 

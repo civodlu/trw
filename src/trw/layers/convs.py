@@ -139,7 +139,9 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             x = flatten(x)
         return x
 
-    def forward_with_intermediate(self, x: torch.Tensor) -> List[torch.Tensor]:
+    def forward_with_intermediate(self, x: torch.Tensor, **kwargs) -> List[torch.Tensor]:
+        assert len(kwargs) == 0, f'unsupported arguments={kwargs}'
+
         r = []
         for layer in self.layers:
             x = layer(x)
