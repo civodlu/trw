@@ -1,10 +1,16 @@
 import os
 import functools
 import collections
+from typing import Optional, List
+
 from PIL import Image
 import torchvision
 import trw
 import xml.etree.ElementTree as ET
+
+from trw.basic_typing import Datasets
+from typing_extensions import Literal
+
 from . import utils
 import numpy as np
 import torch
@@ -156,12 +162,12 @@ def default_voc_transforms():
 
 
 def create_voc_segmentation_dataset(
-        batch_size=40,
-        root=None,
-        transform_train=default_voc_transforms(),
-        transform_valid=None,
-        nb_workers=2,
-        year='2012'):
+        batch_size: int = 40,
+        root: Optional[str] = None,
+        transform_train: Optional[List[trw.transforms]] = default_voc_transforms(),
+        transform_valid: Optional[List[trw.transforms]] = None,
+        nb_workers: int = 2,
+        year: Literal['2007', '2012'] = '2012') -> Datasets:
     """
     Create the VOC segmentation dataset
 
@@ -171,6 +177,7 @@ def create_voc_segmentation_dataset(
         transform_train: the transform to apply on each batch of data of the training data
         transform_valid: the transform to apply on each batch of data of the validation data
         nb_workers: the number of worker process to pre-process the batches
+        year: the version of the dataset
 
     Returns:
         a datasets with dataset `voc2012` and splits `train`, `valid`.
@@ -227,16 +234,16 @@ def create_voc_segmentation_dataset(
 
 
 def create_voc_detection_dataset(
-        root=None,
-        transform_train=None,
-        transform_valid=None,
-        nb_workers=2,
-        batch_size=1,
-        data_subsampling_fraction_train=1.0,
-        data_subsampling_fraction_valid=1.0,
-        train_split='train',
-        valid_split='val',
-        year='2007'):
+        root: str = None,
+        transform_train: Optional[List[trw.transforms]] = None,
+        transform_valid: Optional[List[trw.transforms]] = None,
+        nb_workers: int = 2,
+        batch_size: int = 1,
+        data_subsampling_fraction_train: float = 1.0,
+        data_subsampling_fraction_valid: float = 1.0,
+        train_split: str = 'train',
+        valid_split: str = 'val',
+        year: Literal['2007', '2012'] = '2007') -> Datasets:
     """
     PASCAL VOC detection challenge
 

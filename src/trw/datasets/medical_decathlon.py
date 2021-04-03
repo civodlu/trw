@@ -1,7 +1,9 @@
 import collections
 import functools
 import os
+from typing import Dict, Union, Callable, Optional
 
+from trw.basic_typing import Batch, Dataset, Datasets
 from trw.utils import optional_import
 from .utils import download_and_extract_archive
 import json
@@ -13,7 +15,11 @@ from trw.transforms import Transform
 nib = optional_import('nibabel')
 
 
-def load_nifti(path: str, dtype: np.dtype, base_name: str, remove_patient_transform: bool = False) -> collections.OrderedDict:
+def load_nifti(
+        path: str,
+        dtype: np.dtype,
+        base_name: str,
+        remove_patient_transform: bool = False) -> Dict[str, Union[str, torch.Tensor]]:
     """
     Load a nifti file and metadata.
 
@@ -26,10 +32,11 @@ def load_nifti(path: str, dtype: np.dtype, base_name: str, remove_patient_transf
     Returns:
         a dict of attributes
     """
-    data = collections.OrderedDict()
+    data: Dict[str, Union[str, torch.Tensor]] = collections.OrderedDict()
     img = nib.load(path)
     if not remove_patient_transform:
         data[base_name + 'affine'] = torch.from_numpy(img.affine).unsqueeze(0)  # add the N component
+
     voxels = np.array(img.get_fdata(dtype=np.float32))
     if dtype != np.float32:
         voxels = voxels.astype(dtype)
@@ -41,6 +48,7 @@ def load_nifti(path: str, dtype: np.dtype, base_name: str, remove_patient_transf
     _, case_name = os.path.split(path)
     case_name = case_name.replace('.nii.gz', '')
     data['case_name'] = case_name
+
     return data
 
 
@@ -75,8 +83,8 @@ class MedicalDecathlonDataset:
         self.task_root = os.path.join(root_data, task_name)
         self.remove_patient_transform = remove_patient_transform
 
-    def __call__(self, id: int):
-        data = collections.OrderedDict()
+    def __call__(self, id: int) -> Dict[str, Union[str, torch.Tensor]]:
+        data: Dict[str, Union[str, torch.Tensor]] = collections.OrderedDict()
         data_path = self.metadata[self.collection][id]
         for name, relative_path in data_path.items():
             full_path = os.path.join(self.task_root, relative_path)
@@ -95,7 +103,7 @@ class MedicalDecathlonDataset:
         return len(self.metadata[self.collection])
 
 
-def _load_case_adaptor(batch, dataset, transform_fn):
+def _load_case_adaptor(batch: Batch, dataset: Dataset, transform_fn: Optional[Transform]):
     ids = batch['sample_uid']
     assert len(ids) == 1, 'only load a single case at a time!'
     data = dataset(ids[0])
@@ -113,7 +121,7 @@ def create_decathlon_dataset(
         nb_workers: int = 4,
         valid_ratio: float = 0.2,
         batch_size: int = 1,
-        remove_patient_transform=False):
+        remove_patient_transform: bool = False) -> Datasets:
     """
     Create a task of the medical decathlon dataset.
 
@@ -177,10 +185,10 @@ def create_decathlon_dataset(
     )
     sequence_valid = sequence_valid.collate()
 
-    dataset = collections.OrderedDict([
+    split = collections.OrderedDict([
         ('train', sequence_train),
         ('valid', sequence_valid),
     ])
     return {
-        task_name: dataset
+        task_name: split
     }

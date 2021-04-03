@@ -1,21 +1,25 @@
 import collections
 import functools
 import os
+from typing import Optional, List, Callable, Any
 
 import torchvision
 import torch
 from PIL import Image
 import numpy as np
-from trw.train import SamplerSequential, SamplerRandom, SequenceArray
+from trw.basic_typing import Datasets
+from trw.train import SamplerSequential, SamplerRandom, SequenceArray, Sampler
+from trw.transforms import Transform
+
 from .utils import download_and_extract_archive
 
 
 def create_facades_dataset(
-        root=None,
-        batch_size=32,
-        normalize_0_1=True,
-        transforms_train=None,
-        url='https://people.eecs.berkeley.edu/~tinghuiz/projects/pix2pix/datasets/facades.tar.gz'):
+        root: str = None,
+        batch_size: int = 32,
+        normalize_0_1: bool = True,
+        transforms_train: Optional[List[Transform]] = None,
+        url: str = 'https://people.eecs.berkeley.edu/~tinghuiz/projects/pix2pix/datasets/facades.tar.gz') -> Datasets:
 
     split_loader = functools.partial(image_directory_facades, normalize_0_1=normalize_0_1, extension='.jpg')
 
@@ -70,15 +74,15 @@ def image_directory_facades(sampler, path, uid_prefix, extension, normalize_0_1)
 
 
 def create_dataset_from_archive_url(
-        dataset_name,
-        split_loader,
-        split_names,
-        url,
-        root=None,
-        batch_size=32,
-        split_train_name='train',
-        transforms_train=None,
-        ):
+        dataset_name: str,
+        split_loader: Any,
+        split_names: List[str],
+        url: str,
+        root: Optional[str] = None,
+        batch_size: int = 32,
+        split_train_name: str = 'train',
+        transforms_train: List[Transform] = None,
+        ) -> Datasets:
 
     if root is None:
         # first, check if we have some environment variables configured

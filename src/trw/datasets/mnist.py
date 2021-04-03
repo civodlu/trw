@@ -1,8 +1,12 @@
 import collections
+from typing import List, Sequence, Optional
+
 import trw.train
 import os
 import torchvision
 import numpy as np
+from trw.basic_typing import Datasets
+from trw.transforms import Transform
 
 
 def identity(batch):
@@ -10,14 +14,14 @@ def identity(batch):
 
 
 def create_mnist_dataset(
-        batch_size=1000,
-        root=None,
-        transforms=None,
-        nb_workers=5,
-        data_processing_batch_size=200,
-        normalize_0_1=False,
-        select_classes_train=None,
-        select_classes_test=None):
+        batch_size: int = 1000,
+        root: str = None,
+        transforms: List[Transform] = None,
+        nb_workers: int = 5,
+        data_processing_batch_size: int = 200,
+        normalize_0_1: bool = False,
+        select_classes_train: Optional[Sequence[int]] = None,
+        select_classes_test: Optional[Sequence[int]] = None) -> Datasets:
     """
 
     Args:

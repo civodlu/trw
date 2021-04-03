@@ -1,11 +1,12 @@
 import numpy as np
 import torch
+from PIL.Image import Image
 from PIL import Image
 import torchvision
 
 
-def pic_to_tensor(pic):
-    assert isinstance(pic, Image.Image), 'image must be a PIL Image'
+def pic_to_tensor(pic: Image) -> torch.Tensor:
+    assert isinstance(pic, Image), 'image must be a PIL Image'
 
     i = np.array(pic)
     if len(i.shape) == 2:
@@ -14,8 +15,8 @@ def pic_to_tensor(pic):
     return torch.from_numpy(i)
 
 
-def pic_to_numpy(pic):
-    assert isinstance(pic, Image.Image), 'image must be a PIL Image'
+def pic_to_numpy(pic: Image) -> np.ndarray:
+    assert isinstance(pic, Image), 'image must be a PIL Image'
 
     i = np.array(pic)
     if len(i.shape) == 2:
@@ -24,7 +25,7 @@ def pic_to_numpy(pic):
     return i
 
 
-def download_and_extract_archive(url, dataset_path):
+def download_and_extract_archive(url: str, dataset_path: str) -> None:
     version = [int(x) for x in torchvision.__version__.split('.')]
     if version[0] == 0 and version[1] <= 2:
         raise NotImplementedError('Can\'t download dataset with torchvision <= 0.2')

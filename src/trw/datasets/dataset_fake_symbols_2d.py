@@ -1,8 +1,12 @@
+from typing import Optional, Callable
+
 import trw
 import numpy as np
 import functools
 
+from trw.basic_typing import ShapeX, Datasets
 from trw.datasets import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
+from trw.datasets.dataset_fake_symbols import ShapeCreator
 
 
 def _add_square(imag, mask, shapes_added, scale_factor):
@@ -91,18 +95,18 @@ def default_shapes_2d(global_scale_factor=1.0):
 
 
 def create_fake_symbols_2d_dataset(
-        nb_samples,
-        image_shape,
-        ratio_valid=0.2,
-        nb_classes_at_once=None,
-        global_scale_factor=1.0,
-        normalize_0_1=True,
-        noise_fn=functools.partial(_noisy, noise_type='poisson'),
-        shapes_fn=default_shapes_2d,
-        max_classes=None,
-        batch_size=64,
-        background=255,
-        dataset_name='fake_symbols_2d'):
+        nb_samples: int,
+        image_shape: ShapeX,
+        ratio_valid: float = 0.2,
+        nb_classes_at_once: Optional[int] = None,
+        global_scale_factor: float = 1.0,
+        normalize_0_1: bool = True,
+        noise_fn: Callable[[np.ndarray], np.ndarray] = functools.partial(_noisy, noise_type='poisson'),
+        shapes_fn: ShapeCreator = default_shapes_2d,
+        max_classes: Optional[int] = None,
+        batch_size: int = 64,
+        background: int = 255,
+        dataset_name: str = 'fake_symbols_2d') -> Datasets:
     """
     Create artificial 2D for classification and segmentation problems
 

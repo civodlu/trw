@@ -7,10 +7,13 @@ import glob
 import os
 import unicodedata
 import string
+from typing import Optional, Any
 
 import torch
 
 import trw.train
+from trw.basic_typing import Datasets
+
 from .utils import download_and_extract_archive
 
 
@@ -52,7 +55,12 @@ def line_to_tensor(line, all_letters):
     return tensor.unsqueeze(0)
 
 
-def create_name_nationality_dataset(url='https://download.pytorch.org/tutorial/data.zip', root=None, valid_ratio=0.1, seed=0, batch_size=1):
+def create_name_nationality_dataset(
+        url: str = 'https://download.pytorch.org/tutorial/data.zip',
+        root: Optional[str] = None,
+        valid_ratio: float = 0.1,
+        seed: int = 0,
+        batch_size: int = 1) -> Datasets:
     torch.manual_seed(seed)
 
     if root is None:
@@ -74,8 +82,8 @@ def create_name_nationality_dataset(url='https://download.pytorch.org/tutorial/d
         lines = read_file(filename, all_letters)
         category_lines[category] = lines
 
-    valid_split = collections.defaultdict(list)
-    train_split = collections.defaultdict(list)
+    valid_split: Any = collections.defaultdict(list)
+    train_split: Any = collections.defaultdict(list)
     for category_id, (category, lines) in enumerate(category_lines.items()):
         lines_torch = [line_to_tensor(line, all_letters) for line in lines]
 

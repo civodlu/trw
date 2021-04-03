@@ -1,11 +1,17 @@
+from typing import Optional, List
+
 import torch
 import torchvision
 import numpy as np
+from trw.basic_typing import Datasets
 from trw.train import SequenceArray
 from trw.train import SamplerRandom, SamplerSequential
 import functools
 import collections
 import os
+
+from trw.transforms import Transform
+from typing_extensions import Literal
 
 
 def image_to_torch(i):
@@ -39,7 +45,13 @@ def load_case(batch, dataset, transform):
     return data_batch
 
 
-def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, transform_valid=None, nb_workers=4, target_type='semantic'):
+def create_cityscapes_dataset(
+        batch_size: int = 32,
+        root: Optional[str] = None,
+        transform_train: Optional[List[Transform]] = None,
+        transform_valid: Optional[List[Transform]] = None,
+        nb_workers: int = 4,
+        target_type: Literal['semantic'] = 'semantic') -> Datasets:
     """
     Load the cityscapes dataset. This requires to register on their website https://www.cityscapes-dataset.com/
     and manually download the dataset.
@@ -54,6 +66,7 @@ def create_cityscapes_dataset(batch_size=32, root=None, transform_train=None, tr
         transform_train: the transform to apply on the training batches
         transform_valid: the transform to apply on the validation batches
         nb_workers: the number of workers for each split allocated to the data loading and processing
+        target_type: the segmentation task
 
     Returns:
         a dict of splits. Each split is a :class:`trw.train.Sequence`

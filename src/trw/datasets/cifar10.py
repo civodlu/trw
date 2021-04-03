@@ -1,12 +1,24 @@
 import collections
+from typing import Optional, List
+
 import torchvision
 import trw.train
 import os
 import numpy as np
 import torch
+from trw.basic_typing import Datasets
+from trw.transforms import Transform
 
 
-def create_cifar10_dataset(batch_size=300, root=None, transform_train=None, transform_valid=None, nb_workers=2, data_processing_batch_size=None, normalize_0_1=True):
+def create_cifar10_dataset(
+        batch_size: int = 300,
+        root: str = None,
+        transform_train: Optional[List[Transform]] = None,
+        transform_valid: Optional[List[Transform]] = None,
+        nb_workers: int = 2,
+        data_processing_batch_size: int = None,
+        normalize_0_1: bool = True) -> Datasets:
+
     if root is None:
         # first, check if we have some environment variables configured
         root = os.environ.get('TRW_DATA_ROOT')

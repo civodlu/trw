@@ -1,12 +1,17 @@
+from collections import Callable
+from typing import Dict, Any, List, Tuple, Optional
+
 import numpy as np
 import functools
 import skimage
 import collections
 import trw
 import torch
+from trw.basic_typing import ShapeX, Datasets
+from typing_extensions import Protocol, Literal
 
 
-def _noisy(image, noise_type):
+def _noisy(image: np.ndarray, noise_type: Literal['gauss', 'poisson', 's&p', 'speckle']) -> np.ndarray:
     """
 
     Args:
@@ -65,7 +70,7 @@ def _noisy(image, noise_type):
     raise NotImplemented()
 
 
-def _random_location(image_shape, figure_shape):
+def _random_location(image_shape: np.ndarray, figure_shape) -> np.ndarray:
     image_shape = np.asarray(image_shape)
     figure_shape = np.asarray(figure_shape)
     maximum_location = image_shape - figure_shape
@@ -73,7 +78,7 @@ def _random_location(image_shape, figure_shape):
     return np.asarray(location)
 
 
-def _random_color():
+def _random_color() -> np.ndarray:
     color = np.random.randint(0, 255 + 1, [3]).astype(np.uint8).reshape([3, 1])
     return color
 
@@ -149,19 +154,24 @@ def _create_image(shape, objects, nb_classes_at_once=None, max_classes=None, bac
     return img, mask, shapes_infos
 
 
+class ShapeCreator(Protocol):
+    def __call__(self, global_scale_factor: float) -> \
+            Dict[str, Callable[[Any], Tuple[np.ndarray, np.ndarray, List[Tuple[str, np.ndarray]]]]]: ...
+
+
 def create_fake_symbols_datasset(
-        nb_samples,
-        image_shape,
-        dataset_name,
-        shapes_fn,
-        ratio_valid=0.2,
-        nb_classes_at_once=None,
-        global_scale_factor=1.0,
-        normalize_0_1=True,
-        noise_fn=functools.partial(_noisy, noise_type='poisson'),
-        max_classes=None,
-        batch_size=64,
-        background=255):
+        nb_samples: int,
+        image_shape: ShapeX,
+        dataset_name: str,
+        shapes_fn: ShapeCreator,
+        ratio_valid: float = 0.2,
+        nb_classes_at_once: Optional[int] = None,
+        global_scale_factor: float = 1.0,
+        normalize_0_1: bool = True,
+        noise_fn: Callable[[np.ndarray], np.ndarray] = functools.partial(_noisy, noise_type='poisson'),
+        max_classes: Optional[int] = None,
+        batch_size: int = 64,
+        background: int = 255) -> Datasets:
     """
     Create artificial 2D for classification and segmentation problems
 
@@ -186,7 +196,7 @@ def create_fake_symbols_datasset(
         a dict containing the dataset `fake_symbols_2d` with `train` and `valid` splits with features `image`,
         `mask`, `classification`, `<shape_name>_center`
     """
-    class_dict = collections.OrderedDict()
+    class_dict: Dict = collections.OrderedDict()
     samples = []
 
     objects = shapes_fn(global_scale_factor=global_scale_factor)

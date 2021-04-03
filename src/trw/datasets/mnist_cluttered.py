@@ -1,10 +1,14 @@
 import time
 import collections
 import os
+from typing import Optional, List, Tuple
+
 import torchvision
 import numpy as np
 import trw.train
 import torch
+from trw.basic_typing import ShapeX, Datasets, DatasetsInfo
+from trw.transforms import Transform
 
 
 def _clutter(images, cluttered_size, clutter_window, nb_clutter_windows, normalization_factor):
@@ -34,16 +38,16 @@ def _clutter(images, cluttered_size, clutter_window, nb_clutter_windows, normali
 
 
 def create_mnist_cluttered_datasset(
-        batch_size=1000,
-        cluttered_size=(64, 64),
-        clutter_window=(6, 6),
-        nb_clutter_windows=16,
-        root=None,
-        train_transforms=None,
-        test_transforms=None,
-        nb_workers=5,
-        data_processing_batch_size=200,
-        normalize_0_1=False):
+        batch_size: int = 1000,
+        cluttered_size: ShapeX = (64, 64),
+        clutter_window: ShapeX = (6, 6),
+        nb_clutter_windows: int = 16,
+        root: Optional[str] = None,
+        train_transforms: List[Transform] = None,
+        test_transforms: List[Transform] = None,
+        nb_workers: int = 5,
+        data_processing_batch_size: int = 200,
+        normalize_0_1: bool = False) -> Tuple[Datasets, DatasetsInfo]:
     """
 
     Args:

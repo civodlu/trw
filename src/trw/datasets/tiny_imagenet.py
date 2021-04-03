@@ -1,11 +1,14 @@
 import collections
 import os
+from typing import List, Optional, Tuple
 
 import torch
 import trw.train
 from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
+from trw.basic_typing import Datasets, DatasetsInfo
+from trw.transforms import Transform
 
 
 class TinyImageNet(Dataset):
@@ -76,12 +79,12 @@ class TinyImageNet(Dataset):
 
 
 def create_tiny_imagenet_dataset(
-        batch_size,
-        num_images_per_class=500,
-        transforms_train=None,
-        transforms_valid=None,
-        nb_workers=4,
-        root=None):
+        batch_size: int,
+        num_images_per_class: int = 500,
+        transforms_train: List[Transform] = None,
+        transforms_valid: List[Transform] = None,
+        nb_workers: int = 4,
+        root: Optional[str] = None) -> Tuple[Datasets, DatasetsInfo]:
 
     if root is None:
         # first, check if we have some environment variables configured
