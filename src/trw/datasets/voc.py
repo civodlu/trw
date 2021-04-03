@@ -9,6 +9,7 @@ import trw
 import xml.etree.ElementTree as ET
 
 from trw.basic_typing import Datasets
+from trw.transforms import Transform
 from typing_extensions import Literal
 
 from . import utils
@@ -164,8 +165,8 @@ def default_voc_transforms():
 def create_voc_segmentation_dataset(
         batch_size: int = 40,
         root: Optional[str] = None,
-        transform_train: Optional[List[trw.transforms]] = default_voc_transforms(),
-        transform_valid: Optional[List[trw.transforms]] = None,
+        transform_train: Optional[List[Transform]] = default_voc_transforms(),
+        transform_valid: Optional[List[Transform]] = None,
         nb_workers: int = 2,
         year: Literal['2007', '2012'] = '2012') -> Datasets:
     """
