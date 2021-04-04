@@ -236,8 +236,8 @@ def create_voc_segmentation_dataset(
 
 def create_voc_detection_dataset(
         root: str = None,
-        transform_train: Optional[List[trw.transforms]] = None,
-        transform_valid: Optional[List[trw.transforms]] = None,
+        transform_train: Optional[List[Transform]] = None,
+        transform_valid: Optional[List[Transform]] = None,
         nb_workers: int = 2,
         batch_size: int = 1,
         data_subsampling_fraction_train: float = 1.0,
