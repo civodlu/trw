@@ -1,5 +1,4 @@
-from collections import Callable
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple, Optional, Callable
 
 import numpy as np
 import functools

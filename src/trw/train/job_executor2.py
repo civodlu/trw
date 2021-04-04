@@ -698,7 +698,7 @@ class JobExecutor2:
                 stop_event = Event()
                 self.pin_memory_thread_stop_events[n] = stop_event
                 self.pin_memory_threads[n].join(timeout=5.0)
-                if self.pin_memory_threads[n].isAlive():
+                if self.pin_memory_threads[n].is_alive():
                     logging.error(f'thread={self.pin_memory_threads[n].ident} did not respond to shutdown!')
                     print(f'thread={self.pin_memory_threads[n].ident} did not respond to shutdown!',
                           file=sys.stderr,

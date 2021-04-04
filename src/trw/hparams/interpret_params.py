@@ -162,7 +162,7 @@ def _plot_importance(plot_name, x_names, y_values, y_name, y_errors=None, x_name
     ax.set_ylabel(y_name)
     ax.set_xlabel(x_name)
     ax.set_title(plot_name)
-    ax.set_xticks(r + width / 2.0, False)
+    ax.set_xticks(r + width / 2.0, minor=False)
     ax.set_xticklabels(x_names, rotation=40, ha='right')
     ax.set_xlim(-width)
     analysis_plots.fig_tight_layout(fig)
