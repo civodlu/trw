@@ -20,8 +20,8 @@ matrix:
   #    - PATH=/Users/travis/Library/Python/3.6/bin:$PATH
   #    - TRW_LOGGING_ROOT=./test_tmp
       
-  - name: "Python 3.9 - Linux - torch 1.8.1"
-    python: 3.9
+  - name: "Python 3.8 - Linux - torch 1.8.1"
+    python: 3.8
     before_install:
       - pip install torch==1.8.1+cpu torchvision==0.9.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
       
