@@ -113,7 +113,7 @@ class TrainerV2:
             loss_creator=create_losses_fn,
             log_path=None,
             with_final_evaluation=True,
-            history=[],
+            history=None,
             erase_logging_folder=True,
             eval_every_X_epoch=1):
         """
@@ -169,6 +169,10 @@ class TrainerV2:
                 'default_r{}'.format(options['workflow_options']['trainer_run']))
         options['workflow_options']['current_logging_directory'] = log_path
 
+        if history is None:
+            # no prior history
+            history = []
+
         # now clear our log path to remove previous files if needed
         if erase_logging_folder:
             utilities.create_or_recreate_folder(log_path)
@@ -178,7 +182,7 @@ class TrainerV2:
         if len(logging.root.handlers) == 0:
             # there is no logger configured, so add a basic one
             logging.basicConfig(
-                filename=os.path.join(options['workflow_options']['logging_directory'], 'trainer_logging.txt'),
+                filename=os.path.join(options['workflow_options']['logging_directory'], 'trainer_logging.log'),
                 format='%(asctime)s %(levelname)s %(name)s %(message)s',
                 level=logging.DEBUG,
                 filemode='w')
@@ -191,7 +195,7 @@ class TrainerV2:
         options['workflow_options']['sql_database_view_path'] = sql_path.replace('.db', '.json')
 
         # here we want to have our logging per training run, so add a handler
-        handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
+        handler = logging.FileHandler(os.path.join(log_path, 'trainer.log'))
         formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)

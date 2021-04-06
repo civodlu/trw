@@ -58,6 +58,8 @@ class CallbackExportClassificationReport(callback.Callback):
                     class_name = output['output_ref'].classes_name
                     mapping = get_mappinginv(datasets_infos, dataset_name, split_name, class_name)
 
+                    if output.get('output_raw') is None:
+                        continue
                     raw_values = output['output_raw'].squeeze()
                     output_values = output['output'].squeeze()
                     trues_values = output['output_truth'].squeeze()

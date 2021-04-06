@@ -233,7 +233,7 @@ def flatten_nested_dictionaries(d, root_name='', delimiter='-'):
             full_name = f'{root_name}{delimiter}{name}'
 
         if isinstance(value, collections.Mapping):
-            sub_flattened = flatten_nested_dictionaries(value, root_name=full_name)
+            sub_flattened = flatten_nested_dictionaries(value, root_name=full_name, delimiter=delimiter)
             flattened.update(sub_flattened)
         else:
             flattened[full_name] = value
