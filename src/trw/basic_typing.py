@@ -1,3 +1,4 @@
+from numbers import Number
 from typing import Sequence, Union, Dict, Any, List, Optional
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
@@ -70,6 +71,7 @@ Dataset = Dict[str, Split]
 Datasets = Dict[str, Dataset]
 DatasetsInfo = Datasets
 
+History = List[Dict[str, Number]]
 
 Activation = Any
 
