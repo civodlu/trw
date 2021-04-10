@@ -11,7 +11,7 @@ from time import sleep, perf_counter
 from threadpoolctl import threadpool_limits
 from typing import Callable
 
-from trw.basic_typing import Batch
+from ..basic_typing import Batch
 import logging
 import numpy as np
 from queue import Queue as ThreadQueue, Empty
@@ -20,7 +20,7 @@ from queue import Queue as ThreadQueue, Empty
 # that Windows/Linux environment behave the similarly
 from torch import multiprocessing
 
-from trw.utils.graceful_killer import GracefulKiller
+from ..utils.graceful_killer import GracefulKiller
 
 multiprocessing = multiprocessing.get_context("spawn")
 #multiprocessing = multiprocessing.get_context("fork")

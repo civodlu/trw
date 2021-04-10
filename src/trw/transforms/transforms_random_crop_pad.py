@@ -1,13 +1,12 @@
 import collections
 
 import functools
-from numbers import Number
 from typing import Optional, Callable, List
 
-import trw.utils
-from trw.transforms import transforms
-from trw.transforms import crop
-from trw.basic_typing import ShapeCX, Batch, Numeric
+from ..utils import batch_pad_joint
+from ..transforms import transforms
+from ..transforms import crop
+from ..basic_typing import ShapeCX, Batch, Numeric
 
 
 def _transform_random_crop_pad(features_names, batch, padding, mode='edge', constant_value=0, shape=None):
@@ -41,7 +40,7 @@ def _transform_random_crop_pad(features_names, batch, padding, mode='edge', cons
     arrays = [batch[name] for name in features_names]
     cropped_arrays = crop.transform_batch_random_crop_joint(arrays, shape)
     if padding is not None:
-        cropped_arrays = trw.utils.batch_pad_joint(
+        cropped_arrays = batch_pad_joint(
             cropped_arrays,
             padding=padding,
             mode=mode,

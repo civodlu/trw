@@ -1,7 +1,7 @@
 from enum import Enum
 import torch.nn as nn
-from trw.layers.ops_conversion import OpsConversion
-from typing import Union, Dict, Any, Optional
+from .ops_conversion import OpsConversion
+from typing import Dict, Any, Optional
 
 
 class NormType(Enum):

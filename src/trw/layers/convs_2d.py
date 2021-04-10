@@ -1,10 +1,10 @@
-from typing import List, Union, Any, Dict, Optional, Sequence, Callable
+from typing import Union, Any, Dict, Optional, Sequence, Callable
 
 import torch.nn as nn
-from trw.basic_typing import PoolingSizes, ConvStrides, ConvKernels, Activation, Paddings
-from trw.layers import BlockConvNormActivation
-from trw.layers.layer_config import NormType, default_layer_config, LayerConfig
-from trw.layers.convs import ConvsBase
+from ..basic_typing import PoolingSizes, ConvStrides, ConvKernels, Activation, Paddings
+from .blocks import BlockConvNormActivation
+from .layer_config import NormType, default_layer_config, LayerConfig
+from .convs import ConvsBase
 
 
 def convs_2d(

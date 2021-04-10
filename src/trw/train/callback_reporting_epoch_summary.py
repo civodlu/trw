@@ -1,10 +1,10 @@
 import collections
 
-from trw.train.callback import Callback
+from ..callbacks.callback import Callback
 import logging
 
-from trw.train.callback_reporting_model_summary import export_table
-from trw.train.utilities import update_json_config
+from .callback_reporting_model_summary import export_table
+from .utilities import update_json_config
 
 logger = logging.getLogger(__name__)
 

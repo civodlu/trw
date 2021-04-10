@@ -3,8 +3,8 @@ from typing import Optional
 import torch.nn as nn
 import functools
 
-from trw.basic_typing import ModuleCreator
-from typing_extensions import Literal, Protocol
+from ..basic_typing import ModuleCreator
+from typing_extensions import Literal
 
 
 def upsample_mode(mode: Literal['nearest', 'linear'], dim: int) -> ModuleCreator:

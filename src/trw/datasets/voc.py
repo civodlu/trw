@@ -5,11 +5,15 @@ from typing import Optional, List
 
 from PIL import Image
 import torchvision
-import trw
+from ..transforms import stack
+
+from ..train import SequenceArray, SamplerRandom, SamplerSequential
+from ..transforms import criteria_feature_name, TransformCompose, TransformResize, TransformNormalizeIntensity
+
 import xml.etree.ElementTree as ET
 
-from trw.basic_typing import Datasets
-from trw.transforms import Transform
+from ..basic_typing import Datasets
+from ..transforms import Transform
 from typing_extensions import Literal
 
 from . import utils
@@ -31,8 +35,8 @@ def _load_image_and_mask(batch, transform, normalize_0_1=True):
         masks.append(mask)
 
     batch = {
-        'images': trw.transforms.stack(images),
-        'masks': trw.transforms.stack(masks),
+        'images': stack(images),
+        'masks': stack(masks),
     }
 
     if transform is not None:
@@ -154,11 +158,11 @@ def _load_image_and_bb(batch, transform, normalize_0_1=True):
 
 
 def default_voc_transforms():
-    criteria_images = functools.partial(trw.transforms.criteria_feature_name, feature_names=['images'])
-    return trw.transforms.TransformCompose([
-        trw.transforms.TransformResize(size=[250, 250]),
-        #trw.transforms.TransformRandomCropPad(feature_names=['images', 'masks'], padding=None, shape=[3, 224, 224]),
-        trw.transforms.TransformNormalizeIntensity(criteria_fn=criteria_images, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+    criteria_images = functools.partial(criteria_feature_name, feature_names=['images'])
+    return TransformCompose([
+        TransformResize(size=[250, 250]),
+        #TransformRandomCropPad(feature_names=['images', 'masks'], padding=None, shape=[3, 224, 224]),
+        TransformNormalizeIntensity(criteria_fn=criteria_images, mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
 
 
@@ -207,10 +211,10 @@ def create_voc_segmentation_dataset(
     # the images can be batched subsequently
     train_dataset = torchvision.datasets.VOCSegmentation(
         root=path, image_set='train', transform=None, download=download, year=year)
-    train_sequence = trw.train.SequenceArray({
+    train_sequence = SequenceArray({
         'images': train_dataset.images,
         'masks': train_dataset.masks,
-    }, trw.train.SamplerRandom(batch_size=1))
+    }, SamplerRandom(batch_size=1))
     train_sequence = train_sequence.map(functools.partial(_load_image_and_mask, transform=transform_train), nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
     if batch_size != 1:
         train_sequence = train_sequence.batch(batch_size)
@@ -218,10 +222,10 @@ def create_voc_segmentation_dataset(
     # valid split
     valid_dataset = torchvision.datasets.VOCSegmentation(
         root=path, image_set='val', transform=None, download=download, year=year)
-    valid_sequence = trw.train.SequenceArray({
+    valid_sequence = SequenceArray({
         'images': valid_dataset.images,
         'masks': valid_dataset.masks,
-    }, trw.train.SamplerSequential(batch_size=1))
+    }, SamplerSequential(batch_size=1))
     valid_sequence = valid_sequence.map(functools.partial(_load_image_and_mask, transform=transform_valid), nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
     if batch_size != 1:
         valid_sequence = valid_sequence.batch(batch_size)
@@ -291,10 +295,10 @@ def create_voc_detection_dataset(
         train_dataset.images = np.asarray(train_dataset.images)[indices].tolist()
         train_dataset.annotations = np.asarray(train_dataset.annotations)[indices].tolist()
 
-    train_sequence = trw.train.SequenceArray({
+    train_sequence = SequenceArray({
         'images': train_dataset.images,
         'annotations': train_dataset.annotations
-    }, trw.train.SamplerRandom(batch_size=batch_size))
+    }, SamplerRandom(batch_size=batch_size))
     train_sequence = train_sequence.map(functools.partial(_load_image_and_bb, transform=transform_train),
                                         nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
 
@@ -313,10 +317,10 @@ def create_voc_detection_dataset(
         valid_dataset.images = np.asarray(valid_dataset.images)[indices].tolist()
         valid_dataset.annotations = np.asarray(valid_dataset.annotations)[indices].tolist()
 
-    valid_sequence = trw.train.SequenceArray({
+    valid_sequence = SequenceArray({
         'images': valid_dataset.images,
         'annotations': valid_dataset.annotations,
-    }, trw.train.SamplerSequential(batch_size=batch_size))
+    }, SamplerSequential(batch_size=batch_size))
     valid_sequence = valid_sequence.map(functools.partial(_load_image_and_bb, transform=transform_valid),
                                         nb_workers=nb_workers, max_jobs_at_once=2 * nb_workers)
 

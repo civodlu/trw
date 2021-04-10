@@ -1,6 +1,6 @@
 import collections
 import torch
-from trw.arch import darts_cell
+from . import darts_cell
 import functools
 
 

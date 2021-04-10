@@ -1,5 +1,5 @@
 from typing import Optional
-from trw.basic_typing import Length, ShapeX
+from ..basic_typing import Length, ShapeX
 
 
 class SpatialInfo:

@@ -1,11 +1,10 @@
 import os
 
-import trw
-import trw.utils
-from trw.train import callback
-from trw.train import graph_reflection
-from trw.train import utilities
-from trw.train import sample_export
+from ..utils import to_value
+from ..callbacks import callback
+from . import graph_reflection
+from . import utilities
+from . import sample_export
 import logging
 import collections
 import numpy as np
@@ -111,7 +110,7 @@ class CallbackExportConvolutionKernel(callback.Callback):
 
 
             for kernel_id, kernel in enumerate(self.kernels):
-                kernel_np = trw.utils.to_value(kernel)
+                kernel_np = to_value(kernel)
                 for filter in range(kernel_np.shape[0]):
                     path = os.path.join(self.kernel_root_path, f'kernel{kernel_id}_filter{filter}_iter_{epoch}')
                     self.export_filter_fn(kernel_np[filter], path)

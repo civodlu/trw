@@ -2,7 +2,7 @@ from typing import Sequence, Callable, List
 
 import numpy as np
 import torch
-from trw.basic_typing import Batch
+from ..basic_typing import Batch
 
 
 class Transform:

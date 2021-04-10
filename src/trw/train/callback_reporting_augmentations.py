@@ -1,18 +1,17 @@
 import torch
-import trw
-import trw.train.collate
-import trw.utils
-from trw import reporting
-from trw.reporting.table_sqlite import table_truncate
-from trw.train import callback, create_or_recreate_folder
-from trw.train import utilities
-from trw.train import sequence_array
-from trw.train import sequence
+from ..reporting.export import export_sample
+from .collate import collate_list_of_dicts
+from ..utils import to_value
+from ..reporting.table_sqlite import table_truncate, TableStream
+from .utilities import create_or_recreate_folder, update_json_config
+from ..callbacks import callback
+from . import sequence_array
+from . import sequence
 import logging
 import os
 import collections
 import numpy as np
-from trw.train.utilities import update_json_config
+
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +65,7 @@ class CallbackReportingAugmentations(callback.Callback):
         create_or_recreate_folder(os.path.join(root, 'static', self.table_name))
 
         # create a fresh table
-        sql_table = reporting.TableStream(
+        sql_table = TableStream(
             cursor=sql_database.cursor(),
             table_name=self.table_name,
             table_role='data_samples')
@@ -101,8 +100,8 @@ class CallbackReportingAugmentations(callback.Callback):
             for augmentation_id in range(self.nb_augmentation):
                 nb_samples_recorded = 0
                 for batch in split_subsampled:
-                    batch = {name: trw.utils.to_value(values) for name, values in batch.items()}
-                    uids = trw.utils.to_value(batch.get(self.uid_name))
+                    batch = {name: to_value(values) for name, values in batch.items()}
+                    uids = to_value(batch.get(self.uid_name))
                     if uids is None:
                         logger.error('no UID found in the dataset! Can\'t link the augmentations')
                         return
@@ -126,12 +125,12 @@ class CallbackReportingAugmentations(callback.Callback):
             for uid, samples in samples_by_uid.items():
                 nb_samples = len(samples)
                 if len(samples) > 1:
-                    samples = trw.train.collate.collate_list_of_dicts(samples, device=torch.device('cpu'))
+                    samples = collate_list_of_dicts(samples, device=torch.device('cpu'))
                     samples['dataset'] = np.asarray([dataset_name] * nb_samples)
                     samples['split'] = np.asarray([self.split_name] * nb_samples)
                     for n in range(nb_samples):
                         name = f'{uid}_{n}_{len(history)}'
-                        reporting.export_sample(
+                        export_sample(
                             root,
                             sql_table,
                             base_name=name,

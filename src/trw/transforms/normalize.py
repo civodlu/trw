@@ -2,7 +2,7 @@ from typing import Sequence
 
 import numpy as np
 import torch
-from trw.basic_typing import NumpyTensorNCX, TorchTensorNCX, TensorNCX
+from ..basic_typing import NumpyTensorNCX, TorchTensorNCX, TensorNCX
 
 
 def normalize_numpy(array: NumpyTensorNCX, mean: Sequence[float], std: Sequence[float]) -> NumpyTensorNCX:

@@ -10,10 +10,8 @@ import string
 from typing import Optional, Any
 
 import torch
-
-import trw.train
-from trw.basic_typing import Datasets
-
+from ..train import SamplerRandom, SequenceArray
+from ..basic_typing import Datasets
 from .utils import download_and_extract_archive
 
 
@@ -109,11 +107,11 @@ def create_name_nationality_dataset(
     valid_split['index'] = torch.tensor(valid_split['index'])
     train_split['index'] = torch.tensor(train_split['index'])
 
-    sampler_train = trw.train.SamplerRandom(batch_size=batch_size)
-    sequence_train = trw.train.SequenceArray(train_split, sampler=sampler_train).collate()
+    sampler_train = SamplerRandom(batch_size=batch_size)
+    sequence_train = SequenceArray(train_split, sampler=sampler_train).collate()
 
-    sampler_valid = trw.train.SamplerRandom(batch_size=batch_size)
-    sequence_valid = trw.train.SequenceArray(valid_split, sampler=sampler_valid).collate()
+    sampler_valid = SamplerRandom(batch_size=batch_size)
+    sequence_valid = SequenceArray(valid_split, sampler=sampler_valid).collate()
 
     return {
         'name_nationality': collections.OrderedDict([

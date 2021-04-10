@@ -2,8 +2,8 @@ from typing import Sequence, List, Optional
 
 import numpy as np
 import torch
-from trw.basic_typing import Tensor, TensorNCX
-from trw.transforms.stack import stack
+from ..basic_typing import Tensor, TensorNCX
+from ..transforms.stack import stack
 
 
 def flip(array: Tensor, axis: int) -> Tensor:

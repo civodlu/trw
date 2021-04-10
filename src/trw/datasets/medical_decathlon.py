@@ -3,14 +3,14 @@ import functools
 import os
 from typing import Dict, Union, Callable, Optional
 
-from trw.basic_typing import Batch, Dataset, Datasets
-from trw.utils import optional_import
+from ..basic_typing import Batch, Dataset, Datasets
+from ..utils import optional_import
 from .utils import download_and_extract_archive
 import json
 import numpy as np
 import torch
-from trw.train import SequenceArray, SamplerSequential, SamplerRandom
-from trw.transforms import Transform
+from ..train import SequenceArray, SamplerSequential, SamplerRandom
+from ..transforms import Transform
 
 nib = optional_import('nibabel')
 

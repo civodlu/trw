@@ -1,14 +1,13 @@
-import trw.train
 import torch
 import numpy as np
 import skimage.transform
-import trw.utils
-from trw.basic_typing import TorchTensorNCX, ShapeX, NumpyTensorNCX, TensorNCX
+from ..utils import upsample
+from ..basic_typing import TorchTensorNCX, ShapeX, NumpyTensorNCX, TensorNCX
 from typing_extensions import Literal
 
 
 def resize_torch(array: TorchTensorNCX, size: ShapeX, mode: Literal['nearest', 'linear']) -> TorchTensorNCX:
-    return trw.utils.upsample(array, size, mode)
+    return upsample(array, size, mode)
 
 
 def resize_numpy(array: NumpyTensorNCX, size: ShapeX, mode: Literal['nearest', 'linear']) -> NumpyTensorNCX:

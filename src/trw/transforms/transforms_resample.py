@@ -3,10 +3,10 @@ import functools
 import numbers
 from typing import Union, Callable, Dict, List, Sequence
 
-from trw.transforms import transforms
-from trw.transforms.resample import resample_3d
-from trw.transforms.spatial_info import SpatialInfo
-from trw.basic_typing import Numeric, Batch, Length, ShapeX
+from ..transforms import transforms
+from ..transforms.resample import resample_3d
+from ..transforms.spatial_info import SpatialInfo
+from ..basic_typing import Numeric, Batch, Length, ShapeX
 import numpy as np
 
 """Functor to retrieve spatial information from a batch and tensor name"""

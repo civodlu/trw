@@ -1,13 +1,13 @@
 import copy
 import torch
-from trw.basic_typing import Activation, NestedIntSequence, ConvKernels, ConvStrides, PoolingSizes, Paddings
-from trw.layers import div_shape
-from trw.layers.blocks import BlockConvNormActivation, BlockPool, ConvBlockType
-from trw.layers.layer_config import default_layer_config, NormType, LayerConfig
+from ..basic_typing import Activation, NestedIntSequence, ConvKernels, ConvStrides, PoolingSizes, Paddings
+from .utils import div_shape
+from .blocks import BlockConvNormActivation, BlockPool, ConvBlockType
+from .layer_config import default_layer_config, NormType, LayerConfig
 import torch.nn as nn
 from typing import Union, Dict, Sequence, Optional, List
 
-from trw.utils import flatten
+from ..utils import flatten
 
 
 class ModuleWithIntermediate:

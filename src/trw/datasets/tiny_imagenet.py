@@ -3,12 +3,12 @@ import os
 from typing import List, Optional, Tuple
 
 import torch
-import trw.train
 from torch.utils.data import Dataset
 from PIL import Image
 import numpy as np
-from trw.basic_typing import Datasets, DatasetsInfo
-from trw.transforms import Transform
+from ..train import SequenceArray, SamplerSequential, SamplerRandom
+from ..basic_typing import Datasets, DatasetsInfo
+from ..transforms import Transform
 
 
 class TinyImageNet(Dataset):
@@ -107,10 +107,10 @@ def create_tiny_imagenet_dataset(
         ])
 
         if is_train:
-            sampler = trw.train.SamplerRandom(batch_size=batch_size)
+            sampler = SamplerRandom(batch_size=batch_size)
         else:
-            sampler = trw.train.SamplerSequential(batch_size=batch_size)
-        split = trw.train.SequenceArray(split, sampler=sampler)
+            sampler = SamplerSequential(batch_size=batch_size)
+        split = SequenceArray(split, sampler=sampler)
 
         if transform_fn is not None:
             if is_train:

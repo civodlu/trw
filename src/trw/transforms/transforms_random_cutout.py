@@ -3,10 +3,10 @@ import collections
 import functools
 from typing import Optional, Callable, List, Union
 
-from trw.basic_typing import Batch, ShapeX, ShapeCX, TensorNCX
-from trw.transforms import transforms
-from trw.transforms import cutout_function
-from trw.transforms.copy import copy
+from ..basic_typing import Batch, ShapeX, ShapeCX, TensorNCX
+from ..transforms import transforms
+from ..transforms import cutout_function
+from ..transforms.copy import copy
 
 
 def _transform_random_cutout(feature_names, batch, cutout_size, cutout_value_fn):

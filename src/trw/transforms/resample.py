@@ -3,7 +3,7 @@ from typing import Sequence
 import torch
 from scipy.ndimage import affine_transform
 import numpy as np
-from trw.basic_typing import Numeric, Tensor, Length, NumpyTensorX, TensorX
+from ..basic_typing import Numeric, Length, NumpyTensorX, TensorX
 from typing_extensions import Literal
 
 

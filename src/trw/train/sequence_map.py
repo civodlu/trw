@@ -5,8 +5,8 @@ import time
 from queue import Empty
 import functools
 import traceback
-from trw.train import sequence
-from trw.train.job_executor2 import JobExecutor2, default_queue_timeout
+from . import sequence
+from .job_executor2 import JobExecutor2, default_queue_timeout
 
 
 logger = logging.getLogger(__name__)

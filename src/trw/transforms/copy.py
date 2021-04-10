@@ -1,6 +1,6 @@
 import numpy as np
 import torch
-from trw.basic_typing import Tensor
+from ..basic_typing import Tensor
 
 
 def copy(array: Tensor) -> Tensor:

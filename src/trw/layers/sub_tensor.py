@@ -1,5 +1,5 @@
 import torch
-from trw.utils import sub_tensor
+from ..utils import sub_tensor
 from typing import Sequence
 
 

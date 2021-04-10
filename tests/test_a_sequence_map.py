@@ -9,7 +9,7 @@ from unittest import TestCase
 import os
 import copy
 
-from trw.train.callback_debug_processes import log_all_tree
+from trw.callbacks.callback_debug_processes import log_all_tree
 
 START_TIME = time.time()
 

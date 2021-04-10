@@ -1,10 +1,10 @@
 from typing import List, Callable, Optional
 
-from trw.basic_typing import Datasets
-from trw.utils import safe_lookup
-from trw.train import callback
-from trw.train.outputs_trw import OutputEmbedding
-from trw.train import trainer
+from ..basic_typing import Datasets
+from ..utils import safe_lookup
+from ..callbacks import callback
+from .outputs_trw import OutputEmbedding
+from . import trainer
 import os
 import logging
 

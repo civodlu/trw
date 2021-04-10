@@ -7,9 +7,9 @@ import torchvision
 import torch
 from PIL import Image
 import numpy as np
-from trw.basic_typing import Datasets
-from trw.train import SamplerSequential, SamplerRandom, SequenceArray, Sampler
-from trw.transforms import Transform
+from ..basic_typing import Datasets
+from ..train import SamplerSequential, SamplerRandom, SequenceArray
+from ..transforms import Transform
 
 from .utils import download_and_extract_archive
 

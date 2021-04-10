@@ -1,6 +1,4 @@
-import glob
-import pickle
-from typing import List, Callable, Tuple, Dict
+from typing import List, Callable, Dict
 
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -9,8 +7,8 @@ from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import os
 from .store import RunResult, Metrics
-from trw.train import utilities
-from trw.train import analysis_plots
+from ..train import utilities
+from ..train import analysis_plots
 import math
 import numbers
 import logging

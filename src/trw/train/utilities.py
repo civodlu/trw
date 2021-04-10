@@ -1,4 +1,3 @@
-import functools
 import json
 import time
 import logging
@@ -62,7 +61,7 @@ def log_console(msg):
     print(msg, flush=True)
 
 
-from trw.utils import to_value, recursive_dict_update
+from ..utils import to_value, recursive_dict_update
 
 
 def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
@@ -183,7 +182,6 @@ def get_classification_mappings(datasets_infos, dataset_name, split_name):
         :param datasets_infos: the info of the datasets
         :param dataset_name: the name of the dataset
         :param split_name: the split name
-        :param output_name: the output name
         :return: a dictionary {outputs: {'mapping': {name->ID}, 'mappinginv': {ID->name}}}
         """
     if datasets_infos is None or dataset_name is None or split_name is None:
@@ -514,7 +512,7 @@ def prepare_loss_terms(outputs, batch, is_training):
     """
     Return the loss_terms for the given outputs
     """
-    from trw.train import Output
+    from .outputs_trw import Output
 
     loss_terms = collections.OrderedDict()
     for output_name, output in outputs.items():
@@ -574,7 +572,7 @@ def apply_spectral_norm(
         eps=1e-12,
         dim=None,
         name='weight',
-        discard_layer_types=[torch.nn.InstanceNorm2d, torch.nn.InstanceNorm3d]):
+        discard_layer_types=(torch.nn.InstanceNorm2d, torch.nn.InstanceNorm3d)):
     """
     Apply spectral norm on every sub-modules
 

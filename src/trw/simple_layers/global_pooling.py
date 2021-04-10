@@ -1,6 +1,6 @@
-from trw.simple_layers import simple_layers
 import torch.nn as nn
-import trw.layers
+from ..layers import Flatten
+from .simple_layers import SimpleModule
 
 
 def global_average_pooling_2d(parent):
@@ -9,8 +9,8 @@ def global_average_pooling_2d(parent):
     
     # kernel must have the same size as the image to have `global`
     module = nn.AvgPool2d(kernel_size=[parent.shape[2], parent.shape[3]])
-    module = nn.Sequential(module, trw.layers.Flatten())
-    return simple_layers.SimpleModule(parent, module, shape=shape)
+    module = nn.Sequential(module, Flatten())
+    return SimpleModule(parent, module, shape=shape)
 
 
 def global_max_pooling_2d(parent):
@@ -19,8 +19,8 @@ def global_max_pooling_2d(parent):
     
     # kernel must have the same size as the image to have `global`
     module = nn.MaxPool2d(kernel_size=[parent.shape[2], parent.shape[3]])
-    module = nn.Sequential(module, trw.layers.Flatten())
-    return simple_layers.SimpleModule(parent, module, shape=shape)
+    module = nn.Sequential(module, Flatten())
+    return SimpleModule(parent, module, shape=shape)
 
 
 def global_average_pooling_3d(parent):
@@ -29,8 +29,8 @@ def global_average_pooling_3d(parent):
     
     # kernel must have the same size as the image to have `global`
     module = nn.AvgPool3d(kernel_size=[parent.shape[2], parent.shape[3], parent.shape[4]])
-    module = nn.Sequential(module, trw.layers.Flatten())
-    return simple_layers.SimpleModule(parent, module, shape=shape)
+    module = nn.Sequential(module, Flatten())
+    return SimpleModule(parent, module, shape=shape)
 
 
 def global_max_pooling_3d(parent):
@@ -39,5 +39,5 @@ def global_max_pooling_3d(parent):
     
     # kernel must have the same size as the image to have `global`
     module = nn.MaxPool3d(kernel_size=[parent.shape[2], parent.shape[3], parent.shape[4]])
-    module = nn.Sequential(module, trw.layers.Flatten())
-    return simple_layers.SimpleModule(parent, module, shape=shape)
+    module = nn.Sequential(module, Flatten())
+    return SimpleModule(parent, module, shape=shape)

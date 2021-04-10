@@ -6,7 +6,7 @@ import skimage
 import collections
 import trw
 import torch
-from trw.basic_typing import ShapeX, Datasets
+from ..basic_typing import ShapeX, Datasets
 from typing_extensions import Protocol, Literal
 
 

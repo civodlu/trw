@@ -6,11 +6,11 @@ import traceback
 from io import StringIO
 
 import torch
-from trw.train import default_sum_all_losses, utilities
-from trw.train.trainer import default_per_epoch_callbacks, default_pre_training_callbacks, \
+from .utilities import default_sum_all_losses, create_or_recreate_folder, RuntimeFormatter
+from .trainer import default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_post_training_callbacks, trainer_callbacks_per_batch, epoch_train_eval, create_losses_fn, strip_unpickable
-from trw.utils import safe_lookup
-from trw.utils.graceful_killer import GracefulKiller
+from ..utils import safe_lookup
+from ..utils.graceful_killer import GracefulKiller
 
 logger = logging.getLogger(__name__)
 
@@ -175,7 +175,7 @@ class TrainerV2:
 
         # now clear our log path to remove previous files if needed
         if erase_logging_folder:
-            utilities.create_or_recreate_folder(log_path)
+            create_or_recreate_folder(log_path)
         elif not os.path.exists(log_path):
             os.makedirs(log_path)
 
@@ -196,7 +196,7 @@ class TrainerV2:
 
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.log'))
-        formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        formatter = RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
 

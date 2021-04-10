@@ -3,14 +3,14 @@ from typing import Optional, List
 import torch
 import torchvision
 import numpy as np
-from trw.basic_typing import Datasets
-from trw.train import SequenceArray
-from trw.train import SamplerRandom, SamplerSequential
+from ..basic_typing import Datasets
+from ..train import SequenceArray
+from ..train import SamplerRandom, SamplerSequential
 import functools
 import collections
 import os
 
-from trw.transforms import Transform
+from ..transforms import Transform
 from typing_extensions import Literal
 
 

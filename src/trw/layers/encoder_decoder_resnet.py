@@ -1,10 +1,10 @@
 import copy
-from typing import Sequence, Optional, Any, List
+from typing import Sequence, Optional, Any
 
 import torch.nn as nn
-from trw.basic_typing import ConvStrides, Activation, TorchTensorNCX
-from trw.layers.layer_config import LayerConfig, default_layer_config
-from trw.layers.blocks import ConvBlockType, BlockConvNormActivation, \
+from ..basic_typing import ConvStrides, Activation, TorchTensorNCX
+from .layer_config import LayerConfig, default_layer_config
+from .blocks import ConvBlockType, BlockConvNormActivation, \
     ConvTransposeBlockType, BlockDeconvNormActivation, BlockRes
 
 

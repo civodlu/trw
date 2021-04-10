@@ -1,13 +1,13 @@
-import trw.layers
-
-from trw.simple_layers import simple_layers
+from .simple_layers import SimpleModule
+from ..layers import convs_2d as conv2d_layers
+from ..layers import convs_3d as conv3d_layers
 
 
 def convs_3d(parent, channels, *args, **kwargs):
-    module = trw.layers.convs_3d(input_channels=parent.shape[1], channels=channels, *args, **kwargs)
-    return simple_layers.SimpleModule(parent, module, shape=None)
+    module = conv3d_layers(input_channels=parent.shape[1], channels=channels, *args, **kwargs)
+    return SimpleModule(parent, module, shape=None)
 
 
 def convs_2d(parent, channels, *args, **kwargs):
-    module = trw.layers.convs_2d(input_channels=parent.shape[1], channels=channels, *args, **kwargs)
-    return simple_layers.SimpleModule(parent, module, shape=None)
+    module = conv2d_layers(input_channels=parent.shape[1], channels=channels, *args, **kwargs)
+    return SimpleModule(parent, module, shape=None)

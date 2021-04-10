@@ -4,15 +4,14 @@ import os
 
 import torch
 import numpy as np
-import trw
-import trw.utils
-from trw import reporting
-from trw.utils import collect_hierarchical_module_name
-from trw.reporting.table_sqlite import table_truncate
-from trw.train import create_or_recreate_folder, callback, find_default_dataset_and_split_names, utilities
-from trw.train.utilities import update_json_config
-from trw.train.data_parallel_extented import DataParallelExtended
-from trw.train.outputs_trw import Output
+from ..reporting.export import export_sample
+from ..utils import collect_hierarchical_module_name, to_value
+from ..reporting.table_sqlite import table_truncate, TableStream
+from . import create_or_recreate_folder, find_default_dataset_and_split_names, utilities
+from ..callbacks import callback
+from .utilities import update_json_config
+from .data_parallel_extented import DataParallelExtended
+from .outputs_trw import Output
 
 logger = logging.getLogger(__name__)
 
@@ -108,7 +107,7 @@ def model_summary_base(model, batch):
 
     # assume 4 bytes/number (float on cuda)
     total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
-    total_params_size = abs(trw.utils.to_value(total_params) * 4. / (1024 ** 2.))
+    total_params_size = abs(to_value(total_params) * 4. / (1024 ** 2.))
     return summary, total_output_size, total_params_size, total_params, trainable_params
 
 
@@ -125,14 +124,14 @@ def export_table(options, table_name, batch, table_role, clear_existing_data, ba
         root = os.path.dirname(options['workflow_options']['sql_database_path'])
         create_or_recreate_folder(os.path.join(root, 'static', table_name))
 
-    sql_table = reporting.TableStream(
+    sql_table = TableStream(
         cursor=sql_database.cursor(),
         table_name=table_name,
         table_role=table_role,
         table_preamble=table_preamble)
 
     logger.info(f'export table={table_name} started...')
-    reporting.export_sample(
+    export_sample(
         root,
         sql_table,
         base_name=base_name,

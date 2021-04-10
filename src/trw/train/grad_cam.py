@@ -1,10 +1,8 @@
-import trw
-import trw.utils
-from trw.train import graph_reflection
-from trw.train import utilities
-from trw.utils import upsample
-from trw.train import outputs_trw as outputs_trw
-from trw.train import guided_back_propagation
+from ..utils import len_batch, to_value, upsample
+from . import graph_reflection
+from . import utilities
+from . import outputs_trw as outputs_trw
+from . import guided_back_propagation
 import torch
 import numpy as np
 import logging
@@ -116,7 +114,7 @@ class GradCam:
         #
         assert len(selected_output.shape) == 2, 'it must be a batch x class shape'
         nb_classes = selected_output.shape[1]
-        nb_samples = trw.utils.len_batch(inputs)
+        nb_samples = len_batch(inputs)
 
         model_device = utilities.get_device(self.model)
         one_hot_output = torch.FloatTensor(nb_samples, nb_classes).to(device=model_device).zero_()
@@ -139,12 +137,12 @@ class GradCam:
         for sample in range(nb_samples):
             assert module_output_gradient is not None, 'BUG: the gradient did not propagate to the convolutional layer'
             guided_gradients = module_output_gradient[sample]
-            guided_gradients_np = trw.utils.to_value(guided_gradients)
+            guided_gradients_np = to_value(guided_gradients)
             mean_axis_avg = tuple(list(range(1, len(guided_gradients.shape))))  # remove the first (i.e., filters)
             weights = np.mean(guided_gradients_np, axis=mean_axis_avg)  # Take averages for each gradient
 
             # Create empty numpy array for cam
-            matched_module_output_py = trw.utils.to_value(matched_module_output[sample])
+            matched_module_output_py = to_value(matched_module_output[sample])
             conv_shape = guided_gradients_np.shape[1:]
             cam = np.ones(conv_shape, dtype=np.float32)
             # Multiply each weight with its conv output and then, sum
@@ -158,7 +156,7 @@ class GradCam:
 
             cam = cam.reshape([1, 1] + list(conv_shape))
             cam = upsample(torch.from_numpy(cam), mode='linear', size=input_shape)
-            cam = trw.utils.to_value(cam)[0, 0]  # remove the sample
+            cam = to_value(cam)[0, 0]  # remove the sample
             cam = np.maximum(cam, 0)
             cam = (cam - np.min(cam)) / (np.max(cam) - np.min(cam))  # Normalize between 0-1
 

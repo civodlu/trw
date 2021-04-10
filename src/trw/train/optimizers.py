@@ -2,7 +2,7 @@ import functools
 import torch
 import collections
 
-from trw.utils import torch_requires
+from ..utils import torch_requires
 
 
 def create_scheduler_step_lr(optimizer, step_size=30, gamma=0.1):

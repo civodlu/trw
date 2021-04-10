@@ -1,8 +1,8 @@
-from trw.simple_layers import simple_layers
-import trw
+from .simple_layers import SimpleModule
+from ..layers import ShiftScale as ShiftScale_layers
 
 
-class ShiftScale(simple_layers.SimpleModule):
+class ShiftScale(SimpleModule):
     """
     Normalize a tensor with a mean and standard deviation
 
@@ -17,6 +17,6 @@ class ShiftScale(simple_layers.SimpleModule):
             mean: the mean. Must be broadcastable to node shape
             standard_deviation: the standard deviation. Must be broadcastable to node shape
         """
-        super().__init__(node=node, module=trw.layers.ShiftScale(mean, standard_deviation), shape=node.shape)
+        super().__init__(node=node, module=ShiftScale_layers(mean, standard_deviation), shape=node.shape)
 
 

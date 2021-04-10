@@ -1,7 +1,7 @@
-from trw.train import callback
-from trw.train import utilities
-from trw.train import analysis_plots
-from trw.train import outputs_trw as trf_outputs
+from ..callbacks import callback
+from . import utilities
+from . import analysis_plots
+from . import outputs_trw as trf_outputs
 import os
 import matplotlib.pyplot as plt
 import logging

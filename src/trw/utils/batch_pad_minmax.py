@@ -3,7 +3,7 @@ from typing import List
 import numpy as np
 import torch
 import torch.nn.functional as F
-from trw.basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
+from ..basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
 
 
 def batch_pad_minmax_numpy(

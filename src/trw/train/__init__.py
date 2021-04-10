@@ -20,7 +20,7 @@ from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_schedule
     create_sgd_optimizers_scheduler_one_cycle_lr_fn
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
-from .callback import Callback
+from ..callbacks.callback import Callback
 from .graph_reflection import find_tensor_leaves_with_grad, find_last_forward_convolution, \
     find_last_forward_types, find_first_forward_convolution
 from .grad_cam import GradCam
@@ -54,7 +54,7 @@ from .callback_reporting_dataset_summary import CallbackReportingDatasetSummary
 from .callback_reporting_best_metrics import CallbackReportingBestMetrics
 from .callback_reporting_augmentations import CallbackReportingAugmentations
 from .callback_reporting_layer_weights import CallbackReportingLayerWeights
-from .callback_debug_processes import CallbackDebugProcesses
+from ..callbacks.callback_debug_processes import CallbackDebugProcesses
 
 from .sequence import Sequence
 from .sequence_map import SequenceMap

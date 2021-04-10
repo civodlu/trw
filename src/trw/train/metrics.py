@@ -1,8 +1,6 @@
 import numpy as np
-import trw
-import trw.utils
-from sklearn.metrics import confusion_matrix
-from trw.train import losses
+from ..utils import to_value
+from . import losses
 from sklearn import metrics
 import collections
 import torch
@@ -87,7 +85,7 @@ class MetricLoss(Metric):
     Extract the loss from the outputs
     """
     def __call__(self, outputs):
-        loss = trw.utils.to_value(outputs.get('loss'))
+        loss = to_value(outputs.get('loss'))
         if loss is not None:
             return {'loss': float(loss)}
         return None
@@ -106,8 +104,8 @@ class MetricClassificationBinaryAUC(Metric):
     For this, the output needs to provide an ``output_raw`` of shape [N, 2] (i.e., binary classification).
     """
     def __call__(self, outputs):
-        truth = trw.utils.to_value(outputs.get('output_truth'))
-        found = trw.utils.to_value(outputs.get('output_raw'))
+        truth = to_value(outputs.get('output_truth'))
+        found = to_value(outputs.get('output_raw'))
         if truth is None or found is None:
             # data is missing
             return None
@@ -141,9 +139,9 @@ class MetricClassificationError(Metric):
     Calculate the ``1 - accuracy`` using the `output_truth` and `output`
     """
     def __call__(self, outputs):
-        truth = trw.utils.to_value(outputs.get('output_truth'))
-        found = trw.utils.to_value(outputs.get('output'))
-        weights = trw.utils.to_value(outputs.get('weights'))
+        truth = to_value(outputs.get('output_truth'))
+        found = to_value(outputs.get('output'))
+        weights = to_value(outputs.get('weights'))
         if truth is not None and found is not None:
             if weights is not None:
                 min_weight = weights.min()
@@ -218,8 +216,8 @@ class MetricSegmentationDice(Metric):
         return {
             # sum the samples: we have to do this to support variably sized
             # batch size
-            'numerator': trw.utils.to_value(numerator),
-            'cardinality': trw.utils.to_value(cardinality),
+            'numerator': to_value(numerator),
+            'cardinality': to_value(cardinality),
             'uid': uid
         }
 
@@ -310,13 +308,13 @@ class MetricClassificationF1(Metric):
         self.max_classes = 0
 
     def __call__(self, outputs):
-        output_raw = trw.utils.to_value(outputs.get('output_raw'))
+        output_raw = to_value(outputs.get('output_raw'))
         if output_raw is None:
             return None
         if len(output_raw.shape) != 2:
             return None
 
-        truth = trw.utils.to_value(outputs.get('output_truth'))
+        truth = to_value(outputs.get('output_truth'))
         if truth is None:
             return None
 

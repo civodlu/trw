@@ -7,15 +7,14 @@ import threading
 import logging
 import time
 import traceback
-from multiprocessing import Event
 from pprint import PrettyPrinter
 
-from trw.utils import optional_import
-from trw.utils.graceful_killer import GracefulKiller
+from ..utils import optional_import
+from ..utils.graceful_killer import GracefulKiller
 
 psutil = optional_import('psutil')
 
-from ..callbacks import callback
+from .callback import Callback
 
 
 def bytes2human(n):
@@ -173,7 +172,7 @@ def _collect_data(main_process, filename, frequency_seconds, abort_event):
 logger = logging.getLogger(__name__)
 
 
-class CallbackDebugProcesses(callback.Callback):
+class CallbackDebugProcesses(Callback):
     def __init__(self, filename='process_stack_dumps', frequency_seconds=10.0, timeout=10.0, delayed_init=True):
         super().__init__()
 

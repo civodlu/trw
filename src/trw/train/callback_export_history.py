@@ -1,11 +1,11 @@
-from trw.train import callback
-from trw.train import utilities
-from trw.train import analysis_plots
+from ..callbacks import callback
+from . import utilities
+from . import analysis_plots
 import os
 import collections
 import logging
 import numbers
-from trw.utils import safe_lookup
+from ..utils import safe_lookup
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ def merge_history_values(history_values_list):
 
 
 def default_dicarded_metrics():
-    return []
+    return (),
 
 
 def extract_metrics_name(history, dataset_name, split_name, output_name, dicarded_metrics):

@@ -1,6 +1,5 @@
-import trw
-import trw.utils
-from trw.train import sequence
+from ..utils import len_batch
+from . import sequence
 import numpy as np
 import torch
 import collections
@@ -19,7 +18,7 @@ def split_in_2_batches(batch: collections.Mapping, first_batch_size: int):
     Returns:
         a tuple (first batch, second batch)
     """
-    batch_size = trw.utils.len_batch(batch)
+    batch_size = len_batch(batch)
     if batch_size <= first_batch_size:
         return batch, None
 
@@ -94,7 +93,7 @@ class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
                     # get a new one!
                     continue
 
-                nb_samples = trw.utils.len_batch(batch)
+                nb_samples = len_batch(batch)
                 if total_nb_samples + nb_samples == self.batch_size:
                     # here we are good!
                     batches.append(batch)

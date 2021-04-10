@@ -1,12 +1,12 @@
-from typing import Sequence, Union, List, Tuple
+from typing import Union, List, Tuple
 
 import torch.nn as nn
 import torch.nn.functional as F
 import torch
-from trw.layers import crop_or_pad_fun
-from trw.utils import flatten
+from .crop_or_pad import crop_or_pad_fun
+from ..utils import flatten
 import numpy as np
-from trw.train import get_device
+from ..train import get_device
 
 
 class AutoencoderConvolutionalVariational(nn.Module):

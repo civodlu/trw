@@ -1,9 +1,9 @@
 from typing import List
 
-from trw.transforms import transforms
+from ..transforms import transforms
 import collections
 
-from trw.basic_typing import Batch
+from ..basic_typing import Batch
 
 
 class TransformCompose(transforms.Transform):

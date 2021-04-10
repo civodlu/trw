@@ -3,9 +3,9 @@ import collections
 import functools
 from typing import Optional, Callable, List
 
-from trw.basic_typing import Batch
-from trw.transforms import transforms
-from trw.transforms.flip import transform_batch_random_flip_joint
+from ..basic_typing import Batch
+from ..transforms import transforms
+from ..transforms.flip import transform_batch_random_flip_joint
 
 
 def _transform_random_flip(feature_names, batch, axis, flip_probability):

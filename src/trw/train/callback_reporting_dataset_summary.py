@@ -1,8 +1,7 @@
-import trw
-import trw.utils
-from trw.train import callback
-from trw.train.callback_reporting_model_summary import export_table
-from trw.train.utilities import update_json_config
+from ..utils import to_value, len_batch
+from ..callbacks import callback
+from .callback_reporting_model_summary import export_table
+from .utilities import update_json_config
 import collections
 import numpy as np
 import logging
@@ -42,10 +41,10 @@ def data_summary(datasets, max_nb_samples=None):
             nb_batches = 0
             stats = None
             for batch_id, batch in enumerate(split):
-                nb_samples += trw.utils.len_batch(batch)
+                nb_samples += len_batch(batch)
                 nb_batches += 1
                 for feature_name, feature_value in batch.items():
-                    feature_value = trw.utils.to_value(feature_value)
+                    feature_value = to_value(feature_value)
                     stats = features_stats[feature_name]
                     if isinstance(feature_value, np.ndarray):
                         if batch_id == 0:

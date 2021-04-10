@@ -1,6 +1,5 @@
 from typing import Tuple, Optional, Any, Callable
 
-from trw.hparams import params
 import copy
 import logging
 
@@ -47,7 +46,7 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
         """
         # start with no hyper-parameters
         if hyper_parameters is None:
-            hyper_parameters = params.HyperParameters()
+            hyper_parameters = HyperParameters()
 
         # then randomly evaluate random hyper parameters and export the results
         iteration = 0

@@ -1,7 +1,7 @@
 import signal
 import time
 from multiprocessing import Event
-from trw.utils.optional_import import optional_import
+from .optional_import import optional_import
 psutil = optional_import('psutil')
 
 

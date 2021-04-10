@@ -5,9 +5,10 @@ import torch
 import numpy as np
 
 
-from trw.train import get_device, collate_list_of_dicts
-from trw.train.utilities import prepare_loss_terms
-from trw.utils import len_batch, get_batch_n
+from ..train import get_device
+from ..train.collate import collate_list_of_dicts
+from ..train.utilities import prepare_loss_terms
+from ..utils import len_batch, get_batch_n
 
 
 def process_outputs_and_extract_loss(outputs, batch, is_training):

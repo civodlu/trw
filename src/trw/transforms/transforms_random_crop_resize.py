@@ -3,10 +3,10 @@ import collections
 import functools
 from typing import Optional, Callable, List, Sequence
 
-from trw.basic_typing import Batch, ShapeX
-from trw.transforms import transforms
-from trw.transforms import crop
-from trw.transforms import resize
+from ..basic_typing import Batch, ShapeX
+from ..transforms import transforms
+from ..transforms import crop
+from ..transforms import resize
 from typing_extensions import Literal
 
 

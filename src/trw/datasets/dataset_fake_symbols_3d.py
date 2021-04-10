@@ -3,9 +3,9 @@ from typing import Optional, Callable
 import numpy as np
 import functools
 
-from trw.basic_typing import Shape, ShapeX, Datasets
-from trw.datasets import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
-from trw.datasets.dataset_fake_symbols import ShapeCreator
+from ..basic_typing import ShapeX, Datasets
+from ..datasets import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
+from ..datasets.dataset_fake_symbols import ShapeCreator
 
 
 def _add_square_3d(imag, mask, shapes_added, scale_factor):

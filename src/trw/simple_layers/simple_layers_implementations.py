@@ -1,14 +1,17 @@
-from trw.simple_layers import simple_layers
 import torch
 import torch.nn as nn
 import functools
-import trw.train
-from trw.layers.utils import div_shape
+
+from .simple_layers import SimpleLayerBase, SimpleOutputBase, SimpleModule, SimpleMergeBase
+from ..layers.utils import div_shape
+from ..train.outputs_trw import OutputClassification as OutputClassification_train
+from ..train.outputs_trw import OutputEmbedding as OutputEmbedding_train
+from ..layers import Flatten as Flatten_layers
 import numpy as np
 import collections
 
 
-class Input(simple_layers.SimpleLayerBase):
+class Input(SimpleLayerBase):
     """
     Represent an input (i.e., a feature) to a network
     """
@@ -29,13 +32,13 @@ class Input(simple_layers.SimpleLayerBase):
         return None
 
 
-class OutputClassification(simple_layers.SimpleOutputBase):
+class OutputClassification(SimpleOutputBase):
     """
     Output class for classification
     """
     def __init__(self, node, output_name, classes_name, **kwargs):
         super().__init__(node=node, output_name=output_name, shape=node.shape)
-        self.module_type = trw.train.OutputClassification
+        self.module_type = OutputClassification_train
         self.module_args = kwargs
         self.classes_name = classes_name
 
@@ -51,13 +54,13 @@ def return_output(outputs, batch):
     return outputs
     
     
-class OutputEmbedding(simple_layers.SimpleOutputBase):
+class OutputEmbedding(SimpleOutputBase):
     """
     Create an embedding for display purposes
     """
     def __init__(self, node, output_name, functor=None):
         super().__init__(node=node, output_name=output_name, shape=node.shape)
-        self.module_type = functools.partial(trw.train.OutputEmbedding, functor=functor)
+        self.module_type = functools.partial(OutputEmbedding_train, functor=functor)
 
     def forward(self, inputs, batch):
         return self.module_type(inputs)
@@ -67,12 +70,12 @@ class OutputEmbedding(simple_layers.SimpleOutputBase):
         return None
 
 
-class ReLU(simple_layers.SimpleModule):
+class ReLU(SimpleModule):
     def __init__(self, node):
         super().__init__(node=node, module=nn.ReLU(), shape=node.shape)
 
 
-class BatchNorm2d(simple_layers.SimpleModule):
+class BatchNorm2d(SimpleModule):
     def __init__(self, node, eps=1e-5, momentum=0.1, affine=True):
         super().__init__(
             node=node,
@@ -81,7 +84,7 @@ class BatchNorm2d(simple_layers.SimpleModule):
         )
 
 
-class BatchNorm3d(simple_layers.SimpleModule):
+class BatchNorm3d(SimpleModule):
     def __init__(self, node, eps=1e-5, momentum=0.1, affine=True):
         super().__init__(
             node=node,
@@ -99,7 +102,7 @@ class _Reshape(nn.Module):
         return torch.reshape(x, self.shape)
 
 
-class Reshape(simple_layers.SimpleModule):
+class Reshape(SimpleModule):
     """
     Reshape a tensor to another shape
     """
@@ -108,16 +111,16 @@ class Reshape(simple_layers.SimpleModule):
         super().__init__(node=node, module=_Reshape(shape=reformated_shape), shape=reformated_shape)
 
 
-class Linear(simple_layers.SimpleModule):
+class Linear(SimpleModule):
     def __init__(self, node, out_features):
         assert len(node.shape) == 2, 'Linear input shape must be 2D, instead got={}'.format(node.shape)
         module_args = {'in_features': node.shape[1], 'out_features': out_features}
         super().__init__(node=node, module=nn.Linear(**module_args), shape=[node.shape[0], out_features])
 
 
-class Flatten(simple_layers.SimpleModule):
+class Flatten(SimpleModule):
     def __init__(self, node):
-        super().__init__(node=node, module=trw.layers.Flatten(), shape=[node.shape[0], np.prod(node.shape[1:])])
+        super().__init__(node=node, module=Flatten_layers(), shape=[node.shape[0], np.prod(node.shape[1:])])
 
 
 def _conv_2d_shape_fn(node, module_args):
@@ -127,7 +130,7 @@ def _conv_2d_shape_fn(node, module_args):
     return [node.shape[0], out_channels] + div_shape(node.shape[2:], div=stride)
 
 
-class Conv2d(simple_layers.SimpleModule):
+class Conv2d(SimpleModule):
     def __init__(self, node, out_channels, kernel_size, stride=1, padding='same'):
         module_args = {
             'in_channels': node.shape[1],
@@ -153,7 +156,7 @@ def _conv_3d_shape_fn(node, module_args):
     return [node.shape[0], out_channels] + div_shape(node.shape[2:], div=stride)
 
 
-class Conv3d(simple_layers.SimpleModule):
+class Conv3d(SimpleModule):
     def __init__(self, node, out_channels, kernel_size, stride=1, padding='same'):
         module_args = {
             'in_channels': node.shape[1],
@@ -172,19 +175,19 @@ class Conv3d(simple_layers.SimpleModule):
         super().__init__(node=node, module=nn.Conv3d(**module_args), shape=_conv_3d_shape_fn(node=node, module_args=module_args))
 
 
-class MaxPool2d(simple_layers.SimpleModule):
+class MaxPool2d(SimpleModule):
     def __init__(self, node, kernel_size, stride=None):
         module_args = {'kernel_size': kernel_size, 'stride': stride}
         super().__init__(node=node, module=nn.MaxPool2d(**module_args), shape=node.shape[0:2] + div_shape(node.shape[2:], 2))
 
 
-class MaxPool3d(simple_layers.SimpleModule):
+class MaxPool3d(SimpleModule):
     def __init__(self, node, kernel_size, stride=None):
         module_args = {'kernel_size': kernel_size, 'stride': stride}
         super().__init__(node=node, module=nn.MaxPool3d(**module_args), shape=node.shape[0:2] + div_shape(node.shape[2:], 2))
 
 
-class ConcatChannels(simple_layers.SimpleMergeBase):
+class ConcatChannels(SimpleMergeBase):
     """
     Implement a channel concatenation layer
     """

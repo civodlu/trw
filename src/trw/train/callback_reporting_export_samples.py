@@ -3,16 +3,14 @@ import functools
 import logging
 
 import torch
-import trw
-import trw.utils
-from trw import reporting
-from trw.utils import to_value, flatten
-from trw.reporting.table_sqlite import table_truncate
-from trw.train import callback
-from trw.train import trainer
-from trw.train import utilities
-from trw.train import outputs_trw as outputs_trw
-from trw.train.utilities import update_json_config, create_or_recreate_folder
+from ..reporting.export import export_sample
+from ..utils import to_value, flatten, len_batch
+from ..reporting.table_sqlite import table_truncate, TableStream
+from ..callbacks import callback
+from . import trainer
+from . import utilities
+from . import outputs_trw as outputs_trw
+from .utilities import update_json_config, create_or_recreate_folder
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +54,7 @@ def expand_classification_mapping(batch, loss_term_name, loss_term, classificati
 
 
 def select_all(batch, loss_terms):
-    nb_samples = trw.utils.len_batch(batch)
+    nb_samples = len_batch(batch)
     return range(nb_samples)
 
 
@@ -107,7 +105,7 @@ def callbacks_per_loss_term(
     batch['epoch'] = epoch
 
     # calculate how many samples to export
-    nb_batch_samples = trw.utils.len_batch(batch)
+    nb_batch_samples = len_batch(batch)
     nb_samples_exported = len(exported_cases)
     nb_samples_to_export = min(max_samples - nb_samples_exported, nb_batch_samples)
     if nb_samples_to_export <= 0:
@@ -120,7 +118,7 @@ def callbacks_per_loss_term(
         id = n + nb_samples_exported
         exported_cases.append(id)
         name = format.format(dataset_name=dataset_name, split_name=split_name, id=id, epoch=epoch)
-        reporting.export_sample(
+        export_sample(
             root,
             sql_table,
             base_name=name,
@@ -248,7 +246,7 @@ class CallbackReportingExportSamples(callback.Callback):
             root = os.path.dirname(options['workflow_options']['sql_database_path'])
             create_or_recreate_folder(os.path.join(root, 'static', self.table_name))
 
-        sql_table = reporting.TableStream(
+        sql_table = TableStream(
             cursor=sql_database.cursor(),
             table_name=self.table_name,
             table_role='data_samples')

@@ -3,8 +3,8 @@ import collections
 import functools
 from typing import List
 
-from trw.transforms import transforms
-from trw.transforms.resize import resize
+from ..transforms import transforms
+from ..transforms.resize import resize
 
 
 def _transform_resize(feature_names, batch, size, mode):

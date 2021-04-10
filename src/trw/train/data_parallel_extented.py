@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from trw.train import Output
+from .outputs_trw import Output
 
 
 def gather_extended(outputs, target_device, dim=0):

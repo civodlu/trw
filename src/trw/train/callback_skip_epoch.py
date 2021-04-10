@@ -1,6 +1,6 @@
 import collections
 
-from trw.train import callback
+from ..callbacks import callback
 
 
 class CallbackSkipEpoch(callback.Callback):

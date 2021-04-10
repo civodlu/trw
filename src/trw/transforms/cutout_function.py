@@ -2,7 +2,7 @@ from typing import Sequence, List, Union, Callable
 
 import numpy as np
 import torch
-from trw.basic_typing import Tensor, Numeric, TensorNCX, ShapeCX
+from ..basic_typing import Tensor, Numeric, TensorNCX, ShapeCX
 from typing_extensions import Protocol
 
 

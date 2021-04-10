@@ -1,9 +1,5 @@
-import trw
-import trw.utils
-from trw.train import sequence
-import numpy as np
-import torch
-import collections
+from ..utils import len_batch
+from . import sequence
 
 
 class SequenceMaxSamples(sequence.Sequence, sequence.SequenceIterator):
@@ -53,7 +49,7 @@ class SequenceMaxSamples(sequence.Sequence, sequence.SequenceIterator):
                 # get a new one!
                 continue
 
-            self.current_nb_samples += trw.utils.len_batch(batch)
+            self.current_nb_samples += len_batch(batch)
             return batch
 
     def __iter__(self):

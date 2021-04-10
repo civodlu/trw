@@ -4,7 +4,7 @@ from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpD
 
 from .utils import div_shape
 from .flatten import Flatten
-from trw.utils import flatten
+from ..utils import flatten
 from .denses import denses
 from .convs import ConvsBase, ModuleWithIntermediate
 from .convs_2d import convs_2d

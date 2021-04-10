@@ -1,18 +1,16 @@
 import os
 
-import trw
-import trw.train.utilities
-import trw.utils
-from trw.train import callback
-from trw.train import trainer
-from trw.train import utilities
-from trw.train import sample_export
-from trw.train import sequence_array
-from trw.train import outputs_trw as outputs_trw
-from trw.train import guided_back_propagation
-from trw.train import grad_cam
-from trw.train import integrated_gradients
-from trw.train import meaningful_perturbation
+from .utilities import postprocess_batch, transfer_batch_to_device, create_or_recreate_folder
+from ..utils import len_batch, to_value
+from ..callbacks import callback
+from . import utilities
+from . import sample_export
+from . import sequence_array
+from . import outputs_trw as outputs_trw
+from . import guided_back_propagation
+from . import grad_cam
+from . import integrated_gradients
+from . import meaningful_perturbation
 from enum import Enum
 import torch
 import torch.nn
@@ -71,7 +69,7 @@ def run_classification_explanation(
         logger.info('sample={}'.format(n))
         batch_n = sequence_array.SequenceArray.get(
             batch,
-            trw.utils.len_batch(batch),
+            len_batch(batch),
             np.asarray([n]),
             transforms=None,
             use_advanced_indexing=True)
@@ -86,7 +84,7 @@ def run_classification_explanation(
                 outputs = model(batch_n)
                 output = outputs.get(output_name)
                 assert output is not None
-                output_np = trw.utils.to_value(output.output)[0]
+                output_np = to_value(output.output)[0]
                 max_class_indices = (-output_np).argsort()[0:nb_explanations]
         except Exception as e:
             logger.error('exception, aborted `run_classification_explanation`=', e)
@@ -235,10 +233,10 @@ class CallbackExplainDecision(callback.Callback):
 
         root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
         if not os.path.exists(root):
-            utilities.create_or_recreate_folder(root)
+            create_or_recreate_folder(root)
 
-        batch = utilities.transfer_batch_to_device(self.batch, device=device)
-        trw.train.utilities.postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
+        batch = transfer_batch_to_device(self.batch, device=device)
+        postprocess_batch(self.dataset_name, self.split_name, batch, callbacks_per_batch)
 
         outputs = model(batch)
         output_name = CallbackExplainDecision.find_output_name(outputs, self.output_name)
@@ -246,7 +244,7 @@ class CallbackExplainDecision(callback.Callback):
             logger.error('can\'t find a classification output')
             return
 
-        nb_samples = min(self.max_samples, trw.utils.len_batch(batch))
+        nb_samples = min(self.max_samples, len_batch(batch))
         for algorithm in self.algorithms:
             algorithm_kwargs = {}
             if self.algorithms_kwargs is not None and algorithm in self.algorithms_kwargs:

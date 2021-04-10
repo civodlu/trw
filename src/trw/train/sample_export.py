@@ -5,14 +5,11 @@ We assume throughout that the image format is (samples, channels, height, width)
 import numpy as np
 import numbers
 
-import trw
-import trw.utils
-from trw.train import utilities
-
-
-from trw.reporting.export import as_rgb_image
-from trw.reporting.export import as_image_ui8
-from trw.reporting.export import export_image
+from . import utilities
+from ..utils import to_value
+from ..reporting.export import as_rgb_image
+from ..reporting.export import as_image_ui8
+from ..reporting.export import export_image
 
 
 def export_as_image(name, samples, sample_id, export_root, txt_file):
@@ -24,7 +21,7 @@ def export_as_image(name, samples, sample_id, export_root, txt_file):
     :param txt_file:
     :return:
     """
-    samples = trw.utils.to_value(samples)
+    samples = to_value(samples)
     # an image MUST have a filter component, else we could confuse
     # if as a 2D array that we want to export in a text file
     if not isinstance(samples, np.ndarray) or len(samples.shape) <= 3:
@@ -47,7 +44,7 @@ def export_as_image(name, samples, sample_id, export_root, txt_file):
 
 
 def export_as_npy(name, samples, sample_id, export_root, txt_file):
-    samples = trw.utils.to_value(samples)
+    samples = to_value(samples)
 
     if isinstance(samples, np.ndarray):
         if len(samples.shape) == 1 or len(samples.shape) == 0:
@@ -62,7 +59,7 @@ def export_as_npy(name, samples, sample_id, export_root, txt_file):
 
 
 def export_as_string(name, samples, sample_id, export_root, txt_file, max_len=1024):
-    samples = trw.utils.to_value(samples)
+    samples = to_value(samples)
 
     if isinstance(samples, numbers.Number) or isinstance(samples, str):
         txt_file.write('%s=%s\n' % (name, str(samples)))
@@ -132,7 +129,7 @@ def export_sample(
     # to read the actual class name than the class ID
     if classification_mappings is not None:
         for name, value in batch.items():
-            value = trw.utils.to_value(value)
+            value = to_value(value)
             if not isinstance(value, np.ndarray):
                 continue
             mapping_name = clean_mapping_name_fn(name)

@@ -3,9 +3,9 @@ import warnings
 from numbers import Number
 
 import torch
-from trw.basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
-from trw.layers.utils import div_shape
-from trw.layers.layer_config import LayerConfig
+from ..basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
+from .utils import div_shape
+from .layer_config import LayerConfig
 import torch.nn as nn
 from typing import Union, Dict, Optional, Sequence, List
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7

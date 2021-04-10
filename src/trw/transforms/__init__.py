@@ -6,7 +6,7 @@ Transforms are designed to work for n-dimensional data.
 """
 
 from .crop import transform_batch_random_crop, batch_crop
-from trw.utils import batch_pad_numpy, batch_pad_torch, batch_pad
+from ..utils import batch_pad_numpy, batch_pad_torch, batch_pad
 from .flip import flip
 from .copy import copy
 from .cutout_function import cutout, cutout_random_ui8_torch, cutout_value_fn_constant, cutout_random_size

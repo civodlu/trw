@@ -1,5 +1,5 @@
-from trw.train import callback
-from trw.train import utilities
+from ..callbacks import callback
+from . import utilities
 
 
 def update_best_so_far(epoch, best_so_far, dataset_name, split_name, output_name, category_name, category_value):

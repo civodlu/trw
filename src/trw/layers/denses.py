@@ -1,8 +1,8 @@
 import copy
 
 import torch.nn as nn
-from trw.layers.layer_config import default_layer_config, LayerConfig, NormType
-from trw.layers.flatten import Flatten
+from .layer_config import default_layer_config, LayerConfig, NormType
+from .flatten import Flatten
 from typing import Any, Sequence
 
 

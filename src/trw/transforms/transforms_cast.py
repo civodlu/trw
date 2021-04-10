@@ -3,8 +3,8 @@ from typing import Sequence
 import numpy as np
 import torch
 import functools
-from trw.transforms import transforms, criteria_feature_name
-from trw.basic_typing import Batch
+from ..transforms import transforms, criteria_feature_name
+from ..basic_typing import Batch
 
 NUMPY_CONVERSION = {
     'float': np.float32,

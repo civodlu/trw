@@ -4,9 +4,10 @@ from typing import Sequence, Union, Optional, Any, Dict, Callable, List
 
 import torch
 import torch.nn as nn
-from trw.basic_typing import NestedIntSequence
-from trw.layers import div_shape, ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
-from trw.layers.blocks import BlockDeconvNormActivation, ConvTransposeBlockType
+from ..basic_typing import NestedIntSequence
+from .utils import div_shape
+from .convs import ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
+from .blocks import BlockDeconvNormActivation, ConvTransposeBlockType
 import copy
 
 from .crop_or_pad import crop_or_pad_fun

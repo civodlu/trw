@@ -1,7 +1,5 @@
-import trw
-import trw.utils
-from trw.train import utilities
-from trw.train import outputs_trw as outputs_trw
+from ..utils import to_value
+from . import outputs_trw
 import collections
 import torch
 import logging
@@ -153,7 +151,7 @@ class GuidedBackprop():
         inputs_kvp = GuidedBackprop.get_floating_inputs_with_gradients(inputs)
 
         # extract gradient
-        inputs_kvp = {name: trw.utils.to_value(i.grad) for name, i in inputs_kvp}
+        inputs_kvp = {name: to_value(i.grad) for name, i in inputs_kvp}
 
         self.forward_relu_outputs = None  # clean the state
         return target_class_name, inputs_kvp

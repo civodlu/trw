@@ -1,8 +1,8 @@
 from numbers import Number
 from typing import List
 
-from trw.basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
-from trw.utils.batch_pad_minmax import batch_pad_minmax, batch_pad_minmax_joint, \
+from ..basic_typing import NumpyTensorNCX, ShapeCX, TorchTensorNCX, TensorNCX, Numeric
+from .batch_pad_minmax import batch_pad_minmax, batch_pad_minmax_joint, \
     batch_pad_minmax_numpy, batch_pad_minmax_torch
 
 

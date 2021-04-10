@@ -4,9 +4,9 @@ from typing import Sequence, Callable, List
 
 import numpy as np
 import torch
-from trw.transforms import transforms
-from trw.transforms import affine
-from trw.basic_typing import Batch
+from ..transforms import transforms
+from ..transforms import affine
+from ..basic_typing import Batch
 
 
 def rand_n_2(n_min_max):

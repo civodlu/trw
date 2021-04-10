@@ -1,7 +1,6 @@
-import trw
-import trw.utils
-from trw.train import sequence
-from trw.train import sequence_rebatch
+from ..utils import len_batch
+from . import sequence
+from . import sequence_rebatch
 
 
 class SequenceSubBatch(sequence.Sequence, sequence.SequenceIterator):
@@ -57,7 +56,7 @@ class SequenceSubBatch(sequence.Sequence, sequence.SequenceIterator):
                 # if not, get the next batch
                 batch = self.iter_source.__next__()
 
-            nb_samples = trw.utils.len_batch(batch)
+            nb_samples = len_batch(batch)
 
             if nb_samples > self.batch_size:
                 # too many samples, split the batch and keep the extra samples in the overflow

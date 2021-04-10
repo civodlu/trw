@@ -2,14 +2,14 @@ import copy
 from numbers import Number
 from typing import Sequence, Optional, Union, Any, List
 
-from trw.layers.convs import ModuleWithIntermediate
+from .convs import ModuleWithIntermediate
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 
 import torch
 import torch.nn as nn
-from trw.utils import upsample
-from trw.layers.blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType
-from trw.layers.layer_config import LayerConfig, default_layer_config
+from ..utils import upsample
+from .blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType
+from .layer_config import LayerConfig, default_layer_config
 import numpy as np
 
 

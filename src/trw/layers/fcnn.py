@@ -3,11 +3,11 @@ from typing import Dict, Optional, Sequence, Union, Tuple
 
 import torch
 import torch.nn as nn
-from trw.layers.utils import div_shape
-from trw.layers.convs import ModuleWithIntermediate
+from .utils import div_shape
+from .convs import ModuleWithIntermediate
 import collections
-from trw.layers.blocks import BlockDeconvNormActivation
-from trw.layers.layer_config import default_layer_config, NormType, LayerConfig
+from .blocks import BlockDeconvNormActivation
+from .layer_config import default_layer_config, NormType, LayerConfig
 
 
 class FullyConvolutional(nn.Module):

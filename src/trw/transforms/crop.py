@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from typing import Sequence
 
-from trw.basic_typing import TensorNCX
+from ..basic_typing import TensorNCX
 
 
 def _crop_5d(image, min, max):

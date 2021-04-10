@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch
-from trw.arch import darts_ops
+from . import darts_ops
 import torch.nn.functional as F
 import collections
 import numpy as np

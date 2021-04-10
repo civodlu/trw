@@ -9,7 +9,7 @@ import math
 import numpy as np
 import logging
 
-from trw.hparams.store import Metrics, RunStore
+from .store import Metrics, RunStore
 
 logger = logging.getLogger(__name__)
 

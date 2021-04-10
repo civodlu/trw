@@ -5,10 +5,11 @@ from typing import Optional, List, Tuple
 
 import torchvision
 import numpy as np
-import trw.train
 import torch
-from trw.basic_typing import ShapeX, Datasets, DatasetsInfo
-from trw.transforms import Transform
+from trw.train import SequenceArray, SamplerRandom
+
+from ..basic_typing import ShapeX, Datasets, DatasetsInfo
+from ..transforms import Transform
 
 
 def _clutter(images, cluttered_size, clutter_window, nb_clutter_windows, normalization_factor):
@@ -100,11 +101,11 @@ def create_mnist_cluttered_datasset(
     }
 
     if train_transforms is None:
-        train_sequence = trw.train.SequenceArray(train_split, trw.train.SamplerRandom(batch_size=batch_size))
+        train_sequence = SequenceArray(train_split, SamplerRandom(batch_size=batch_size))
     else:
         assert batch_size % data_processing_batch_size == 0
-        sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
-        train_sequence = trw.train.SequenceArray(train_split, sampler=sampler).map(
+        sampler = SamplerRandom(batch_size=data_processing_batch_size)
+        train_sequence = SequenceArray(train_split, sampler=sampler).map(
             train_transforms,
             nb_workers=nb_workers,
             max_jobs_at_once=nb_workers * 2)
@@ -123,11 +124,11 @@ def create_mnist_cluttered_datasset(
     }
 
     if test_transforms is None:
-        test_sequence = trw.train.SequenceArray(test_split, trw.train.SamplerRandom(batch_size=batch_size))
+        test_sequence = SequenceArray(test_split, SamplerRandom(batch_size=batch_size))
     else:
         assert batch_size % data_processing_batch_size == 0
-        sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
-        test_sequence = trw.train.SequenceArray(test_split, sampler=sampler).map(
+        sampler = SamplerRandom(batch_size=data_processing_batch_size)
+        test_sequence = SequenceArray(test_split, sampler=sampler).map(
             train_transforms,
             nb_workers=nb_workers,
             max_jobs_at_once=nb_workers * 2)

@@ -3,8 +3,8 @@ from typing import Sequence
 
 import torch
 import torch.nn as nn
-import trw.train
-from trw.basic_typing import ShapeCX, TorchTensorNCX
+from ..train import grid_sample
+from ..basic_typing import ShapeCX, TorchTensorNCX
 
 
 def affine_transformation_translation(t: Sequence[float]) -> torch.Tensor:
@@ -214,7 +214,7 @@ def affine_transform(
         raise NotImplementedError(f'dimension not supported! Must be 2 or 3, current={dim}')
 
     grid = nn.functional.affine_grid(affine_matrices, list(images.shape))
-    resampled_images = trw.train.grid_sample(
+    resampled_images = grid_sample(
         images,
         grid,
         mode=interpolation,

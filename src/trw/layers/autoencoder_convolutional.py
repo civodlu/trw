@@ -1,11 +1,12 @@
-from abc import ABC
-from typing import Sequence, Union, Optional, Any, Dict, Callable, Tuple, List
+from typing import Sequence, Union, Optional, Dict, Callable, Tuple, List
 
 import torch
 import torch.nn as nn
-from trw.basic_typing import NestedIntSequence, Activation
-from trw.layers import ModuleWithIntermediate, ConvsBase, ConvsTransposeBase, crop_or_pad_fun, NormType, LayerConfig, \
-    default_layer_config
+from .layer_config import NormType, LayerConfig, default_layer_config
+from .convs_transpose import ConvsTransposeBase
+from .crop_or_pad import crop_or_pad_fun
+from ..layers.convs import ModuleWithIntermediate, ConvsBase
+from ..basic_typing import NestedIntSequence, Activation
 
 
 class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
@@ -15,7 +16,7 @@ class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
     Examples:
         Create an encoder taking 1 channel with [4, 8, 16] filters and a decoder taking as input 16 channels
         of 4x4 with [8, 4, 1] filters:
-        >>> model = trw.layers.AutoencoderConvolutional(2, 1, [4, 8, 16], [8, 4, 1])
+        >>> model = AutoencoderConvolutional(2, 1, [4, 8, 16], [8, 4, 1])
     """
     def __init__(
             self,

@@ -2,10 +2,9 @@ import logging
 
 from bokeh.application.handlers.lifecycle import LifecycleHandler
 import multiprocessing as mp
-from trw.reporting import create_default_reporting_options
-from trw.reporting.reporting_bokeh import run_server
-from trw.train import callback
-
+from ..reporting.reporting_bokeh import create_default_reporting_options
+from ..reporting.reporting_bokeh import run_server
+from ..callbacks import callback
 
 logger = logging.getLogger(__name__)
 

@@ -2,9 +2,9 @@ import functools
 from numbers import Number
 from typing import Optional, Callable, List, Sequence
 
-from trw.basic_typing import Batch
-from trw.transforms import transforms
-from trw.transforms.normalize import normalize
+from ..basic_typing import Batch
+from ..transforms import transforms
+from ..transforms.normalize import normalize
 import collections
 
 

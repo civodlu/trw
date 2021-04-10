@@ -1,7 +1,6 @@
 import logging
 import os
-from trw.train import callback
-
+from ..callbacks import callback
 
 logger = logging.getLogger(__name__)
 

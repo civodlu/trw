@@ -5,11 +5,11 @@ from bokeh.layouts import column, row, gridplot
 from bokeh.models import Panel, CheckboxGroup, PreText, RadioGroup, ColumnDataSource, HoverTool
 from bokeh.palettes import Category20
 from bokeh.plotting import figure
-from trw.utils import get_batch_n, safe_lookup, len_batch
-from trw.reporting.bokeh_ui import BokehUi
-from trw.reporting.data_category import DataCategory
+from ..utils import get_batch_n, safe_lookup, len_batch
+from .bokeh_ui import BokehUi
+from .data_category import DataCategory
 import numpy as np
-from trw.reporting.reporting_bokeh_samples import make_custom_tooltip
+from .reporting_bokeh_samples import make_custom_tooltip
 
 
 def process_data_graph(options, name, role, data, types, type_categories):

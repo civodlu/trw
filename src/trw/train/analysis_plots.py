@@ -5,7 +5,7 @@ from typing import List, Optional
 
 import matplotlib.pyplot as plt
 import numpy as np
-from trw.train import utilities
+from . import utilities
 import collections
 from textwrap import wrap
 import itertools

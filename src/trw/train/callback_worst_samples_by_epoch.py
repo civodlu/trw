@@ -1,12 +1,12 @@
-import trw
-import trw.utils
-from trw.train import callback
-from trw.train import utilities
-from trw.train import outputs_trw as trw_outputs
-from trw.train import sample_export
-from trw.train import sequence_array
-from trw.train import sampler
-from trw.train import trainer
+from ..reporting.export import export_image
+from ..utils import len_batch, to_value
+from ..callbacks import callback
+from . import utilities
+from . import outputs_trw as trw_outputs
+from . import sample_export
+from . import sequence_array
+from . import sampler
+from . import trainer
 import os
 import logging
 import collections
@@ -71,7 +71,7 @@ def export_samples_v2(dataset_name, split_name, device, split, model, losses, ro
                 output_and_batch_merged[output_name + '_' + output_value_name] = output_value
             
         # finally, export the errors
-        batch_size = trw.utils.len_batch(batch)
+        batch_size = len_batch(batch)
         for sample_id in range(batch_size):
             sample_output = os.path.join(root, dataset_name + '_' + split_name + '_s' + str(nb_exported_samples))
             txt_file = sample_output + '.txt'
@@ -227,7 +227,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
 
             image = (image * 255.0).astype(np.uint8)
             image_path = os.path.join(self.root, '{}-{}-{}-e{}'.format(self.dataset_name, split_name, self.output_name, nb_epochs))
-            sample_export.export_image(image, image_path + '.png')
+            export_image(image, image_path + '.png')
 
             # export basic info so that we can at least track back the samples
             with open(image_path + '.txt', 'w') as f:
@@ -288,7 +288,7 @@ class CallbackWorstSamplesByEpoch(callback.Callback):
                 output = split_output.get(self.output_name)
                 if output is not None and 'uid' in output:
                     uids = output['uid']
-                    output_losses = trw.utils.to_value(output['losses'])
+                    output_losses = to_value(output['losses'])
                     assert len(uids) == len(output_losses)
                     for loss, uid in zip(output_losses, uids):
                         # record the epoch: for example if we have resampled dataset,

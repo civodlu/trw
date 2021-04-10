@@ -1,9 +1,10 @@
-from typing import Union, Sequence, List, Tuple
+from typing import Union, List, Tuple
 
 import torch.nn as nn
 import torch
-from trw.layers import crop_or_pad_fun, AutoencoderConvolutionalVariational
-from trw.utils import flatten
+from .crop_or_pad import crop_or_pad_fun
+from .autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
+from ..utils import flatten
 import numpy as np
 
 

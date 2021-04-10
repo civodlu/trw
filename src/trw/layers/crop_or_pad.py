@@ -1,6 +1,6 @@
 import torch.nn.functional as F
 import numpy as np
-from trw.transforms import batch_crop
+from ..transforms import batch_crop
 import torch
 from typing import Sequence
 

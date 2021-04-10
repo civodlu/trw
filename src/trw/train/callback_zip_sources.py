@@ -1,4 +1,4 @@
-from trw.train import callback
+from ..callbacks import callback
 import logging
 import os
 import zipfile

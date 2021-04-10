@@ -7,16 +7,16 @@ import os
 from bokeh.layouts import column
 from bokeh.models import Div, Panel
 from tornado import web
-from trw.reporting.reporting_bokeh_graph import process_data_graph
-from trw.reporting.reporting_bokeh_samples import process_data_samples, process_data_tabular
-from trw.reporting.reporting_bokeh_tabs_dynamic_data import TabsDynamicData
-from trw.reporting.reporting_bokeh_tabs_dynamic_header import TabsDynamicHeader
+from .reporting_bokeh_graph import process_data_graph
+from .reporting_bokeh_samples import process_data_samples, process_data_tabular
+from .reporting_bokeh_tabs_dynamic_data import TabsDynamicData
+from .reporting_bokeh_tabs_dynamic_header import TabsDynamicHeader
 import sqlite3
 from bokeh.server.server import Server
 import json
 import numpy as np
 
-from trw.reporting.table_sqlite import get_metadata_name, get_table_data
+from .table_sqlite import get_metadata_name, get_table_data
 
 """
 table roles:

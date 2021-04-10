@@ -5,11 +5,10 @@ such as finding layers of specified types in a nn.Module or using the `grad_fn`
 
 import torch
 import torch.nn as nn
-from trw.train import utilities
+from . import utilities
 import collections
 import logging
 import traceback
-import sys
 import io
 
 

@@ -1,14 +1,11 @@
 import warnings
 
-import trw
-import trw.utils
-from trw.train import sequence
-from trw.train import sampler as sampler_trw
+from . import sequence
+from . import sampler as sampler_trw
 import numpy as np
 import collections
 import copy
-from trw.utils import get_batch_n
-
+from ..utils import get_batch_n, len_batch
 
 # this the name used for the sample UID
 sample_uid_name = 'sample_uid'
@@ -39,7 +36,7 @@ class SequenceArray(sequence.Sequence):
 
         # create a unique UID
         if sample_uid_name is not None and sample_uid_name not in split:
-            split[sample_uid_name] = np.asarray(np.arange(trw.utils.len_batch(split)))
+            split[sample_uid_name] = np.asarray(np.arange(len_batch(split)))
 
     def subsample(self, nb_samples):
         # get random indices
@@ -50,7 +47,7 @@ class SequenceArray(sequence.Sequence):
         indices = next(iter(subsample_sample))
         subsampled_split = SequenceArray.get(
             self.split,
-            trw.utils.len_batch(self.split),
+            len_batch(self.split),
             indices,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -81,7 +78,7 @@ class SequenceArray(sequence.Sequence):
         # extract the samples
         subsampled_split = get_batch_n(
             self.split,
-            trw.utils.len_batch(self.split),
+            len_batch(self.split),
             indices_to_keep,
             self.transforms,
             use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
@@ -118,7 +115,7 @@ class SequenceIteratorArray(sequence.SequenceIterator):
     def __init__(self, base_sequence, sampler):
         super().__init__()
         self.base_sequence = base_sequence
-        self.nb_samples = trw.utils.len_batch(self.base_sequence.split)
+        self.nb_samples = len_batch(self.base_sequence.split)
 
         self.sampler = sampler
         self.sampler.initializer(self.base_sequence.split)

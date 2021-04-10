@@ -14,33 +14,32 @@ import pickle
 import time
 import itertools
 
-import trw
-import trw.utils
-from trw.train import outputs_trw
-from trw.train import callback_epoch_summary
-from trw.train import callback_export_classification_report
-from trw.train import callback_export_history
-from trw.train import callback_save_last_model
+from ..utils import to_value, len_batch, safe_lookup
 
-from trw.train import callback_learning_rate_finder
-from trw.train import callback_learning_rate_recorder
-from trw.train import callback_explain_decision
-from trw.train import callback_worst_samples_by_epoch
-from trw.train import callback_zip_sources
-from trw.train import callback_export_convolution_kernel
+from . import outputs_trw
+from . import callback_epoch_summary
+from . import callback_export_classification_report
+from . import callback_export_history
+from . import callback_save_last_model
 
-from trw.train import callback_reporting_export_samples
-from trw.train import callback_reporting_start_server
-from trw.train import callback_reporting_epoch_summary
-from trw.train import callback_reporting_model_summary
-from trw.train import callback_reporting_layer_statistics
-from trw.train import callback_reporting_dataset_summary
-from trw.train import callback_reporting_augmentations
-from trw.train import callback_reporting_best_metrics
-from trw.train import utilities
-from trw.utils import safe_lookup
+from . import callback_learning_rate_finder
+from . import callback_learning_rate_recorder
+from . import callback_explain_decision
+from . import callback_worst_samples_by_epoch
+from . import callback_zip_sources
+from . import callback_export_convolution_kernel
 
-from trw.train.utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch
+from . import callback_reporting_export_samples
+from . import callback_reporting_start_server
+from . import callback_reporting_epoch_summary
+from . import callback_reporting_model_summary
+from . import callback_reporting_layer_statistics
+from . import callback_reporting_dataset_summary
+from . import callback_reporting_augmentations
+from . import callback_reporting_best_metrics
+
+from .utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch, transfer_batch_to_device, \
+    log_and_print, create_or_recreate_folder, RuntimeFormatter
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +236,7 @@ def train_loop(
             total_batch_processing_time += current_batch_processing
 
             total_collate_and_postprocess_start = time.perf_counter()
-            batch = utilities.transfer_batch_to_device(batch, device)
+            batch = transfer_batch_to_device(batch, device)
             
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=i)
             total_collate_and_postprocess_end = time.perf_counter()
@@ -262,7 +261,7 @@ def train_loop(
                     loss.backward()
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
-            loss_terms['overall_loss'] = {'loss': float(trw.utils.to_value(loss))}
+            loss_terms['overall_loss'] = {'loss': float(to_value(loss))}
             
             if callbacks_per_batch_loss_terms is not None:
                 for callback in callbacks_per_batch_loss_terms:
@@ -289,7 +288,7 @@ def train_loop(
 
             all_loss_terms.append(loss_terms)
             batch_processing_last = time.perf_counter()
-            nb_samples += trw.utils.len_batch(batch)
+            nb_samples += len_batch(batch)
 
     except StopIteration:
         pass
@@ -340,7 +339,7 @@ def eval_loop(
     try:
         for i, batch in enumerate(split):
             assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
-            batch = utilities.transfer_batch_to_device(batch, device=device)
+            batch = transfer_batch_to_device(batch, device=device)
             postprocess_batch(dataset_name, split_name, batch, callbacks_per_batch, batch_id=i)
             with torch.no_grad():  # do not keep track of the gradient as we are just evaluating
                 outputs = model(batch)
@@ -349,7 +348,7 @@ def eval_loop(
                     continue
                 loss_terms = prepare_loss_terms(outputs, batch, is_training=False)
                 loss = loss_fn(dataset_name, batch, loss_terms)
-                loss_terms['overall_loss'] = {'loss': float(trw.utils.to_value(loss))}
+                loss_terms['overall_loss'] = {'loss': float(to_value(loss))}
                 all_loss_terms.append(loss_terms)
 
                 if callbacks_per_batch_loss_terms is not None:
@@ -375,7 +374,7 @@ def approximate_batch_size_from_loss_terms(all_loss_terms):
     samples within one batch
     """
     for name, values in all_loss_terms[0].items():
-        s = trw.utils.len_batch(values)
+        s = len_batch(values)
         if s != 0:
             return s * len(all_loss_terms)
     return 0
@@ -491,7 +490,7 @@ def epoch_train_eval(
     return outputs_by_dataset_epoch, history_by_dataset_epoch
 
 
-default_logger = utilities.log_and_print
+default_logger = log_and_print
 
 
 def default_pre_training_callbacks(
@@ -776,7 +775,7 @@ class Trainer:
         options['workflow_options']['current_logging_directory'] = log_path
 
         # now clear our log path to remove previous files if needed
-        utilities.create_or_recreate_folder(log_path)
+        create_or_recreate_folder(log_path)
         
         if len(logging.root.handlers) == 0:
             # there is no logger configured, so add a basic one
@@ -795,7 +794,7 @@ class Trainer:
 
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
-        formatter = utilities.RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
+        formatter = RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
         logging.root.addHandler(handler)
 

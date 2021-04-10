@@ -189,6 +189,9 @@ class TestSequenceReservoir(TestCase):
 
     def test_multiple_iterators_same_sequence(self):
         # test the statistics of iterating the same sequence using different iterators
+        np.random.seed(0)
+        torch.random.manual_seed(0)
+
         nb_indices = 10
         paths = [[i, 42] for i in range(nb_indices)]
         split = {'path': np.asarray(paths)}

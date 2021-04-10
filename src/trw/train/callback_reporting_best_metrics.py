@@ -1,11 +1,11 @@
 import time
 
-from trw.train import callback
+from ..callbacks import callback
 import logging
 import collections
 
-from trw.train.callback_reporting_model_summary import export_table
-from trw.train.utilities import update_json_config
+from .callback_reporting_model_summary import export_table
+from .utilities import update_json_config
 
 logger = logging.getLogger(__name__)
 

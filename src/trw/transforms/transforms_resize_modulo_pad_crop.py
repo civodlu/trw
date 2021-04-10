@@ -4,11 +4,11 @@ import functools
 from numbers import Number
 from typing import Callable, Union, List
 
-from trw.transforms import transforms
-from trw.transforms import crop
+from ..transforms import transforms
+from ..transforms import crop
 import numpy as np
-from trw.basic_typing import ShapeX, Batch
-from trw.utils import batch_pad_minmax_joint
+from ..basic_typing import ShapeX, Batch
+from ..utils import batch_pad_minmax_joint
 from typing_extensions import Literal
 
 

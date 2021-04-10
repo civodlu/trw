@@ -4,9 +4,10 @@ from typing import Callable, Sequence, Optional, List
 import torch
 import torch.nn as nn
 
-from trw.basic_typing import ShapeCX, TorchTensorNCX, TensorNCX
-from trw.train import Output, get_device, OutputSegmentation2
-from trw.transforms import resize
+from ..basic_typing import ShapeCX, TorchTensorNCX, TensorNCX
+from ..train.outputs_trw import Output, OutputSegmentation2
+from ..train import get_device
+from ..transforms import resize
 from typing_extensions import Literal, Protocol
 
 from .layer_config import LayerConfig, default_layer_config
@@ -14,7 +15,6 @@ from .convs import ModuleWithIntermediate
 from .blocks import ConvBlockType, BlockConvNormActivation
 import numpy as np
 
-from trw.train import Output
 
 
 def adaptative_weighting(outputs: Sequence[TorchTensorNCX]) -> np.ndarray:
@@ -44,7 +44,7 @@ class DeepSupervision(nn.Module):
     Example:
         >>> import trw
         >>> backbone = trw.layers.UNetBase(dim=2, input_channels=3, channels=[2, 4, 8], output_channels=2)
-        >>> deep_supervision = trw.layers.DeepSupervision(backbone, [3, 8, 16])
+        >>> deep_supervision = DeepSupervision(backbone, [3, 8, 16])
         >>> i = torch.zeros([1, 3, 8, 16], dtype=torch.float32)
         >>> t = torch.zeros([1, 1, 8, 16], dtype=torch.long)
         >>> outputs = deep_supervision(i, t)
@@ -118,7 +118,7 @@ class DeepSupervision(nn.Module):
         self.output_creator = output_creator
         self.resize_mode = resize_mode
 
-    def forward(self, x: torch.Tensor, target: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
+    def forward(self, x: torch.Tensor, target: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[Output]:
         os = self.backbone.forward_with_intermediate(x, latent=latent)
 
         outputs = []

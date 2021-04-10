@@ -3,9 +3,9 @@ import os
 
 import numpy as np
 import skimage.transform
-from trw.utils import safe_lookup, len_batch
-from trw.reporting.data_category import DataCategory
-from trw.reporting.table_sqlite import get_data_types_and_clean_data
+from ..utils import safe_lookup, len_batch
+from .data_category import DataCategory
+from .table_sqlite import get_data_types_and_clean_data
 from typing import List
 
 

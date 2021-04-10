@@ -1,5 +1,5 @@
-from trw.train import collate
-from trw.train import sequence
+from . import collate
+from . import sequence
 
 
 class SequenceCollate(sequence.Sequence, sequence.SequenceIterator):

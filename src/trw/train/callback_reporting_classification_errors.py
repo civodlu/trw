@@ -1,17 +1,16 @@
 import collections
 import logging
 import numpy as np
-import trw
-import trw.utils
-from trw.utils import to_value
-from trw.train import callback, CallbackReportingExportSamples
-from trw.train import outputs_trw as outputs_trw
+from ..utils import to_value, len_batch
+from . import CallbackReportingExportSamples
+from ..callbacks import callback
+from . import outputs_trw
 
 logger = logging.getLogger(__name__)
 
 
 def select_classification_errors(batch, loss_terms):
-    nb_samples = trw.utils.len_batch(batch)
+    nb_samples = len_batch(batch)
     indices_errors = collections.defaultdict(list)
     for name, loss_term in loss_terms.items():
         ref = loss_term.get('output_ref')

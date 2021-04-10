@@ -2,12 +2,12 @@ import collections
 from typing import Optional, List
 
 import torchvision
-import trw.train
 import os
 import numpy as np
 import torch
-from trw.basic_typing import Datasets
-from trw.transforms import Transform
+from ..train import SequenceArray, SamplerRandom
+from ..basic_typing import Datasets
+from ..transforms import Transform
 
 
 def create_cifar10_dataset(
@@ -49,11 +49,11 @@ def create_cifar10_dataset(
     
     def create_sequence(transforms, ds):
         if transforms is None:
-            sequence = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size))
+            sequence = SequenceArray(ds, SamplerRandom(batch_size=batch_size))
         else:
             assert batch_size % data_processing_batch_size == 0
-            sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
-            sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
+            sampler = SamplerRandom(batch_size=data_processing_batch_size)
+            sequence = SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
             sequence = sequence.batch(batch_size // data_processing_batch_size)
         return sequence
 

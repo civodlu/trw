@@ -131,4 +131,4 @@ def default_collate_fn(batch, device, pin_memory=False, non_blocking=False):
     if isinstance(batch, collections.Mapping):
         return collate_dicts(batch, device, pin_memory, non_blocking)
 
-    raise NotImplemented()
+    raise NotImplementedError()

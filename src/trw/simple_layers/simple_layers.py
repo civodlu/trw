@@ -7,8 +7,8 @@ Notes:
 import weakref
 import torch.nn as nn
 import torch
-from trw.train import get_device
-from trw.simple_layers.ordered_set import OrderedSet
+from ..train import get_device
+from .ordered_set import OrderedSet
 
 
 class SimpleLayerBase:

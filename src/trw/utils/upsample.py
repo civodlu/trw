@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from trw.basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX, ShapeX
+from ..basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX, ShapeX
 
 
 def _upsample_int_1d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:

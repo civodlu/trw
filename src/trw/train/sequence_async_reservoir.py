@@ -1,7 +1,5 @@
-import math
-
-import trw.train.job_executor2
-from trw.train import sequence
+from .job_executor2 import JobExecutor2
+from . import sequence
 
 import collections
 from queue import Empty
@@ -99,7 +97,7 @@ class SequenceAsyncReservoir(sequence.Sequence):
             # before blocking
             max_jobs_at_once = nb_workers
 
-        self.job_executer = trw.train.job_executor2.JobExecutor2(
+        self.job_executer = JobExecutor2(
             nb_workers=nb_workers,
             function_to_run=self.function_to_run,
             max_queue_size_pin_thread_per_worker=max_jobs_at_once,

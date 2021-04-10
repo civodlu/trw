@@ -1,12 +1,12 @@
 import collections
 from typing import List, Sequence, Optional
 
-import trw.train
 import os
 import torchvision
 import numpy as np
-from trw.basic_typing import Datasets
-from trw.transforms import Transform
+from ..train import SamplerRandom, SequenceArray
+from ..basic_typing import Datasets
+from ..transforms import Transform
 
 
 def identity(batch):
@@ -67,11 +67,11 @@ def create_mnist_dataset(
         ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}
 
     if transforms is None:
-        sequence = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size))
+        sequence = SequenceArray(ds, SamplerRandom(batch_size=batch_size))
     else:
         assert batch_size % data_processing_batch_size == 0
-        sampler = trw.train.SamplerRandom(batch_size=data_processing_batch_size)
-        sequence = trw.train.SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
+        sampler = SamplerRandom(batch_size=data_processing_batch_size)
+        sequence = SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
         sequence = sequence.batch(batch_size // data_processing_batch_size)
 
     splits['train'] = sequence.collate()
@@ -81,7 +81,7 @@ def create_mnist_dataset(
         indices = np.where(np.in1d(test_dataset.targets, np.asarray(select_classes_test)))
         ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}
 
-    splits['test'] = trw.train.SequenceArray(ds, trw.train.SamplerRandom(batch_size=batch_size)).collate()
+    splits['test'] = SequenceArray(ds, SamplerRandom(batch_size=batch_size)).collate()
 
     # generate the class mapping
     mapping = dict()
