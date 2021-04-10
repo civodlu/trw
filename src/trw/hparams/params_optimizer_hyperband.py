@@ -68,8 +68,8 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
             self,
             repeat_id,
             nb_runs,
-            store: Optional[RunStore] = None,
-            hyper_parameters: Optional[HyperParameters] = None) -> Tuple[List[RunResult], int]:
+            hyper_parameters: HyperParameters,
+            store: Optional[RunStore] = None) -> Tuple[List[RunResult], int]:
         """
         Run full Hyperband search
 
@@ -160,17 +160,19 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
             results_last += run_params  # keep track of the last round for each `s`
         return results_last, nb_runs
 
-    def optimize(self, store: Optional[RunStore]) -> List[RunResult]:
+    def optimize(self, store: Optional[RunStore], hyper_parameters: Optional[HyperParameters] = None) -> List[RunResult]:
         """
         Optimize the hyper parameters using Hyperband
         
         Args:
             store: how to result of each run. Can be None, in this case nothing is exported.
+            hyper_parameters: the hyper parameters
 
         Returns:
             the results of all the runs
         """
-        hyper_parameters = HyperParameters()
+        if hyper_parameters is None:
+            hyper_parameters = HyperParameters()
 
         # here `discover` the hyper-parameter. We must assume the hyper-parameter list
         # won't change

@@ -271,9 +271,9 @@ def analyse_hyperparameters(run_results: List[RunResult],
                 params_current[key] = value.current_value
         else:
             for key in hparams_to_visualize:
-                value = params.hparams.get(key)
-                if value is not None:
-                    params_current[key] = value
+                v = params.hparams.get(key)
+                if v is not None:
+                    params_current[key] = v
 
         params_current['loss'] = loss
         data.append(params_current)
