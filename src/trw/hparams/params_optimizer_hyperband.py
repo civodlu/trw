@@ -1,10 +1,15 @@
-from trw.hparams import params
-from trw.hparams import params_optimizer_random_search
-import os
+from typing import Callable, Tuple, Any, Optional, List
+
+from .params_optimizer import HyperParametersOptimizer
+from .store import RunResult
+from .params import HyperParameters
+
 import copy
 import math
 import numpy as np
 import logging
+
+from trw.hparams.store import Metrics, RunStore
 
 logger = logging.getLogger(__name__)
 
@@ -13,24 +18,19 @@ def log_hyperband(msg):
     logger.info(msg)
 
 
-class HyperParametersOptimizerHyperband:
+class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
     """
-    Implementation of `Hyperband: a novel bandit based approach to hyper-parameter optimization`
-    https://arxiv.org/abs/1603.06560
+    Implementation of `Hyperband: a novel bandit based approach to hyper-parameter optimization` [#]_
 
-    def evaluate_hparams(hparams, nb_epochs):
-        # evaluate an hyper-parameter configuration and return a loss value and some additional information
-        # e.g., result report
-        return 0.0, {}
+    .. [#] https://arxiv.org/abs/1603.06560
     """
-
-    def __init__(self, evaluate_hparams_fn,
-                 result_prefix='',
-                 max_iter=81,
-                 eta=3,
-                 repeat=100,
-                 log_string=log_hyperband,
-                 always_include_default_hparams_in_each_cycle=True):
+    def __init__(self, evaluate_fn: Callable[[HyperParameters, float], Tuple[Metrics, Any]],
+                 loss_fn: Callable[[Metrics], float],
+                 max_iter: int = 81,
+                 eta: int = 3,
+                 repeat: int = 100,
+                 log_string: Callable[[str], None] = log_hyperband,
+                 always_include_default_hparams_in_each_cycle: bool = True):
         """
         Table of runs for max_iter=81, eta=3
 
@@ -46,118 +46,140 @@ class HyperParametersOptimizerHyperband:
         n_i = number of configurations
         r_i = number of iteration per configuration
 
-        :param evaluate_hparams_fn: input `(hparams, nb_epochs)` and return `loss, {report}`
-        :param max_iter: the maximum number of epoch for the training of the best configuration
-        :param eta: downsampling rate
-        :param always_include_default_hparams_in_each_cycle: if True, for each outer loop, the default parameters are evaluated for the FIRST repeat only!
-        :param repeat: number of times hyperband will be repeated
+        Args:
+            evaluate_fn: evaluation function, returning metrics and info
+            max_iter: the maximum number of epoch for the training of the best configuration
+            eta: downsampling rate
+            repeat: number of times hyperband will be repeated
+            log_string: defines how to report results
+            always_include_default_hparams_in_each_cycle: if True, for each outer loop,
+                the default parameters are evaluated for the first repeat only!
+            loss_fn: extract a loss to minimize from the metrics
         """
-        self.evaluate_hparams_fn = evaluate_hparams_fn
+        self.evaluate_fn = evaluate_fn
         self.log_string = log_string
         self.max_iter = max_iter
         self.eta = eta
         self.repeat = repeat
+        self.loss_fn = loss_fn
         self.always_include_default_hparams_in_each_cycle = always_include_default_hparams_in_each_cycle
-        self.result_prefix = result_prefix
 
-    def _repeat_one(self, result_path, hyper_parameters, repeat_id, nb_runs):
+    def _repeat_one(
+            self,
+            repeat_id,
+            nb_runs,
+            store: Optional[RunStore] = None,
+            hyper_parameters: Optional[HyperParameters] = None) -> Tuple[List[RunResult], int]:
         """
         Run full Hyperband search
-        :param result_path:
-        :return: the last round of configurations
+
+        Args:
+            repeat_id: the iteration number
+            nb_runs: the run number
+            store: how to store the result
+            hyper_parameters: the hyper-parameters
+
+        Returns:
+            a tuple of list of runs and number of runs for this iteration og hyperband
         """
+
         log = math.log
         default_parameters = copy.deepcopy(hyper_parameters)
 
-        self.log_string('repeat_id=%d, run=%d' % (repeat_id, nb_runs))
+        self.log_string(f'repeat_id={repeat_id}, run={nb_runs}')
 
         logeta = lambda x: log(x) / log(self.eta)
-        s_max = int(logeta(self.max_iter))  # number of unique executions of Successive Halving (minus one)
-        B = (s_max + 1) * self.max_iter  # total number of iterations (without reuse) per execution of Succesive Halving (n,r)
+
+        # number of unique executions of Successive Halving (minus one)
+        s_max = int(logeta(self.max_iter))
+
+        # total number of iterations (without reuse) per execution of Succesive Halving (n,r)
+        B = (s_max + 1) * self.max_iter
 
         #
-        # Code adapted from https://people.eecs.berkeley.edu/~kjamieson/hyperband.html
+        # Code adapted from https://homes.cs.washington.edu/~jamieson/hyperband.html
         #
 
-        #### Begin Finite Horizon Hyperband outlerloop. Repeat indefinetely.
+        # Begin Finite Horizon Hyperband outlerloop. Repeat indefinitely.
         results_last = []
         for s in reversed(range(s_max + 1)):
             n = int(math.ceil(int(B / self.max_iter / (s + 1)) * self.eta ** s))  # initial number of configurations
             r = self.max_iter * self.eta ** (-s)  # initial number of iterations to run configurations for
 
-            #### Begin Finite Horizon Successive Halving with (n,r)
+            # Begin Finite Horizon Successive Halving with (n,r)
             T = []
             for i in range(n):
                 if self.always_include_default_hparams_in_each_cycle and i == 0 and repeat_id == 0:
                     # include the default configuration for the 1 repeat
                     T.append(copy.deepcopy(default_parameters))
                 else:
-                    hyper_parameters.generate_random_hparams()
+                    hyper_parameters.randomize()
                     T.append(copy.deepcopy(hyper_parameters))
+
+            run_params = None
             for i in range(s + 1):
                 # Run each of the n_i configs for r_i iterations and keep best n_i/eta
                 n_i = n * self.eta ** (-i)
                 r_i = r * self.eta ** (i)
 
+                val_results = []
                 val_losses = []
-                val_infos = []
                 for t_index, t in enumerate(T):
-                    loss, infos = self.evaluate_hparams_fn(t, r_i)
-                    val_losses.append(loss)
-                    val_infos.append(infos)
-                    self.log_string('run=%d, s=%d, r_i=%d, loss=%f, params=%s, infos=%s' % (nb_runs,
-                                                                                            s,
-                                                                                            r_i,
-                                                                                            loss,
-                                                                                            str(t.hparams),
-                                                                                            str(infos)))
+                    metrics, info = self.evaluate_fn(t, r_i)
+                    loss = self.loss_fn(metrics)
+                    metrics['hparams_loss'] = loss
+                    self.log_string(f'run={nb_runs}, s={s}, r_i={r_i}, loss={loss}, params={t.hparams}, info={info}')
 
-                    if result_path is not None:
-                        output_location = os.path.join(
-                            result_path,
-                            self.result_prefix + 'loss-%s-iter-%d-s-%d-config-%d-repeat-%d-run-%d.pkl' % (str(loss),
-                                                                                                          r_i,
-                                                                                                          s,
-                                                                                                          t_index,
-                                                                                                          repeat_id,
-                                                                                                          nb_runs))
-                        directory, _ = os.path.split(output_location)
-                        if not os.path.exists(directory):
-                            os.mkdir(directory)
-                            
-                        params_optimizer_random_search.store_loss_params(output_location, loss, infos, t)
+                    run_result = RunResult(
+                        metrics=metrics,
+                        info={
+                            'run': nb_runs,
+                            's': s,
+                            'r_i': r_i,
+                            'info': info
+                        },
+                        hyper_parameters=copy.deepcopy(t)
+                    )
+
+                    val_results.append(run_result)
+                    val_losses.append(loss)
+
+                    if store is not None:
+                        store.save_run(run_result=run_result)
+
                     nb_runs += 1
 
                 best_runs = np.argsort(val_losses)[0:int(n_i / self.eta)]
                 run_params = []
                 for run in range(len(val_losses)):
-                    run_params.append((val_losses[run], val_infos[run], T[run]))
+                    run_params.append(val_results[run])
 
                 T = [T[i] for i in best_runs]
 
+            assert run_params is not None, 'implementation is wrong!'
             results_last += run_params  # keep track of the last round for each `s`
         return results_last, nb_runs
 
-    def optimize(self, result_path):
+    def optimize(self, store: Optional[RunStore]) -> List[RunResult]:
         """
         Optimize the hyper parameters using Hyperband
         
         Args:
-            result_path: where to save the information of each run. Can be None, in this case nothing is exported.
+            store: how to result of each run. Can be None, in this case nothing is exported.
 
         Returns:
             the results of all the runs
         """
-        hyper_parameters = params.HyperParameters()
+        hyper_parameters = HyperParameters()
 
         # here `discover` the hyper-parameter. We must assume the hyper-parameter list
         # won't change
-        self.evaluate_hparams_fn(hyper_parameters, 1)
+        self.evaluate_fn(hyper_parameters, 1)
 
         results = []
         nb_runs = 0
         for repeat_id in range(self.repeat):
-            r, nb_runs = self._repeat_one(result_path,
+            r, nb_runs = self._repeat_one(store=store,
                                           hyper_parameters=hyper_parameters,
                                           repeat_id=repeat_id,
                                           nb_runs=nb_runs)

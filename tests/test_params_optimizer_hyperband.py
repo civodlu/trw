@@ -13,26 +13,24 @@ class TestParamsOptimizer(TestCase):
         #
 
         def evaluate_hparams(hparams, iterations):
-            x = hparams.create('param_x', trw.hparams.ContinuousUniform(5, -10, 10))
-            y = hparams.create('param_y', trw.hparams.ContinuousUniform(5, -10, 10))
-            d = hparams.create('param_d', trw.hparams.ContinuousUniform(5, -10, 10))
+            x = hparams.create(trw.hparams.ContinuousUniform('param_x', 5, -10, 10))
+            y = hparams.create(trw.hparams.ContinuousUniform('param_y', 5, -10, 10))
+            d = hparams.create(trw.hparams.ContinuousUniform('param_d', 5, -10, 10))
 
-            return x * x + y * y + d, {'param_x': x, 'param_y': y, 'param_d': d}
-            #return  5 * x * x +  2 * y * y + d * d, {'param_x': x, 'param_y': y, 'param_d': d}
-            #return x * y  +  0.1 * d, {'param_x': x, 'param_y': y, 'param_d': d}
-            #return x + y + d, {'param_x': x, 'param_y': y, 'param_d': d}
+            return {'loss': x * x + y * y + d}, {'param_x': x, 'param_y': y, 'param_d': d}
 
         optimizer = trw.hparams.params_optimizer_hyperband.HyperParametersOptimizerHyperband(
-            evaluate_hparams_fn=evaluate_hparams,
+            loss_fn=lambda metrics: metrics['loss'],
+            evaluate_fn=evaluate_hparams,
             max_iter=81,
             repeat=20)
 
         options = trw.train.create_default_options()
         tmp = os.path.join(options['workflow_options']['logging_directory'], 'hyperband_test')
         trw.train.create_or_recreate_folder(tmp)
-        tries = optimizer.optimize(result_path=tmp)
+        tries = optimizer.optimize(store=None)
 
-        values = [t[0] for t in tries]
+        values = [t.metrics['loss'] for t in tries]
         best_try = tries[np.argmin(np.abs(values))]
         print(str(best_try))
-        self.assertTrue(best_try[0] < 1.0)
+        self.assertTrue(best_try.metrics['loss'] < 1.0)

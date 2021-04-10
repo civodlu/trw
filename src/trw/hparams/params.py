@@ -1,8 +1,78 @@
+from abc import ABC, abstractmethod
+from typing import List, Optional, Dict, Any
+
 import numpy as np
 
 
-class HyperParam:
-    pass
+class HyperParam(ABC):
+    """
+    Represent an hyper-parameter
+    """
+    def __init__(self, name: str, default_value: Any, current_value: Any = None):
+        """
+
+        Args:
+            name: a unique name of an hyper-parameter
+            default_value: the default value of an hyper-parameter
+            current_value: the current value of an hyper-parameter
+        """
+        self.default_value = default_value
+        self.name = name
+
+        if current_value is None:
+            self.current_value = default_value
+        else:
+            self.current_value = current_value
+
+    def set_value(self, value: Any) -> None:
+        """
+        Set the current value of an hyper-parameter
+
+        Args:
+            value: the new current value
+        """
+        self.current_value = value
+
+    def get_value(self) -> Any:
+        """
+        return the current value of an hyper-parameter
+        """
+        return self.current_value
+
+    @abstractmethod
+    def randomize(self) -> None:
+        """
+        Randomize the current value of an hyper-parameter
+        """
+        pass
+
+
+class DiscreteValue(HyperParam):
+    """
+    Discrete value. This can be useful to select one choice among many
+    """
+    def __init__(self, name: str, default_value: Any, values: List[Any]):
+        assert isinstance(values, list)
+        assert default_value in values
+        self.values = values
+        super().__init__(name, default_value=default_value)
+
+    def set_value(self, value: Any) -> None:
+        assert value in self.values
+        super().set_value(value)
+
+    def randomize(self):
+        v = np.random.randint(low=0, high=len(self.values))
+        self.set_value(self.values[v])
+
+    def __repr__(self):
+        return f'DiscreteValue value={self.current_value}'
+
+
+def create_discrete_value(*args, **kwargs):
+    p = DiscreteValue(*args, **kwargs)
+    v = register_hparam(p)
+    return v
 
 
 class DiscreteMapping(HyperParam):
@@ -11,155 +81,109 @@ class DiscreteMapping(HyperParam):
     
     e.g., this can be useful to test activation function as hyper-parameter
     """
-    def __init__(self, list_name_value, current_value):
-        assert isinstance(list_name_value, list)
-        assert isinstance(list_name_value[0], (tuple, list))
-        self.kvp = {k: v for k, v in list_name_value}
-        self.list_name_value = list_name_value
-        assert len(self.kvp) == len(list_name_value), 'must be the same size. duplicate name?'
+    def __init__(self, name: str, default_value: Any, mapping: Dict[Any, Any]):
+        """
 
-        assert self.kvp.get(current_value) is not None, 'current_value must be in the dictionary! c=%s' % \
-                                                        str(current_value)
-        self.current_value = None
-        self.set_value(current_value)
+        Args:
+            name: the name of the hyper-parameter. Must be unique
+            default_value: a default value (`key` in kvp)
+            mapping: a mapping of key to value
+        """
+        assert isinstance(mapping, dict)
+        assert default_value in mapping, f'`default_value={default_value}` is not in kvp! ' \
+                                         f'Must be one of {mapping.keys()}'
+        self.mapping = mapping
+        self.key_value_list = list(mapping.items())
+        super().__init__(name=name, default_value=default_value)
 
-    def set_value(self, value):
-        assert self.kvp.get(value) is not None, 'current_value must be in the dictionary! c=%s' % \
-                                                        str(value)
+    def set_value(self, value: Any):
+        assert value in self.mapping, f'current_value must be in the dictionary! c={value}'
         self.current_value = value
 
     def get_value(self):
-        return self.kvp[self.current_value]
+        return self.mapping[self.current_value]
 
-    def random_value(self):
-        """
-        :return: a random value
-        """
-        v = np.random.randint(low=0, high=len(self.kvp))
-        return self.list_name_value[v][0]
+    def randomize(self):
+        index = np.random.randint(low=0, high=len(self.key_value_list))
+        key, _ = self.key_value_list[index]
+        self.set_value(key)
 
     def __repr__(self):
-        return 'DiscreteMapping value=%s' % str(self.current_value)
+        return f'DiscreteMapping value={self.current_value}'
 
 
-class DiscreteValue(HyperParam):
-    """
-    Discrete value. This can be useful to select one choice among many
-    """
-    def __init__(self, values, current_value):
-        assert isinstance(values, list)
-        assert current_value in values
-        self.values = values
-        self.current_value = current_value
-
-    def set_value(self, value):
-        assert value in self.values
-        self.current_value = value
-
-    def get_value(self):
-        return self.current_value
-
-    def random_value(self):
-        """
-        :return: a random value
-        """
-        v = np.random.randint(low=0, high=len(self.values))
-        return self.values[v]
-
-    def __repr__(self):
-        return 'DiscreteValue value=%s' % str(self.current_value)
-
-
-class DiscreteIntegrer(HyperParam):
+class DiscreteInteger(HyperParam):
     """
     Represent an integer hyper-parameter
     """
-    def __init__(self, current_value, min_range, max_range):
+    def __init__(self, name: str, default_value: int, min_range: int, max_range: int):
         """
-        :param name: the name of the hyper-parameter. Must be unique
-        :param max_range: max integer (inclusive) to be generated
-        :param min_range: minimum integer (inclusive) to be generated
-        :param current_value:
+
+        Args:
+            name: the name of the hyper-parameter. Must be unique
+            default_value: the default value
+            min_range: maximum integer (inclusive) to be generated
+            max_range: minimum integer (inclusive) to be generated
         """
         assert max_range >= min_range
         self.max_range = max_range
         self.min_range = min_range
-        self.current_value = current_value
+        super().__init__(name, default_value)
 
-    def set_value(self, value):
-        self.current_value = value
-
-    def get_value(self):
-        return int(self.current_value)
-
-    def random_value(self):
-        """
-        :return: a random value
-        """
-        return np.random.randint(low=self.min_range, high=self.max_range + 1)
+    def randomize(self) -> None:
+        v = np.random.randint(low=self.min_range, high=self.max_range + 1)
+        self.set_value(v)
 
     def __repr__(self):
-        return 'DiscreteIntegrer value=%d, min=%d, max=%d' % (self.current_value, self.min_range, self.max_range)
+        return f'DiscreteInteger value={self.current_value} min={self.min_range}, max={self.max_range}'
 
 
 class DiscreteBoolean(HyperParam):
     """
     Represent a boolean hyper-parameter
     """
-    def __init__(self, current_value):
+    def __init__(self, name, default_value):
         """
-        :param name: the name of the hyper-parameter. Must be unique
-        :param current_value: the initial boolean value
-        """
-        assert current_value or not current_value
-        self.current_value = current_value
 
-    def set_value(self, value):
-        self.current_value = value
-
-    def get_value(self):
-        return self.current_value
-
-    def random_value(self):
+        Args:
+            name: the name of the hyper-parameter. Must be unique
+            default_value: the initial boolean value
         """
-        :return: a random value
-        """
-        return np.random.randint(low=0, high=1 + 1)
+        assert isinstance(default_value, bool)
+        super().__init__(name, default_value=default_value)
+
+    def randomize(self) -> None:
+        v = bool(np.random.randint(low=0, high=1 + 1))
+        self.set_value(v)
 
     def __repr__(self):
-        return 'DiscreteBoolean value=%d' % self.current_value
+        return f'DiscreteBoolean value={self.current_value}'
 
 
 class ContinuousUniform(HyperParam):
     """
     Represent a continuous hyper-parameter
     """
-    def __init__(self, current_value, min_range, max_range):
+    def __init__(self, name: str, default_value: float, min_range: float, max_range: float):
         """
-        :param name: the name of the hyper-parameter. Must be unique
-        :param max_range: max integer (inclusive) to be generated
-        :param min_range: minimum integer (inclusive) to be generated
-        :param current_value:
+
+        Args:
+            name: the name of the hyper-parameter. Must be unique
+            default_value:
+            min_range: minimum (inclusive) to be generated
+            max_range: maximum (inclusive) to be generated
         """
         assert max_range >= min_range
         self.max_range = max_range
         self.min_range = min_range
-        self.current_value = current_value
+        super().__init__(name, default_value)
 
-    def set_value(self, value):
-        self.current_value = value
-
-    def get_value(self):
-        return self.current_value
-
-    def random_value(self):
-        """
-        :return: a random value
-        """
-        return np.random.uniform(low=self.min_range, high=self.max_range)
+    def randomize(self) -> None:
+        v = np.random.uniform(low=self.min_range, high=self.max_range)
+        self.set_value(v)
 
     def __repr__(self):
-        return 'ContinuousUniform value=%f, min=%f, max=%f' % (self.current_value, self.min_range, self.max_range)
+        return f'ContinuousUniform value={self.current_value}, min={self.min_range}, max={self.max_range}'
     
     
 class ContinuousPower(HyperParam):
@@ -169,74 +193,104 @@ class ContinuousPower(HyperParam):
     This type of distribution can be useful to test e.g., learning rate hyper-parameter. Given a
     random number x generated from uniform interval (min_range, max_range), return 10 ** x
     """
-    def __init__(self, current_value, exponent_min, exponent_max):
+    def __init__(self, name: str, default_value: float, exponent_min: float, exponent_max: float):
         """
-        
         Args:
-            current_value: the current value of the parameter (power will ``NOT`` be applied)
+            name: the name of the hyper-parameter. Must be unique
+            default_value: the current value of the parameter (power will ``NOT`` be applied)
             exponent_min: minimum floating number (inclusive) of the power exponent to be generated
             exponent_max: max_range: max floating number (inclusive) of the power exponent to be generated
         """
         assert exponent_max >= exponent_min
-        assert current_value >= 10 ** exponent_min, 'make sure the current value must have the power already applied and be within the generated interval'
-        assert current_value <= 10 ** exponent_max, 'make sure the current value must have the power already applied and be within the generated interval'
+        assert default_value >= 10 ** exponent_min, 'make sure the current value must have the power already ' \
+                                                    'applied and be within the generated interval'
+        assert default_value <= 10 ** exponent_max, 'make sure the current value must have the power already ' \
+                                                    'applied and be within the generated interval'
         self.exponent_max = exponent_max
         self.exponent_min = exponent_min
-        self.current_value = current_value
+        super(ContinuousPower, self).__init__(name, default_value)
 
-    def set_value(self, value):
-        self.current_value = value
-
-    def get_value(self):
-        return self.current_value
-
-    def random_value(self):
+    def randomize(self) -> None:
         uniform = np.random.uniform(low=self.exponent_min, high=self.exponent_max)
-        return 10 ** uniform
+        v = 10 ** uniform
+        self.set_value(v)
 
     def __repr__(self):
-        return 'ContinuousPower value=%f, min=%f, max=%f' % (self.current_value, self.exponent_min, self.exponent_max)
+        return f'ContinuousPower value={self.current_value}, min={self.exponent_min}, max={self.exponent_max}'
 
 
 class HyperParameters:
     """
-    Holds a repository of hyper-parameters
+    Holds a repository a set of hyper-parameters
     """
-    def __init__(self, hparams=None):
+    def __init__(self,
+                 hparams: Optional[Dict[str, HyperParam]] = None,
+                 randomize_at_creation: bool = False,
+                 hparams_to_randomize: Optional[List[str]] = None):
         """
         Create the hyper-parameter repository
 
-        :param hparams: if not None, the initial parameters
+        Args:
+            hparams: pre-existing hyper-parameters or None
+            randomize_at_creation: if True, the hyper-parameter will not have
+                take default value at creation but random
+            hparams_to_randomize: this is the list og hyper-parameters to randomize. Other hyper-parameters
+                will be kept constant during optimization. If `None`, all hyper-parameters will be
+                randomized
         """
+        self.hparams_to_randomize = hparams_to_randomize
+        self.randomize_at_creation = randomize_at_creation
         if hparams is not None:
             self.hparams = hparams
         else:
             self.hparams = {}
 
-    def create(self, hparam_name, hparam):
-        """
-        Create an hyper parameter if it is not already present
+    def _hparam_to_be_optimized(self, haparam_name: str) -> bool:
+        if self.hparams_to_randomize is None:
+            return True
+        return haparam_name in self.hparams_to_randomize
 
-        :param hparam_name: the name of the hyper-parameter to create
-        :param hparam: the hyper-parameter description and value
-        :return: the hyper parameter value
+    def create(self, hparam: HyperParam) -> Any:
+        """
+        Create an hyper parameter if it is not already present. If it is present,
+        the given `hparam` is ignored
+
+        Args:
+            hparam: the hyper-parameter
+
+        Returns:
+            the hyper parameter value
         """
         assert isinstance(hparam, HyperParam), 'must be an instance of HyperParam'
-        if self.hparams.get(hparam_name) is None:
-            self.hparams[hparam_name] = hparam
 
-        hparam_config = self.hparams[hparam_name]
-        return hparam_config.get_value()
+        stored_hparam = self.hparams.get(hparam.name)
+        if stored_hparam is None:
+            if self.randomize_at_creation:
+                if self._hparam_to_be_optimized(hparam.name):
+                    hparam.randomize()
+            self.hparams[hparam.name] = hparam
+            stored_hparam = hparam
+        else:
+            assert type(stored_hparam) == type(hparam), f'type mismatch (got={type(stored_hparam)} vs ' \
+                                                        f'created={type(hparam)}. Hyper-parameter name collision?)! '
 
-    def generate_random_hparams(self):
+        assert stored_hparam is not None
+        return stored_hparam.get_value()
+
+    def randomize(self) -> None:
         """
         Set hyper-parameter to a random value
         """
         for name, hparam in self.hparams.items():
-            value = hparam.random_value()
-            hparam.set_value(value)
+            if self._hparam_to_be_optimized(name):
+                hparam.randomize()
 
-    def get_value(self, name):
+    def __getitem__(self, name: str):
+        hp = self.hparams.get(name)
+        assert hp is not None, f'`{name}` is not defined in the hyper-parameters!'
+        return hp
+
+    def get_value(self, name: str) -> Any:
         """
         Return the current value of an hyper-parameter
         """
@@ -253,3 +307,35 @@ class HyperParameters:
     def __len__(self):
         return len(self.hparams)
 
+
+class HyperParameterRepository:
+    """
+    Holds the current hyper-parameters
+    """
+    current_hparams: HyperParameters = HyperParameters()
+
+    @staticmethod
+    def reset(new_hparams: Optional[HyperParameters] = None) -> None:
+        """
+        Replace the existing hyper parameters by a new one
+
+        Args:
+            new_hparams: the new hyper-parameters
+        """
+        if new_hparams is None:
+            new_hparams = HyperParameters()
+
+        HyperParameterRepository.current_hparams = new_hparams
+
+
+def register_hparam(hparam: HyperParam) -> Any:
+    """
+    Create a hyper-parameter and record it in the :class:`HyperParameterRepository` repository
+
+    Args:
+        hparam: the hyper-parameter to be created
+
+    Returns:
+        the value of the hyper-parameter
+    """
+    return HyperParameterRepository.current_hparams.create(hparam)

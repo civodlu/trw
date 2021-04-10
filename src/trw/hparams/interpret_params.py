@@ -1,12 +1,14 @@
 import glob
 import pickle
+from typing import List, Callable, Tuple, Dict
+
 import pandas as pd
 import matplotlib.pyplot as plt
 from sklearn.ensemble import ExtraTreesRegressor, RandomForestRegressor
 from sklearn.preprocessing import LabelEncoder
 import numpy as np
 import os
-from trw.hparams import params_optimizer_random_search
+from .store import RunResult, Metrics
 from trw.train import utilities
 from trw.train import analysis_plots
 import math
@@ -213,59 +215,55 @@ def discretize(values):
     return np.stack(new_values, axis=1), mapping
 
 
-def analyse_hyperparameters(hprams_path_pattern,
-                            output_path,
-                            hparams_to_visualize=None,
-                            params_forest_n_estimators=5000,
-                            params_forest_max_features_ratio=0.6,
-                            top_k_covariance=5,
-                            create_graphs=True,
-                            verbose=True,
-                            dpi=300):
+def analyse_hyperparameters(run_results: List[RunResult],
+                            output_path: str,
+                            loss_fn: Callable[[Metrics], float] = lambda metrics: metrics['loss'],
+                            hparams_to_visualize: List[str] = None,
+                            params_forest_n_estimators: int = 5000,
+                            params_forest_max_features_ratio: float = 0.6,
+                            top_k_covariance: int = 5,
+                            create_graphs: bool = True,
+                            verbose: bool = True,
+                            dpi: int = 300) -> Dict[str, List]:
     """
-    Importance hyper-pramaeter estimation using random forest regressors
+    Importance hyper-parameter estimation using random forest regressors.
 
     From simulation, the ordering of hyper-parameters importance is correct, but the importance value itself may be
     over-estimated (for the best param) and underestimated (for the others).
 
-    The scatter plot for each hparam is useful to understand in what direction the hyper-parameter should be modified
+    The scatter plot for each hyper parameter is useful to understand in what direction the
+    hyper-parameter should be modified.
 
-    The covariance plot can be used to understand the relation between most important hyper-parameter
+    The covariance plot can be used to understand the relation between most important hyper-parameter.
 
     WARNING:
-    [1] With correlated features, strong features can end up with low scores and the method can be biased towards
-    variables with many categories. See for more details:
-    see http://blog.datadive.net/selecting-good-features-part-iii-random-forests/
-    and https://link.springer.com/article/10.1186%2F1471-2105-8-25
+        With correlated features, strong features can end up with low scores and the method can be biased towards
+        variables with many categories. See for more details [1]_, [2]_.
 
-    :param params_forest_n_estimators: number of trees used to estimate the loss from the hyperparameters
-    :param params_forest_max_features_ratio: the maximum number of features to be used. Note we don't want to
-           select all the features to limit the correlation importance decrease effect [1]
-    :param hprams_path_pattern: a pattern (globing) to be used to select the hyper parameter files
-    :param hparams_to_visualize: a list of hparam names to visualize or `None`. If `None`, display from the most
-              important (i.e., causing the most loss variation) to the least
-    :param create_graphs: if True, export matplotlib visualizations
-    :param top_k_covariance: export the parameter covariance for the most important k hyper-parameters
-    :param output_path: where to export the graph
-    :param dpi: the resolution of the exported graph
-    :param verbose: if True, display additional information
-    :return:
+    .. [1] http://blog.datadive.net/selecting-good-features-part-iii-random-forests/
+    .. [2] https://link.springer.com/article/10.1186%2F1471-2105-8-25
+
+    Args:
+        run_results: a list of runs
+        output_path: where to export the graphs
+        loss_fn: a function to extract a single value (loss) from a list of metrics
+        hparams_to_visualize: a list of parameters (string) to visualize
+        params_forest_n_estimators: number of trees used to estimate the loss from the hyperparameters
+        params_forest_max_features_ratio: the maximum number of features to be used. Note we don't want to
+           select all the features to limit the correlation importance decrease effect [1]_
+        top_k_covariance: export the parameter covariance for the most important k hyper-parameters
+        create_graphs: if True, export matplotlib visualizations
+        verbose: if True, display additional information
+        dpi: the resolution of the exported graph
+
+    Returns:
+        2 lists representing the hyper parameter name and importance
+
     """
-    files = glob.glob(hprams_path_pattern)
-    files = [file for file in files if os.path.isfile(file)]
-    if verbose:
-        print('Hyper parameter files matching patterns=\n', str(files).replace(',', '\n'))
-        
-    if len(files) == 0:
-        return
-
     data = []
-    for file in files:
-        loss, _, params = params_optimizer_random_search.load_loss_params(file)
-        with open(file, 'rb') as f:
-            loss = pickle.load(f)
-            _ = pickle.load(f)
-            params = pickle.load(f)
+    for run_result in run_results:
+        loss = loss_fn(run_result.metrics)
+        params = run_result.hyper_parameters
 
         params_current = {}
         if hparams_to_visualize is None:
@@ -285,12 +283,10 @@ def analyse_hyperparameters(hprams_path_pattern,
 
     # hyper parameter importance: use an extra tree to predict the loss value from the hyper parameter values
     # in order to calculate the importance of each feature
-    #Estimator = RandomForestRegressor
     Estimator = ExtraTreesRegressor
     params_forest = {
         'n_estimators': params_forest_n_estimators,
         'max_features': max(1, int(params_forest_max_features_ratio * len(param_names))),
-        #'bootstrap': True,
     }
     forest = Estimator(**params_forest)
 

@@ -1,4 +1,8 @@
+import copy
+
 import matplotlib
+from trw.hparams import RunResult
+
 matplotlib.use('Agg')  # change the backend. Issues with CI on windows
 
 from unittest import TestCase
@@ -9,10 +13,11 @@ import math
 
 
 def create_data(location_base, loss_generator, nb_samples):
+    runs = []
     for n in range(nb_samples):
-        file = os.path.join(location_base, 'hparam-%d.pkl' %n)
-        loss, params = loss_generator()
-        trw.hparams.store_loss_params(file, loss, None, params)
+        r = loss_generator()
+        runs.append(r)
+    return runs
 
 
 class TestParamsInterpretation(TestCase):
@@ -42,16 +47,18 @@ class TestParamsInterpretation(TestCase):
 
         def generator():
             hparams = trw.hparams.HyperParameters()
-            hparams.create('x', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.create('y', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.create('z', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.create('w', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.generate_random_hparams()
-            return hparams.hparams['x'].current_value * 3 + hparams.hparams['y'].current_value * 2 + hparams.hparams['z'].current_value + 0.01 * hparams.hparams['w'].current_value, hparams
+            hparams.create(trw.hparams.ContinuousUniform('x', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('y', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('z', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('w', 0, 0, 5))
+            hparams.randomize()
 
-        create_data(tmp_path, generator, nb_samples)
+            loss = hparams.hparams['x'].current_value * 3 + hparams.hparams['y'].current_value * 2 + hparams.hparams['z'].current_value
+            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            return r
 
-        r = trw.hparams.analyse_hyperparameters(os.path.join(tmp_path, 'hparam-*'),
+        runs = create_data(tmp_path, generator, nb_samples)
+        r = trw.hparams.analyse_hyperparameters(runs,
                                                 tmp_path,
                                                 params_forest_max_features_ratio=0.6,
                                                 params_forest_n_estimators=1000,
@@ -79,16 +86,20 @@ class TestParamsInterpretation(TestCase):
 
         def generator():
             hparams = trw.hparams.HyperParameters()
-            p = trw.hparams.ContinuousUniform(0, 0, 5)
-            hparams.create('x', p)
-            hparams.create('y', p)
-            hparams.create('z', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.generate_random_hparams()
-            return hparams.hparams['x'].current_value * 2 + hparams.hparams['y'].current_value * 2 + hparams.hparams['z'].current_value, hparams
+            hparams.create(trw.hparams.ContinuousUniform('x', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('y', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('z', 0, 0, 5))
+            hparams.randomize()
+            loss = hparams.hparams['x'].current_value * 2 + \
+                   hparams.hparams['y'].current_value * 2 + \
+                   hparams.hparams['z'].current_value
 
-        create_data(tmp_path, generator, nb_samples)
+            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            return r
 
-        r = trw.hparams.interpret_params.analyse_hyperparameters(os.path.join(tmp_path, 'hparam-*'),
+        runs = create_data(tmp_path, generator, nb_samples)
+
+        r = trw.hparams.interpret_params.analyse_hyperparameters(runs,
                                                                  tmp_path,
                                                                  params_forest_max_features_ratio=0.6,
                                                                  params_forest_n_estimators=1000,
@@ -112,16 +123,21 @@ class TestParamsInterpretation(TestCase):
 
         def generator():
             hparams = trw.hparams.HyperParameters()
-            hparams.create('x', trw.hparams.ContinuousUniform(0, 0, 15))
-            hparams.create('y', trw.hparams.ContinuousUniform(0, 0, 5))
-            hparams.create('z', trw.hparams.ContinuousUniform(0, 0, 1))
-            hparams.create('w', trw.hparams.ContinuousUniform(0, 0, 0.1))
-            hparams.generate_random_hparams()
-            return hparams.hparams['x'].current_value + hparams.hparams['y'].current_value + hparams.hparams['z'].current_value + hparams.hparams['w'].current_value, hparams
+            hparams.create(trw.hparams.ContinuousUniform('x', 0, 0, 15))
+            hparams.create(trw.hparams.ContinuousUniform('y', 0, 0, 5))
+            hparams.create(trw.hparams.ContinuousUniform('z', 0, 0, 1))
+            hparams.create(trw.hparams.ContinuousUniform('w', 0, 0, 0.1))
+            hparams.randomize()
+            loss = hparams.hparams['x'].current_value + \
+                   hparams.hparams['y'].current_value + \
+                   hparams.hparams['z'].current_value + \
+                   hparams.hparams['w'].current_value
 
-        create_data(tmp_path, generator, nb_samples)
+            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            return r
 
-        r = trw.hparams.interpret_params.analyse_hyperparameters(os.path.join(tmp_path, 'hparam-*'),
+        runs = create_data(tmp_path, generator, nb_samples)
+        r = trw.hparams.interpret_params.analyse_hyperparameters(runs,
                                                                  tmp_path,
                                                                  params_forest_max_features_ratio=0.6,
                                                                  params_forest_n_estimators=1000,
