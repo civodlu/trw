@@ -143,16 +143,11 @@ def _collect_data(main_process, filename, frequency_seconds, abort_event):
                 # here we use a short sleep so that when `abort_event` is
                 # set, we can quickly exit the process!
                 time.sleep(0.5)
-                #print('---------CHECKING')
                 continue
 
             # here we MUST collect stats on the MAIN process, the one that
             # instantiated the callback
-            #print('-----------STARTED')
-            #time_start = time.time()
             logs = log_all_tree(main_process)
-            #print('-----------ENDED TIME TO LOG=', time.time() - time_start)
-
             with open(filename, 'w') as f:
                 f.write(f'Time={datetime.datetime.now()}\n')
                 f.write(f'Logging from Process={os.getpid()}\n')
@@ -227,28 +222,6 @@ class CallbackDebugProcesses(callback.Callback):
                           f'process={os.getpid()} that did not create it! ({self.main_process})')
             return
 
-        # give some time to the process to shutdown normally
-        """
-        shutdown_time_start = time.perf_counter()
-        while True:
-            if not self.thread.is_alive():
-                # normal shutdown
-                break
-            shutdown_time = time.perf_counter() - shutdown_time_start
-            if shutdown_time < self.timeout:
-                time.sleep(0.1)
-                continue
-            else:
-                logging.error(f'a job (_collect_data={self.thread.ident}) did not respond to the shutdown '
-                              'request in the allotted time. It could be that it needs '
-                              'a longer timeout or a deadlock. The processes'
-                              'will now be forced to shutdown!')
-                # error!
-                break
-
-        #self.thread.join(timeout=self.timeout)
-        self.thread = None
-        """
         logging.info('CallbackDebugProcesses shutdown completed!')
 
     def __del__(self):
