@@ -66,7 +66,7 @@ options = trw.train.create_default_options(num_epochs=0)
 trainer = trw.train.Trainer(
     callbacks_pre_training_fn=None,
     trainer_callbacks_per_batch=None,
-    callbacks_post_training_fn=lambda: [trw.train.CallbackExplainDecision()]
+    callbacks_post_training_fn=lambda: [trw.callbacks.CallbackExplainDecision()]
 )
 
 model, results = trainer.fit(

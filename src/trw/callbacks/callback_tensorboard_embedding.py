@@ -1,8 +1,7 @@
 from ..utils import to_value, len_batch
-from . import callback_tensorboard
-from . import utilities
-from . import trainer
-from . import outputs_trw as O
+from .callback_tensorboard import CallbackTensorboardBased
+from ..train import utilities
+from ..train import outputs_trw as O
 import functools
 import collections
 import torch
@@ -99,7 +98,7 @@ def add_classification_strings_from_output(dataset_name, split_name, output, dat
     return output_dict
 
 
-class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased):
+class CallbackTensorboardEmbedding(CallbackTensorboardBased):
     """
     This callback records the embedding to be displayed with tensorboard
 
@@ -153,7 +152,7 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         root = options['workflow_options']['current_logging_directory']
         logger.info('root={}, nb_samples={}'.format(root, self.maximum_samples))
-        logger_tb = callback_tensorboard.CallbackTensorboardBased.create_logger(root)
+        logger_tb = CallbackTensorboardBased.create_logger(root)
         if logger_tb is None:
             return
         if self.dataset_name is None or self.image_name is None:
@@ -227,7 +226,8 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
                 raise StopIteration()
             nb_samples_collected += batch_size
 
-        trainer.eval_loop(
+        from ..train.trainer import eval_loop
+        eval_loop(
             device,
             self.dataset_name,
             self.split_name,
@@ -253,7 +253,8 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
 
         images = merged_embedding.get('images')
         if images is not None:
-            assert len(images.shape) == 4 and (images.shape[1] == 1 or images.shape[1] == 3), 'Expected images format (N, C, H, W), got shape={}'.format(images.shape)
+            assert len(images.shape) == 4 and (images.shape[1] == 1 or images.shape[1] == 3), \
+                'Expected images format (N, C, H, W), got shape={}'.format(images.shape)
             images = torch.Tensor(images)
 
         # export the metada
@@ -270,5 +271,10 @@ class CallbackTensorboardEmbedding(callback_tensorboard.CallbackTensorboardBased
 
         # export the embedding to the tensorboard log
         logger.info('adding embedding...')
-        logger_tb.add_embedding(embedding_values, label_img=images, global_step=len(history) - 1, metadata=metadata.tolist(), metadata_header=metadata_header)
+        logger_tb.add_embedding(
+            embedding_values,
+            label_img=images,
+            global_step=len(history) - 1,
+            metadata=metadata.tolist(),
+            metadata_header=metadata_header)
         logger.info('embedding successfully added!')

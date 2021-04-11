@@ -49,9 +49,9 @@ class Torchvision(nn.Module):
 
 def per_epoch_additional_callbacks():
     return [
-        trw.train.CallbackSkipEpoch(20, [
-            trw.train.CallbackReportingExportSamples(max_samples=20, reporting_scatter_x='split_name', table_name='errors'),
-            trw.train.CallbackSaveLastModel(model_name='interim', with_outputs=False),
+        trw.callbacks.CallbackSkipEpoch(20, [
+            trw.callbacks.CallbackReportingExportSamples(max_samples=20, reporting_scatter_x='split_name', table_name='errors'),
+            trw.callbacks.CallbackSaveLastModel(model_name='interim', with_outputs=False),
         ], include_epoch_zero=True),
     ]
 

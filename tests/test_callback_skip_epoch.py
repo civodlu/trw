@@ -1,8 +1,9 @@
 import unittest
 import trw.train
+from trw.callbacks.callback import Callback
 
 
-class CallbackRecordEpoch(trw.train.Callback):
+class CallbackRecordEpoch(Callback):
     def __init__(self):
         self.epochs_called = []
 
@@ -13,7 +14,7 @@ class CallbackRecordEpoch(trw.train.Callback):
 class TestCallbackSkipEpoch(unittest.TestCase):
     def test_basic(self):
         callback_record = CallbackRecordEpoch()
-        callback = trw.train.CallbackSkipEpoch(nb_epochs=3, callbacks=[callback_record])
+        callback = trw.callbacks.CallbackSkipEpoch(nb_epochs=3, callbacks=[callback_record])
 
         nb_epochs = 200
         for h in range(nb_epochs):

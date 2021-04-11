@@ -4,7 +4,7 @@ from bokeh.application.handlers.lifecycle import LifecycleHandler
 import multiprocessing as mp
 from ..reporting.reporting_bokeh import create_default_reporting_options
 from ..reporting.reporting_bokeh import run_server
-from ..callbacks import callback
+from .callback import Callback
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ class ReportingLifeCycleHandler(LifecycleHandler):
         return ReportingLifeCycleHandler._do_nothing
 
 
-class CallbackReportingStartServer(callback.Callback):
+class CallbackReportingStartServer(Callback):
     def __init__(
             self,
             reporting_options=create_default_reporting_options(embedded=True, config={}),

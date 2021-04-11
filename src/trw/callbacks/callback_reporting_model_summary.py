@@ -7,11 +7,11 @@ import numpy as np
 from ..reporting.export import export_sample
 from ..utils import collect_hierarchical_module_name, to_value
 from ..reporting.table_sqlite import table_truncate, TableStream
-from . import create_or_recreate_folder, find_default_dataset_and_split_names, utilities
-from ..callbacks import callback
-from .utilities import update_json_config
-from .data_parallel_extented import DataParallelExtended
-from .outputs_trw import Output
+from ..train.utilities import create_or_recreate_folder, find_default_dataset_and_split_names, transfer_batch_to_device
+from .callback import Callback
+from ..train.utilities import update_json_config
+from ..train.data_parallel_extented import DataParallelExtended
+from ..train.outputs_trw import Output
 
 logger = logging.getLogger(__name__)
 
@@ -155,7 +155,7 @@ def html_list(items, header=None):
     return v
 
 
-class CallbackReportingModelSummary(callback.Callback):
+class CallbackReportingModelSummary(Callback):
     def __init__(self, dataset_name=None, split_name=None):
         self.split_name = split_name
         self.dataset_name = dataset_name
@@ -189,7 +189,7 @@ class CallbackReportingModelSummary(callback.Callback):
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
         batch['split_name'] = self.split_name
         device = options['workflow_options']['device']
-        batch = utilities.transfer_batch_to_device(batch, device=device)
+        batch = transfer_batch_to_device(batch, device=device)
         summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(
             model,
             batch)

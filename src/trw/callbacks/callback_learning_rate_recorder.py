@@ -2,15 +2,15 @@ import os
 import logging
 import collections
 
-from ..callbacks import callback
-from . import utilities
-from . import analysis_plots
+from .callback import Callback
+from ..train import utilities
+from ..train import analysis_plots
 
 
 logger = logging.getLogger(__name__)
 
 
-class CallbackLearningRateRecorder(callback.Callback):
+class CallbackLearningRateRecorder(Callback):
     """
     Record the learning rate of the optimizers.
 

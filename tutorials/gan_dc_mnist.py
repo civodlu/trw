@@ -14,11 +14,11 @@ from trw.utils import global_average_pooling_2d
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackReportingExportSamples(
+        trw.callbacks.CallbackReportingExportSamples(
             split_exclusions=['test']
         ),
-        trw.train.CallbackEpochSummary(),
-        trw.train.CallbackReportingRecordHistory(),
+        trw.callbacks.CallbackEpochSummary(),
+        trw.callbacks.CallbackReportingRecordHistory(),
     ]
 
 

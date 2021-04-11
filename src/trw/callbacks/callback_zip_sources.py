@@ -1,4 +1,4 @@
-from ..callbacks import callback
+from .callback import Callback
 import logging
 import os
 import zipfile
@@ -37,7 +37,7 @@ def zip_sources(roots, location, extensions, exclusions):
                     f.write(full_path, arcname=os.path.relpath(full_path, root_for_zip))
 
 
-class CallbackZipSources(callback.Callback):
+class CallbackZipSources(Callback):
     """
     Record important info relative to the training such as the sources & configuration info
 

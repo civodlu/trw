@@ -8,10 +8,10 @@ import math
 import collections
 
 from ..utils import len_batch, to_value
-from ..callbacks import callback
-from . import trainer
-from . import utilities
-from . import analysis_plots
+from .callback import Callback
+from ..train import trainer
+from ..train import utilities
+from ..train import analysis_plots
 
 
 logger = logging.getLogger(__name__)
@@ -156,7 +156,7 @@ def default_identify_learning_rate_section(lines_x, lines_y, loss_ratio_to_disca
     return lines_x, lines_y
 
 
-class CallbackLearningRateFinder(callback.Callback):
+class CallbackLearningRateFinder(Callback):
     """
     Identify a good range for the learning rate parameter.
 
@@ -185,7 +185,7 @@ class CallbackLearningRateFinder(callback.Callback):
             nb_samples_per_learning_rate: the number of samples used to calculate the loss for each learning rate tried
             learning_rate_start: the learning rate starting value
             learning_rate_stop: the learning rate stopping value. When the learning rate exceed this value,
-                :class:`trw.train.CallbackLearningRateFinder` will be stopped
+                :class:`trw.callbacks.CallbackLearningRateFinder` will be stopped
             learning_rate_mul: the learning rate multiplier for the next learning rate to be tested
             learning_rate_final_multiplier: often the best learning rate is too high for full convergence. If
                 `set_new_learning_rate` is True, the final learning rate will be

@@ -160,20 +160,20 @@ def create_model(options):
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackSkipEpoch(4, [
-            trw.train.CallbackReportingExportSamples(),
+        trw.callbacks.CallbackSkipEpoch(4, [
+            trw.callbacks.CallbackReportingExportSamples(),
         ], include_epoch_zero=True),
-        trw.train.CallbackEpochSummary(),
-        trw.train.CallbackReportingRecordHistory(),
-        trw.train.CallbackSkipEpoch(20, [
-            trw.train.CallbackReportingLayerStatistics(),
+        trw.callbacks.CallbackEpochSummary(),
+        trw.callbacks.CallbackReportingRecordHistory(),
+        trw.callbacks.CallbackSkipEpoch(20, [
+            trw.callbacks.CallbackReportingLayerStatistics(),
         ], include_epoch_zero=True),
     ]
 
 
 def pre_training_callbacks():
     return [
-        trw.train.CallbackReportingStartServer(),
+        trw.callbacks.CallbackReportingStartServer(),
     ]
 
 

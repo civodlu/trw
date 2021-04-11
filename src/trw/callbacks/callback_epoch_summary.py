@@ -1,5 +1,5 @@
-from ..callbacks import callback
-from . import utilities
+from ..train.utilities import log_and_print
+from .callback import Callback
 
 
 def update_best_so_far(epoch, best_so_far, dataset_name, split_name, output_name, category_name, category_value):
@@ -31,11 +31,11 @@ def update_best_so_far(epoch, best_so_far, dataset_name, split_name, output_name
     return best_so_far[dataset_name][split_name][output_name][category_name]
 
 
-class CallbackEpochSummary(callback.Callback):
+class CallbackEpochSummary(Callback):
     """
     Summarizes the last epoch and display useful information such as metric per dataset/split
     """
-    def __init__(self, logger=utilities.log_and_print, track_best_so_far=True):
+    def __init__(self, logger=log_and_print, track_best_so_far=True):
         self.logger = logger
         self.track_best_so_far = track_best_so_far
         self.best_so_far = {}

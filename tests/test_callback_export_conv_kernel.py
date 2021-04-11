@@ -36,7 +36,7 @@ class TestCallbackExportConvolutionKernel(TestCase):
         assert output_values.shape == (10, 128)
 
         options = trw.train.create_default_options()
-        callback = trw.train.CallbackExportConvolutionKernel(
+        callback = trw.callbacks.CallbackExportConvolutionKernel(
             find_convolution_fn=trw.train.find_last_forward_convolution)
 
         callback(options, [], net, None, None, dataset, None, None)

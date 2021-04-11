@@ -18,8 +18,8 @@ class Net(nn.Module):
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackReportingExportSamples(max_samples=5),
-        trw.train.CallbackEpochSummary(),
+        trw.callbacks.CallbackReportingExportSamples(max_samples=5),
+        trw.callbacks.CallbackEpochSummary(),
     ]
 
 

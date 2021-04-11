@@ -1,11 +1,11 @@
-from . import callback_tensorboard
+from .callback_tensorboard import CallbackTensorboardBased
 import logging
 
 
 logger = logging.getLogger(__name__)
 
 
-class CallbackTensorboardRecordHistory(callback_tensorboard.CallbackTensorboardBased):
+class CallbackTensorboardRecordHistory(CallbackTensorboardBased):
     """
     This callback records the history to a tensorboard readable log
     """
@@ -13,7 +13,7 @@ class CallbackTensorboardRecordHistory(callback_tensorboard.CallbackTensorboardB
         root = options['workflow_options']['current_logging_directory']
         logger.info('started CallbackTensorboardRecordHistory.__call__')
 
-        logger_tb = callback_tensorboard.CallbackTensorboardBased.create_logger(root)
+        logger_tb = CallbackTensorboardBased.create_logger(root)
         if logger_tb is None:
             return
 

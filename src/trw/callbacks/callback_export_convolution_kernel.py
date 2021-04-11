@@ -1,10 +1,11 @@
 import os
 
+from trw.callbacks import Callback
+
 from ..utils import to_value
-from ..callbacks import callback
-from . import graph_reflection
-from . import utilities
-from . import sample_export
+from ..train import graph_reflection
+from ..train import utilities
+from ..train import sample_export
 import logging
 import collections
 import numpy as np
@@ -37,7 +38,7 @@ def default_export_filter(filter, path, min_value=-0.05, max_value=0.05):
         np.save(path + '.npy', filter)
 
 
-class CallbackExportConvolutionKernel(callback.Callback):
+class CallbackExportConvolutionKernel(Callback):
     """
     Simply export convolutional kernel.
 

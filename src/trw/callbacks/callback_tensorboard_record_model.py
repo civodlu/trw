@@ -1,6 +1,6 @@
-from .utilities import postprocess_batch
-from . import callback_tensorboard
-from . import utilities
+from ..train.utilities import postprocess_batch
+from .callback_tensorboard import CallbackTensorboardBased
+from ..train import utilities
 import os
 import logging
 import torch
@@ -9,7 +9,7 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-class CallbackTensorboardRecordModel(callback_tensorboard.CallbackTensorboardBased):
+class CallbackTensorboardRecordModel(CallbackTensorboardBased):
     """
     This callback will export the model to tensorboard
 
@@ -23,7 +23,7 @@ class CallbackTensorboardRecordModel(callback_tensorboard.CallbackTensorboardBas
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         root = options['workflow_options']['current_logging_directory']
         logger.info('root={}'.format(root))
-        logger_tb = callback_tensorboard.CallbackTensorboardBased.create_logger(root)
+        logger_tb = CallbackTensorboardBased.create_logger(root)
         if logger_tb is None:
             return
 

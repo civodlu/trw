@@ -35,7 +35,7 @@ def create_datasets():
 class TestCallbackLearningRateRecorder(TestCase):
     def test_model_fitting_with_lr_scheduler(self):
 
-        lr_recorder = trw.train.CallbackLearningRateRecorder()
+        lr_recorder = trw.callbacks.CallbackLearningRateRecorder()
 
         trainer = trw.train.Trainer(
             callbacks_per_epoch_fn=lambda: [lr_recorder],

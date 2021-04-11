@@ -6,11 +6,10 @@ import torch
 from ..reporting.export import export_sample
 from ..utils import to_value, flatten, len_batch
 from ..reporting.table_sqlite import table_truncate, TableStream
-from ..callbacks import callback
-from . import trainer
-from . import utilities
-from . import outputs_trw as outputs_trw
-from .utilities import update_json_config, create_or_recreate_folder
+from .callback import Callback
+from ..train import utilities
+from ..train import outputs_trw
+from ..train.utilities import update_json_config, create_or_recreate_folder
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +127,7 @@ def callbacks_per_loss_term(
         )
 
 
-class CallbackReportingExportSamples(callback.Callback):
+class CallbackReportingExportSamples(Callback):
     def __init__(
             self,
             max_samples=50,
@@ -251,6 +250,7 @@ class CallbackReportingExportSamples(callback.Callback):
             table_name=self.table_name,
             table_role='data_samples')
 
+        from ..train.trainer import eval_loop
         logger.info(f'export started..., N={self.max_samples}')
         for dataset_name, dataset in datasets.items():
             root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', self.table_name)
@@ -259,25 +259,25 @@ class CallbackReportingExportSamples(callback.Callback):
 
             for split_name, split in dataset.items():
                 exported_cases = []
-                trainer.eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
-                                  history=None,
-                                  callbacks_per_batch=callbacks_per_batch,
-                                  callbacks_per_batch_loss_terms=[
-                                      functools.partial(
-                                          callbacks_per_loss_term,
-                                          root=options['workflow_options']['current_logging_directory'],
-                                          datasets_infos=datasets_infos,
-                                          loss_terms_inclusion=self.loss_terms_inclusion,
-                                          feature_exclusions=self.feature_exclusions,
-                                          dataset_exclusions=self.dataset_exclusions,
-                                          split_exclusions=self.split_exclusions,
-                                          exported_cases=exported_cases,
-                                          max_samples=self.max_samples,
-                                          epoch=len(history),
-                                          sql_table=sql_table,
-                                          format=self.format,
-                                          select_fn=self.select_sample_to_export
-                                      )])
+                eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
+                          history=None,
+                          callbacks_per_batch=callbacks_per_batch,
+                          callbacks_per_batch_loss_terms=[
+                              functools.partial(
+                                  callbacks_per_loss_term,
+                                  root=options['workflow_options']['current_logging_directory'],
+                                  datasets_infos=datasets_infos,
+                                  loss_terms_inclusion=self.loss_terms_inclusion,
+                                  feature_exclusions=self.feature_exclusions,
+                                  dataset_exclusions=self.dataset_exclusions,
+                                  split_exclusions=self.split_exclusions,
+                                  exported_cases=exported_cases,
+                                  max_samples=self.max_samples,
+                                  epoch=len(history),
+                                  sql_table=sql_table,
+                                  format=self.format,
+                                  select_fn=self.select_sample_to_export
+                              )])
 
         sql_database.commit()
         logger.info('successfully completed CallbackExportSamples.__call__!')

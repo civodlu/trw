@@ -53,10 +53,10 @@ class Net(nn.Module):
 
 def per_epoch_fn():
     callbacks = [
-        trw.train.CallbackEpochSummary(),
-        trw.train.CallbackSkipEpoch(
+        trw.callbacks.CallbackEpochSummary(),
+        trw.callbacks.CallbackSkipEpoch(
             nb_epochs=1,
-            callbacks=[trw.train.CallbackReportingExportSamples(table_name='random_samples', max_samples=5, split_exclusions=['train'])]),
+            callbacks=[trw.callbacks.CallbackReportingExportSamples(table_name='random_samples', max_samples=5, split_exclusions=['train'])]),
     ]
 
     return callbacks
@@ -64,8 +64,8 @@ def per_epoch_fn():
 
 def pos_training_fn():
     return [
-        trw.train.CallbackReportingExportSamples(max_samples=500),
-        trw.train.CallbackSaveLastModel()
+        trw.callbacks.CallbackReportingExportSamples(max_samples=500),
+        trw.callbacks.CallbackSaveLastModel()
     ]
 
 

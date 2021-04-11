@@ -139,18 +139,18 @@ if __name__ == '__main__':
     options = trw.train.create_default_options(num_epochs=nb_epochs)
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=lambda: [
-            trw.train.CallbackReportingStartServer(),
-            trw.train.CallbackReportingModelSummary(),
-            #trw.train.CallbackReportingDatasetSummary(),
-            #trw.train.CallbackReportingAugmentations(),
+            trw.callbacks.CallbackReportingStartServer(),
+            trw.callbacks.CallbackReportingModelSummary(),
+            #trw.callbacks.CallbackReportingDatasetSummary(),
+            #trw.callbacks.CallbackReportingAugmentations(),
         ],
         callbacks_per_epoch_fn=lambda: [
-            trw.train.CallbackLearningRateRecorder(),
-            trw.train.CallbackEpochSummary(),
-            trw.train.CallbackReportingRecordHistory(),
-            trw.train.CallbackReportingBestMetrics(),
-            trw.train.CallbackSkipEpoch(10, [
-                trw.train.CallbackReportingExportSamples(table_name='current_samples'),
+            trw.callbacks.CallbackLearningRateRecorder(),
+            trw.callbacks.CallbackEpochSummary(),
+            trw.callbacks.CallbackReportingRecordHistory(),
+            trw.callbacks.CallbackReportingBestMetrics(),
+            trw.callbacks.CallbackSkipEpoch(10, [
+                trw.callbacks.CallbackReportingExportSamples(table_name='current_samples'),
             ], include_epoch_zero=False)
         ]
     )

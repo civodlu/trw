@@ -1,11 +1,11 @@
 import time
 
-from ..callbacks import callback
+from .callback import Callback
 import logging
 import collections
 
 from .callback_reporting_model_summary import export_table
-from .utilities import update_json_config
+from ..train.utilities import update_json_config
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ def collect_best_metrics(current_metrics, history_step, metric_to_discard, epoch
     return current_metrics
 
 
-class CallbackReportingBestMetrics(callback.Callback):
+class CallbackReportingBestMetrics(Callback):
     """
     Report the best value of the history and epoch for each metric
 

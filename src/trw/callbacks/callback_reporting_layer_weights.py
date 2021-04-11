@@ -1,12 +1,12 @@
 import collections
 
-from ..callbacks.callback import Callback
+from .callback import Callback
 from .callback_reporting_model_summary import export_table
-from .utilities import update_json_config, find_default_dataset_and_split_names
+from ..train.utilities import update_json_config, find_default_dataset_and_split_names
+from ..utils import collect_hierarchical_parameter_name, to_value
 import logging
 import torch.nn as nn
 
-from ..utils import collect_hierarchical_parameter_name, to_value
 
 logger = logging.getLogger(__name__)
 

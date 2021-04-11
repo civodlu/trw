@@ -1,12 +1,11 @@
 from ..reporting.export import export_image
 from ..utils import len_batch, to_value
-from ..callbacks import callback
-from . import utilities
-from . import outputs_trw as trw_outputs
-from . import sample_export
-from . import sequence_array
-from . import sampler
-from . import trainer
+from .callback import Callback
+from ..train import utilities
+from ..train import outputs_trw as trw_outputs
+from ..train import sample_export
+from ..train import sequence_array
+from ..train import sampler
 import os
 import logging
 import collections
@@ -88,13 +87,14 @@ def export_samples_v2(dataset_name, split_name, device, split, model, losses, ro
         if nb_exported_samples >= max_samples:
             raise StopIteration()  # abort the loop, we have already too many samples
 
-    trainer.eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
-                      history=None,
-                      callbacks_per_batch=callbacks_per_batch,
-                      callbacks_per_batch_loss_terms=[per_batch_export_fn])
+    from ..train.trainer import eval_loop
+    eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
+              history=None,
+              callbacks_per_batch=callbacks_per_batch,
+              callbacks_per_batch_loss_terms=[per_batch_export_fn])
 
 
-class CallbackWorstSamplesByEpoch(callback.Callback):
+class CallbackWorstSamplesByEpoch(Callback):
     """
     The purpose of this callback is to track the samples with the worst loss during the training of the model
 

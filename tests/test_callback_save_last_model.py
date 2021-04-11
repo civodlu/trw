@@ -5,7 +5,7 @@ import tempfile
 import glob
 import os
 import numpy as np
-from trw.train.callback_save_last_model import exclude_large_embeddings
+from trw.callbacks.callback_save_last_model import exclude_large_embeddings
 
 
 class ModelDense(nn.Module):
@@ -21,7 +21,7 @@ class ModelDense(nn.Module):
 
 class TestCallbackSaveLastModel(TestCase):
     def test_rolling_models(self):
-        callback = trw.train.CallbackSaveLastModel(
+        callback = trw.callbacks.CallbackSaveLastModel(
             model_name='checkpoint',
             with_outputs=True,
             is_versioned=True,
@@ -44,8 +44,8 @@ class TestCallbackSaveLastModel(TestCase):
         assert oldest_model == 'checkpoint_e_16.model'
 
     def test_keep_best_model(self):
-        callback = trw.train.CallbackSaveLastModel(
-            keep_model_with_lowest_metric=trw.train.ModelWithLowestMetric(
+        callback = trw.callbacks.CallbackSaveLastModel(
+            keep_model_with_lowest_metric=trw.callbacks.ModelWithLowestMetric(
                 dataset_name='dataset1',
                 split_name='split1',
                 output_name='output1',
@@ -91,7 +91,7 @@ class TestCallbackSaveLastModel(TestCase):
         assert len(models) == 1
 
     def test_post_process_outputs(self):
-        callback = trw.train.CallbackSaveLastModel(post_process_outputs=exclude_large_embeddings)
+        callback = trw.callbacks.CallbackSaveLastModel(post_process_outputs=exclude_large_embeddings)
 
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()

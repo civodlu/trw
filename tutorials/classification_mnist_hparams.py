@@ -30,7 +30,7 @@ def evaluate_hparams(hparams):
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=None,
         callbacks_post_training_fn=None,
-        callbacks_per_epoch_fn=lambda: [trw.train.callback_epoch_summary.CallbackEpochSummary()])
+        callbacks_per_epoch_fn=lambda: [trw.callbacks.callback_epoch_summary.CallbackEpochSummary()])
     
     model, results = trainer.fit(
         options,

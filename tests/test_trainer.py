@@ -8,6 +8,7 @@ import torch.utils.data
 import trw
 import trw.train
 import trw.utils
+from trw.callbacks import Callback
 from trw.train import default_pre_training_callbacks
 
 import utils
@@ -56,7 +57,7 @@ def create_random_input():
     return datasets
 
 
-class CallbackCollectOutput(trw.train.Callback):
+class CallbackCollectOutput(Callback):
     """
     Export random samples from our datasets
 

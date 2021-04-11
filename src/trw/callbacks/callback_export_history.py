@@ -1,6 +1,6 @@
-from ..callbacks import callback
-from . import utilities
-from . import analysis_plots
+from .callback import Callback
+from ..train import utilities
+from ..train import analysis_plots
 import os
 import collections
 import logging
@@ -77,7 +77,7 @@ def extract_metrics_name(history, dataset_name, split_name, output_name, dicarde
     return names
 
 
-class CallbackExportHistory(callback.Callback):
+class CallbackExportHistory(Callback):
     """
     Summarize the training history of a model (i.e., as a function of iteration)
 

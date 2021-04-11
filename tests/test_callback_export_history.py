@@ -22,7 +22,7 @@ class TestCallbackExportHistory(unittest.TestCase):
         ]
 
         options = trw.train.create_default_options()
-        callback = trw.train.CallbackExportHistory()
+        callback = trw.callbacks.CallbackExportHistory()
         outputs = {
             'dataset_1': {
                 'split_1': {

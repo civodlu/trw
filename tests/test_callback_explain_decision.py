@@ -36,7 +36,7 @@ optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_ra
 
 def callbacks_post_training_fn():
     return [
-        trw.train.CallbackExplainDecision()
+        trw.callbacks.CallbackExplainDecision()
     ]
 
 
@@ -61,7 +61,7 @@ class TestCallbackExplainDecision(TestCase):
         classification_error = results['history'][-1]['fake_symbols_2d']['train']['fake_symbols_2d']['classification error']
         assert classification_error < 0.05
 
-        expected_algorithms = [kvp.name for kvp in list(trw.train.ExplainableAlgorithm)]
+        expected_algorithms = [kvp.name for kvp in list(trw.callbacks.ExplainableAlgorithm)]
         explanation_path = os.path.join(options['workflow_options']['current_logging_directory'], 'explained')
         for algorithm in expected_algorithms:
             files = glob.glob(os.path.join(explanation_path, f'*{algorithm}*.png'))

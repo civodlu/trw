@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch
 import os
 import numpy as np
+from trw.callbacks import CallbackExportClassificationReport
 
 
 class Criterion:
@@ -85,7 +86,7 @@ class TestCallbackExportClassificationErrors(unittest.TestCase):
             }
         }
 
-        callback = trw.train.CallbackExportClassificationReport()
+        callback = CallbackExportClassificationReport()
         options = trw.train.create_default_options(device=torch.device('cpu'))
         options['workflow_options']['current_logging_directory'] = os.path.join(
             options['workflow_options']['logging_directory'],

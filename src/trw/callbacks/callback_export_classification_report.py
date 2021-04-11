@@ -1,7 +1,7 @@
-from ..callbacks import callback
-from . import utilities
-from . import analysis_plots
-from . import outputs_trw as trf_outputs
+from .callback import Callback
+from ..train import utilities
+from ..train import analysis_plots
+from ..train import outputs_trw as trf_outputs
 import os
 import matplotlib.pyplot as plt
 import logging
@@ -20,7 +20,7 @@ def get_mappinginv(datasets_infos, dataset_name, split_name, class_name):
 logger = logging.getLogger(__name__)
 
 
-class CallbackExportClassificationReport(callback.Callback):
+class CallbackExportClassificationReport(Callback):
     """
     Export the main classification measures for the classification outputs of the model
 

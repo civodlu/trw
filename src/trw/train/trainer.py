@@ -17,26 +17,12 @@ import itertools
 from ..utils import to_value, len_batch, safe_lookup
 
 from . import outputs_trw
-from . import callback_epoch_summary
-from . import callback_export_classification_report
-from . import callback_export_history
-from . import callback_save_last_model
-
-from . import callback_learning_rate_finder
-from . import callback_learning_rate_recorder
-from . import callback_explain_decision
-from . import callback_worst_samples_by_epoch
-from . import callback_zip_sources
-from . import callback_export_convolution_kernel
-
-from . import callback_reporting_export_samples
-from . import callback_reporting_start_server
-from . import callback_reporting_epoch_summary
-from . import callback_reporting_model_summary
-from . import callback_reporting_layer_statistics
-from . import callback_reporting_dataset_summary
-from . import callback_reporting_augmentations
-from . import callback_reporting_best_metrics
+from trw.callbacks import callback_epoch_summary, callback_export_classification_report, callback_explain_decision, \
+    callback_export_convolution_kernel, callback_export_history, callback_learning_rate_finder, \
+    callback_learning_rate_recorder, callback_reporting_augmentations, callback_reporting_best_metrics, \
+    callback_reporting_dataset_summary, callback_reporting_epoch_summary, callback_reporting_export_samples, \
+    callback_reporting_layer_statistics, callback_reporting_model_summary, callback_reporting_start_server, \
+    callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources
 
 from .utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch, transfer_batch_to_device, \
     log_and_print, create_or_recreate_folder, RuntimeFormatter

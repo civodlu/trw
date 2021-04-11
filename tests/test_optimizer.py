@@ -6,7 +6,8 @@ import torch
 import trw
 import numpy as np
 from torch import nn
-from trw.train import create_default_options, Callback
+from trw.callbacks import Callback
+from trw.train import create_default_options
 from trw.utils import torch_requires
 
 

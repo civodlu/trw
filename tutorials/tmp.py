@@ -46,24 +46,24 @@ if __name__ == '__main__':
     #options = trw.train.create_default_options(num_epochs=100, device=torch.device('cpu'))
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=lambda: [
-            trw.train.CallbackReportingStartServer(),
-            trw.train.CallbackReportingModelSummary(),
-            trw.train.CallbackReportingExportSamples(
+            trw.callbacks.CallbackReportingStartServer(),
+            trw.callbacks.CallbackReportingModelSummary(),
+            trw.callbacks.CallbackReportingExportSamples(
                 max_samples=10,
                 table_name='test_samples'),
-            trw.train.CallbackReportingDatasetSummary(),
-            trw.train.CallbackReportingAugmentations(),
+            trw.callbacks.CallbackReportingDatasetSummary(),
+            trw.callbacks.CallbackReportingAugmentations(),
         ],
 
         callbacks_per_epoch_fn=lambda: [
-            trw.train.CallbackEpochSummary(),
-            trw.train.CallbackReportingRecordHistory(),
-            #trw.train.CallbackReportingLayerStatistics(),
-            #trw.train.CallbackReportingLayerWeights(),
-            #trw.train.CallbackReportingBestMetrics(),
-            trw.train.CallbackSkipEpoch(10, [
-                trw.train.CallbackReportingClassificationErrors(max_samples=100),
-                trw.train.CallbackSaveLastModel(keep_model_with_lowest_metric=
+            trw.callbacks.CallbackEpochSummary(),
+            trw.callbacks.CallbackReportingRecordHistory(),
+            #trw.callbacks.CallbackReportingLayerStatistics(),
+            #trw.callbacks.CallbackReportingLayerWeights(),
+            #trw.callbacks.CallbackReportingBestMetrics(),
+            trw.callbacks.CallbackSkipEpoch(10, [
+                trw.callbacks.CallbackReportingClassificationErrors(max_samples=100),
+                trw.callbacks.CallbackSaveLastModel(keep_model_with_lowest_metric=
                                                 trw.train.ModelWithLowestMetric(
                                                     dataset_name='mnist',
                                                     split_name='test',
@@ -72,7 +72,7 @@ if __name__ == '__main__':
             ], include_epoch_zero=True)
         ],
         callbacks_post_training_fn=lambda: [
-            trw.train.CallbackReportingClassificationErrors(max_samples=20)
+            trw.callbacks.CallbackReportingClassificationErrors(max_samples=20)
         ])
 
     model, results = trainer.fit(

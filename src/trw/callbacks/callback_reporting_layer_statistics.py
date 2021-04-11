@@ -8,9 +8,9 @@ import torch.nn as nn
 import numpy as np
 
 from ..utils import collect_hierarchical_module_name, collect_hierarchical_parameter_name, to_value, len_batch
-from ..callbacks.callback import Callback
+from .callback import Callback
 from .callback_reporting_model_summary import export_table
-from .utilities import update_json_config, get_device, \
+from ..train.utilities import update_json_config, get_device, \
     transfer_batch_to_device, CleanAddedHooks, find_default_dataset_and_split_names, prepare_loss_terms, \
     default_sum_all_losses, postprocess_batch
 

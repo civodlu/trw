@@ -1,12 +1,12 @@
 import torch
 from ..reporting.export import export_sample
-from .collate import collate_list_of_dicts
+from ..train.collate import collate_list_of_dicts
 from ..utils import to_value
 from ..reporting.table_sqlite import table_truncate, TableStream
-from .utilities import create_or_recreate_folder, update_json_config
-from ..callbacks import callback
-from . import sequence_array
-from . import sequence
+from ..train.utilities import create_or_recreate_folder, update_json_config
+from .callback import Callback
+from ..train import sequence_array
+from ..train import sequence
 import logging
 import os
 import collections
@@ -16,7 +16,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-class CallbackReportingAugmentations(callback.Callback):
+class CallbackReportingAugmentations(Callback):
     """
     Export sample augmentations.
 

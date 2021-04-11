@@ -110,20 +110,20 @@ def create_model(options):
 
 def per_epoch_callbacks():
     return [
-        trw.train.CallbackReportingExportSamples(
+        trw.callbacks.CallbackReportingExportSamples(
             max_samples=200,
             reporting_scatter_x='targets',
             reporting_scatter_y='split_name',
             reporting_display_with='term_gen_image_output'),
-        trw.train.CallbackEpochSummary(),
-        trw.train.CallbackReportingRecordHistory(),
+        trw.callbacks.CallbackEpochSummary(),
+        trw.callbacks.CallbackReportingRecordHistory(),
     ]
 
 
 def pre_training_callbacks():
     return [
-        trw.train.CallbackReportingStartServer(),
-        trw.train.CallbackReportingModelSummary(),
+        trw.callbacks.CallbackReportingStartServer(),
+        trw.callbacks.CallbackReportingModelSummary(),
     ]
 
 

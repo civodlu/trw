@@ -1,10 +1,11 @@
 import collections
 import logging
 import numpy as np
+
+from .callback_reporting_export_samples import CallbackReportingExportSamples
 from ..utils import to_value, len_batch
-from . import CallbackReportingExportSamples
-from ..callbacks import callback
-from . import outputs_trw
+from .callback import Callback
+from ..train import outputs_trw
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +36,7 @@ def select_classification_errors(batch, loss_terms):
     return samples
 
 
-class CallbackReportingClassificationErrors(callback.Callback):
+class CallbackReportingClassificationErrors(Callback):
     def __init__(
             self,
             max_samples=10,

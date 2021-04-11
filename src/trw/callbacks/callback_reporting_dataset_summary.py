@@ -1,7 +1,7 @@
 from ..utils import to_value, len_batch
-from ..callbacks import callback
+from .callback import Callback
 from .callback_reporting_model_summary import export_table
-from .utilities import update_json_config
+from ..train.utilities import update_json_config
 import collections
 import numpy as np
 import logging
@@ -10,7 +10,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def data_summary(datasets, max_nb_samples=None):
+def _data_summary(datasets, max_nb_samples=None):
     """
 
     Args:
@@ -101,7 +101,7 @@ def data_summary(datasets, max_nb_samples=None):
     ])
 
 
-class CallbackReportingDatasetSummary(callback.Callback):
+class CallbackReportingDatasetSummary(Callback):
     """
     Summarizes the data (min value, max value, number of batches, shapes) for each split of each dataset
     """
@@ -125,7 +125,7 @@ class CallbackReportingDatasetSummary(callback.Callback):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('CallbackReportingDatasetSummary started')
         self.first_epoch(options)
-        data_stats = data_summary(datasets, max_nb_samples=self.max_nb_samples)
+        data_stats = _data_summary(datasets, max_nb_samples=self.max_nb_samples)
 
         sql_database = options['workflow_options']['sql_database']
         export_table(

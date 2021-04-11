@@ -2,9 +2,8 @@ from typing import List, Callable, Optional
 
 from ..basic_typing import Datasets
 from ..utils import safe_lookup
-from ..callbacks import callback
-from .outputs_trw import OutputEmbedding
-from . import trainer
+from .callback import Callback
+from ..train.outputs_trw import OutputEmbedding
 import os
 import logging
 
@@ -60,7 +59,7 @@ def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Op
     return outputs
 
 
-class CallbackSaveLastModel(callback.Callback):
+class CallbackSaveLastModel(Callback):
     """
     Save the current model to disk as well as metadata (history, outputs, infos).
 
@@ -126,7 +125,8 @@ class CallbackSaveLastModel(callback.Callback):
         export_path = os.path.join(options['workflow_options']['current_logging_directory'], name)
 
         logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
-        trainer.Trainer.save_model(model, result, export_path)
+        from ..train.trainer import Trainer
+        Trainer.save_model(model, result, export_path)
         if self.rolling_size is not None and self.rolling_size > 0:
             self.last_models.append(export_path)
 
@@ -153,6 +153,6 @@ class CallbackSaveLastModel(callback.Callback):
                 export_path = os.path.join(
                     options['workflow_options']['current_logging_directory'],
                     f'{self.best_model_name}.model')
-                trainer.Trainer.save_model(model, result, export_path)
+                Trainer.save_model(model, result, export_path)
 
         logger.info('successfully completed CallbackSaveLastModel.__call__')

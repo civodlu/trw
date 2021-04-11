@@ -1,9 +1,9 @@
 import collections
 
-from ..callbacks import callback
+from .callback import Callback
 
 
-class CallbackSkipEpoch(callback.Callback):
+class CallbackSkipEpoch(Callback):
     """
     Run its callbacks every few epochs
     """

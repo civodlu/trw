@@ -1,6 +1,6 @@
 import logging
 import os
-from ..callbacks import callback
+from .callback import Callback
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ except ImportError:
     logger.error('package `tensorboardX` could not be imported. Tensorboard callbacks will be disabled!')
 
 
-class CallbackTensorboardBased(callback.Callback):
+class CallbackTensorboardBased(Callback):
     """
     Tensorboard based callback. Manages a single `tensorboardX.SummaryWriter` instance
     """
