@@ -244,6 +244,7 @@ class ExceptionAbortRun(BaseException):
     """
     The run has been pruned due to performance reason
     """
-    def __init__(self, history, metrics=None):
+    def __init__(self, history, metrics=None, reason=None):
+        self.reason = reason
         self.history = history
         self.metrics = metrics

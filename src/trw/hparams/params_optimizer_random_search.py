@@ -31,7 +31,8 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
         
         Args:
             evaluate_fn: th evaluation function taking as input hyper-parameters and returning
-                a tuple (metrics, history, evaluate info)
+                a tuple (metrics, history, evaluate info). `evaluate_fn` may raise :class:`ExceptionAbortRun`
+                to early terminate a run
             repeat: the number of random iterations
             log_string: how to log the search
         """
@@ -64,8 +65,11 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
                 # the run was aborted early. Record only the history of the run
                 metrics = e.metrics
                 history = e.history
-                info = 'the run was aborted!'
+                info = e.reason
+                self.log_string(f'iteration={iteration} was terminated early. Reason={e.reason}')
 
+            if iteration == 0:
+                self.log_string(f'hyper_parameters (first run)={hyper_parameters}')
             self.log_string(f'iteration={iteration}, metrics={metrics}, params={str(hyper_parameters.hparams)}')
 
             run_result = RunResult(

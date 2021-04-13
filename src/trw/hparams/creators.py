@@ -123,7 +123,6 @@ def create_norm_type(
         norms: Sequence[Optional[NormType]] = (
                 NormType.BatchNorm,
                 NormType.InstanceNorm,
-                NormType.GroupNorm,
                 None,)) -> NormType:
     """
     Create a normalization layer type hyper-parameter

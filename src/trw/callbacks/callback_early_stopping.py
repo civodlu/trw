@@ -86,4 +86,7 @@ class CallbackEarlyStopping(Callback):
             loss = self.loss_fn(history[-1])
             if loss > max_loss:
                 logger.info(f'epoch={epoch}, loss={loss} > {max_loss}, the run is discarded!')
-                raise ExceptionAbortRun(history=history)
+                raise ExceptionAbortRun(
+                    history=history,
+                    reason=f'loss={loss} is too high (threshold={max_loss}, '
+                           f'minimum={self.discard_if_among_worst_X_performers}%')
