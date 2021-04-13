@@ -67,7 +67,14 @@ def create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn=None, per_s
     return optimizers, schedulers, per_step_schedulers
 
 
-def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, betas=(0.9, 0.999), scheduler_fn=None):
+def create_adam_optimizers_fn(
+        datasets,
+        model,
+        learning_rate,
+        weight_decay=0,
+        betas=(0.9, 0.999),
+        eps=1e-8,
+        scheduler_fn=None):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
@@ -79,11 +86,12 @@ def create_adam_optimizers_fn(datasets, model, learning_rate, weight_decay=0, be
         scheduler_fn: a scheduler, or `None`
         betas: coefficients used for computing running averages of gradient
             and its square (default: (0.9, 0.999))
+        eps: term to add to denominator to avoid division by zero
 
     Returns:
         An optimizer
     """
-    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay, betas=betas)
+    optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay, betas=betas, eps=eps)
     return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
 
 

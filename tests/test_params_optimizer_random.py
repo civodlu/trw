@@ -95,7 +95,7 @@ class TestParamsOptimizer(TestCase):
             x = hparams.create(trw.hparams.ContinuousUniform('param_x', 5, -10, 10))
             y = hparams.create(trw.hparams.ContinuousUniform('param_y', 5, -10, 10))
             d = hparams.create(discrete_mapping('value_0'))
-            return {'loss': score(x, y, d)}, {'param_x': x, 'param_y': y, 'param_d': d}
+            return {'loss': score(x, y, d)}, [], {'param_x': x, 'param_y': y, 'param_d': d}
 
         np.random.seed(0)
         optimizer = trw.hparams.HyperParametersOptimizerRandomSearchLocal(
@@ -160,7 +160,7 @@ class TestParamsOptimizer(TestCase):
                 optimizers_fn=optimizer_fn,
                 run_prefix=prefix)
             loss = output['outputs']['dataset_1']['train']['regression']['loss']
-            return {'loss': trw.utils.to_value(loss)}, 'no report'
+            return {'loss': trw.utils.to_value(loss)}, [], 'no report'
 
         np.random.seed(0)
         prefix = 'hparams'

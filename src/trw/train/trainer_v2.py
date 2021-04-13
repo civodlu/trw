@@ -198,6 +198,7 @@ class TrainerV2:
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.log'))
         formatter = RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
+        handler.setLevel(logging.DEBUG)
         logging.root.addHandler(handler)
 
         # instantiate the datasets, model, optimizers and losses

@@ -62,7 +62,7 @@ Batch = Dict[str, Any]
 Length = Sequence[float]
 
 """Represent a data split, a dictionary of any value"""
-Split = Dict[str, Any]
+Split = Any
 
 """Represent a dataset which is composed of named data splits"""
 Dataset = Dict[str, Split]
@@ -71,7 +71,8 @@ Dataset = Dict[str, Split]
 Datasets = Dict[str, Dataset]
 DatasetsInfo = Datasets
 
-History = List[Dict[str, Number]]
+HistoryStep = Dict[str, Number]
+History = List[HistoryStep]
 
 Activation = Any
 

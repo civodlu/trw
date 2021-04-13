@@ -54,7 +54,7 @@ class TestParamsInterpretation(TestCase):
             hparams.randomize()
 
             loss = hparams.hparams['x'].current_value * 3 + hparams.hparams['y'].current_value * 2 + hparams.hparams['z'].current_value
-            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            r = RunResult(metrics={'loss': loss}, history=[], hyper_parameters=copy.deepcopy(hparams))
             return r
 
         runs = create_data(tmp_path, generator, nb_samples)
@@ -94,7 +94,7 @@ class TestParamsInterpretation(TestCase):
                    hparams.hparams['y'].current_value * 2 + \
                    hparams.hparams['z'].current_value
 
-            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            r = RunResult(metrics={'loss': loss}, history=[], hyper_parameters=copy.deepcopy(hparams))
             return r
 
         runs = create_data(tmp_path, generator, nb_samples)
@@ -133,7 +133,7 @@ class TestParamsInterpretation(TestCase):
                    hparams.hparams['z'].current_value + \
                    hparams.hparams['w'].current_value
 
-            r = RunResult(metrics={'loss': loss}, hyper_parameters=copy.deepcopy(hparams))
+            r = RunResult(metrics={'loss': loss}, history=[], hyper_parameters=copy.deepcopy(hparams))
             return r
 
         runs = create_data(tmp_path, generator, nb_samples)

@@ -149,3 +149,19 @@ class TestParams(TestCase):
             v2_all.add(hp2.get_value())
         assert len(v1_all) == 1
         assert len(v2_all) > 20
+
+    def test_regex(self):
+        """
+        Handle regular expression (e.g., to handle hyper-parameters hierarchically)
+        """
+        hparams = trw.hparams.HyperParameters(randomize_at_creation=True, hparams_to_randomize=['hp.test1.*'])
+        assert hparams.hparam_to_be_randomized('hp.test1.name1')
+        assert not hparams.hparam_to_be_randomized('hp.test2.name1')
+
+    def test_non_optimized_params_created_with_default_value(self):
+        hparams = trw.hparams.HyperParameters(randomize_at_creation=True, hparams_to_randomize=['hp2'])
+        hp1 = trw.hparams.DiscreteInteger('hp1', default_value=42, min_range=0, max_range=100)
+        assert hp1.get_value() == 42
+
+        hparams.randomize()
+        assert hp1.get_value() == 42

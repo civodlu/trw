@@ -1,6 +1,9 @@
 import io
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Sequence
+
+from trw.basic_typing import History
+
 from .params import HyperParameters
 import pickle
 
@@ -12,7 +15,7 @@ class RunResult:
     """
     Represent the result of a run
     """
-    def __init__(self, metrics: Metrics, hyper_parameters: HyperParameters, info: Any = None):
+    def __init__(self, metrics: Metrics, hyper_parameters: HyperParameters, history: History, info: Any = None):
         """
         Args:
             metrics: the metrics to be recorded
@@ -22,6 +25,7 @@ class RunResult:
         self.info = info
         self.hyper_parameters = hyper_parameters
         self.metrics = metrics
+        self.history = history
 
 
 class RunStore(ABC):

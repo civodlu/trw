@@ -3,7 +3,7 @@ from typing import Sequence
 
 import torch
 import torch.nn as nn
-from ..train import grid_sample
+from ..train.compatibility import grid_sample
 from ..basic_typing import ShapeCX, TorchTensorNCX
 
 

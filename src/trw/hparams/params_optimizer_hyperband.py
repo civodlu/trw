@@ -1,7 +1,8 @@
 from typing import Callable, Tuple, Any, Optional, List
 
+from ..basic_typing import History
 from .params_optimizer import HyperParametersOptimizer
-from .store import RunResult
+from .store import Metrics, RunStore, RunResult
 from .params import HyperParameters
 
 import copy
@@ -9,7 +10,6 @@ import math
 import numpy as np
 import logging
 
-from .store import Metrics, RunStore
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +24,7 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
 
     .. [#] https://arxiv.org/abs/1603.06560
     """
-    def __init__(self, evaluate_fn: Callable[[HyperParameters, float], Tuple[Metrics, Any]],
+    def __init__(self, evaluate_fn: Callable[[HyperParameters, float], Tuple[Metrics, History, Any]],
                  loss_fn: Callable[[Metrics], float],
                  max_iter: int = 81,
                  eta: int = 3,
@@ -47,7 +47,7 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
         r_i = number of iteration per configuration
 
         Args:
-            evaluate_fn: evaluation function, returning metrics and info
+            evaluate_fn: evaluation function, returning metrics, history and info
             max_iter: the maximum number of epoch for the training of the best configuration
             eta: downsampling rate
             repeat: number of times hyperband will be repeated
@@ -125,13 +125,14 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
                 val_results = []
                 val_losses = []
                 for t_index, t in enumerate(T):
-                    metrics, info = self.evaluate_fn(t, r_i)
+                    metrics, history, info = self.evaluate_fn(t, r_i)
                     loss = self.loss_fn(metrics)
                     metrics['hparams_loss'] = loss
                     self.log_string(f'run={nb_runs}, s={s}, r_i={r_i}, loss={loss}, params={t.hparams}, info={info}')
 
                     run_result = RunResult(
                         metrics=metrics,
+                        history=history,
                         info={
                             'run': nb_runs,
                             's': s,

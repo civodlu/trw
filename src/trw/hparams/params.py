@@ -1,3 +1,5 @@
+import collections
+import re
 from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
@@ -69,8 +71,8 @@ class DiscreteValue(HyperParam):
         return f'DiscreteValue value={self.current_value}'
 
 
-def create_discrete_value(*args, **kwargs):
-    p = DiscreteValue(*args, **kwargs)
+def create_discrete_value(name: str, default_value: Any, values: List[Any]) -> Any:
+    p = DiscreteValue(name, default_value, values)
     v = register_hparam(p)
     return v
 
@@ -112,6 +114,12 @@ class DiscreteMapping(HyperParam):
         return f'DiscreteMapping value={self.current_value}'
 
 
+def create_discrete_mapping(name: str, default_value: Any, mapping: Dict[Any, Any]) -> Any:
+    p = DiscreteMapping(name, default_value, mapping)
+    v = register_hparam(p)
+    return v
+
+
 class DiscreteInteger(HyperParam):
     """
     Represent an integer hyper-parameter
@@ -138,6 +146,12 @@ class DiscreteInteger(HyperParam):
         return f'DiscreteInteger value={self.current_value} min={self.min_range}, max={self.max_range}'
 
 
+def create_discrete_integer(name: str, default_value: Any, min_range: int, max_range: int) -> Any:
+    p = DiscreteInteger(name, default_value, min_range, max_range)
+    v = register_hparam(p)
+    return v
+
+
 class DiscreteBoolean(HyperParam):
     """
     Represent a boolean hyper-parameter
@@ -158,6 +172,12 @@ class DiscreteBoolean(HyperParam):
 
     def __repr__(self):
         return f'DiscreteBoolean value={self.current_value}'
+
+
+def create_boolean(name: str, default_value: Any) -> bool:
+    p = DiscreteBoolean(name, default_value)
+    v = register_hparam(p)
+    return v
 
 
 class ContinuousUniform(HyperParam):
@@ -184,7 +204,13 @@ class ContinuousUniform(HyperParam):
 
     def __repr__(self):
         return f'ContinuousUniform value={self.current_value}, min={self.min_range}, max={self.max_range}'
-    
+
+
+def create_continuous_uniform(name: str, default_value: float, min_range: float, max_range: float) -> float:
+    p = ContinuousUniform(name, default_value, min_range, max_range)
+    v = register_hparam(p)
+    return v
+
     
 class ContinuousPower(HyperParam):
     """
@@ -192,6 +218,10 @@ class ContinuousPower(HyperParam):
     
     This type of distribution can be useful to test e.g., learning rate hyper-parameter. Given a
     random number x generated from uniform interval (min_range, max_range), return 10 ** x
+
+    Examples:
+        >>> hp1 = ContinuousPower('hp1', default_value=0.1, exponent_min=-5, exponent_max=-1)
+        ``hp1.get_value()`` would return a value in the range(1e-1, 1e-5)
     """
     def __init__(self, name: str, default_value: float, exponent_min: float, exponent_max: float):
         """
@@ -219,6 +249,12 @@ class ContinuousPower(HyperParam):
         return f'ContinuousPower value={self.current_value}, min={self.exponent_min}, max={self.exponent_max}'
 
 
+def create_continuous_power(name: str, default_value: float, exponent_min: float, exponent_max: float) -> float:
+    p = ContinuousPower(name, default_value, exponent_min, exponent_max)
+    v = register_hparam(p)
+    return v
+
+
 class HyperParameters:
     """
     Holds a repository a set of hyper-parameters
@@ -236,19 +272,23 @@ class HyperParameters:
                 take default value at creation but random
             hparams_to_randomize: this is the list og hyper-parameters to randomize. Other hyper-parameters
                 will be kept constant during optimization. If `None`, all hyper-parameters will be
-                randomized
+                randomized. This can be a regular expression (e.g., `trw.optimizer.*` so that we can match hierarchy
+                of hyper-parameters)
         """
         self.hparams_to_randomize = hparams_to_randomize
         self.randomize_at_creation = randomize_at_creation
         if hparams is not None:
             self.hparams = hparams
         else:
-            self.hparams = {}
+            self.hparams = collections.OrderedDict()
 
-    def _hparam_to_be_optimized(self, haparam_name: str) -> bool:
+    def hparam_to_be_randomized(self, haparam_name: str) -> bool:
         if self.hparams_to_randomize is None:
             return True
-        return haparam_name in self.hparams_to_randomize
+        for pattern in self.hparams_to_randomize:
+            if re.search(pattern, haparam_name) is not None:
+                return True
+        return False
 
     def create(self, hparam: HyperParam) -> Any:
         """
@@ -266,7 +306,9 @@ class HyperParameters:
         stored_hparam = self.hparams.get(hparam.name)
         if stored_hparam is None:
             if self.randomize_at_creation:
-                if self._hparam_to_be_optimized(hparam.name):
+                if self.hparam_to_be_randomized(hparam.name):
+                    # parameters not to be optimized should be
+                    # created with their default value!
                     hparam.randomize()
             self.hparams[hparam.name] = hparam
             stored_hparam = hparam
@@ -282,7 +324,7 @@ class HyperParameters:
         Set hyper-parameter to a random value
         """
         for name, hparam in self.hparams.items():
-            if self._hparam_to_be_optimized(name):
+            if self.hparam_to_be_randomized(name):
                 hparam.randomize()
 
     def __getitem__(self, name: str):

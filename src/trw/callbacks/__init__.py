@@ -27,3 +27,4 @@ from .callback_tensorboard_record_history import CallbackTensorboardRecordHistor
 from .callback_tensorboard_record_model import CallbackTensorboardRecordModel
 from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
 from .callback_zip_sources import CallbackZipSources
+from .callback_early_stopping import CallbackEarlyStopping

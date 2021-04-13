@@ -3,9 +3,11 @@ from typing import Tuple, Optional, Any, Callable
 import copy
 import logging
 
+from ..basic_typing import History
 from .params_optimizer import HyperParametersOptimizer
 from .store import Metrics, RunStore, RunResult
 from .params import HyperParameters
+from ..utils import ExceptionAbortRun
 
 logger = logging.getLogger(__name__)
 
@@ -22,13 +24,14 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
     hyper-parameter search using a random walk on a single machine
     """
     def __init__(self,
-                 evaluate_fn: Callable[[HyperParameters], Tuple[Metrics, Any]],
+                 evaluate_fn: Callable[[HyperParameters], Tuple[Metrics, History, Any]],
                  repeat: int,
                  log_string: Callable[[str], None] = log_with_logger):
         """
         
         Args:
-            evaluate_fn: th evaluation function
+            evaluate_fn: th evaluation function taking as input hyper-parameters and returning
+                a tuple (metrics, history, evaluate info)
             repeat: the number of random iterations
             log_string: how to log the search
         """
@@ -48,15 +51,29 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
         if hyper_parameters is None:
             hyper_parameters = HyperParameters()
 
+        self.log_string(f'started optimize(), hyper_parameters={hyper_parameters}')
+
         # then randomly evaluate random hyper parameters and export the results
         iteration = 0
         results = []
         while self.repeat != iteration:
             # by default, evaluate the given hyper parameter default value
-            metrics, info = self.evaluate_fn(hyper_parameters)
+            try:
+                metrics, history, info = self.evaluate_fn(hyper_parameters)
+            except ExceptionAbortRun as e:
+                # the run was aborted early. Record only the history of the run
+                metrics = e.metrics
+                history = e.history
+                info = 'the run was aborted!'
+
             self.log_string(f'iteration={iteration}, metrics={metrics}, params={str(hyper_parameters.hparams)}')
 
-            run_result = RunResult(metrics=metrics, hyper_parameters=copy.deepcopy(hyper_parameters), info=info)
+            run_result = RunResult(
+                metrics=metrics,
+                hyper_parameters=copy.deepcopy(hyper_parameters),
+                history=history,
+                info=info
+            )
             if store is not None:
                 store.save_run(run_result)
 

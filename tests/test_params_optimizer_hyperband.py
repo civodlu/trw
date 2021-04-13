@@ -17,7 +17,7 @@ class TestParamsOptimizer(TestCase):
             y = hparams.create(trw.hparams.ContinuousUniform('param_y', 5, -10, 10))
             d = hparams.create(trw.hparams.ContinuousUniform('param_d', 5, -10, 10))
 
-            return {'loss': x * x + y * y + d}, {'param_x': x, 'param_y': y, 'param_d': d}
+            return {'loss': x * x + y * y + d}, [], {'param_x': x, 'param_y': y, 'param_d': d}
 
         optimizer = trw.hparams.params_optimizer_hyperband.HyperParametersOptimizerHyperband(
             loss_fn=lambda metrics: metrics['loss'],

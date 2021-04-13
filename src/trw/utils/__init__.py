@@ -238,3 +238,12 @@ def flatten_nested_dictionaries(d, root_name='', delimiter='-'):
         else:
             flattened[full_name] = value
     return flattened
+
+
+class ExceptionAbortRun(BaseException):
+    """
+    The run has been pruned due to performance reason
+    """
+    def __init__(self, history, metrics=None):
+        self.history = history
+        self.metrics = metrics
