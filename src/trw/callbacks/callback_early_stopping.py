@@ -92,8 +92,6 @@ class CallbackEarlyStopping(Callback):
 
         epoch = len(history)
         loss = self.loss_fn(history[-1])
-        if loss is None:
-            return
 
         if self.raise_stop_fn is not None:
             # check if we are satisfying early termination criteria
@@ -104,6 +102,12 @@ class CallbackEarlyStopping(Callback):
                 raise ExceptionAbortRun(
                     history=history,
                     reason=f'Early termination. loss={loss}. raise_stop_fn returned true!')
+
+        # return ONLY after the `raise_stop_fn` check: often,
+        # the `loss` will be based on the validation (potentially mostly none)
+        # while `raise_stop_fn` check will use the training.
+        if loss is None:
+            return
 
         if self.max_loss_by_epoch is None:
             # we can't process! No previous runs

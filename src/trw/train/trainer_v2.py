@@ -204,7 +204,19 @@ class TrainerV2:
         # instantiate the datasets, model, optimizers and losses
         logger.info('started Trainer.fit(). Options={}'.format(options))
 
-        def clean_up():
+        def clean_up(datasets):
+            if datasets is not None:
+                # make sure the datasets are closed properly: threads and processes
+                # are stopped in a controlled manner to avoid memory leaks
+                for dataset_name, dataset in datasets.items():
+                    for split_name, split in dataset.items():
+                        logger.info(f'closing dataset={dataset_name} split={split_name}')
+                        split.close()
+                        logger.info(f'closed dataset={dataset_name} split={split_name}!')
+
+            # resource are released, just continue the shutdown
+            logger.info(f'datasets all closed!')
+
             # increment the number of runs
             options['workflow_options']['trainer_run'] += 1
 
@@ -356,24 +368,17 @@ class TrainerV2:
                 logger.info('finished post training callbacks...')
 
         except KeyboardInterrupt as e:
-            logger.info('KeyboardInterrupt received. closing datasets explicitly to ensure proper resource release')
-
-            # make sure the datasets are closed properly: threads and processes
-            # are stopped in a controlled manner to avoid memory leaks
-            for dataset_name, dataset in datasets.items():
-                for split_name, split in dataset.items():
-                    logger.info(f'closing dataset={dataset_name} split={split_name}')
-                    split.close()
-                    logger.info(f'closed dataset={dataset_name} split={split_name}!')
-
-            # resource are released, just continue the shutdown
-            logger.info(f'datasets all closed!')
-            clean_up()
+            # since we are about to exit the process, explicitly
+            # dispose the datasets to make sure resources are properly disposed of
+            logger.info('KeyboardInterrupt received. closing datasets explicitly')
+            clean_up(datasets)
 
             # since the resources are released, we can now re-raise the exception
             raise e
 
-        clean_up()
+        # do not explicitly clean up the datasets since these were
+        # created outside the trainer
+        clean_up(datasets=None)
 
         return model, {
             'history': history,
