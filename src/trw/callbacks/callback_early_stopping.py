@@ -66,7 +66,8 @@ class CallbackEarlyStopping(Callback):
             for run in all_runs:
                 if len(run.history) > e:
                     loss = self.loss_fn(run.history[e])
-                    losses_by_step[e].append(loss)
+                    if loss is not None:
+                        losses_by_step[e].append(loss)
 
         # for each checkpoint, sort the losses, and calculate the worst X% of the runs
         # the current run MUST be better than the threshold or it will be pruned
