@@ -9,7 +9,7 @@ import torch
 from .utilities import default_sum_all_losses, create_or_recreate_folder, RuntimeFormatter
 from .trainer import default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_post_training_callbacks, trainer_callbacks_per_batch, epoch_train_eval, create_losses_fn, strip_unpickable
-from ..utils import safe_lookup
+from ..utils import safe_lookup, ExceptionAbortRun
 from ..utils.graceful_killer import GracefulKiller
 
 logger = logging.getLogger(__name__)
@@ -367,7 +367,7 @@ class TrainerV2:
 
                 logger.info('finished post training callbacks...')
 
-        except (KeyboardInterrupt, RuntimeError) as e:
+        except (KeyboardInterrupt, RuntimeError, ExceptionAbortRun) as e:
             # since we are about to exit the process, explicitly
             # dispose the datasets to make sure resources are properly disposed of
             logger.info('KeyboardInterrupt received. closing datasets explicitly')

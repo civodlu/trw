@@ -45,13 +45,15 @@ class CallbackEarlyStopping(Callback):
         self.loss_fn = loss_fn
         self.store = store
         self.max_loss_by_epoch = None
+        self.nb_checked_checkpoints = 0
 
         assert 0 < discard_if_among_worst_X_performers < 1, 'must be a fraction!'
         for c in checkpoints:
             assert 0 < c < 1, 'must be a fraction!'
 
-    def _initialize(self, num_epochs):
+    def _initialize(self, num_epochs: int) -> None:
         logger.info('initializing run analysis...')
+        # beware: the eval run MUST be synchronized with the epoch checkpoints
         checkpoints_epoch = [int(f * num_epochs) for f in self.checkpoints]
         try:
             all_runs = self.store.load_all_runs()
@@ -65,7 +67,7 @@ class CallbackEarlyStopping(Callback):
         for e in checkpoints_epoch:
             for run in all_runs:
                 if len(run.history) > e:
-                    loss = self.loss_fn(run.history[e])
+                    loss = self.loss_fn(run.history[e - 1])
                     if loss is not None:
                         losses_by_step[e].append(loss)
 
@@ -88,10 +90,12 @@ class CallbackEarlyStopping(Callback):
         self.max_loss_by_epoch = max_loss_by_epoch
         logger.info(f'max_loss_by_step={max_loss_by_epoch}')
 
-    def __call__(self, options, history, model, **kwargs):
+    def __call__(self, options, history: History, model, **kwargs):
+        logger.info('started!')
         num_epochs = options['training_parameters']['num_epochs']
 
         if self.max_loss_by_epoch is None:
+            logger.debug('initializing the checkpoints...')
             self._initialize(num_epochs)
 
         epoch = len(history)
@@ -111,19 +115,34 @@ class CallbackEarlyStopping(Callback):
         # the `loss` will be based on the validation (potentially mostly none)
         # while `raise_stop_fn` check will use the training.
         if loss is None:
+            logger.debug('loss is None!')
             return
 
         if self.max_loss_by_epoch is None:
             # we can't process! No previous runs
+            logger.info('self.max_loss_by_epoch is None, No previous runs!')
             return
 
         max_loss = self.max_loss_by_epoch.get(epoch)
         if max_loss is not None:
+            self.nb_checked_checkpoints += 1
             if loss > max_loss:
                 logger.info(f'epoch={epoch}, loss={loss} > {max_loss}, the run is discarded!')
                 raise ExceptionAbortRun(
                     history=history,
                     reason=f'loss={loss} is too high (threshold={max_loss}, '
-                           f'minimum={self.discard_if_among_worst_X_performers}%')
+                           f'minimum={self.discard_if_among_worst_X_performers} of the runs')
             else:
-                logger.info(f'run passed the checkpoint. loss={loss} <= {max_loss}')
+                logger.info(f'epoch={epoch}, run passed the checkpoint. loss={loss} <= {max_loss}')
+
+    def __del__(self):
+        # since it can be tricky to setup properly (e.g., synchronize the epochs of
+        # eval run with the checkpoint). These errors should help diagnose a
+        # misconfiguration!
+        if self.max_loss_by_epoch is None:
+            logger.error('`max_loss_by_epoch` is None, no previously run store was empty?')
+            return
+
+        logger.info(f'performed {self.nb_checked_checkpoints} / {len(self.max_loss_by_epoch)} checkpoints!')
+        if self.nb_checked_checkpoints == 0:
+            logger.error('no checkpoints checked! Misconfiguration or first hyper-parameter run?')

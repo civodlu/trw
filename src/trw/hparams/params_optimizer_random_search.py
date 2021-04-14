@@ -49,7 +49,9 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
             hyper_parameters: the hyper parameters to be optimized.
         """
         # start with no hyper-parameters
+        self.log_string('started optimization')
         if hyper_parameters is None:
+            self.log_string('creating an empty hyper parameter repository')
             hyper_parameters = HyperParameters()
 
         self.log_string(f'started optimize(), hyper_parameters={hyper_parameters}')
@@ -66,7 +68,7 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
                 metrics = e.metrics
                 history = e.history
                 info = e.reason
-                self.log_string(f'iteration={iteration} was terminated early. Reason={e.reason}')
+                self.log_string(f'iteration={iteration} was terminated early (epoch={len(history)}). Reason={e.reason}')
             except RuntimeError as e:
                 metrics = None
                 history = None
@@ -95,4 +97,6 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
 
             # at the end of the iteration, randomly modify the hyper parameters
             hyper_parameters.randomize()
+
+        self.log_string('hyper-parameter optimization completed!')
         return results
