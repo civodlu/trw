@@ -76,6 +76,11 @@ class RunStoreFile(RunStore):
         self.serializer = serializer
         self.store_location = store_location
 
+        # do not keep file descriptor open BUT at least create an empty file,
+        # meaning the store exists but is currently empty.
+        with open(self.store_location, mode='ab') as f:
+            pass
+
     def close(self) -> None:
         """
         Close the store
