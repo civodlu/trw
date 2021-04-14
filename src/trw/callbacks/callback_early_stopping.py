@@ -77,9 +77,12 @@ class CallbackEarlyStopping(Callback):
                 max_loss_by_epoch[e] = None
                 continue
 
-            values = sorted(values)
-            rank = round(len(values) * (1.0 - self.discard_if_among_worst_X_performers))
-            threshold = values[rank]
+            if values is not None:
+                values = sorted(values)
+                rank = round(len(values) * (1.0 - self.discard_if_among_worst_X_performers))
+                threshold = values[rank]
+            else:
+                threshold = None
             max_loss_by_epoch[e] = threshold
         self.max_loss_by_epoch = max_loss_by_epoch
         logger.info(f'max_loss_by_step={max_loss_by_epoch}')
@@ -101,7 +104,7 @@ class CallbackEarlyStopping(Callback):
                 logger.info(f'epoch={epoch}, loss={loss}, early termination!')
                 raise ExceptionAbortRun(
                     history=history,
-                    reason=f'Early termination. loss={loss}. raise_stop_fn returned true!')
+                    reason=f'Early termination (epoch={len(history)}). loss={loss}. raise_stop_fn returned true!')
 
         # return ONLY after the `raise_stop_fn` check: often,
         # the `loss` will be based on the validation (potentially mostly none)
