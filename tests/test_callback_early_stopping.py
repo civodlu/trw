@@ -108,6 +108,41 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         }
         assert early_stopping.max_loss_by_epoch == expected_checkpoints
 
+    def test_early_termination(self):
+        nb_epochs = 2
+        nb_runs = 1
+        tmp = tempfile.mkdtemp()
+
+        store_path = os.path.join(tmp, 'store.pkl')
+        store = trw.hparams.RunStoreFile(store_path)
+        hparams = HyperParameters()
+
+        for r in range(nb_runs):
+            history = [{'1-accuracy': 0.99} for n in range(nb_epochs)]
+            store.save_run(RunResult(metrics={}, hyper_parameters=hparams, history=history, info=None))
+
+        history = [{'1-accuracy': 0.9999} for n in range(nb_epochs)]
+
+        def check_min_loss(loss, history):
+            return loss >= 0.9
+
+        early_stopping = CallbackEarlyStopping(
+            store=store,
+            loss_fn=lambda hstep: hstep['1-accuracy'],
+            raise_stop_fn=check_min_loss
+        )
+
+        # we are better, do NOT raise `ExceptionAbortRun`
+        aborted_run = False
+        try:
+            options = create_default_options(num_epochs=nb_epochs)
+            early_stopping(options, history[:10], None)
+        except ExceptionAbortRun as e:
+            aborted_run = True
+            assert 'Early termination' in e.reason
+
+        assert aborted_run, 'run should NOT have been aborted!'
+
 
 if __name__ == '__main__':
     unittest.main()

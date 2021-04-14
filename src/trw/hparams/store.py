@@ -62,17 +62,25 @@ class RunStore(ABC):
 
 
 class RunStoreFile(RunStore):
+    """
+    Linear file based store.
+
+    Notes:
+         * we don't keep the file open, since we may have
+           several stores reading from this location (single writer
+           but many reader). Reading and writing must happen on the same
+           thread
+    """
     def __init__(self, store_location: str, serializer=pickle):
         super().__init__()
         self.serializer = serializer
-        self.f = open(store_location, mode='ab+')
+        self.store_location = store_location
 
     def close(self) -> None:
         """
         Close the store
         """
-        if self.f is not None:
-            self.f.close()
+        pass
 
     def save_run(self, run_result: RunResult) -> None:
         """
@@ -81,22 +89,20 @@ class RunStoreFile(RunStore):
         Args:
             run_result: the results to record
         """
-        assert self.f is not None, 'file is already closed!'
-        self.f.seek(0, io.SEEK_END)
-        self.serializer.dump(run_result, self.f)
+        with open(self.store_location, mode='ab') as f:
+            self.serializer.dump(run_result, f)
 
     def load_all_runs(self) -> Sequence[RunResult]:
         """
         Load all the runs
         """
-        self.f.seek(0, io.SEEK_SET)
-
         results = []
-        while True:
-            try:
-                r = self.serializer.load(self.f)
-                results.append(r)
-            except EOFError:
-                break
+        with open(self.store_location, mode='rb') as f:
+            while True:
+                try:
+                    r = self.serializer.load(f)
+                    results.append(r)
+                except EOFError:
+                    break
 
         return results

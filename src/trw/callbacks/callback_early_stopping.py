@@ -1,8 +1,8 @@
 import collections
-from typing import Callable, Sequence
+from typing import Callable, Sequence, Optional
 
 from ..utils import ExceptionAbortRun
-from ..basic_typing import HistoryStep
+from ..basic_typing import HistoryStep, History
 from .callback import Callback
 from ..hparams import RunStore
 import logging
@@ -19,6 +19,7 @@ class CallbackEarlyStopping(Callback):
             self,
             store: RunStore,
             loss_fn: Callable[[HistoryStep], float],
+            raise_stop_fn: Optional[Callable[[float, History], bool]] = None,
             checkpoints: Sequence[float] = (0.1, 0.25, 0.5, 0.75),
             discard_if_among_worst_X_performers: float = 0.8,
             min_number_of_runs: int = 10):
@@ -33,7 +34,11 @@ class CallbackEarlyStopping(Callback):
                 runs using `loss_fn` and `store`. If the runs is X% worst performer, discard the run
             min_number_of_runs: collect at least this number of runs before applying the early stopping.
                 larger number means better estimation of the worst losses.
+            raise_stop_fn: specify if a run should be stopped. For example, this can be useful to discard
+                the parameters that make the model diverge very early. It takes as input (loss, history)
+                and return `True` if the run should be stopped
         """
+        self.raise_stop_fn = raise_stop_fn
         self.min_number_of_runs = min_number_of_runs
         self.discard_if_among_worst_X_performers = discard_if_among_worst_X_performers
         self.checkpoints = checkpoints
@@ -48,7 +53,12 @@ class CallbackEarlyStopping(Callback):
     def _initialize(self, num_epochs):
         logger.info('initializing run analysis...')
         checkpoints_epoch = [int(f * num_epochs) for f in self.checkpoints]
-        all_runs = self.store.load_all_runs()
+        try:
+            all_runs = self.store.load_all_runs()
+        except RuntimeError as e:
+            # no file available, not initialized!
+            logger.error(f'exception opening the store={e}')
+            return
 
         # collect loss for all runs at given checkpoints
         losses_by_step = collections.defaultdict(list)
@@ -81,12 +91,31 @@ class CallbackEarlyStopping(Callback):
             self._initialize(num_epochs)
 
         epoch = len(history)
+        loss = self.loss_fn(history[-1])
+        if loss is None:
+            return
+
+        if self.raise_stop_fn is not None:
+            # check if we are satisfying early termination criteria
+            # e.g., Nan, very slow loss decrease...
+            should_be_stopped = self.raise_stop_fn(loss, history)
+            if should_be_stopped:
+                logger.info(f'epoch={epoch}, loss={loss}, early termination!')
+                raise ExceptionAbortRun(
+                    history=history,
+                    reason=f'Early termination. loss={loss}. raise_stop_fn returned true!')
+
+        if self.max_loss_by_epoch is None:
+            # we can't process! No previous runs
+            return
+
         max_loss = self.max_loss_by_epoch.get(epoch)
         if max_loss is not None:
-            loss = self.loss_fn(history[-1])
             if loss > max_loss:
                 logger.info(f'epoch={epoch}, loss={loss} > {max_loss}, the run is discarded!')
                 raise ExceptionAbortRun(
                     history=history,
                     reason=f'loss={loss} is too high (threshold={max_loss}, '
                            f'minimum={self.discard_if_among_worst_X_performers}%')
+            else:
+                logger.info(f'run passed the checkpoint. loss={loss} <= {max_loss}')
