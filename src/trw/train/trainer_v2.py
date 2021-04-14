@@ -214,8 +214,8 @@ class TrainerV2:
                         split.close()
                         logger.info(f'closed dataset={dataset_name} split={split_name}!')
 
-            # resource are released, just continue the shutdown
-            logger.info(f'datasets all closed!')
+                # resource are released, just continue the shutdown
+                logger.info(f'datasets all closed!')
 
             # increment the number of runs
             options['workflow_options']['trainer_run'] += 1
@@ -367,7 +367,7 @@ class TrainerV2:
 
                 logger.info('finished post training callbacks...')
 
-        except KeyboardInterrupt as e:
+        except (KeyboardInterrupt, RuntimeError) as e:
             # since we are about to exit the process, explicitly
             # dispose the datasets to make sure resources are properly disposed of
             logger.info('KeyboardInterrupt received. closing datasets explicitly')
