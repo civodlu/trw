@@ -81,13 +81,13 @@ class Net(nn.Module):
 
 # configure and run the training/evaluation
 options = trw.train.create_default_options(num_epochs=100)
-trainer = trw.train.Trainer()
+trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(nb_workers=0),
-    run_prefix='contrastive_loss_mnist',
-    model_fn=lambda options: Net(),
+    datasets=trw.datasets.create_mnist_dataset(nb_workers=0),
+    log_path='contrastive_loss_mnist',
+    model=Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
         datasets=datasets,
         model=model,

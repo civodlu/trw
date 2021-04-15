@@ -6,7 +6,7 @@ import logging
 from ..basic_typing import History
 from .params_optimizer import HyperParametersOptimizer
 from .store import Metrics, RunStore, RunResult
-from .params import HyperParameters
+from .params import HyperParameters, HyperParameterRepository
 from ..utils import ExceptionAbortRun
 
 logger = logging.getLogger(__name__)
@@ -46,13 +46,19 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
         
         Args:
             store: defines how the runs will be saved
-            hyper_parameters: the hyper parameters to be optimized.
+            hyper_parameters: the hyper parameters to be optimized. If `None`,
+                use the global repository :class:`trw.hparams.HyperParameterRepository`
         """
-        # start with no hyper-parameters
         self.log_string('started optimization')
         if hyper_parameters is None:
+            # do not create a new store instance: the model might have
+            # instantiated hyper-parameters already, before the `evaluate_fn`
+            # so instead, use existing repository
             self.log_string('creating an empty hyper parameter repository')
-            hyper_parameters = HyperParameters()
+            hyper_parameters = HyperParameterRepository.current_hparams
+        else:
+            # update the global repository
+            HyperParameterRepository.current_hparams = hyper_parameters
 
         self.log_string(f'started optimize(), hyper_parameters={hyper_parameters}')
 

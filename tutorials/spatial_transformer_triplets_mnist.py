@@ -98,16 +98,16 @@ def pre_training_fn():
 
 # configure and run the training/evaluation
 options = trw.train.create_default_options(num_epochs=400)
-trainer = trw.train.Trainer(
-    callbacks_pre_training_fn=pre_training_fn,
-    callbacks_per_epoch_fn=per_epoch_fn,
+trainer = trw.train.TrainerV2(
+    callbacks_pre_training=pre_training_fn(),
+    callbacks_per_epoch=per_epoch_fn(),
 )
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64), nb_workers=0),
-    run_prefix='mnist_cluttered_spatial_transformer_triplets',
-    model_fn=lambda options: Net(),
+    datasets=trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64), nb_workers=0),
+    log_path='mnist_cluttered_spatial_transformer_triplets',
+    model=Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(
         datasets=datasets,
         model=model,

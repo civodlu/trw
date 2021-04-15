@@ -38,7 +38,7 @@ class NetClassic(nn.Module):
         }
 
 
-def create_model_simplified(options):
+def create_model_simplified():
     n = trw.simple_layers.Input([None, 1, 28, 28], 'images')
     n = trw.simple_layers.Conv2d(n, out_channels=16, kernel_size=5, stride=2)
     n = trw.simple_layers.ReLU(n)
@@ -51,7 +51,7 @@ def create_model_simplified(options):
     return trw.simple_layers.compile_nn([n])
 
 
-def create_model_classic(options):
+def create_model_classic():
     model = NetClassic()
     model = trw.train.DataParallelExtended(model)
     return model
@@ -81,19 +81,19 @@ class TestMultiGpus(TestCase):
             return
 
         options = trw.train.create_default_options(num_epochs=5)
-        trainer = trw.train.Trainer(
-            callbacks_per_epoch_fn=None,
-            callbacks_per_batch_loss_terms_fn=None,
-            callbacks_post_training_fn=None,
-            callbacks_per_batch_fn=None,
-            callbacks_pre_training_fn=None
+        trainer = trw.train.TrainerV2(
+            callbacks_per_epoch=None,
+            callbacks_per_batch_loss_terms=None,
+            callbacks_post_training=None,
+            callbacks_per_batch=None,
+            callbacks_pre_training=None
         )
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
         final_model, results = trainer.fit(
             options,
-            inputs_fn=create_dataset,
-            model_fn=create_model_classic,
+            datasets=create_dataset(),
+            model=create_model_classic(),
             optimizers_fn=optimizer_fn)
 
         assert trw.utils.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5
@@ -107,19 +107,19 @@ class TestMultiGpus(TestCase):
             return
 
         options = trw.train.create_default_options(num_epochs=5)
-        trainer = trw.train.Trainer(
-            callbacks_per_epoch_fn=None,
-            callbacks_per_batch_loss_terms_fn=None,
-            callbacks_post_training_fn=None,
-            callbacks_per_batch_fn=None,
-            callbacks_pre_training_fn=None
+        trainer = trw.train.TrainerV2(
+            callbacks_per_epoch=None,
+            callbacks_per_batch_loss_terms=None,
+            callbacks_post_training=None,
+            callbacks_per_batch=None,
+            callbacks_pre_training=None
         )
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
         final_model, results = trainer.fit(
             options,
-            inputs_fn=create_dataset,
-            model_fn=create_model_simplified,
+            datasets=create_dataset(),
+            model=create_model_simplified(),
             optimizers_fn=optimizer_fn)
 
         assert trw.utils.to_value(results['history'][-1]['mnist']['train']['overall_loss']['loss']) < 1e-5

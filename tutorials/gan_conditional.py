@@ -88,7 +88,7 @@ def get_target(batch):
     return {'digits': batch['targets']}
 
 
-def create_model(options):
+def create_model():
     latent_size = 64
 
     discriminator = Discriminator()
@@ -128,18 +128,16 @@ def pre_training_callbacks():
 
 
 options = trw.train.create_default_options(num_epochs=15)
-trainer = trw.train.Trainer(
-    callbacks_per_epoch_fn=per_epoch_callbacks,
-    callbacks_pre_training_fn=pre_training_callbacks
+trainer = trw.train.TrainerV2(
+    callbacks_per_epoch=per_epoch_callbacks(),
+    callbacks_pre_training=pre_training_callbacks()
 )
 
-model, result = trw.train.run_trainer_repeat(
-    trainer,
+trainer.fit(
     options,
-    number_of_training_runs=1,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(batch_size=32, normalize_0_1=True),
+    datasets=trw.datasets.create_mnist_dataset(batch_size=32, normalize_0_1=True),
     eval_every_X_epoch=1,
-    model_fn=create_model,
-    run_prefix='mnist_gan_conditional',
+    model=create_model(),
+    log_path='mnist_gan_conditional',
     optimizers_fn=None  # the module has its own optimizers
 )

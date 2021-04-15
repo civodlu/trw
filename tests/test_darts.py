@@ -136,11 +136,11 @@ class TestDarts(TestCase):
         cell weights and the NN weights. Make sure we find the expected solution
         """
         options = trw.train.create_default_options(num_epochs=50)
-        trainer = trw.train.Trainer()
+        trainer = trw.train.TrainerV2()
         r = trainer.fit(
             options=options,
-            inputs_fn=lambda: create_darts_dataset_1d(),
-            model_fn=lambda options: ModelDarts1D_fn_1(),
+            datasets=create_darts_dataset_1d(),
+            model=ModelDarts1D_fn_1(),
             optimizers_fn=lambda datasets, model: trw.arch.create_darts_adam_optimizers_fn(datasets, model, darts_weight_dataset_name='training_weights', learning_rate=0.01)
         )
 
@@ -165,9 +165,3 @@ class TestDarts(TestCase):
         genotype_2 = cell.get_genotype()
         assert genotype_2 == genotype, 'the reconstruction must have the same genotype as the original!'
 
-    def test_parameter_known_solution(self):
-        """
-        Make sure we only optimize the cell parameters on dataset `train_params`
-        and only the cell's weights on the dataset `training_weights`
-        """
-        pass  # TODO

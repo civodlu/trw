@@ -9,7 +9,7 @@ from .outputs_trw import Output, OutputClassification, OutputClassification2, Ou
     default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss, OutputSegmentation2
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
-from .trainer import Trainer, create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
+from .trainer import create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
     run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
 from .trainer_v2 import TrainerV2

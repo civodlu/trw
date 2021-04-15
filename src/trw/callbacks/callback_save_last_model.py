@@ -125,8 +125,8 @@ class CallbackSaveLastModel(Callback):
         export_path = os.path.join(options['workflow_options']['current_logging_directory'], name)
 
         logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
-        from ..train.trainer import Trainer
-        Trainer.save_model(model, result, export_path)
+        from ..train.trainer_v2 import TrainerV2
+        TrainerV2.save_model(model, result, export_path)
         if self.rolling_size is not None and self.rolling_size > 0:
             self.last_models.append(export_path)
 
@@ -153,6 +153,6 @@ class CallbackSaveLastModel(Callback):
                 export_path = os.path.join(
                     options['workflow_options']['current_logging_directory'],
                     f'{self.best_model_name}.model')
-                Trainer.save_model(model, result, export_path)
+                TrainerV2.save_model(model, result, export_path)
 
         logger.info('successfully completed CallbackSaveLastModel.__call__')

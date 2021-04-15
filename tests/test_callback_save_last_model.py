@@ -114,6 +114,6 @@ class TestCallbackSaveLastModel(TestCase):
         assert len(models) == 1
         assert os.path.basename(models[0]) == 'last.model'
 
-        _, results_reloaded = trw.train.Trainer.load_model(models[0], with_result=True)
+        _, results_reloaded = trw.train.TrainerV2.load_model(models[0], with_result=True)
         # the embedding value should be stripped
         assert len(results_reloaded['outputs']['dataset1']['split1']['output1']) == 0

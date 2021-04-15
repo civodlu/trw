@@ -38,14 +38,14 @@ class UNetSegmentation(nn.Module):
 if __name__ == '__main__':
     nb_epochs = 400
     options = trw.train.create_default_options(num_epochs=nb_epochs, device=torch.device('cuda:1'))
-    trainer = trw.train.Trainer(
-        callbacks_pre_training_fn=lambda: [
+    trainer = trw.train.TrainerV2(
+        callbacks_pre_training=[
             trw.callbacks.CallbackReportingStartServer(),
             trw.callbacks.CallbackReportingModelSummary(),
             trw.callbacks.CallbackReportingDatasetSummary(),
             trw.callbacks.CallbackReportingAugmentations(),
         ],
-        callbacks_per_epoch_fn=lambda: [
+        callbacks_per_epoch=[
             trw.callbacks.CallbackLearningRateRecorder(),
             trw.callbacks.CallbackEpochSummary(),
             trw.callbacks.CallbackReportingRecordHistory(),
@@ -58,14 +58,14 @@ if __name__ == '__main__':
 
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_decathlon_dataset(
+        datasets=trw.datasets.create_decathlon_dataset(
             'Task04_Hippocampus',
             transform_train=trw.transforms.TransformResizeModuloCropPad(multiple_of=8, mode='pad'),
             transform_valid=trw.transforms.TransformResizeModuloCropPad(multiple_of=8, mode='pad'),
             remove_patient_transform=True,
         ),
-        run_prefix='decathlon_task4',
-        model_fn=lambda options: UNetSegmentation(),
+        log_path='decathlon_task4',
+        model=UNetSegmentation(),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(
             datasets=datasets,
             model=model,

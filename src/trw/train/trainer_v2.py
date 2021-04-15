@@ -4,6 +4,7 @@ import pickle
 import sqlite3
 import traceback
 from io import StringIO
+from torch import nn
 
 import torch
 from .utilities import default_sum_all_losses, create_or_recreate_folder, RuntimeFormatter
@@ -108,7 +109,11 @@ class TrainerV2:
         model = torch.load(path, map_location=device, pickle_module=pickle_module)
         return model, result
 
-    def fit(self, options, datasets, model, optimizers_fn,
+    def fit(self,
+            options,
+            datasets,
+            model: nn.Module,
+            optimizers_fn,
             losses_fn=default_sum_all_losses,
             loss_creator=create_losses_fn,
             log_path=None,
@@ -119,18 +124,9 @@ class TrainerV2:
         """
         Fit the model
 
-        Requirements:
-
-        * enough main memory to store the outputs of all the datasets of a single epoch.
-            If this cannot be satisfied, sub-sample the epoch so that it can fit in main memory.
-
-        Notes:
-
-        * if a feature value is Callable, its value will be replaced by the result of the call
-            (e.g., this can be useful to generate `z` embedding in GANs)
-
-        :param options:
-        :param datasets: a functor returning a dictionary of datasets. Alternatively, datasets infos can be specified.
+        Args:
+            options:
+            datasets:  a functor returning a dictionary of datasets. Alternatively, datasets infos can be specified.
                         `inputs_fn` must return one of:
 
                         * datasets: dictionary of dataset
@@ -138,35 +134,39 @@ class TrainerV2:
 
                         We define:
 
-                        * datasets: a dictionary of dataset. a dataset is a dictionary of splits. a split is a dictionary of batched features.
-                        * Datasets infos are additional infos useful for the debugging of the dataset (e.g., class mappings, sample UIDs).
-                        Datasets infos are typically much smaller than datasets should be loaded in loadable in memory
+                        * datasets: a dictionary of dataset. a dataset is a dictionary of splits.
+                          a split is a dictionary of batched features.
+                        * Datasets infos are additional infos useful for the debugging of the
+                          dataset (e.g., class mappings, sample UIDs). Datasets infos are
+                          typically much smaller than datasets should be loaded in
+                          loadable in memory
+            model: a `Module` or a `ModuleDict`
+            optimizers_fn:
+            losses_fn:
+            loss_creator:
+            log_path: the path of the logs to be exported during the training of the model.
+                if the `log_path` is a relative path, the options['workflow_options']['logging_directory']
+                is used as root
+            with_final_evaluation:
+            history:
+            erase_logging_folder: if `True`, the logging will be erased when fitting starts
+            eval_every_X_epoch: evaluate the model every `X` epochs
 
-        :param model: a functor with parameter `options` and returning a `Module` or a `ModuleDict`
+        Returns:
+       """
 
-        Depending of the type of the model, this is how it will be used:
-
-        * `Module`: optimizer will optimize `model.parameters()`
-        * `ModuleDict`: for each dataset name, the optimizer will optimize
-            `model[dataset_name].parameters()`. Note that a `forward` method will need to be implemented
-
-        :param losses_fn:
-        :param optimizers_fn:
-        :param loss_creator:
-        :param eval_every_X_epoch: evaluate the model every `X` epochs
-        :param log_path: where the trainer will log its info. If `None`, default to
-            a folder in options['workflow_options']['logging_directory']
-        :param with_final_evaluation: if True, once the model is fitted, evaluate all the data again in eval mode
-        :return: a tuple `model, result`
-        """
         # reset the abort state
         GracefulKiller.abort_event.clear()
 
         # set up our log path. This is where all the analysis of the model will be exported
+        logging_directory = options['workflow_options']['logging_directory']
         if log_path is None:
             log_path = os.path.join(
-                options['workflow_options']['logging_directory'],
+                logging_directory,
                 'default_r{}'.format(options['workflow_options']['trainer_run']))
+        elif not os.path.isabs(log_path):
+            log_path = os.path.join(logging_directory, log_path)
+
         options['workflow_options']['current_logging_directory'] = log_path
 
         if history is None:
@@ -182,7 +182,7 @@ class TrainerV2:
         if len(logging.root.handlers) == 0:
             # there is no logger configured, so add a basic one
             logging.basicConfig(
-                filename=os.path.join(options['workflow_options']['logging_directory'], 'trainer_logging.log'),
+                filename=os.path.join(logging_directory, 'trainer_logging.log'),
                 format='%(asctime)s %(levelname)s %(name)s %(message)s',
                 level=logging.DEBUG,
                 filemode='w')
@@ -370,7 +370,7 @@ class TrainerV2:
         except (KeyboardInterrupt, RuntimeError, ExceptionAbortRun) as e:
             # since we are about to exit the process, explicitly
             # dispose the datasets to make sure resources are properly disposed of
-            logger.info('KeyboardInterrupt received. closing datasets explicitly')
+            logger.info(f'Exception received. closing datasets explicitly. Exception={e}')
             clean_up(datasets)
 
             # since the resources are released, we can now re-raise the exception

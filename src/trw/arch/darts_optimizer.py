@@ -73,7 +73,7 @@ def create_darts_optimizers_fn(datasets, model, optimizer_fn, darts_weight_datas
             scheduler = scheduler_fn(optimizer)
             schedulers[dataset_name] = scheduler
 
-    return optimizers, schedulers
+    return optimizers, schedulers, None
 
 
 def create_darts_adam_optimizers_fn(datasets, model, darts_weight_dataset_name, learning_rate, scheduler_fn=None):

@@ -47,16 +47,16 @@ class TestCallbackLearningRateFinder(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
         options = trw.train.create_default_options(device=torch.device('cpu'), num_epochs=200)
-        trainer = trw.train.Trainer(
-            callbacks_post_training_fn=None,
-            callbacks_pre_training_fn=lambda: [trw.callbacks.CallbackLearningRateFinder(set_new_learning_rate=True)]
+        trainer = trw.train.TrainerV2(
+            callbacks_post_training=None,
+            callbacks_pre_training=[trw.callbacks.CallbackLearningRateFinder(set_new_learning_rate=True)]
         )
         model, results = trainer.fit(
             options,
-            inputs_fn=functools.partial(create_simple_regression, factor=10.0),
-            model_fn=lambda _: ModelSimpleRegression(),
+            datasets=create_simple_regression(factor=10.0),
+            model=ModelSimpleRegression(),
             optimizers_fn=optimizer_fn,
-            run_prefix='LR_finder',
+            log_path='LR_finder',
             eval_every_X_epoch=2)
 
         assert float(results['history'][-1]['simple']['train']['overall_loss']['loss']) < 1e-4

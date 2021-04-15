@@ -135,7 +135,7 @@ def optimizer_fn(params, lr):
     return optimizer, scheduler
 
 
-def create_model():
+def create_model(options):
     latent_size = 0
 
     #discriminator = apply_spectral_norm(Discriminator())
@@ -180,20 +180,22 @@ def pre_training_callbacks():
 num_epochs = 300
 options = trw.train.create_default_options(num_epochs=num_epochs, device='cuda:0')
 
-trainer = trw.train.TrainerV2(
-    callbacks_per_epoch=per_epoch_callbacks(),
+trainer = trw.train.Trainer(
+    callbacks_per_epoch_fn=per_epoch_callbacks,
 )
 
-trainer.fit(
+model, result = trw.train.run_trainer_repeat(
+    trainer,
     options,
-    datasets=trw.datasets.create_facades_dataset(
+    number_of_training_runs=10,
+    inputs_fn=lambda: trw.datasets.create_facades_dataset(
         batch_size=1,
         transforms_train=trw.transforms.TransformCompose([
             trw.transforms.TransformRandomFlip(axis=3),
         ])),
     eval_every_X_epoch=20,
-    model=create_model(),
-    log_path='facade_pix2pix',
+    model_fn=create_model,
+    run_prefix='facade_pix2pix_3',
     optimizers_fn=None  # the module has its own optimizers
 )
 

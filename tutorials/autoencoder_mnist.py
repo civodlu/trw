@@ -1,3 +1,5 @@
+from functools import partial
+
 import trw
 import torch.nn as nn
 import torch
@@ -37,16 +39,15 @@ def per_epoch_fn():
 
 
 options = trw.train.create_default_options(num_epochs=100)
-trainer = trw.train.Trainer(
-    callbacks_per_epoch_fn=per_epoch_fn,
-    callbacks_post_training_fn=lambda: [trw.callbacks.CallbackReportingExportSamples(max_samples=2000)],
+trainer = trw.train.TrainerV2(
+    callbacks_per_epoch=per_epoch_fn(),
+    callbacks_post_training=[trw.callbacks.CallbackReportingExportSamples(max_samples=2000)],
 )
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=1),
-    run_prefix='mnist_autoencoder',
-    model_fn=lambda options: Net(),
-    optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
-        datasets=datasets, model=model, learning_rate=0.25))
+    datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
+    log_path='mnist_autoencoder',
+    model=Net(),
+    optimizers_fn=partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.25))
 

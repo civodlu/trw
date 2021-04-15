@@ -37,10 +37,10 @@ class TestCallbackLearningRateRecorder(TestCase):
 
         lr_recorder = trw.callbacks.CallbackLearningRateRecorder()
 
-        trainer = trw.train.Trainer(
-            callbacks_per_epoch_fn=lambda: [lr_recorder],
-            callbacks_pre_training_fn=None,
-            callbacks_post_training_fn=None,
+        trainer = trw.train.TrainerV2(
+            callbacks_per_epoch=[lr_recorder],
+            callbacks_pre_training=None,
+            callbacks_post_training=None,
             trainer_callbacks_per_batch=None
         )
 
@@ -54,8 +54,8 @@ class TestCallbackLearningRateRecorder(TestCase):
         options = trw.train.create_default_options(num_epochs=50)
         r = trainer.fit(
             options,
-            inputs_fn=create_datasets,
-            model_fn=lambda options: ModelDense(),
+            datasets=create_datasets(),
+            model=ModelDense(),
             optimizers_fn=optimizer_fn
         )
 

@@ -35,13 +35,13 @@ class Net(nn.Module):
 
 # configure and run the training/evaluation
 options = trw.train.create_default_options(num_epochs=40)
-trainer = trw.train.Trainer()
+trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
-    run_prefix='mnist_cnn',
-    model_fn=lambda options: Net(),
+    datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
+    log_path='mnist_cnn',
+    model=Net(),
     optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
         datasets=datasets, model=model, learning_rate=0.1))
 

@@ -30,13 +30,13 @@ class RNN(nn.Module):
 
 
 options = trw.train.create_default_options(num_epochs=150)
-trainer = trw.train.Trainer()
+trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
-    run_prefix='mnist_rnn',
-    model_fn=lambda o: RNN(28, 256, 2, 10),
+    datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
+    log_path='mnist_rnn',
+    model=RNN(28, 256, 2, 10),
     optimizers_fn=lambda datasets, m: trw.train.create_adam_optimizers_fn(
         datasets=datasets, model=m, learning_rate=0.005))
 

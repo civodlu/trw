@@ -87,8 +87,7 @@ class FilterGaussian(FilterFixed):
         for size, s, mgrid in zip(kernel_sizes, sigma, meshgrids):
             std = s * s
             mean = (size - 1) / 2
-            kernel *= 1 / (std * math.sqrt(2 * math.pi)) \
-                      * torch.exp(-0.5 / std * ((mgrid - mean)) ** 2)
+            kernel *= 1 / (std * math.sqrt(2 * math.pi)) * torch.exp(-0.5 / std * (mgrid - mean) ** 2)
 
         # Make sure sum of values in gaussian kernel equals 1.
         kernel = kernel / torch.sum(kernel)

@@ -3,7 +3,7 @@ from typing import Callable, Tuple, Any, Optional, List
 from ..basic_typing import History
 from .params_optimizer import HyperParametersOptimizer
 from .store import Metrics, RunStore, RunResult
-from .params import HyperParameters
+from .params import HyperParameters, HyperParameterRepository
 
 import copy
 import math
@@ -167,13 +167,21 @@ class HyperParametersOptimizerHyperband(HyperParametersOptimizer):
         
         Args:
             store: how to result of each run. Can be None, in this case nothing is exported.
-            hyper_parameters: the hyper parameters
+            hyper_parameters: the hyper parameters to be optimized. If `None`,
+                use the global repository :class:`trw.hparams.HyperParameterRepository`
 
         Returns:
             the results of all the runs
         """
         if hyper_parameters is None:
-            hyper_parameters = HyperParameters()
+            # do not create a new store instance: the model might have
+            # instantiated hyper-parameters already, before the `evaluate_fn`
+            # so instead, use existing repository
+            self.log_string('creating an empty hyper parameter repository')
+            hyper_parameters = HyperParameterRepository.current_hparams
+        else:
+            # update the global repository
+            HyperParameterRepository.current_hparams = hyper_parameters
 
         # here `discover` the hyper-parameter. We must assume the hyper-parameter list
         # won't change

@@ -1,6 +1,5 @@
-import io
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Sequence
+from typing import Dict, Any, Sequence, List
 
 from trw.basic_typing import History
 
@@ -97,7 +96,7 @@ class RunStoreFile(RunStore):
         with open(self.store_location, mode='ab') as f:
             self.serializer.dump(run_result, f)
 
-    def load_all_runs(self) -> Sequence[RunResult]:
+    def load_all_runs(self) -> List[RunResult]:
         """
         Load all the runs
         """

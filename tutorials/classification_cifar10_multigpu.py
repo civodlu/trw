@@ -103,7 +103,7 @@ class Net(nn.Module):
         }
 
 
-def create_model(options):
+def create_model():
     model = Net()
     model = trw.train.DataParallelExtended(model)
     return model
@@ -113,7 +113,7 @@ if __name__ == '__main__':
     # configure and run the training/evaluation
     assert torch.cuda.device_count() >= 2, 'not enough CUDA devices for this multi-GPU tutorial!'
     options = trw.train.create_default_options(num_epochs=600)
-    trainer = trw.train.Trainer(callbacks_post_training_fn=None)
+    trainer = trw.train.TrainerV2(callbacks_post_training=None)
 
     mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
@@ -131,11 +131,12 @@ if __name__ == '__main__':
 
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transform_train=transform_train,
-                                                              transform_valid=transform_valid, nb_workers=0,
-                                                              batch_size=400, data_processing_batch_size=None),
-        run_prefix='cifar10_resnet50_multigpu',
-        model_fn=create_model,
+        datasets=trw.datasets.create_cifar10_dataset(
+            transform_train=transform_train,
+            transform_valid=transform_valid, nb_workers=0,
+            batch_size=400, data_processing_batch_size=None),
+        log_path='cifar10_resnet50_multigpu',
+        model=create_model(),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(
             datasets=datasets, model=model, learning_rate=0.1, momentum=0.9, weight_decay=5e-4, step_size=100,
             gamma=0.3))

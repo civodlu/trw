@@ -120,7 +120,7 @@ class ModelEmbeddedOptimizer(nn.Module):
         return {}
 
 
-def create_model(options):
+def create_model():
     m = ModelSimpleRegression()
     return m
 
@@ -129,12 +129,12 @@ optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_ra
 
 
 def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_batch_loss_terms=[]):
-    return trw.train.Trainer(
-        callbacks_per_epoch_fn=lambda: callback_per_epoch,
-        callbacks_per_batch_loss_terms_fn=lambda: callback_per_batch_loss_terms,
-        callbacks_post_training_fn=None,
-        callbacks_per_batch_fn=lambda: callback_per_batch,
-        callbacks_pre_training_fn=functools.partial(default_pre_training_callbacks, with_reporting_server=False)
+    return trw.train.TrainerV2(
+        callbacks_per_epoch=callback_per_epoch,
+        callbacks_per_batch_loss_terms=callback_per_batch_loss_terms,
+        callbacks_post_training=None,
+        callbacks_per_batch=callback_per_batch,
+        callbacks_pre_training=default_pre_training_callbacks(with_reporting_server=False)
     )
 
 
@@ -145,8 +145,8 @@ class TestTrainer(TestCase):
         trainer = create_trainer()
         model, results = trainer.fit(
             options,
-            inputs_fn=create_simple_regression,
-            model_fn=create_model,
+            datasets=create_simple_regression(),
+            model=create_model(),
             optimizers_fn=optimizer_fn,
             eval_every_X_epoch=2)
 
@@ -164,8 +164,8 @@ class TestTrainer(TestCase):
 
         model, results = trainer.fit(
             options,
-            inputs_fn=create_random_input,
-            model_fn=lambda _: ModelEmbedding(),
+            datasets=create_random_input(),
+            model=ModelEmbedding(),
             optimizers_fn=optimizer_fn)
         # do NOT use the results: final iteration is performed in eval mode
 
@@ -211,8 +211,8 @@ class TestTrainer(TestCase):
 
         _, _ = trainer.fit(
             options,
-            inputs_fn=create_random_input,
-            model_fn=lambda _: ModelEmbedding(),
+            datasets=create_random_input(),
+            model=ModelEmbedding(),
             optimizers_fn=optimizer_fn)
 
         self.assertTrue(len(all_batches) == 4)
@@ -238,9 +238,9 @@ class TestTrainer(TestCase):
             extension = 'pickle'
 
         path = os.path.join(utils.root_output, f'test.{extension}')
-        trw.train.Trainer.save_model(model, None, path, pickle_module=pickle_module)
+        trw.train.TrainerV2.save_model(model, None, path, pickle_module=pickle_module)
 
-        model2, results = trw.train.Trainer.load_model(path, pickle_module=pickle_module)
+        model2, results = trw.train.TrainerV2.load_model(path, pickle_module=pickle_module)
         assert (model2.w == model.w).all()
 
     def test_embedded_optimizer(self):
@@ -248,8 +248,8 @@ class TestTrainer(TestCase):
         trainer = create_trainer()
         model, results = trainer.fit(
             options,
-            inputs_fn=create_simple_regression,
-            model_fn=lambda options: ModelEmbeddedOptimizer(),
+            datasets=create_simple_regression(),
+            model=ModelEmbeddedOptimizer(),
             optimizers_fn=None,  # no optimizer: it is embedded in the model!
             eval_every_X_epoch=2)
 

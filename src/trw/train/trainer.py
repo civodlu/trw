@@ -1,7 +1,3 @@
-import sqlite3
-import traceback
-from io import StringIO
-
 import torch
 import torch.optim
 import torch.nn
@@ -10,11 +6,10 @@ import logging
 import numpy as np
 import numbers
 import os
-import pickle
 import time
 import itertools
 
-from ..utils import to_value, len_batch, safe_lookup
+from ..utils import to_value, len_batch
 
 from . import outputs_trw
 from trw.callbacks import callback_epoch_summary, callback_export_classification_report, callback_explain_decision, \
@@ -25,7 +20,7 @@ from trw.callbacks import callback_epoch_summary, callback_export_classification
     callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources
 
 from .utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch, transfer_batch_to_device, \
-    log_and_print, create_or_recreate_folder, RuntimeFormatter
+    log_and_print
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +192,6 @@ def train_loop(
         history: a list of history step
         callbacks_per_batch: the callbacks to be performed on each batch. if `None`, no callbacks to be run
         callbacks_per_batch_loss_terms: the callbacks to be performed on each loss term. if `None`, no callbacks to be run
-        apply_backward: if True, the gradient will be back-propagated
 
     Notes:
         if ``optimizer`` is None, there MUST be a ``.backward()`` to free graph and memory.
@@ -567,11 +561,6 @@ def default_post_training_callbacks(
     callbacks += [
         callback_export_classification_report.CallbackExportClassificationReport(),
         callback_export_history.CallbackExportHistory(),
-        #callback_tensorboard_embedding.CallbackTensorboardEmbedding(
-        #    embedding_name=embedding_name,
-        #    dataset_name=dataset_name,
-        #    split_name=split_name),
-        #callback_tensorboard_record_model.CallbackTensorboardRecordModel(),
     ]
 
     if explain_decision:
@@ -597,373 +586,6 @@ def trainer_callbacks_per_batch(dataset_name, split_name, batch):
         # (e.g., GAN `z` randomly generated)
         if isinstance(value, collections.Callable):
             batch[name] = value(batch)
-
-
-class Trainer:
-    """
-    This is the main class to train a model
-    """
-    def __init__(
-            self,
-            callbacks_per_batch_fn=None,
-            callbacks_per_batch_loss_terms_fn=None,
-            callbacks_per_epoch_fn=default_per_epoch_callbacks,
-            callbacks_pre_training_fn=default_pre_training_callbacks,
-            callbacks_post_training_fn=default_post_training_callbacks,
-            trainer_callbacks_per_batch=trainer_callbacks_per_batch,
-            run_epoch_fn=epoch_train_eval,
-            skip_eval_epoch_0=True):
-        """
-        Args:
-            callbacks_per_batch_fn: functor returning a list of callbacks. Call back must be
-                callable with `(dataset_name, split_name, batch)`. Each call back will be called
-                on each batch before the model is invoked
-
-            callbacks_per_batch_loss_terms_fn: a functor returning a list of callbacks. Each callback will be executed
-                after each model(batch) call. Must be callable with `dataset_name, split_name, batch, loss_terms`
-
-            callbacks_per_epoch_fn: a functor returning a list of callbacks. Each callback will be executed at
-                the end of every epoch
-
-            callbacks_pre_training_fn: a functor returning a list of callbacks. Each callback will be executed
-                before the training is started
-
-            callbacks_post_training_fn: a functor returning a list of callbacks. Each callback will be executed
-                after the training is started
-
-            trainer_callbacks_per_batch: Postprocessing step to be run on the batches
-
-            run_epoch_fn: the function to be used to perform training and
-            skip_eval_epoch_0: if ``True``, validation/test will not be run for epoch 0
-        """
-
-        self.callbacks_per_batch_fn = callbacks_per_batch_fn
-        self.callbacks_per_epoch_fn = callbacks_per_epoch_fn
-        self.callbacks_pre_training_fn = callbacks_pre_training_fn
-        self.callbacks_post_training_fn = callbacks_post_training_fn
-        self.callbacks_per_batch_loss_terms_fn = callbacks_per_batch_loss_terms_fn
-        self.trainer_callbacks_per_batch = trainer_callbacks_per_batch
-        self.run_epoch_fn = run_epoch_fn
-        self.skip_eval_epoch_0 = skip_eval_epoch_0
-
-    @staticmethod
-    def save_model(model, result, path, pickle_module=pickle):
-        """
-        Save a model to file
-
-        Args:
-            model: the model to serialize
-            result: an optional result file associated with the model
-            path: the base path to save the model
-            pickle_module: the serialization module that will be used to save the model and results
-
-        """
-        result_cp = None
-        sql_database = None
-        if result is not None:
-            import copy
-            # we don't want this function to have side effects so copy
-            # the result and strip what can't be pickled
-            result_cp = copy.copy(result)
-
-            if 'outputs' in result_cp is not None:
-                result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
-
-            sql_database = safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database')
-            if sql_database is not None:
-                del result_cp['options']['workflow_options']['sql_database']
-
-        result_cp_path = path + '.result'
-        with open(result_cp_path, 'wb') as f:
-            pickle_module.dump(result_cp, f)
-        torch.save(model, path, pickle_module=pickle_module)
-
-        if sql_database is not None:
-            # TODO find a cleaner and generic way of doing this...
-            result_cp['options']['workflow_options']['sql_database'] = sql_database
-
-    @staticmethod
-    def load_model(path, with_result=False, device=None, pickle_module=pickle):
-        """
-        load a saved model
-
-        Args:
-            path: where to store the model. result's will be loaded from `path + '.result'`
-            with_result: if True, the results of the model will be loaded
-            device: where to load the model. For example, models are typically trained on GPU,
-                but for deployment, CPU might be good enough. If `None`, use the same device as
-                when the model was exported
-            pickle_module: the de-serialization module to be used to load model and results
-
-        Returns:
-            a tuple `model, result`
-        """
-        result = None
-        if with_result:
-            result_path = path + '.result'
-            with open(result_path, 'rb') as f:
-                result = pickle_module.load(f)
-        model = torch.load(path, map_location=device, pickle_module=pickle_module)
-        return model, result
-
-    def fit(self, options, inputs_fn, model_fn, optimizers_fn,
-            losses_fn=default_sum_all_losses,
-            loss_creator=create_losses_fn,
-            run_prefix='default',
-            with_final_evaluation=True,
-            eval_every_X_epoch=1):
-        """
-        Fit the model
-
-        Requirements:
-
-        * enough main memory to store the outputs of all the datasets of a single epoch.
-            If this cannot be satisfied, sub-sample the epoch so that it can fit in main memory.
-        
-        Notes:
-
-        * if a feature value is Callable, its value will be replaced by the result of the call
-            (e.g., this can be useful to generate `z` embedding in GANs)
-
-        :param options:
-        :param inputs_fn: a functor returning a dictionary of datasets. Alternatively, datasets infos can be specified.
-                        `inputs_fn` must return one of:
-
-                        * datasets: dictionary of dataset
-                        * (datasets, datasets_infos): dictionary of dataset and additional infos
-                        
-                        We define:
-
-                        * datasets: a dictionary of dataset. a dataset is a dictionary of splits. a split is a dictionary of batched features.
-                        * Datasets infos are additional infos useful for the debugging of the dataset (e.g., class mappings, sample UIDs).
-                        Datasets infos are typically much smaller than datasets should be loaded in loadable in memory
-
-        :param model_fn: a functor with parameter `options` and returning a `Module` or a `ModuleDict`
-        
-        Depending of the type of the model, this is how it will be used:
-
-        * `Module`: optimizer will optimize `model.parameters()`
-        * `ModuleDict`: for each dataset name, the optimizer will optimize
-            `model[dataset_name].parameters()`. Note that a `forward` method will need to be implemented
-
-        :param losses_fn:
-        :param optimizers_fn:
-        :param loss_creator:
-        :param eval_every_X_epoch: evaluate the model every `X` epochs
-        :param run_prefix: the prefix of the output folder
-        :param with_final_evaluation: if True, once the model is fitted, evaluate all the data again in eval mode
-        :return: a tuple `model, result`
-        """
-        # set up our log path. This is where all the analysis of the model will be exported
-        log_path = os.path.join(
-            options['workflow_options']['logging_directory'],
-            run_prefix + '_r{}'.format(options['workflow_options']['trainer_run']))
-        options['workflow_options']['current_logging_directory'] = log_path
-
-        # now clear our log path to remove previous files if needed
-        create_or_recreate_folder(log_path)
-        
-        if len(logging.root.handlers) == 0:
-            # there is no logger configured, so add a basic one
-            logging.basicConfig(
-                filename=os.path.join(options['workflow_options']['logging_directory'], 'logging.txt'),
-                format='%(asctime)s %(levelname)s %(name)s %(message)s',
-                level=logging.DEBUG,
-                filemode='w')
-
-        # create the reporting SQL database
-        sql_path = os.path.join(options['workflow_options']['current_logging_directory'], 'reporting_sqlite.db')
-        sql = sqlite3.connect(sql_path)
-        options['workflow_options']['sql_database'] = sql
-        options['workflow_options']['sql_database_path'] = sql_path
-        options['workflow_options']['sql_database_view_path'] = sql_path.replace('.db', '.json')
-
-        # here we want to have our logging per training run, so add a handler
-        handler = logging.FileHandler(os.path.join(log_path, 'trainer.txt'))
-        formatter = RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
-        handler.setFormatter(formatter)
-        logging.root.addHandler(handler)
-
-        # instantiate the datasets, model, optimizers and losses
-        logger.info('started Trainer.fit(). Options={}'.format(options))
-
-        datasets_infos = None
-        logger.info('creating datasets...')
-        datasets = inputs_fn()
-        logger.info('datasets created successfully!')
-        assert datasets is not None, '`datasets` is None!'
-        if isinstance(datasets, tuple):
-            if len(datasets) == 2:
-                logger.info('inputs_fn specified `datasets, datasets_infos`')
-                datasets, datasets_infos = datasets
-            else:
-                assert 0, 'expected tuple `datasets` or `datasets, datasets_infos`'
-
-        logger.info('creating model...')
-        model = model_fn(options)
-        logger.info('model created successfully!')
-        
-        if isinstance(model, torch.nn.ModuleDict):
-            # if we have sub-models, we MUST define a `forward` method
-            # to orchestrate the calls of sub-models
-            assert 'forward' in dir(model)
-        
-        # migrate the model to the specified device
-        device = options['workflow_options']['device']
-
-        logger.info('model moved to device={}'.format(device))
-        model.to(device)
-        
-        # instantiate the optimizer and scheduler
-        logger.info('creating optimizers...')
-        if optimizers_fn is not None:
-            optimizers, schedulers, per_step_schedulers = optimizers_fn(datasets, model)
-            logger.info('optimizers created successfully!')
-        else:
-            logger.info('optimizer fn is None! No optimizer created.')
-            optimizers, schedulers, per_step_schedulers = None, None, None
-
-        logger.info('creating losses...')
-        losses = loss_creator(datasets, losses_fn)
-        logger.info('losses created successfully!')
-
-        num_epochs = options['training_parameters']['num_epochs']
-
-        if isinstance(optimizers, tuple):
-            assert len(optimizers) == 3, 'expected tuple(optimizer, scheduler)'
-            optimizers, schedulers, per_step_schedulers = optimizers
-
-        history = []
-
-        logger.info('creating callbacks...')
-        if self.callbacks_per_epoch_fn is not None:
-            callbacks_per_epoch = self.callbacks_per_epoch_fn()
-        else:
-            callbacks_per_epoch = []
-            
-        callbacks_per_batch = []
-        if self.trainer_callbacks_per_batch is not None:
-            callbacks_per_batch.append(self.trainer_callbacks_per_batch)
-        if self.callbacks_per_batch_fn is not None:
-            callbacks_per_batch += self.callbacks_per_batch_fn()
-
-        callbacks_per_batch_loss_terms = []
-        if self.callbacks_per_batch_loss_terms_fn is not None:
-            callbacks_per_batch_loss_terms += self.callbacks_per_batch_loss_terms_fn()
-        logger.info('callbacks created successfully!')
-
-        # run the callbacks  before training
-        if self.callbacks_pre_training_fn is not None:
-            logger.info('running pre-training callbacks...')
-            callbacks = self.callbacks_pre_training_fn()
-            for callback in callbacks:
-                #callback(options, history, model, losses=losses, outputs=None, datasets=datasets,
-                #         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                #         optimizers_fn=optimizers_fn, optimizers=optimizers)
-                try:
-                    callback(options, history, model, losses=losses, outputs=None,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn, optimizers=optimizers)
-                except Exception as e:
-                    f = StringIO()
-                    traceback.print_exc(file=f)
-                    print(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
-                    logger.error(f'callback={callback} failed with exception={e}. Stacktrace=\n{f.getvalue()}')
-
-            logger.info('pre-training callbacks completed!')
-
-        for epoch in range(num_epochs):
-            logger.info('started training epoch {}'.format(epoch))
-            run_eval = (not self.skip_eval_epoch_0 and epoch == 0) or (epoch + 1) % eval_every_X_epoch == 0
-
-            outputs_epoch, history_epoch = self.run_epoch_fn(
-                options,
-                datasets,
-                optimizers,
-                model,
-                losses,
-                schedulers,
-                per_step_schedulers,
-                history,
-                callbacks_per_batch,
-                callbacks_per_batch_loss_terms,
-                run_eval=run_eval,
-                force_eval_mode=False)
-            history.append(history_epoch)
-
-            logger.info('finished training epoch {}'.format(epoch))
-
-            last_epoch = epoch + 1 == num_epochs
-
-            logger.info('callbacks started')
-            for callback in callbacks_per_epoch:
-                #callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                #         datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                #         optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                try:
-                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                             optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
-                except Exception as e:
-                    logger.error('callback={} failed with exception={}'.format(callback, e))
-
-            logger.info('callbacks epoch {} finished'.format(epoch))
-
-        # finally run the post-training callbacks
-        outputs_epoch = None
-        if with_final_evaluation:
-            logger.info('started final evaluation...')
-            outputs_epoch, history_epoch = self.run_epoch_fn(
-                options,
-                datasets,
-                None,
-                model,
-                losses,
-                None,
-                None,
-                history,
-                callbacks_per_batch,
-                callbacks_per_batch_loss_terms,
-                run_eval=True,
-                force_eval_mode=True)
-            logger.info('finished final evaluation...')
-            history.append(history_epoch)
-
-        if self.callbacks_post_training_fn is not None:
-            logger.info('started post training callbacks...')
-            callbacks_post_training = self.callbacks_post_training_fn()
-            for callback in callbacks_post_training:
-                #callback(options, history, model, losses=losses, outputs=outputs_epoch, datasets=datasets,
-                #         datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                #         optimizers_fn=optimizers_fn)
-                try:
-                    callback(options, history, model, losses=losses, outputs=outputs_epoch,
-                             datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch, optimizers_fn=optimizers_fn)
-                except Exception as e:
-                    print('callback={} failed with exception={}'.format(callback, e))
-                    logger.error('callback={} failed with exception={}'.format(callback, e))
-
-            logger.info('finished post training callbacks...')
-
-            del callbacks_post_training
-            logger.info('deleted post training callbacks!')
-
-        # increment the number of runs
-        options['workflow_options']['trainer_run'] += 1
-
-        logger.info('removing logging handlers...')
-        logging.root.removeHandler(handler)
-
-        logger.info('training completed!')
-
-        sql.commit()
-        sql.close()
-
-        return model, {
-            'history': history,
-            'options': options,
-            'outputs': outputs_epoch,
-            'datasets_infos': datasets_infos
-        }
 
 
 def strip_unpickable(outputs):

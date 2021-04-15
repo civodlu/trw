@@ -66,16 +66,17 @@ def per_epoch_fn():
 
 # configure and run the training/evaluation
 options = trw.train.create_default_options(num_epochs=400)
-trainer = trw.train.Trainer(
-    callbacks_per_epoch_fn=per_epoch_fn,
+trainer = trw.train.TrainerV2(
+    callbacks_per_epoch=per_epoch_fn(),
 )
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64)),
-    run_prefix='mnist_cluttered_spatial_transformer',
-    model_fn=lambda options: Net(),
-    optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(datasets=datasets, model=model, learning_rate=0.00051, step_size=100, gamma=0.1)
+    datasets=trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64)),
+    log_path='mnist_cluttered_spatial_transformer',
+    model=Net(),
+    optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_scheduler_step_lr_fn(
+        datasets=datasets, model=model, learning_rate=0.00051, step_size=100, gamma=0.1)
 )
 
 # calculate statistics of the final epoch

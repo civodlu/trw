@@ -60,7 +60,7 @@ class Lstm(nn.Module):
         }
 
 
-def create_model(options, model_type):
+def create_model(model_type):
     if model_type == 'rnn':
         return RNN(input_size=57, hidden_size=128, output_size=18)
     elif model_type == 'lstm':
@@ -72,13 +72,13 @@ def create_model(options, model_type):
 # configure and run the training/evaluation
 model_type = 'lstm'
 options = trw.train.create_default_options(num_epochs=10)
-trainer = trw.train.Trainer()
+trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(
     options,
-    inputs_fn=lambda: trw.datasets.create_name_nationality_dataset(),
-    run_prefix='name_nationality_rnn',
-    model_fn=functools.partial(create_model, model_type=model_type),
+    datasets=trw.datasets.create_name_nationality_dataset(),
+    log_path='name_nationality_rnn',
+    model=create_model(model_type=model_type),
     optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(
         datasets=datasets, model=model, learning_rate=0.001))
 

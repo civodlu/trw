@@ -63,15 +63,15 @@ class Model(nn.Module):
 
 
 options = trw.train.create_default_options(num_epochs=0)
-trainer = trw.train.Trainer(
-    callbacks_pre_training_fn=None,
+trainer = trw.train.TrainerV2(
+    callbacks_pre_training=None,
     trainer_callbacks_per_batch=None,
-    callbacks_post_training_fn=lambda: [trw.callbacks.CallbackExplainDecision()]
+    callbacks_post_training=[trw.callbacks.CallbackExplainDecision()]
 )
 
 model, results = trainer.fit(
     options,
-    inputs_fn=input_dataset,
-    run_prefix='imagenet-explanation',
-    model_fn=lambda options: Model(),
+    datasets=input_dataset(),
+    log_path='imagenet-explanation',
+    model=Model(),
     optimizers_fn=None)

@@ -34,7 +34,7 @@ class Net(nn.Module):
 if __name__ == '__main__':
     # configure and run the training/evaluation
     options = trw.train.create_default_options(num_epochs=40)
-    trainer = trw.train.Trainer()
+    trainer = trw.train.TrainerV2()
     
     # perform augmentation on each batch of training data
     transforms = [
@@ -43,11 +43,14 @@ if __name__ == '__main__':
     
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_mnist_dataset(
-            transforms=transforms, nb_workers=2),
-        run_prefix='mnist_cnn_augmentation',
-        model_fn=lambda options: Net(),
-        optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=0.1))
+        datasets=trw.datasets.create_mnist_dataset(transforms=transforms, nb_workers=2),
+        log_path='mnist_cnn_augmentation',
+        model=Net(),
+        optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
+            datasets=datasets,
+            model=model,
+            learning_rate=0.1)
+    )
     
     # calculate statistics of the final epoch
     output = results['outputs']['mnist']['test']['softmax']

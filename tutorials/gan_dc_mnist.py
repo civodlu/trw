@@ -77,7 +77,7 @@ class Generator(nn.Module):
         ])
 
 
-def create_model(options):
+def create_model():
     latent_size = 64
 
     generator = Generator(latent_size=latent_size)
@@ -98,16 +98,16 @@ def create_model(options):
 
 
 options = trw.train.create_default_options(num_epochs=50)
-trainer = trw.train.Trainer(
-    callbacks_per_epoch_fn=per_epoch_callbacks,
+trainer = trw.train.TrainerV2(
+    callbacks_per_epoch=per_epoch_callbacks(),
 )
-model, result = trw.train.run_trainer_repeat(
-    trainer,
+
+trainer.fit(
     options,
-    number_of_training_runs=1,
-    inputs_fn=lambda: trw.datasets.create_mnist_dataset(batch_size=256, normalize_0_1=True),
+    datasets=trw.datasets.create_mnist_dataset(batch_size=256, normalize_0_1=True),
     eval_every_X_epoch=1,
-    model_fn=create_model,
-    run_prefix='mnist_dcgan2',
+    model=create_model(),
+    log_path='mnist_dcgan2',
     optimizers_fn=None  # the module has its own optimizers
 )
+

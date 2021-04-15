@@ -1,12 +1,12 @@
-import trw.utils
-
 import trw
 import os
 
 
 def create_net(hparams):
-    number_hidden = hparams.create('number_hidden', trw.hparams.DiscreteIntegrer(500, 100, 1000))
-    number_conv1_channels = hparams.create('number_conv1_channels', trw.hparams.DiscreteIntegrer(16, 4, 64))
+    # here we use the `trw.hparams.HyperParameterRepository.current_hparams` instance
+    # for ease of use.
+    number_hidden = hparams.create(trw.hparams.DiscreteInteger('number_hidden', 500, 100, 1000))
+    number_conv1_channels = hparams.create(trw.hparams.DiscreteInteger('number_conv1_channels', 16, 4, 64))
 
     n = trw.simple_layers.Input([None, 1, 28, 28], 'images')
     n = trw.simple_layers.Conv2d(n, out_channels=number_conv1_channels, kernel_size=5, stride=2)
@@ -21,27 +21,32 @@ def create_net(hparams):
     
 
 def evaluate_hparams(hparams):
-    learning_rate = hparams.create('learning_rate', trw.hparams.ContinuousUniform(0.1, 1e-5, 1.0))
-    options['model_parameters']['hyperparams'] = hparams
+    # resort to `trw.hparams.HyperParameterRepository.current_hparams`. It is the same
+    # object as `hparams`.
+    learning_rate = hparams.create(trw.hparams.ContinuousPower('learning_rate', 0.1, -5, -1))
 
     # disable most of the reporting so that we don't end up with
     # thousands of files that are not useful for hyper-parameter
     # search
-    trainer = trw.train.Trainer(
-        callbacks_pre_training_fn=None,
-        callbacks_post_training_fn=None,
-        callbacks_per_epoch_fn=lambda: [trw.callbacks.callback_epoch_summary.CallbackEpochSummary()])
+    trainer = trw.train.TrainerV2(
+        callbacks_pre_training=None,
+        callbacks_post_training=None,
+        callbacks_per_epoch=[trw.callbacks.callback_epoch_summary.CallbackEpochSummary()]
+    )
     
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_mnist_dataset(normalize_0_1=True),
-        run_prefix='run',
-        model_fn=lambda options: create_net(hparams),
-        optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(datasets=datasets, model=model, learning_rate=learning_rate))
+        datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
+        log_path='run',
+        model=create_net(hparams),
+        optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
+            datasets=datasets,
+            model=model,
+            learning_rate=learning_rate)
+    )
     
     hparam_loss = trw.utils.to_value(results['history'][-1]['mnist']['test']['overall_loss']['loss'])
-    hparam_infos = results['history']
-    return hparam_loss, hparam_infos
+    return {'loss': hparam_loss}, results['history'], 'additional info goes here!'
     
     
 # configure and run the training/evaluation
@@ -52,12 +57,13 @@ options['workflow_options']['logging_directory'] = hparams_root
 
 # run the hyper-parameter search
 random_search = trw.hparams.HyperParametersOptimizerRandomSearchLocal(
-    evaluate_hparams_fn=evaluate_hparams,
+    evaluate_fn=evaluate_hparams,
     repeat=40)
-random_search.optimize(hparams_root)
+
+store = trw.hparams.RunStoreFile(os.path.join(hparams_root, 'hparams.pkl'))
+runs = random_search.optimize(store)
 
 # finally analyse the run
-hparams_report = os.path.join(hparams_root, 'report')
 trw.hparams.analyse_hyperparameters(
-    hprams_path_pattern=hparams_root + r'/hparams-*.pkl',
-    output_path=hparams_report)
+    run_results=runs,
+    output_path=hparams_root)

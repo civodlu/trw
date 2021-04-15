@@ -106,7 +106,11 @@ class TestParamsOptimizer(TestCase):
         options = trw.train.create_default_options(num_epochs=1000)
         store_location = os.path.join(options['workflow_options']['logging_directory'], 'ut_store.pkl')
         store = trw.hparams.RunStoreFile(store_location=store_location)
-        tries = optimizer.optimize(store)
+        hparams = trw.hparams.HyperParameterRepository.current_hparams
+        tries = optimizer.optimize(store, hyper_parameters=hparams)
+
+        # existing hparam must have been replaced by the new one!
+        assert trw.hparams.HyperParameterRepository.current_hparams is hparams
 
         values = [t.metrics['loss'] for t in tries]
         best_try = tries[np.argmin(values)]
@@ -141,34 +145,35 @@ class TestParamsOptimizer(TestCase):
             }
             return datasets
 
-        def model_fn(options):
-            hparams = options['model_parameters']['hyperparams']
-            return Model_XOR(hparams)
+        def model_fn():
+            return Model_XOR(trw.hparams.HyperParameterRepository.current_hparams)
 
         def evaluate_hparams(hparams, options):
-            options['model_parameters']['hyperparams'] = hparams
-
-            trainer = trw.train.Trainer(
-                callbacks_per_epoch_fn=None,
-                callbacks_pre_training_fn=None,
-                callbacks_post_training_fn=None
+            trainer = trw.train.TrainerV2(
+                callbacks_per_epoch=None,
+                callbacks_pre_training=None,
+                callbacks_post_training=None
             )
             model, output = trainer.fit(
                 options,
-                inputs_fn=inputs_fn,
-                model_fn=model_fn,
+                datasets=inputs_fn(),
+                model=model_fn(),
                 optimizers_fn=optimizer_fn,
-                run_prefix=prefix)
+                log_path=prefix)
             loss = output['outputs']['dataset_1']['train']['regression']['loss']
             return {'loss': trw.utils.to_value(loss)}, [], 'no report'
 
         np.random.seed(0)
         prefix = 'hparams'
         options = trw.train.create_default_options(num_epochs=1000)
+        hparams_copy = trw.hparams.HyperParameterRepository.current_hparams
         optimizer = trw.hparams.params_optimizer_random_search.HyperParametersOptimizerRandomSearchLocal(
             evaluate_fn=functools.partial(evaluate_hparams, options=options),
             log_string=log_nothing,
             repeat=10)
+
+        # we did not provide a new HParams, it should be re-using the current hparams!
+        assert hparams_copy is trw.hparams.HyperParameterRepository.current_hparams
 
         store_location = os.path.join(options['workflow_options']['logging_directory'], 'ut_store.pkl')
         store = trw.hparams.RunStoreFile(store_location=store_location)

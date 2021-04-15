@@ -102,20 +102,20 @@ class TestTrainerAdvanced(TestCase):
         leaving the other parameters unchanged
         """
         options = trw.train.create_default_options(num_epochs=100)
-        trainer = trw.train.Trainer(
-            callbacks_pre_training_fn=None,
-            callbacks_per_epoch_fn=None,
-            callbacks_per_batch_loss_terms_fn=None,
-            callbacks_post_training_fn=None,
-            callbacks_per_batch_fn=None
+        trainer = trw.train.TrainerV2(
+            callbacks_pre_training=None,
+            callbacks_per_epoch=None,
+            callbacks_per_batch_loss_terms=None,
+            callbacks_post_training=None,
+            callbacks_per_batch=None
         )
 
         composed_model = ComposedModel()
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
         model, results = trainer.fit(
             options,
-            inputs_fn=create_regression_double_dataset,
-            model_fn=lambda options: composed_model,
+            datasets=create_regression_double_dataset(),
+            model=composed_model,
             optimizers_fn=optimizer_fn)
 
         # first make sure the model was trained perfectly
@@ -145,11 +145,11 @@ class TestTrainerAdvanced(TestCase):
 
         # make sure we can save a model
         path = os.path.join(utils.root_output, 'model_pytorch.pkl')
-        trw.train.Trainer.save_model(model, path=path, result=results)
+        trw.train.TrainerV2.save_model(model, path=path, result=results)
 
         # reload the model and compare the parameters
         device = torch.device('cpu')
-        loaded_model, loaded_result = trw.train.Trainer.load_model(path=path, with_result=True, device=device)
+        loaded_model, loaded_result = trw.train.TrainerV2.load_model(path=path, with_result=True, device=device)
         w_loaded = trw.utils.to_value(loaded_model['dataset_1'].w)
         w = trw.utils.to_value(model['dataset_1'].w)
         assert w == w_loaded
@@ -163,20 +163,20 @@ class TestTrainerAdvanced(TestCase):
         Make sure we can block the training of sub-models using standard torch
         """
         options = trw.train.create_default_options(num_epochs=100)
-        trainer = trw.train.Trainer(
-            callbacks_pre_training_fn=None,
-            callbacks_per_epoch_fn=None,
-            callbacks_per_batch_loss_terms_fn=None,
-            callbacks_post_training_fn=None,
-            callbacks_per_batch_fn=None
+        trainer = trw.train.TrainerV2(
+            callbacks_pre_training=None,
+            callbacks_per_epoch=None,
+            callbacks_per_batch_loss_terms=None,
+            callbacks_post_training=None,
+            callbacks_per_batch=None
         )
         model = PartNotTrainedModel()
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
         final_model, results = trainer.fit(
             options,
-            inputs_fn=create_regression_double_dataset,
-            model_fn=lambda options: model,
+            datasets=create_regression_double_dataset(),
+            model=model,
             optimizers_fn=optimizer_fn)
 
         print('Done!')

@@ -47,15 +47,15 @@ class TestCallbackExplainDecision(TestCase):
         The validity of the explanation.
         """
         options = trw.train.create_default_options(num_epochs=50)
-        trainer = trw.train.Trainer(
-            callbacks_post_training_fn=callbacks_post_training_fn,
-            callbacks_pre_training_fn=None)
+        trainer = trw.train.TrainerV2(
+            callbacks_post_training=callbacks_post_training_fn(),
+            callbacks_pre_training=None)
 
         model, results = trainer.fit(
             options,
-            inputs_fn=create_dataset,
-            run_prefix='synthetic_explanation',
-            model_fn=lambda options: Net(),
+            datasets=create_dataset(),
+            log_path='synthetic_explanation',
+            model=Net(),
             optimizers_fn=optimizer_fn)
 
         classification_error = results['history'][-1]['fake_symbols_2d']['train']['fake_symbols_2d']['classification error']
