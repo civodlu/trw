@@ -157,7 +157,8 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             kernel_size: Optional[int] = 3,
             strides: Union[int, Sequence[int]] = 2,
             activation: Optional[Any] = None,
-            config: LayerConfig = default_layer_config(dimensionality=None)
+            config: LayerConfig = default_layer_config(dimensionality=None),
+            add_last_downsampling_to_intermediates: bool = False
     ):
         """
 
@@ -172,10 +173,14 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             dim: the dimensionality of the UNet (e.g., dim=2 for 2D images)
             input_channels: the number of channels of the input
             output_channels: the number of channels of the output
-            down_block_fn: a function taking (dim, in_channels, out_channels) and returning a nn.Module
-            up_block_fn: a function taking (dim, in_channels, out_channels, bilinear) and returning a nn.Module
-            init_block_channels: the number of channels to be used by the init block. If `None`, `channels[0] // 2`
-                will be used
+            down_block_fn: a function taking (dim, in_channels, out_channels)
+                and returning a nn.Module
+            up_block_fn: a function taking (dim, in_channels, out_channels, bilinear)
+                and returning a nn.Module
+            init_block_channels: the number of channels to be used by the init block.
+                If `None`, `channels[0] // 2` will be used
+            add_last_downsampling_to_intermediates: if True, the last down sampling layer will
+                be added to the intermediate
         """
         assert len(channels) >= 1
         config = copy.copy(config)
@@ -193,6 +198,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
         self.init_block_channels = init_block_channels
         self.output_channels = output_channels
         self.latent_channels = latent_channels
+        self.add_last_downsampling_to_intermediates = add_last_downsampling_to_intermediates
 
         if isinstance(strides, int):
             strides = [strides] * len(channels)
@@ -296,6 +302,10 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             prev = x_n[-1]
 
         intermediates = []
+        if self.add_last_downsampling_to_intermediates:
+            # can be useful for a global embedding supervision
+            intermediates.append(prev)
+
         for skip, up in zip(reversed(x_n[:-1]), self.ups):
             prev = up(skip, prev)
             intermediates.append(prev)
