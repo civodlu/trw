@@ -13,13 +13,18 @@ def cutout_value_fn_constant(image: Tensor, value: Numeric) -> None:
     image[:] = value
 
 
-def cutout_random_ui8_torch(image: torch.Tensor, min_value: Numeric = 0, max_value: Numeric = 255) -> None:
+def cutout_random_ui8_torch(image: torch.Tensor, min_value: int = 0, max_value: int = 255) -> None:
     """
     Replace the image content as a constant value
     """
     assert isinstance(image, torch.Tensor), f'must be a tensor. Got={type(image)}'
     size = [image.shape[0]] + [1] * (len(image.shape) - 1)
-    color = torch.randint(min_value, max_value, dtype=image.dtype, device=image.device, size=size)
+    color = torch.randint(
+        min_value,
+        max_value,
+        dtype=image.dtype,
+        device=image.device,
+        size=size)
     image[:] = color
 
 

@@ -71,6 +71,7 @@ def upsample(tensor: TensorNCX, size: ShapeX, mode='linear') -> TensorNCX:
     assert len(tensor.shape) >= 3, 'only 1D, 2D, 3D tensors are currently handled!'
     assert len(tensor.shape) <= 5, 'only 1D, 2D, 3D tensors are currently handled!'
 
+    size = tuple(size)
     if not torch.is_floating_point(tensor):
         # Workaround for non floating point tensors. Ignore `mode`
         if len(tensor.shape) == 3:

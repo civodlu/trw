@@ -102,6 +102,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             if padding == 'same':
                 p = div_shape(convolution_kernels[n], 2)
             else:
+                assert not isinstance(padding, str)
                 p = padding[n]
 
             ops = []

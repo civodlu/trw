@@ -6,6 +6,7 @@ from ..basic_typing import ConvStrides, Activation, TorchTensorNCX
 from .layer_config import LayerConfig, default_layer_config
 from .blocks import ConvBlockType, BlockConvNormActivation, \
     ConvTransposeBlockType, BlockDeconvNormActivation, BlockRes
+import numpy as np
 
 
 class EncoderDecoderResnet(nn.Module):

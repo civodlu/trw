@@ -3,7 +3,7 @@ import copy
 import torch.nn as nn
 from .layer_config import default_layer_config, LayerConfig, NormType
 from .flatten import Flatten
-from typing import Any, Sequence
+from typing import Any, Sequence, List
 
 
 def denses(
@@ -36,7 +36,7 @@ def denses(
     config.norm_type = normalization_type
     config.set_dim(1)
 
-    ops = []
+    ops: List[nn.Module] = []
     if with_flatten:
         ops.append(Flatten())
     

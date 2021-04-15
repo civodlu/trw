@@ -19,6 +19,6 @@ class SpatialInfo:
             spacing: the size in mm of a voxel in each dimension, in DHW order
             shape: the shape of the volume in DHW order
         """
-        self.origin: Length = origin
-        self.spacing: Length = spacing
-        self.shape: ShapeX = shape
+        self.origin: Optional[Length] = origin
+        self.spacing: Optional[Length] = spacing
+        self.shape: Optional[ShapeX] = shape

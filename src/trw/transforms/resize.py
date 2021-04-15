@@ -18,7 +18,13 @@ def resize_numpy(array: NumpyTensorNCX, size: ShapeX, mode: Literal['nearest', '
     else:
         raise NotImplementedError('mode={} is not implemented!'.format(mode))
 
-    resized_array = skimage.transform.resize(array, [array.shape[0], array.shape[1]] + size, order=order, anti_aliasing=False, preserve_range=True)
+    resized_array = skimage.transform.resize(
+        array,
+        [array.shape[0], array.shape[1]] + list(size),
+        order=order,
+        anti_aliasing=False,
+        preserve_range=True
+    )
     if resized_array.dtype != array.dtype:
         resized_array = resized_array.astype(array.dtype)
     return resized_array

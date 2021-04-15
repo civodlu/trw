@@ -1,5 +1,7 @@
 from enum import Enum
 import torch.nn as nn
+from trw.basic_typing import ModuleCreator
+
 from .ops_conversion import OpsConversion
 from typing import Dict, Any, Optional
 
@@ -35,7 +37,7 @@ class DropoutType(Enum):
     AlphaDropout = 'AlphaDropout'
 
 
-def create_dropout_fn(ops: OpsConversion, dropout: Optional[DropoutType]) -> Optional[nn.Module]:
+def create_dropout_fn(ops: OpsConversion, dropout: Optional[DropoutType]) -> Optional[ModuleCreator]:
     """
     Create the norm function from the ops and norm type
 
@@ -60,7 +62,7 @@ def create_dropout_fn(ops: OpsConversion, dropout: Optional[DropoutType]) -> Opt
     return None
 
 
-def create_pool_fn(ops: OpsConversion, pool: Optional[PoolType]) -> Optional[nn.Module]:
+def create_pool_fn(ops: OpsConversion, pool: Optional[PoolType]) -> Optional[ModuleCreator]:
     """
     Create the norm function from the ops and pool type
 
@@ -89,7 +91,7 @@ def create_pool_fn(ops: OpsConversion, pool: Optional[PoolType]) -> Optional[nn.
     return None
 
 
-def create_norm_fn(ops: OpsConversion, norm: Optional[NormType]) -> Optional[nn.Module]:
+def create_norm_fn(ops: OpsConversion, norm: Optional[NormType]) -> Optional[ModuleCreator]:
     """
     Create the norm function from the ops and norm type
 
@@ -149,11 +151,11 @@ class LayerConfig:
         self.dropout_kwargs = dropout_kwargs
 
         # types depends on the dimensionality
-        self.norm: Optional[nn.Module] = None
-        self.conv: Optional[nn.Module] = None
-        self.deconv: Optional[nn.Module] = None
-        self.pool: Optional[nn.Module] = None
-        self.dropout: Optional[nn.Module] = None
+        self.norm: Optional[ModuleCreator] = None
+        self.conv: Optional[ModuleCreator] = None
+        self.deconv: Optional[ModuleCreator] = None
+        self.pool: Optional[ModuleCreator] = None
+        self.dropout: Optional[ModuleCreator] = None
 
     def set_dim(self, dimensionality: int):
         self.ops.set_dim(dimensionality)

@@ -25,6 +25,7 @@ class BlockPool(nn.Module):
         if kernel_size is not None:
             pool_kwargs['kernel_size'] = kernel_size
 
+        assert config.pool is not None
         self.op = config.pool(**pool_kwargs)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -49,6 +50,7 @@ def _posprocess_padding(config: LayerConfig, conv_kwargs: Dict, ops: List[nn.Mod
     # than the other. Here we need to add an additional ops to perform the padding
     # since we can't do it in the convolution
     if padding is not None:
+        assert config.ops.dim is not None
         if isinstance(padding, int):
             padding = [padding] * config.ops.dim
         else:
@@ -80,6 +82,7 @@ def _posprocess_padding(config: LayerConfig, conv_kwargs: Dict, ops: List[nn.Mod
                 # and then reverse the whole sequence
                 full_padding += [right, left]
 
+            assert config.ops.constant_padding is not None
             ops.append(config.ops.constant_padding(padding=tuple(full_padding[::-1]), value=0))
             # we have explicitly added padding, so now set to
             # convolution padding to none
@@ -122,6 +125,7 @@ class BlockConvNormActivation(nn.Module):
         ops: List[nn.Module] = []
         _posprocess_padding(config, conv_kwargs, ops)
 
+        assert config.conv is not None
         conv = config.conv(
             in_channels=input_channels,
             out_channels=output_channels,
@@ -170,6 +174,7 @@ class BlockDeconvNormActivation(nn.Module):
         ops: List[nn.Module] = []
         _posprocess_padding(config, deconv_kwargs, ops)
 
+        assert config.deconv is not None
         deconv = config.deconv(
             in_channels=input_channels,
             out_channels=output_channels,
@@ -229,11 +234,14 @@ class BlockUpsampleNnConvNormActivation(nn.Module):
         assert stride is not None
 
         ops = []
-        if (isinstance(stride, Number) and stride != 1) or (max(stride) != 1 or min(stride) != 1):
+        stride_np = np.asarray(stride)
+        if (isinstance(stride, Number) and stride != 1) or (stride_np.max() != 1 or stride_np.min() != 1):
             # if stride is 1, don't upsample!
+            assert config.ops.upsample_fn is not None
             ops.append(config.ops.upsample_fn(scale_factor=stride))
 
         _posprocess_padding(config, conv_kwargs, ops)
+        assert config.conv is not None
         ops.append(config.conv(in_channels=input_channels,
                                out_channels=output_channels,
                                **conv_kwargs))
@@ -356,6 +364,7 @@ class BlockRes(nn.Module):
             kernel_size=kernel_size, padding=padding,
             stride=stride, padding_mode=padding_mode)
 
+        assert config.activation is not None
         self.activation = config.activation(**config.activation_kwargs)
 
         config.activation = None
