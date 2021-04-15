@@ -66,7 +66,7 @@ class CallbackEarlyStopping(Callback):
         losses_by_step = collections.defaultdict(list)
         for e in checkpoints_epoch:
             for run in all_runs:
-                if len(run.history) > e:
+                if run.history is not None and len(run.history) > e:
                     loss = self.loss_fn(run.history[e - 1])
                     if loss is not None:
                         losses_by_step[e].append(loss)
