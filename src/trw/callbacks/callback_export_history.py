@@ -90,7 +90,7 @@ class CallbackExportHistory(Callback):
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('CallbackExportHistory.__call__ started')
-        export_root = options['workflow_options']['current_logging_directory']
+        export_root = options.workflow_options.current_logging_directory
         sample_root_dir = os.path.join(export_root, self.export_dirname)
         utilities.create_or_recreate_folder(sample_root_dir)
 

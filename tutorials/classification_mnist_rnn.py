@@ -29,7 +29,7 @@ class RNN(nn.Module):
         }
 
 
-options = trw.train.create_default_options(num_epochs=150)
+options = trw.train.Options(num_epochs=150)
 trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(

@@ -429,7 +429,7 @@ outputs = g(x, conditional=c)
 """
 
 num_epochs = 300
-options = trw.train.create_default_options(num_epochs=num_epochs, device='cuda:0')
+options = trw.train.Options(num_epochs=num_epochs, device='cuda:0')
 
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,

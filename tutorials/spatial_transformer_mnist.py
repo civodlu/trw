@@ -65,7 +65,7 @@ def per_epoch_fn():
 
 
 # configure and run the training/evaluation
-options = trw.train.create_default_options(num_epochs=400)
+options = trw.train.Options(num_epochs=400)
 trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_fn(),
 )

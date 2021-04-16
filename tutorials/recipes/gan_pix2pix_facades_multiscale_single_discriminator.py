@@ -204,7 +204,7 @@ def pre_training_callbacks():
 
 
 num_epochs = 10000
-options = trw.train.create_default_options(num_epochs=num_epochs, device='cuda:1')
+options = trw.train.Options(num_epochs=num_epochs, device='cuda:1')
 
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,

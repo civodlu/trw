@@ -191,7 +191,7 @@ class CallbackReportingLayerStatistics(Callback):
                 default_split_name=self.split_name)
 
             # set the default parameter of the graph
-            config_path = options['workflow_options']['sql_database_view_path']
+            config_path = options.workflow_options.sql_database_view_path
 
             table_names = [self.table_name_activation, self.table_name_gradient]
             for table_name in table_names:

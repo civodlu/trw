@@ -35,7 +35,7 @@ class TestCallbackExportConvolutionKernel(TestCase):
         output_values = o['embedding'].output
         assert output_values.shape == (10, 128)
 
-        options = trw.train.create_default_options()
+        options = trw.train.Options()
         callback = trw.callbacks.CallbackExportConvolutionKernel(
             find_convolution_fn=trw.train.find_last_forward_convolution)
 

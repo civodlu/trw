@@ -62,7 +62,7 @@ class Model(nn.Module):
         }
 
 
-options = trw.train.create_default_options(num_epochs=0)
+options = trw.train.Options(num_epochs=0)
 trainer = trw.train.TrainerV2(
     callbacks_pre_training=None,
     trainer_callbacks_per_batch=None,

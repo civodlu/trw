@@ -92,7 +92,7 @@ class CallbackEarlyStopping(Callback):
 
     def __call__(self, options, history: History, model, **kwargs):
         logger.info('started!')
-        num_epochs = options['training_parameters']['num_epochs']
+        num_epochs = options.training_parameters.num_epochs
 
         if self.max_loss_by_epoch is None:
             logger.debug('initializing the checkpoints...')

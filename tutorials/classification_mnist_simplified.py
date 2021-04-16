@@ -19,7 +19,7 @@ def create_net(options):
 trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(
-    trw.train.create_default_options(num_epochs=10),
+    trw.train.Options(num_epochs=10),
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_cnn',
     model=create_net(),

@@ -38,10 +38,10 @@ def create_dataset():
 
 class TestCallbackTensorboardRecordModel(unittest.TestCase):
     def test_basic(self):
-        options = trw.train.create_default_options(device=torch.device('cpu'))
+        options = trw.train.Options(device=torch.device('cpu'))
         callback = trw.callbacks.CallbackTensorboardRecordModel(onnx_folder='onnx_export')
 
-        onnx_root = os.path.join(options['workflow_options']['current_logging_directory'], 'onnx_export')
+        onnx_root = os.path.join(options.workflow_options.current_logging_directory, 'onnx_export')
         trw.train.create_or_recreate_folder(onnx_root)
 
         model = Net()

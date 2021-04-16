@@ -69,7 +69,7 @@ def pos_training_fn():
     ]
 
 
-options = trw.train.create_default_options(num_epochs=200)
+options = trw.train.Options(num_epochs=200)
 trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_fn(),
     callbacks_post_training=pos_training_fn(),

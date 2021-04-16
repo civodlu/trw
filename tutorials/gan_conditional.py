@@ -127,7 +127,7 @@ def pre_training_callbacks():
     ]
 
 
-options = trw.train.create_default_options(num_epochs=15)
+options = trw.train.Options(num_epochs=15)
 trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_callbacks(),
     callbacks_pre_training=pre_training_callbacks()

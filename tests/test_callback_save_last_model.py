@@ -29,7 +29,7 @@ class TestCallbackSaveLastModel(TestCase):
 
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()
-        options = trw.train.create_default_options(logging_directory=logging_directory)
+        options = trw.train.Options(logging_directory=logging_directory)
         history = []
         for epoch in range(20):
             history.append({})
@@ -55,7 +55,7 @@ class TestCallbackSaveLastModel(TestCase):
 
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()
-        options = trw.train.create_default_options(logging_directory=logging_directory)
+        options = trw.train.Options(logging_directory=logging_directory)
 
         outputs = {
             'dataset1': {
@@ -95,7 +95,7 @@ class TestCallbackSaveLastModel(TestCase):
 
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()
-        options = trw.train.create_default_options(logging_directory=logging_directory)
+        options = trw.train.Options(logging_directory=logging_directory)
 
         outputs = {
             'dataset1': {

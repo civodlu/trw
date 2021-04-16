@@ -33,7 +33,7 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
-    options = trw.train.create_default_options(num_epochs=40)
+    options = trw.train.Options(num_epochs=40)
     trainer = trw.train.TrainerV2()
     
     # perform augmentation on each batch of training data

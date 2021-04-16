@@ -21,7 +21,7 @@ class CallbackTensorboardRecordModel(CallbackTensorboardBased):
         self.onnx_folder = onnx_folder
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
-        root = options['workflow_options']['current_logging_directory']
+        root = options.workflow_options.current_logging_directory
         logger.info('root={}'.format(root))
         logger_tb = CallbackTensorboardBased.create_logger(root)
         if logger_tb is None:
@@ -34,7 +34,7 @@ class CallbackTensorboardRecordModel(CallbackTensorboardBased):
         if self.split_name is None:
             self.split_name = next(iter(datasets[self.dataset_name]))
 
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
 
         # ONNX export MUST be in eval mode!
         model.eval()

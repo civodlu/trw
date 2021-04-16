@@ -141,7 +141,7 @@ def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_ba
 class TestTrainer(TestCase):
     def test_simple_regression(self):
         # the simples API test for model fitting
-        options = trw.train.create_default_options(num_epochs=200)
+        options = trw.train.Options(num_epochs=200)
         trainer = create_trainer()
         model, results = trainer.fit(
             options,
@@ -158,7 +158,7 @@ class TestTrainer(TestCase):
         # make sure the mode is correctly set for the different phases of train and evaluation
         # in this test, capture the dropout layer applied on an input. In `train` mode we expect random drop
         # of the output while in test mode we should get the identity
-        options = trw.train.create_default_options(num_epochs=1)
+        options = trw.train.Options(num_epochs=1)
         callback = CallbackCollectOutput()
         trainer = create_trainer(callback_per_epoch=[callback])
 
@@ -206,7 +206,7 @@ class TestTrainer(TestCase):
             all_batches.append(batch)
             all_loss_terms.append(loss_terms)
 
-        options = trw.train.create_default_options(num_epochs=1)
+        options = trw.train.Options(num_epochs=1)
         trainer = create_trainer(callback_per_batch=[callback_batch], callback_per_batch_loss_terms=[callback_batch_loss_terms])
 
         _, _ = trainer.fit(
@@ -244,7 +244,7 @@ class TestTrainer(TestCase):
         assert (model2.w == model.w).all()
 
     def test_embedded_optimizer(self):
-        options = trw.train.create_default_options(num_epochs=200)
+        options = trw.train.Options(num_epochs=200)
         trainer = create_trainer()
         model, results = trainer.fit(
             options,

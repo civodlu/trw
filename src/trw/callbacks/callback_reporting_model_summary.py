@@ -112,8 +112,8 @@ def model_summary_base(model, batch):
 
 
 def export_table(options, table_name, batch, table_role, clear_existing_data, base_name='', table_preamble='', commit=True):
-    sql_database = options['workflow_options']['sql_database']
-    root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', table_name)
+    sql_database = options.workflow_options.sql_database
+    root = os.path.join(options.workflow_options.current_logging_directory, 'static', table_name)
 
     if clear_existing_data:
         cursor = sql_database.cursor()
@@ -121,7 +121,7 @@ def export_table(options, table_name, batch, table_role, clear_existing_data, ba
         sql_database.commit()
 
         # also remove the binary/image store
-        root = os.path.dirname(options['workflow_options']['sql_database_path'])
+        root = os.path.dirname(options.workflow_options.sql_database_path)
         create_or_recreate_folder(os.path.join(root, 'static', table_name))
 
     sql_table = TableStream(
@@ -177,7 +177,7 @@ class CallbackReportingModelSummary(Callback):
         table_name = 'model_summary'
         if not self.reporting_config_exported:
             self.reporting_config_exported = True
-            config_path = options['workflow_options']['sql_database_view_path']
+            config_path = options.workflow_options.sql_database_view_path
             update_json_config(config_path, {
                 table_name: {
                     'default': {
@@ -188,7 +188,7 @@ class CallbackReportingModelSummary(Callback):
 
         batch = next(iter(datasets[self.dataset_name][self.split_name]))
         batch['split_name'] = self.split_name
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
         batch = transfer_batch_to_device(batch, device=device)
         summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(
             model,

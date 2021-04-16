@@ -101,7 +101,7 @@ class TestTrainerAdvanced(TestCase):
         We expect to have the parameters of model[datasetname] trained only for datasetname dataset,
         leaving the other parameters unchanged
         """
-        options = trw.train.create_default_options(num_epochs=100)
+        options = trw.train.Options(num_epochs=100)
         trainer = trw.train.TrainerV2(
             callbacks_pre_training=None,
             callbacks_per_epoch=None,
@@ -162,7 +162,7 @@ class TestTrainerAdvanced(TestCase):
         """
         Make sure we can block the training of sub-models using standard torch
         """
-        options = trw.train.create_default_options(num_epochs=100)
+        options = trw.train.Options(num_epochs=100)
         trainer = trw.train.TrainerV2(
             callbacks_pre_training=None,
             callbacks_per_epoch=None,

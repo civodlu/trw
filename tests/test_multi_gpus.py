@@ -80,7 +80,7 @@ class TestMultiGpus(TestCase):
             warnings.warn(f'This test can\'t be run. Requires CUDA devices>=2, got={nb_cuda_devices}', ResourceWarning)
             return
 
-        options = trw.train.create_default_options(num_epochs=5)
+        options = trw.train.Options(num_epochs=5)
         trainer = trw.train.TrainerV2(
             callbacks_per_epoch=None,
             callbacks_per_batch_loss_terms=None,
@@ -106,7 +106,7 @@ class TestMultiGpus(TestCase):
             warnings.warn(f'This test can\'t be run. Requires CUDA devices>=2, got={nb_cuda_devices}', ResourceWarning)
             return
 
-        options = trw.train.create_default_options(num_epochs=5)
+        options = trw.train.Options(num_epochs=5)
         trainer = trw.train.TrainerV2(
             callbacks_per_epoch=None,
             callbacks_per_batch_loss_terms=None,

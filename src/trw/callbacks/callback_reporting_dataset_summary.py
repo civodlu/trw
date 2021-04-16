@@ -112,7 +112,7 @@ class CallbackReportingDatasetSummary(Callback):
 
     def first_epoch(self, options):
         # set the default parameter of the graph
-        config_path = options['workflow_options']['sql_database_view_path']
+        config_path = options.workflow_options.sql_database_view_path
         update_json_config(config_path, {
             self.table_name: {
                 'default': {
@@ -127,7 +127,7 @@ class CallbackReportingDatasetSummary(Callback):
         self.first_epoch(options)
         data_stats = _data_summary(datasets, max_nb_samples=self.max_nb_samples)
 
-        sql_database = options['workflow_options']['sql_database']
+        sql_database = options.workflow_options.sql_database
         export_table(
             options,
             self.table_name,

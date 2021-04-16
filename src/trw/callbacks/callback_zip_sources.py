@@ -42,7 +42,7 @@ class CallbackZipSources(Callback):
     Record important info relative to the training such as the sources & configuration info
 
     This is to make sure a result can always be easily reproduced. Any configuration option
-    can be safely appended in options['runtime']
+    can be safely appended in options.runtime
     """
     def __init__(
             self,
@@ -64,7 +64,7 @@ class CallbackZipSources(Callback):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
         logging.info(f'CallbackZipSources, folders={self.folders_to_record}')
-        source_zip_path = os.path.join(options['workflow_options']['current_logging_directory'], self.filename)
+        source_zip_path = os.path.join(options.workflow_options.current_logging_directory, self.filename)
         zip_sources(self.folders_to_record, source_zip_path, extensions=self.extensions, exclusions=self.exclusions)
 
         stream = io.StringIO()

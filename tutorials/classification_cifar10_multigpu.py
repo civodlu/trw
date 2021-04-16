@@ -112,7 +112,7 @@ def create_model():
 if __name__ == '__main__':
     # configure and run the training/evaluation
     assert torch.cuda.device_count() >= 2, 'not enough CUDA devices for this multi-GPU tutorial!'
-    options = trw.train.create_default_options(num_epochs=600)
+    options = trw.train.Options(num_epochs=600)
     trainer = trw.train.TrainerV2(callbacks_post_training=None)
 
     mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)

@@ -76,7 +76,7 @@ def create_model(model_type):
 
 # configure and run the training/evaluation
 model_type = 'lstm'
-options = trw.train.create_default_options(num_epochs=10)
+options = trw.train.Options(num_epochs=10)
 trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(

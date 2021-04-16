@@ -104,8 +104,8 @@ class TestParamsOptimizer(TestCase):
             log_string=log_nothing,
             repeat=10000)
 
-        options = trw.train.create_default_options(num_epochs=1000)
-        store_location = os.path.join(options['workflow_options']['logging_directory'], 'ut_store.pkl')
+        options = trw.train.Options(num_epochs=1000)
+        store_location = os.path.join(options.workflow_options.logging_directory, 'ut_store.pkl')
         store = trw.hparams.RunStoreFile(store_location=store_location)
         hparams = trw.hparams.HyperParameterRepository.current_hparams
         tries = optimizer.optimize(store, hyper_parameters=hparams)
@@ -167,7 +167,7 @@ class TestParamsOptimizer(TestCase):
         trw.hparams.HyperParameterRepository.reset()
         np.random.seed(0)
         prefix = 'hparams'
-        options = trw.train.create_default_options(num_epochs=1000)
+        options = trw.train.Options(num_epochs=1000)
         hparams_copy = trw.hparams.HyperParameterRepository.current_hparams
         optimizer = trw.hparams.params_optimizer_random_search.HyperParametersOptimizerRandomSearchLocal(
             evaluate_fn=functools.partial(evaluate_hparams, options=options),
@@ -177,7 +177,7 @@ class TestParamsOptimizer(TestCase):
         # we did not provide a new HParams, it should be re-using the current hparams!
         assert hparams_copy is trw.hparams.HyperParameterRepository.current_hparams
 
-        store_location = os.path.join(options['workflow_options']['logging_directory'], 'ut_store.pkl')
+        store_location = os.path.join(options.workflow_options.logging_directory, 'ut_store.pkl')
         store = trw.hparams.RunStoreFile(store_location=store_location)
         tries = optimizer.optimize(store)
 

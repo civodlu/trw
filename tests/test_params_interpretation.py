@@ -39,8 +39,8 @@ class TestParamsInterpretation(TestCase):
 
         This is the simplest case: independent, same range, positive only
         """
-        options = trw.train.options.create_default_options()
-        tmp_path = os.path.join(options['workflow_options']['logging_directory'], 'test_independent_params')
+        options = trw.train.options.Options()
+        tmp_path = os.path.join(options.workflow_options.logging_directory, 'test_independent_params')
         trw.train.create_or_recreate_folder(tmp_path)
 
         nb_samples = 500
@@ -78,8 +78,8 @@ class TestParamsInterpretation(TestCase):
 
         The correlated parameters should have a similar importance
         """
-        options = trw.train.options.create_default_options()
-        tmp_path = os.path.join(options['workflow_options']['logging_directory'], 'test_correlated_params')
+        options = trw.train.options.Options()
+        tmp_path = os.path.join(options.workflow_options.logging_directory, 'test_correlated_params')
         trw.train.create_or_recreate_folder(tmp_path)
 
         nb_samples = 500
@@ -115,8 +115,8 @@ class TestParamsInterpretation(TestCase):
 
         This is the simplest case: independent, same range, positive only
         """
-        options = trw.train.options.create_default_options()
-        tmp_path = os.path.join(options['workflow_options']['logging_directory'], 'test_independent_different_ranges')
+        options = trw.train.options.Options()
+        tmp_path = os.path.join(options.workflow_options.logging_directory, 'test_independent_different_ranges')
         trw.train.create_or_recreate_folder(tmp_path)
 
         nb_samples = 1000

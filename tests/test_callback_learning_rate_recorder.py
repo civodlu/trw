@@ -51,7 +51,7 @@ class TestCallbackLearningRateRecorder(TestCase):
             gamma=0.1
         )
 
-        options = trw.train.create_default_options(num_epochs=50)
+        options = trw.train.Options(num_epochs=50)
         r = trainer.fit(
             options,
             datasets=create_datasets(),

@@ -37,7 +37,7 @@ class UNetSegmentation(nn.Module):
 
 if __name__ == '__main__':
     nb_epochs = 400
-    options = trw.train.create_default_options(num_epochs=nb_epochs, device=torch.device('cuda:1'))
+    options = trw.train.Options(num_epochs=nb_epochs, device=torch.device('cuda:1'))
     trainer = trw.train.TrainerV2(
         callbacks_pre_training=[
             trw.callbacks.CallbackReportingStartServer(),

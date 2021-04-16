@@ -88,12 +88,12 @@ class TestCallbackExportClassificationErrors(unittest.TestCase):
         }
 
         callback = CallbackExportClassificationReport()
-        options = trw.train.create_default_options(device=torch.device('cpu'))
-        options['workflow_options']['current_logging_directory'] = os.path.join(
-            options['workflow_options']['logging_directory'],
+        options = trw.train.Options(device=torch.device('cpu'))
+        options.workflow_options.current_logging_directory = os.path.join(
+            options.workflow_options.logging_directory,
             'test_classification_report')
-        root_output = options['workflow_options']['current_logging_directory']
-        trw.train.create_or_recreate_folder(options['workflow_options']['current_logging_directory'])
+        root_output = options.workflow_options.current_logging_directory
+        trw.train.create_or_recreate_folder(options.workflow_options.current_logging_directory)
         callback(options, None, None, None, outputs, None, datasets_infos, None)
 
         path_report = os.path.join(root_output, 'output1-dataset1-split1-report.txt')

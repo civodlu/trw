@@ -16,7 +16,7 @@ def create_net_simple():
 trainer = trw.train.TrainerV2(callbacks_post_training=trw.train.default_post_training_callbacks(explain_decision=True))
 
 model, results = trainer.fit(
-    trw.train.create_default_options(num_epochs=5),
+    trw.train.Options(num_epochs=5),
     datasets=trw.datasets.create_fake_symbols_2d_dataset(
         image_shape=[64, 64],
         nb_classes_at_once=1,

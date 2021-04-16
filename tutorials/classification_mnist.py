@@ -34,7 +34,7 @@ class Net(nn.Module):
 
 
 # configure and run the training/evaluation
-options = trw.train.create_default_options(num_epochs=40)
+options = trw.train.Options(num_epochs=40)
 trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(

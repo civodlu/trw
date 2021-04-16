@@ -85,7 +85,7 @@ def get_spatial_info_type(batch: Batch, name: str) -> SpatialInfo:
 
 if __name__ == '__main__':
     nb_epochs = 400
-    options = trw.train.create_default_options(num_epochs=nb_epochs)
+    options = trw.train.Options(num_epochs=nb_epochs)
     trainer = trw.train.Trainer(
         callbacks_pre_training_fn=lambda: [
             trw.callbacks.CallbackReportingStartServer(),

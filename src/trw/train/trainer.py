@@ -396,8 +396,8 @@ def epoch_train_eval(
     Returns:
 
     """
-    device = options['workflow_options']['device']
-    train_split_name = options['workflow_options']['train_split']
+    device = options.workflow_options.device
+    train_split_name = options.workflow_options.train_split
     history_by_dataset_epoch = collections.OrderedDict()
     outputs_by_dataset_epoch = collections.OrderedDict()
     for dataset_name, dataset in datasets.items():

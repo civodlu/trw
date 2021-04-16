@@ -220,7 +220,7 @@ def pre_training_callbacks():
     ]
 
 
-options = trw.train.create_default_options(num_epochs=600, device='cuda:0')
+options = trw.train.Options(num_epochs=600, device='cuda:0')
 
 trainer = trw.train.Trainer(
     callbacks_per_epoch_fn=per_epoch_callbacks,

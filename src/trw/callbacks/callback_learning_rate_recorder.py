@@ -26,7 +26,7 @@ class CallbackLearningRateRecorder(Callback):
         if optimizers is None:
             return
         if self.output_path is None:
-            self.output_path = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
+            self.output_path = os.path.join(options.workflow_options.current_logging_directory, self.dirname)
 
         epoch = len(history)
         for optimizer_name, optimizer in optimizers.items():

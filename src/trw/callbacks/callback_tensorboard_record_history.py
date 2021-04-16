@@ -10,7 +10,7 @@ class CallbackTensorboardRecordHistory(CallbackTensorboardBased):
     This callback records the history to a tensorboard readable log
     """
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
-        root = options['workflow_options']['current_logging_directory']
+        root = options.workflow_options.current_logging_directory
         logger.info('started CallbackTensorboardRecordHistory.__call__')
 
         logger_tb = CallbackTensorboardBased.create_logger(root)

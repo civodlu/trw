@@ -201,7 +201,7 @@ class CallbackExplainDecision(callback.Callback):
             datasets,
             self.dataset_name,
             self.split_name,
-            train_split_name=options['workflow_options']['train_split'])
+            train_split_name=options.workflow_options.train_split)
 
         if self.dataset_name is None:
             logger.error('can\'t find split={} for dataset={}'.format(self.split_name, self.dataset_name))
@@ -223,7 +223,7 @@ class CallbackExplainDecision(callback.Callback):
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('started CallbackExplainDecision.__call__')
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
         model.eval()  # we are in evaluation mode!
 
         if self.batch is None:
@@ -231,7 +231,7 @@ class CallbackExplainDecision(callback.Callback):
         if self.batch is None:
             return
 
-        root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
+        root = os.path.join(options.workflow_options.current_logging_directory, self.dirname)
         if not os.path.exists(root):
             create_or_recreate_folder(root)
 

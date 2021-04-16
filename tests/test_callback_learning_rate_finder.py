@@ -46,7 +46,7 @@ class TestCallbackLearningRateFinder(unittest.TestCase):
         """
         torch.manual_seed(0)
         np.random.seed(0)
-        options = trw.train.create_default_options(device=torch.device('cpu'), num_epochs=200)
+        options = trw.train.Options(device=torch.device('cpu'), num_epochs=200)
         trainer = trw.train.TrainerV2(
             callbacks_post_training=None,
             callbacks_pre_training=[trw.callbacks.CallbackLearningRateFinder(set_new_learning_rate=True)]

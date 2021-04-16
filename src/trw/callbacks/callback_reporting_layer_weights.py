@@ -46,7 +46,7 @@ class CallbackReportingLayerWeights(Callback):
                 default_split_name=self.split_name)
 
             # set the default parameter of the graph
-            config_path = options['workflow_options']['sql_database_view_path']
+            config_path = options.workflow_options.sql_database_view_path
 
             update_json_config(config_path, {
                 self.table_name: {

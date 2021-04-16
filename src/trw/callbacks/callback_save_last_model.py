@@ -122,7 +122,7 @@ class CallbackSaveLastModel(Callback):
             name = f'{self.model_name}_e_{len(history)}.model'
         else:
             name = f'{self.model_name}.model'
-        export_path = os.path.join(options['workflow_options']['current_logging_directory'], name)
+        export_path = os.path.join(options.workflow_options.current_logging_directory, name)
 
         logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
         from ..train.trainer_v2 import TrainerV2
@@ -151,7 +151,7 @@ class CallbackSaveLastModel(Callback):
             if metric_value is not None and metric_value < self.keep_model_with_lowest_metric.lowest_metric:
                 self.keep_model_with_lowest_metric.lowest_metric = metric_value
                 export_path = os.path.join(
-                    options['workflow_options']['current_logging_directory'],
+                    options.workflow_options.current_logging_directory,
                     f'{self.best_model_name}.model')
                 TrainerV2.save_model(model, result, export_path)
 

@@ -8,7 +8,7 @@ class Net_simple(nn.Module):
     def __init__(self, options):
         super().__init__()
 
-        dropout_probability = options['training_parameters']['dropout_probability']
+        dropout_probability = options.training_parameters['dropout_probability']
         self.convs = trw.layers.convs_2d(3, [64, 128, 256], batch_norm_kwargs={}, convolution_repeats=[3, 3, 3])
         self.denses = trw.layers.denses([4096, 256, 10], dropout_probability=None, batch_norm_kwargs={}, last_layer_is_output=True)
 
@@ -128,7 +128,7 @@ class Net_DARTS(nn.Module):
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
-    options = trw.train.create_default_options(num_epochs=600)
+    options = trw.train.Options(num_epochs=600)
     trainer = trw.train.TrainerV2(callbacks_post_training=None)
 
     transforms = [
@@ -148,6 +148,6 @@ if __name__ == '__main__':
         optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(
             datasets=datasets, model=model, learning_rate=0.01))
     
-    model.export_configuration(options['workflow_options']['current_logging_directory'])
+    model.export_configuration(options.workflow_options.current_logging_directory)
 
     print('DONE')

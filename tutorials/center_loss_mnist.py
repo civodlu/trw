@@ -24,7 +24,7 @@ def export_scatter(embedding, output_truth, name, min_values=None, max_values=No
 
     plt.title(name)
     plt.legend(loc=2)
-    trw.train.export_figure(options['workflow_options']['current_logging_directory'], name)
+    trw.train.export_figure(options.workflow_options.current_logging_directory, name)
 
 
 class Net(nn.Module):
@@ -67,7 +67,7 @@ class Net(nn.Module):
 
 
 # configure and run the training/evaluation
-options = trw.train.create_default_options(num_epochs=200)
+options = trw.train.Options(num_epochs=200)
 trainer = trw.train.TrainerV2()
 
 model, results = trainer.fit(

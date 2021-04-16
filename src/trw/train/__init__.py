@@ -1,4 +1,4 @@
-from .options import create_default_options
+from .options import Options
 from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     time_it, CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\

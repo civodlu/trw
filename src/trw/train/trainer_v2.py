@@ -66,15 +66,16 @@ class TrainerV2:
         if result is not None:
             import copy
             # we don't want this function to have side effects so copy
-            # the result and strip what can't be pickled
+            # the result
             result_cp = copy.copy(result)
 
+            # strip what can't be pickled
             if 'outputs' in result_cp is not None:
                 result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
 
-            sql_database = safe_lookup(result_cp, 'options', 'workflow_options', 'sql_database')
+            sql_database = result_cp['options'].workflow_options.sql_database
             if sql_database is not None:
-                del result_cp['options']['workflow_options']['sql_database']
+                result_cp['options'].workflow_options.sql_database = None
 
         result_cp_path = path + '.result'
         with open(result_cp_path, 'wb') as f:
@@ -83,7 +84,7 @@ class TrainerV2:
 
         if sql_database is not None:
             # TODO find a cleaner and generic way of doing this...
-            result_cp['options']['workflow_options']['sql_database'] = sql_database
+            result_cp['options'].workflow_options.sql_database = sql_database
 
     @staticmethod
     def load_model(path, with_result=False, device=None, pickle_module=pickle):
@@ -145,7 +146,7 @@ class TrainerV2:
             losses_fn:
             loss_creator:
             log_path: the path of the logs to be exported during the training of the model.
-                if the `log_path` is a relative path, the options['workflow_options']['logging_directory']
+                if the `log_path` is a relative path, the options.workflow_options.logging_directory
                 is used as root
             with_final_evaluation:
             history:
@@ -159,15 +160,15 @@ class TrainerV2:
         GracefulKiller.abort_event.clear()
 
         # set up our log path. This is where all the analysis of the model will be exported
-        logging_directory = options['workflow_options']['logging_directory']
+        logging_directory = options.workflow_options.logging_directory
         if log_path is None:
             log_path = os.path.join(
                 logging_directory,
-                'default_r{}'.format(options['workflow_options']['trainer_run']))
+                'default_r{}'.format(options.workflow_options.trainer_run))
         elif not os.path.isabs(log_path):
             log_path = os.path.join(logging_directory, log_path)
 
-        options['workflow_options']['current_logging_directory'] = log_path
+        options.workflow_options.current_logging_directory = log_path
 
         if history is None:
             # no prior history
@@ -190,9 +191,9 @@ class TrainerV2:
         # create the reporting SQL database
         sql_path = os.path.join(log_path, 'reporting_sqlite.db')
         sql = sqlite3.connect(sql_path)
-        options['workflow_options']['sql_database'] = sql
-        options['workflow_options']['sql_database_path'] = sql_path
-        options['workflow_options']['sql_database_view_path'] = sql_path.replace('.db', '.json')
+        options.workflow_options.sql_database = sql
+        options.workflow_options.sql_database_path = sql_path
+        options.workflow_options.sql_database_view_path = sql_path.replace('.db', '.json')
 
         # here we want to have our logging per training run, so add a handler
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.log'))
@@ -218,7 +219,7 @@ class TrainerV2:
                 logger.info(f'datasets all closed!')
 
             # increment the number of runs
-            options['workflow_options']['trainer_run'] += 1
+            options.workflow_options.trainer_run += 1
 
             logger.info('removing logging handlers...')
             logging.root.removeHandler(handler)
@@ -246,7 +247,7 @@ class TrainerV2:
         outputs_epoch = None
         try:
             # migrate the model to the specified device
-            device = options['workflow_options']['device']
+            device = options.workflow_options.device
 
             logger.info('model moved to device={}'.format(device))
             model.to(device)
@@ -264,7 +265,7 @@ class TrainerV2:
             losses = loss_creator(datasets, losses_fn)
             logger.info('losses created successfully!')
 
-            num_epochs = options['training_parameters']['num_epochs']
+            num_epochs = options.training_parameters.num_epochs
 
             callbacks_per_epoch = []
             if self.callbacks_per_epoch is not None:

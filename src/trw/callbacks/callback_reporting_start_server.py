@@ -55,7 +55,7 @@ class CallbackReportingStartServer(Callback):
             else:
                 handlers = []
             process = mp.Process(target=run_server,
-                                 args=(options['workflow_options']['sql_database_path'],
+                                 args=(options.workflow_options.sql_database_path,
                                        self.reporting_options,
                                        self.show_app,
                                        handlers,

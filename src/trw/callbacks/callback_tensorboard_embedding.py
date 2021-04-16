@@ -129,7 +129,7 @@ class CallbackTensorboardEmbedding(CallbackTensorboardBased):
             datasets,
             default_dataset_name=self.dataset_name,
             default_split_name=self.split_name,
-            train_split_name=options['workflow_options']['train_split']
+            train_split_name=options.workflow_options.train_split
         )
 
         if self.dataset_name is None:
@@ -150,7 +150,7 @@ class CallbackTensorboardEmbedding(CallbackTensorboardBased):
                 self.image_name = ''
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
-        root = options['workflow_options']['current_logging_directory']
+        root = options.workflow_options.current_logging_directory
         logger.info('root={}, nb_samples={}'.format(root, self.maximum_samples))
         logger_tb = CallbackTensorboardBased.create_logger(root)
         if logger_tb is None:
@@ -165,7 +165,7 @@ class CallbackTensorboardEmbedding(CallbackTensorboardBased):
             return
         logger.info('parameters: dataset={}, split={}, embedding={}, image_name={}'.format(self.dataset_name, self.split_name, self.embedding_name, self.image_name))
 
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
         logger.info('collecting embeddings')
 
         # here collect the embeddings and images

@@ -221,16 +221,16 @@ class CallbackLearningRateFinder(Callback):
             **kwargs: required `optimizers_fn`
         """
         logger.info('started CallbackLearningRateFinder.__call__')
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
 
-        output_path = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
+        output_path = os.path.join(options.workflow_options.current_logging_directory, self.dirname)
         utilities.create_or_recreate_folder(output_path)
 
         if self.dataset_name is None:
             self.dataset_name = next(iter(datasets))
 
         if self.split_name is None:
-            self.split_name = options['workflow_options']['train_split']
+            self.split_name = options.workflow_options.train_split
 
         logger.info('dataset={}, split={}, nb_samples={}, learning_rate_start={}, learning_rate_stop={}'.format(
             self.dataset_name,

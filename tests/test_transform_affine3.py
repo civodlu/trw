@@ -60,13 +60,13 @@ class TestTransformsAffine(unittest.TestCase):
             interpolation='nearest')
 
         i = np.uint8(images_tfm.numpy())[0, 0]
-        options = trw.train.create_default_options()
-        root = options['workflow_options']['logging_directory']
+        options = trw.train.Options()
+        root = options.workflow_options.logging_directory
         Image.fromarray(np.stack((i, i, i), axis=2)).save(os.path.join(root, 'transformed.png'))
 
     def test_affine_2d_joint(self):
-        options = trw.train.create_default_options()
-        root = options['workflow_options']['logging_directory']
+        options = trw.train.Options()
+        root = options.workflow_options.logging_directory
 
         from PIL import Image
         image_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..', 'tutorials', 'input_images', '2007_008764.jpg')
@@ -92,8 +92,8 @@ class TestTransformsAffine(unittest.TestCase):
         assert (transformed_batch['images'] == transformed_batch['images_joint']).all()
 
     def test_affine_3d_joint(self):
-        options = trw.train.create_default_options()
-        root = options['workflow_options']['logging_directory']
+        options = trw.train.Options()
+        root = options.workflow_options.logging_directory
 
         shape = [32, 64, 96]
         shape2 = [32 // 2, 64 // 2, 96 // 2]

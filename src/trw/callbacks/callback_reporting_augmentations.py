@@ -43,7 +43,7 @@ class CallbackReportingAugmentations(Callback):
 
     def first_epoch(self, options):
         # set the default parameter of the graph
-        config_path = options['workflow_options']['sql_database_view_path']
+        config_path = options.workflow_options.sql_database_view_path
         update_json_config(config_path, {
             self.table_name: {
                 'default': {
@@ -56,12 +56,12 @@ class CallbackReportingAugmentations(Callback):
 
     def create_or_recreate_table(self, options):
         # destroy previous table
-        sql_database = options['workflow_options']['sql_database']
+        sql_database = options.workflow_options.sql_database
         cursor = sql_database.cursor()
         table_truncate(cursor, self.table_name)
 
         # remove the binary/image store of the previous table
-        root = os.path.dirname(options['workflow_options']['sql_database_path'])
+        root = os.path.dirname(options.workflow_options.sql_database_path)
         create_or_recreate_folder(os.path.join(root, 'static', self.table_name))
 
         # create a fresh table
@@ -74,7 +74,7 @@ class CallbackReportingAugmentations(Callback):
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs):
         logger.info('started CallbackReportingAugmentations.__call__')
         if self.split_name is None:
-            self.split_name = options['workflow_options']['train_split']
+            self.split_name = options.workflow_options.train_split
 
         if not self.init_done:
             self.first_epoch(options)

@@ -130,7 +130,7 @@ class Net_simple(nn.Module):
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
-    options = trw.train.create_default_options(num_epochs=200)
+    options = trw.train.Options(num_epochs=200)
     trainer = trw.train.TrainerV2(callbacks_post_training=None)
     
     mean = np.asarray([0.4914, 0.4822, 0.4465], dtype=np.float32)

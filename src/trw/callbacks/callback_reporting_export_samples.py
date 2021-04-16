@@ -211,11 +211,11 @@ class CallbackReportingExportSamples(Callback):
                  **kwargs):
 
         logger.info('started CallbackExportSamples.__call__')
-        device = options['workflow_options']['device']
+        device = options.workflow_options.device
 
         if not self.reporting_config_exported:
             # export how the samples should be displayed by the reporting
-            config_path = options['workflow_options']['sql_database_view_path']
+            config_path = options.workflow_options.sql_database_view_path
             update_json_config(config_path, {
                 self.table_name: {
                     'data': {
@@ -235,14 +235,14 @@ class CallbackReportingExportSamples(Callback):
             })
             self.reporting_config_exported = True
 
-        sql_database = options['workflow_options']['sql_database']
+        sql_database = options.workflow_options.sql_database
         if self.clear_previously_exported_samples:
             cursor = sql_database.cursor()
             table_truncate(cursor, self.table_name)
             sql_database.commit()
 
             # also remove the binary/image store
-            root = os.path.dirname(options['workflow_options']['sql_database_path'])
+            root = os.path.dirname(options.workflow_options.sql_database_path)
             create_or_recreate_folder(os.path.join(root, 'static', self.table_name))
 
         sql_table = TableStream(
@@ -253,7 +253,7 @@ class CallbackReportingExportSamples(Callback):
         from ..train.trainer import eval_loop
         logger.info(f'export started..., N={self.max_samples}')
         for dataset_name, dataset in datasets.items():
-            root = os.path.join(options['workflow_options']['current_logging_directory'], 'static', self.table_name)
+            root = os.path.join(options.workflow_options.current_logging_directory, 'static', self.table_name)
             if not os.path.exists(root):
                 utilities.create_or_recreate_folder(root)
 
@@ -265,7 +265,7 @@ class CallbackReportingExportSamples(Callback):
                           callbacks_per_batch_loss_terms=[
                               functools.partial(
                                   callbacks_per_loss_term,
-                                  root=options['workflow_options']['current_logging_directory'],
+                                  root=options.workflow_options.current_logging_directory,
                                   datasets_infos=datasets_infos,
                                   loss_terms_inclusion=self.loss_terms_inclusion,
                                   feature_exclusions=self.feature_exclusions,

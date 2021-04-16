@@ -84,7 +84,7 @@ class CallbackExportConvolutionKernel(Callback):
             logger.error('can\'t find a dataset name or split name!')
             return
 
-        self.kernel_root_path = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
+        self.kernel_root_path = os.path.join(options.workflow_options.current_logging_directory, self.dirname)
         utilities.create_or_recreate_folder(self.kernel_root_path)
 
         # find the requested kernels

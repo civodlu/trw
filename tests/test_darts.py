@@ -135,7 +135,7 @@ class TestDarts(TestCase):
         Create a synthetic problem with a single best value for the
         cell weights and the NN weights. Make sure we find the expected solution
         """
-        options = trw.train.create_default_options(num_epochs=50)
+        options = trw.train.Options(num_epochs=50)
         trainer = trw.train.TrainerV2()
         r = trainer.fit(
             options=options,

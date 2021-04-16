@@ -19,7 +19,7 @@ class CallbackReportingRecordHistory(Callback):
 
     def first_epoch(self, options):
         # set the default parameter of the graph
-        config_path = options['workflow_options']['sql_database_view_path']
+        config_path = options.workflow_options.sql_database_view_path
         update_json_config(config_path, {
             self.table_name: {
                 'default': {
@@ -39,7 +39,7 @@ class CallbackReportingRecordHistory(Callback):
         if not self.init_done:
             self.first_epoch(options)
 
-        sql_database = options['workflow_options']['sql_database']
+        sql_database = options.workflow_options.sql_database
         dataset_values = []
         split_values = []
         output_values = []

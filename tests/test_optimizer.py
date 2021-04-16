@@ -7,7 +7,7 @@ import trw
 import numpy as np
 from torch import nn
 from trw.callbacks import Callback
-from trw.train import create_default_options
+from trw.train import Options
 from trw.utils import torch_requires
 
 
@@ -55,7 +55,7 @@ class TestOptimizer(unittest.TestCase):
         num_epochs = 100
 
         model = Model()
-        options = create_default_options(device=torch.device('cpu'), num_epochs=num_epochs)
+        options = Options(device=torch.device('cpu'), num_epochs=num_epochs)
         callback_per_step = CallbackLearningRateRecorderPerStep()
         trainer = trw.train.TrainerV2(
             callbacks_per_batch_loss_terms=[callback_per_step],

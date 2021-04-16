@@ -5,7 +5,7 @@ import trw
 from trw.utils import ExceptionAbortRun
 from trw.callbacks import CallbackEarlyStopping
 from trw.hparams import HyperParameters, RunResult
-from trw.train import create_default_options
+from trw.train import Options
 
 
 class TestCallbackEarlyStopping(unittest.TestCase):
@@ -26,7 +26,7 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         early_stopping = CallbackEarlyStopping(store=store, loss_fn=lambda hstep: hstep['1-accuracy'])
 
         # we are better, do NOT raise `ExceptionAbortRun`
-        options = create_default_options(num_epochs=nb_epochs)
+        options = Options(num_epochs=nb_epochs)
         early_stopping(options, history[:10], None)
         early_stopping(options, history[:25], None)
         early_stopping(options, history[:50], None)
@@ -59,7 +59,7 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         # we are better, do NOT raise `ExceptionAbortRun`
         aborted_run = False
         try:
-            options = create_default_options(num_epochs=nb_epochs)
+            options = Options(num_epochs=nb_epochs)
             early_stopping(options, history[:10], None)
         except ExceptionAbortRun:
             aborted_run = True
@@ -93,7 +93,7 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         # we are better, do NOT raise `ExceptionAbortRun`
         aborted_run = False
         try:
-            options = create_default_options(num_epochs=nb_epochs)
+            options = Options(num_epochs=nb_epochs)
             early_stopping(options, history[:10], None)
         except ExceptionAbortRun:
             aborted_run = True
@@ -135,7 +135,7 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         # we are better, do NOT raise `ExceptionAbortRun`
         aborted_run = False
         try:
-            options = create_default_options(num_epochs=nb_epochs)
+            options = Options(num_epochs=nb_epochs)
             early_stopping(options, history[:10], None)
         except ExceptionAbortRun as e:
             aborted_run = True

@@ -47,7 +47,7 @@ class TestCallbackExplainDecision(TestCase):
         Make sure the explanations for the different algorithms are generated. This is not assessing
         The validity of the explanation.
         """
-        options = trw.train.create_default_options(num_epochs=50)
+        options = trw.train.Options(num_epochs=50)
         trainer = trw.train.TrainerV2(
             callbacks_post_training=callbacks_post_training_fn(),
             callbacks_pre_training=None)
@@ -63,7 +63,7 @@ class TestCallbackExplainDecision(TestCase):
         assert classification_error < 0.05
 
         expected_algorithms = [kvp.name for kvp in list(trw.callbacks.ExplainableAlgorithm)]
-        explanation_path = os.path.join(options['workflow_options']['current_logging_directory'], 'explained')
+        explanation_path = os.path.join(options.workflow_options.current_logging_directory, 'explained')
         for algorithm in expected_algorithms:
             files = glob.glob(os.path.join(explanation_path, f'*{algorithm}*.png'))
             assert len(files) >= 2 * 4

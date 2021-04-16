@@ -50,10 +50,10 @@ def evaluate_hparams(hparams):
     
     
 # configure and run the training/evaluation
-options = trw.train.create_default_options(num_epochs=5)
-hparams_root = os.path.join(options['workflow_options']['logging_directory'], 'mnist_cnn_hparams')
+options = trw.train.Options(num_epochs=5)
+hparams_root = os.path.join(options.workflow_options.logging_directory, 'mnist_cnn_hparams')
 trw.train.utilities.create_or_recreate_folder(hparams_root)
-options['workflow_options']['logging_directory'] = hparams_root
+options.workflow_options.logging_directory = hparams_root
 
 # run the hyper-parameter search
 random_search = trw.hparams.HyperParametersOptimizerRandomSearchLocal(

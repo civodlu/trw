@@ -53,7 +53,7 @@ class CallbackExportClassificationReport(Callback):
                         continue
                     logger.info('output_classification found={}, dataset={}, split={}'.format(output_name, dataset_name, split_name))
 
-                    root = options['workflow_options']['current_logging_directory']
+                    root = options.workflow_options.current_logging_directory
 
                     class_name = output['output_ref'].classes_name
                     mapping = get_mappinginv(datasets_infos, dataset_name, split_name, class_name)

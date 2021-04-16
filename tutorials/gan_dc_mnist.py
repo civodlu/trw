@@ -97,7 +97,7 @@ def create_model():
     return model
 
 
-options = trw.train.create_default_options(num_epochs=50)
+options = trw.train.Options(num_epochs=50)
 trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_callbacks(),
 )

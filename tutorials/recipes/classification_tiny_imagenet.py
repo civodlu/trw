@@ -70,7 +70,7 @@ if __name__ == '__main__':
         trw.transforms.TransformCast(feature_names=['images'], cast_type='float'),
     ]
 
-    options = trw.train.create_default_options(num_epochs=2000, device=torch.device('cuda:1'))
+    options = trw.train.Options(num_epochs=2000, device=torch.device('cuda:1'))
     trainer = trw.train.TrainerV2(
         callbacks_per_epoch=trw.train.default_per_epoch_callbacks(
             additional_callbacks=per_epoch_additional_callbacks())

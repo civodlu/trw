@@ -25,8 +25,8 @@ class TestParamsOptimizer(TestCase):
             max_iter=81,
             repeat=20)
 
-        options = trw.train.create_default_options()
-        tmp = os.path.join(options['workflow_options']['logging_directory'], 'hyperband_test')
+        options = trw.train.Options()
+        tmp = os.path.join(options.workflow_options.logging_directory, 'hyperband_test')
         trw.train.create_or_recreate_folder(tmp)
         tries = optimizer.optimize(store=None)
 

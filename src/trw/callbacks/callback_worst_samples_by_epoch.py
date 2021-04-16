@@ -249,7 +249,7 @@ class CallbackWorstSamplesByEpoch(Callback):
                 subsampled_split = split.subsample_uids(uids=uids_to_export, uids_name=self.uids_name, new_sampler=sampler.SamplerSequential())
                 logger.info('subsampled sequence!')
 
-                device = options['workflow_options']['device']
+                device = options.workflow_options.device
 
                 logger.info('exporting...')
                 export_samples_v2(
@@ -272,7 +272,7 @@ class CallbackWorstSamplesByEpoch(Callback):
         if self.output_name is None or self.split_names is None or self.dataset_name is None:
             return
 
-        self.root = os.path.join(options['workflow_options']['current_logging_directory'], self.dirname)
+        self.root = os.path.join(options.workflow_options.current_logging_directory, self.dirname)
         if not os.path.exists(self.root):
             utilities.create_or_recreate_folder(self.root)
 
