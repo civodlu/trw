@@ -103,8 +103,9 @@ def create_activation(
                 nn.RReLU,
                 nn.SELU,
                 nn.CELU,
-                nn.GELU,
-                nn.Softplus)) -> nn.Module:
+                #nn.GELU,  # TODO torch >= 1.4
+                nn.Softplus
+        )) -> nn.Module:
     """
     Create activation functions
 
