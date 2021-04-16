@@ -147,7 +147,6 @@ def _plot_scatter(plot_name, x_values, x_name, y_values, y_name, discrete_random
     ax.set_xlabel(x_name)
     ax.set_ylabel(y_name)
     ax.set_title(plot_name)
-    analysis_plots.fig_tight_layout(fig)
     return fig
 
 
@@ -165,7 +164,6 @@ def _plot_importance(plot_name, x_names, y_values, y_name, y_errors=None, x_name
     ax.set_xticks(r + width / 2.0, minor=False)
     ax.set_xticklabels(x_names, rotation=40, ha='right')
     ax.set_xlim(-width)
-    analysis_plots.fig_tight_layout(fig)
     return fig
 
 
@@ -186,7 +184,6 @@ def _plot_param_covariance(plot_name, x_name, x_values, y_name, y_values, xy_val
     ax.set_ylabel(y_name)
     ax.set_title(plot_name)
     plt.colorbar(im)
-    analysis_plots.fig_tight_layout(fig)
     return fig
 
 
@@ -261,17 +258,26 @@ def analyse_hyperparameters(run_results: List[RunResult],
     data = []
     for run_result in run_results:
         loss = loss_fn(run_result.metrics)
+        if loss is None:
+            # we don't want to analyze the run that could not
+            # calculate the metric
+            continue
         params = run_result.hyper_parameters
+
+        def to_value(v):
+            if isinstance(v, numbers.Number):
+                return v
+            return str(v)
 
         params_current = {}
         if hparams_to_visualize is None:
             for key, value in params.hparams.items():
-                params_current[key] = value.current_value
+                params_current[key] = to_value(value.current_value)
         else:
             for key in hparams_to_visualize:
                 v = params.hparams.get(key)
                 if v is not None:
-                    params_current[key] = v
+                    params_current[key] = to_value(v)
 
         params_current['loss'] = loss
         data.append(params_current)
