@@ -317,3 +317,22 @@ class TestUtilities(TestCase):
 
         r = anything()
         assert r is None
+
+    def test_find_global_name_success(self):
+        f = trw.utils.find_global_name('trw.utils.find_global_name')
+        assert f is trw.utils.find_global_name
+
+    def test_find_global_name_failed(self):
+        try:
+            f = trw.utils.find_global_name('DOES NOT EXIST')
+            assert False, 'should throw exception'
+        except:
+            pass
+
+        try:
+            # using modules
+            f = trw.utils.find_global_name('DOES.NOT.EXIST')
+            assert False, 'should throw exception'
+        except:
+            pass
+

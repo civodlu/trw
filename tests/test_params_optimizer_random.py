@@ -161,7 +161,7 @@ class TestParamsOptimizer(TestCase):
                 model=model_fn(),
                 optimizers_fn=optimizer_fn,
                 log_path=prefix)
-            loss = output['outputs']['dataset_1']['train']['regression']['loss']
+            loss = output.outputs['dataset_1']['train']['regression']['loss']
             return {'loss': trw.utils.to_value(loss)}, [], 'no report'
 
         trw.hparams.HyperParameterRepository.reset()

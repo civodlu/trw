@@ -4,20 +4,25 @@ import pickle
 import sqlite3
 import traceback
 from io import StringIO
+from typing import Tuple, Optional, Any, Dict
+
 from torch import nn
 
 import torch
+
+from .utilities import RunMetadata
 from .utilities import default_sum_all_losses, create_or_recreate_folder, RuntimeFormatter
 from .trainer import default_per_epoch_callbacks, default_pre_training_callbacks, \
-    default_post_training_callbacks, trainer_callbacks_per_batch, epoch_train_eval, create_losses_fn, strip_unpickable
-from ..utils import safe_lookup, ExceptionAbortRun
+    default_post_training_callbacks, trainer_callbacks_per_batch, epoch_train_eval, \
+    create_losses_fn, strip_unpickable
+from ..utils import ExceptionAbortRun
 from ..utils.graceful_killer import GracefulKiller
+from ..utils.load_module import find_global_name
 
 logger = logging.getLogger(__name__)
 
 
 class TrainerV2:
-
     def __init__(
             self,
             callbacks_per_batch=None,
@@ -50,49 +55,82 @@ class TrainerV2:
         self.skip_eval_epoch_0 = skip_eval_epoch_0
 
     @staticmethod
-    def save_model(model, result, path, pickle_module=pickle):
+    def save_model(model, metadata: RunMetadata, path, pickle_module=pickle):
         """
         Save a model to file
 
         Args:
             model: the model to serialize
-            result: an optional result file associated with the model
+            metadata: an optional result file associated with the model
             path: the base path to save the model
             pickle_module: the serialization module that will be used to save the model and results
 
         """
-        result_cp = None
         sql_database = None
-        if result is not None:
+        if metadata is not None:
             import copy
             # we don't want this function to have side effects so copy
             # the result
-            result_cp = copy.copy(result)
+            sql_database = metadata.options.workflow_options.sql_database
 
             # strip what can't be pickled
-            if 'outputs' in result_cp is not None:
-                result_cp['outputs'] = strip_unpickable(result_cp['outputs'])
-
-            sql_database = result_cp['options'].workflow_options.sql_database
             if sql_database is not None:
-                result_cp['options'].workflow_options.sql_database = None
+                metadata.options.workflow_options.sql_database = None
+            metadata_cp = copy.copy(metadata)
+            if metadata_cp.outputs is not None:
+                metadata_cp.outputs = strip_unpickable(metadata_cp.outputs)
+        else:
+            # we MUST have at least the class name!
+            metadata_cp = RunMetadata(options=None, history=None, outputs=None)
 
-        result_cp_path = path + '.result'
-        with open(result_cp_path, 'wb') as f:
-            pickle_module.dump(result_cp, f)
-        torch.save(model, path, pickle_module=pickle_module)
+        # record the original fully qualified class name so that we can re-instantiate it
+        metadata_cp.class_name = str(model.__class__.__name__)
+        module = model.__class__.__module__
+        if len(module) > 0:
+            metadata_cp.class_name = module + '.' + metadata_cp.class_name
+
+        metadata_cp_path = path + '.metadata'
+        with open(metadata_cp_path, 'wb') as f:
+            pickle_module.dump(metadata_cp, f)
+        torch.save(model.state_dict(), path, pickle_module=pickle_module)
 
         if sql_database is not None:
             # TODO find a cleaner and generic way of doing this...
-            result_cp['options'].workflow_options.sql_database = sql_database
+            metadata.options.workflow_options.sql_database = sql_database
 
     @staticmethod
-    def load_model(path, with_result=False, device=None, pickle_module=pickle):
+    def load_state(
+            model: nn.Module,
+            path: str,
+            device: torch.device = None,
+            pickle_module: Any = pickle) -> None:
         """
-        load a saved model
+        Load the state of a model
+
+        Args:
+            model: where to load the state
+            path: where the model's state was saved
+            device: where to locate the model
+            pickle_module: how to read the model parameters and metadata
+        """
+        model_state = torch.load(path, map_location=device, pickle_module=pickle_module)
+        model.load_state_dict(model_state)
+
+    @staticmethod
+    def load_model(
+            path: str,
+            model_kwargs: Optional[Dict[Any, Any]] = None,
+            with_result: bool = False,
+            device: torch.device = None,
+            pickle_module: Any = pickle) -> Tuple[nn.Module, RunMetadata]:
+        """
+        Load a previously saved model
+
+        Construct a model from the :attr:`RunMetadata.class_name` class and with arguments :obj:`model_kwargs`
 
         Args:
             path: where to store the model. result's will be loaded from `path + '.result'`
+            model_kwargs: arguments used to instantiate the model stored in :attr:`RunMetadata.class_name`
             with_result: if True, the results of the model will be loaded
             device: where to load the model. For example, models are typically trained on GPU,
                 but for deployment, CPU might be good enough. If `None`, use the same device as
@@ -100,15 +138,22 @@ class TrainerV2:
             pickle_module: the de-serialization module to be used to load model and results
 
         Returns:
-            a tuple `model, result`
+            a tuple `model, metadata`
         """
-        result = None
-        if with_result:
-            result_path = path + '.result'
-            with open(result_path, 'rb') as f:
-                result = pickle_module.load(f)
-        model = torch.load(path, map_location=device, pickle_module=pickle_module)
-        return model, result
+        result_path = path + '.metadata'
+        with open(result_path, 'rb') as f:
+            metadata = pickle_module.load(f)
+        if not with_result:
+            metadata.outputs = None
+
+        class_name = metadata.class_name
+        class_type = find_global_name(class_name)
+        if model_kwargs is None:
+            model_kwargs = {}
+        model = class_type(**model_kwargs)
+
+        TrainerV2.load_state(model, path, device=device, pickle_module=pickle_module)
+        return model, metadata
 
     def fit(self,
             options,
@@ -380,10 +425,9 @@ class TrainerV2:
         # do not explicitly clean up the datasets since these were
         # created outside the trainer
         clean_up(datasets=None)
-
-        return model, {
-            'history': history,
-            'options': options,
-            'outputs': outputs_epoch,
-            'datasets_infos': datasets_infos
-        }
+        return model, RunMetadata(
+            history=history,
+            options=options,
+            outputs=outputs_epoch,
+            datasets_infos=datasets_infos
+        )

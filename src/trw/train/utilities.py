@@ -1,6 +1,8 @@
 import json
 import time
 import logging
+from typing import Optional, Any
+
 import torch
 import shutil
 import os
@@ -10,6 +12,8 @@ import datetime
 import traceback as traceback_module
 import io
 import torch.nn as nn
+from ..basic_typing import History, DatasetsInfo
+from .options import Options
 
 logger = logging.getLogger(__name__)
 
@@ -616,3 +620,18 @@ def apply_gradient_clipping(module: nn.Module, value):
     assert value >= 0
     for p in module.parameters():
         p.register_hook(lambda gradient: torch.clamp(gradient, -value, value))
+
+
+class RunMetadata:
+    def __init__(self,
+                 options: Optional[Options],
+                 history: Optional[History],
+                 outputs: Optional[Any],
+                 datasets_infos: Optional[DatasetsInfo] = None,
+                 class_name: Optional[str] = None):
+
+        self.class_name = class_name
+        self.datasets_infos = datasets_infos
+        self.outputs = outputs
+        self.history = history
+        self.options = options

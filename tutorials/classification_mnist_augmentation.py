@@ -53,6 +53,6 @@ if __name__ == '__main__':
     )
     
     # calculate statistics of the final epoch
-    output = results['outputs']['mnist']['test']['softmax']
+    output = results.outputs['mnist']['test']['softmax']
     accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
     assert accuracy >= 0.95

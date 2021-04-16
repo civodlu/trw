@@ -120,9 +120,9 @@ class TestTrainerAdvanced(TestCase):
 
         # first make sure the model was trained perfectly
         loss_1 = float(
-            trw.utils.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
+            trw.utils.to_value(results.history[-1]['dataset_1']['train']['overall_loss']['loss']))
         loss_2 = float(
-            trw.utils.to_value(results['history'][-1]['dataset_2']['train']['overall_loss']['loss']))
+            trw.utils.to_value(results.history[-1]['dataset_2']['train']['overall_loss']['loss']))
         assert loss_1 < 1e-3
         assert loss_2 < 1e-3
 
@@ -145,7 +145,7 @@ class TestTrainerAdvanced(TestCase):
 
         # make sure we can save a model
         path = os.path.join(utils.root_output, 'model_pytorch.pkl')
-        trw.train.TrainerV2.save_model(model, path=path, result=results)
+        trw.train.TrainerV2.save_model(model, path=path, metadata=results)
 
         # reload the model and compare the parameters
         device = torch.device('cpu')
@@ -154,8 +154,8 @@ class TestTrainerAdvanced(TestCase):
         w = trw.utils.to_value(model['dataset_1'].w)
         assert w == w_loaded
 
-        r_loaded = loaded_result['outputs']['dataset_1']['train']['regression']
-        r = results['outputs']['dataset_1']['train']['regression']
+        r_loaded = loaded_result.outputs['dataset_1']['train']['regression']
+        r = results.outputs['dataset_1']['train']['regression']
         assert (r_loaded['output_raw'] == r['output_raw']).all()
 
     def test_independent_sub_models(self):
@@ -181,7 +181,7 @@ class TestTrainerAdvanced(TestCase):
 
         print('Done!')
         # first make sure the model was trained perfectly
-        loss = float(trw.utils.to_value(results['history'][-1]['dataset_1']['train']['overall_loss']['loss']))
+        loss = float(trw.utils.to_value(results.history[-1]['dataset_1']['train']['overall_loss']['loss']))
         assert loss < 1e-3
 
         # we expect `model1` to not be trained (w=0)

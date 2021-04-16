@@ -46,6 +46,6 @@ model, results = trainer.fit(
         datasets=datasets, model=model, learning_rate=0.1))
 
 # calculate statistics of the final epoch
-output = results['outputs']['mnist']['test']['softmax']
+output = results.outputs['mnist']['test']['softmax']
 accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
 assert accuracy >= 0.95

@@ -45,8 +45,8 @@ def evaluate_hparams(hparams):
             learning_rate=learning_rate)
     )
     
-    hparam_loss = trw.utils.to_value(results['history'][-1]['mnist']['test']['overall_loss']['loss'])
-    return {'loss': hparam_loss}, results['history'], 'additional info goes here!'
+    hparam_loss = trw.utils.to_value(results.history[-1]['mnist']['test']['overall_loss']['loss'])
+    return {'loss': hparam_loss}, results.history, 'additional info goes here!'
     
     
 # configure and run the training/evaluation

@@ -86,7 +86,7 @@ splits = ['train', 'test']
 max_values = None
 min_values = None
 for split in splits:
-    outputs_values = results['outputs']['mnist'][split]
+    outputs_values = results.outputs['mnist'][split]
     values = outputs_values['embedding']['output']
     if max_values is None:
         max_values = outputs_values['embedding']['output'].max(axis=0)

@@ -4,6 +4,7 @@ from ..basic_typing import Datasets
 from ..utils import safe_lookup
 from .callback import Callback
 from ..train.outputs_trw import OutputEmbedding
+from ..train.utilities import RunMetadata
 import os
 import logging
 
@@ -105,18 +106,19 @@ class CallbackSaveLastModel(Callback):
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
-        result = {
-            'history': history,
-            'options': options,
-            'outputs': outputs,
-            'datasets_infos': datasets_infos
-        }
+
+        metadata = RunMetadata(
+            options=options,
+            history=history,
+            outputs=outputs,
+            datasets_infos=datasets_infos,
+        )
 
         if not self.with_outputs:
             # discard the outputs (e.g., for large outputs)
-            result['outputs'] = None
+            metadata.outputs = None
         elif self.post_process_outputs is not None:
-            result['outputs'] = self.post_process_outputs(result['outputs'])
+            metadata.outputs = self.post_process_outputs(metadata.outputs)
 
         if self.is_versioned:
             name = f'{self.model_name}_e_{len(history)}.model'
@@ -126,13 +128,13 @@ class CallbackSaveLastModel(Callback):
 
         logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
         from ..train.trainer_v2 import TrainerV2
-        TrainerV2.save_model(model, result, export_path)
+        TrainerV2.save_model(model, metadata, export_path)
         if self.rolling_size is not None and self.rolling_size > 0:
             self.last_models.append(export_path)
 
             if len(self.last_models) > self.rolling_size:
                 model_location_to_delete = self.last_models.pop(0)
-                model_result_location_to_delete = model_location_to_delete + '.result'
+                model_result_location_to_delete = model_location_to_delete + '.metadata'
                 logger.info(f'deleted model={model_location_to_delete}')
                 os.remove(model_location_to_delete)
                 os.remove(model_result_location_to_delete)
@@ -153,6 +155,6 @@ class CallbackSaveLastModel(Callback):
                 export_path = os.path.join(
                     options.workflow_options.current_logging_directory,
                     f'{self.best_model_name}.model')
-                TrainerV2.save_model(model, result, export_path)
+                TrainerV2.save_model(model, metadata, export_path)
 
         logger.info('successfully completed CallbackSaveLastModel.__call__')

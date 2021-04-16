@@ -36,7 +36,7 @@ class TestCallbackSaveLastModel(TestCase):
             callback(options, history, model, None, {'results': {'outputs': {}}}, None, {'info': 'dummy'}, None)
 
         models = glob.glob(os.path.join(logging_directory, '*.model'))
-        results = glob.glob(os.path.join(logging_directory, '*.model.result'))
+        results = glob.glob(os.path.join(logging_directory, '*.model.metadata'))
         assert len(models) == 5
         assert len(results) == 5
 
@@ -116,4 +116,4 @@ class TestCallbackSaveLastModel(TestCase):
 
         _, results_reloaded = trw.train.TrainerV2.load_model(models[0], with_result=True)
         # the embedding value should be stripped
-        assert len(results_reloaded['outputs']['dataset1']['split1']['output1']) == 0
+        assert len(results_reloaded.outputs['dataset1']['split1']['output1']) == 0

@@ -170,15 +170,15 @@ class TestTrainer(TestCase):
         # do NOT use the results: final iteration is performed in eval mode
 
         # expected the same
-        truth = results['outputs']['simple']['valid']['regression']['output_truth']
-        found = results['outputs']['simple']['valid']['regression']['output']
+        truth = results.outputs['simple']['valid']['regression']['output_truth']
+        found = results.outputs['simple']['valid']['regression']['output']
         diff = np.abs(truth - found)
         self.assertTrue(np.max(diff) == 0.0)
 
         # expected same (result is done in in ``eval`` mode for the training loop to remove
         # dropout and additional training during eval)
-        truth = results['outputs']['simple']['train']['regression']['output_truth']
-        found = results['outputs']['simple']['train']['regression']['output']
+        truth = results.outputs['simple']['train']['regression']['output_truth']
+        found = results.outputs['simple']['train']['regression']['output']
         diff = np.abs(truth - found)
         self.assertTrue(np.max(diff) == 0.0)
 

@@ -59,7 +59,7 @@ class TestCallbackExplainDecision(TestCase):
             model=Net(),
             optimizers_fn=optimizer_fn)
 
-        classification_error = results['history'][-1]['fake_symbols_2d']['train']['fake_symbols_2d']['classification error']
+        classification_error = results.history[-1]['fake_symbols_2d']['train']['fake_symbols_2d']['classification error']
         assert classification_error < 0.05
 
         expected_algorithms = [kvp.name for kvp in list(trw.callbacks.ExplainableAlgorithm)]
