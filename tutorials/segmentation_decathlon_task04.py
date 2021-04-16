@@ -1,5 +1,5 @@
 import torch
-from trw.train import OutputEmbedding, OutputSegmentation2
+from trw.train import OutputEmbedding, OutputSegmentation
 import trw
 import torch.nn as nn
 
@@ -31,7 +31,7 @@ class UNetSegmentation(nn.Module):
             'x_2d': OutputEmbedding(x_2d),
             'o_2d': OutputEmbedding(nn.Sigmoid()(o_2d)),
             'labels_2d': OutputEmbedding(labels_2d),
-            'softmax': OutputSegmentation2(o, labels)
+            'softmax': OutputSegmentation(o, labels)
         }
 
 

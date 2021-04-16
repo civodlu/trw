@@ -18,7 +18,7 @@ class Net(nn.Module):
         x = self.classifier(x)
 
         return {
-            'fake_symbols_2d': trw.train.OutputClassification2(
+            'fake_symbols_2d': trw.train.OutputClassification(
                 x, batch['classification'], classes_name='classification')
         }
 

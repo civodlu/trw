@@ -179,7 +179,7 @@ def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weig
     return loss
 
 
-class OutputClassification2(Output):
+class OutputClassification(Output):
     """
     Classification output
     """
@@ -326,7 +326,7 @@ class OutputClassification2(Output):
             del loss_term['output_truth']
 
 
-class OutputSegmentation2(OutputClassification2):
+class OutputSegmentation(OutputClassification):
     def __init__(
             self,
             output: torch.Tensor,

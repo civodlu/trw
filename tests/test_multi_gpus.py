@@ -34,7 +34,7 @@ class NetClassic(nn.Module):
         # here we create a softmax output that will use
         # the `targets` feature as classification target
         return {
-            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
+            'softmax': trw.train.OutputClassification(x, batch['targets'], classes_name='targets')
         }
 
 

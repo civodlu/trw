@@ -14,7 +14,7 @@ from trw.layers import BlockConvNormActivation, default_layer_config, NormType, 
 from trw.layers.blocks import BlockUpsampleNnConvNormActivation, ConvTransposeBlockType
 from trw.layers.gan import Gan, GanDataPool
 from trw.train import OutputEmbedding, OutputLoss, LossMsePacked, apply_spectral_norm, MetricLoss
-from trw.train.outputs_trw import OutputClassification2
+from trw.train.outputs_trw import OutputClassification
 from torch.optim import lr_scheduler
 from trw.transforms import resize
 
@@ -343,7 +343,7 @@ class Discriminator(nn.Module):
             o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
             o_expected = o_expected.unsqueeze(1).unsqueeze(1)
             o_expected = o_expected.repeat([1, o.shape[2], o.shape[3]])
-            output = OutputClassification2(o, o_expected, criterion_fn=LossMsePacked)
+            output = OutputClassification(o, o_expected, criterion_fn=LossMsePacked)
             outputs.append((f'c_{i}', output))
 
         del outputs[-1]  # before the last is NOT useful

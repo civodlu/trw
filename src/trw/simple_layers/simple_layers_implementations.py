@@ -4,7 +4,7 @@ import functools
 
 from .simple_layers import SimpleLayerBase, SimpleOutputBase, SimpleModule, SimpleMergeBase
 from ..layers.utils import div_shape
-from ..train.outputs_trw import OutputClassification2 as OutputClassification_train
+from ..train.outputs_trw import OutputClassification as OutputClassification_train
 from ..train.outputs_trw import OutputEmbedding as OutputEmbedding_train
 from ..layers import Flatten as Flatten_layers
 import numpy as np

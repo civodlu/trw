@@ -64,7 +64,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
         target_values = torch.from_numpy(np.asarray([1, 0], dtype=np.int64))
 
-        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target')
+        o = trw.train.OutputClassification(input_values, target_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -80,7 +80,7 @@ class TestOutput(TestCase):
         target_values = torch.from_numpy(np.asarray([1, 1], dtype=np.int64))
         weights = torch.from_numpy(np.asarray([1, 0], dtype=float))
 
-        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target', weights=weights)
+        o = trw.train.OutputClassification(input_values, target_values, classes_name='target', weights=weights)
         batch = {'target': target_values, 'weights': weights}
         r = o.evaluate_batch(batch, False)
 
@@ -93,7 +93,7 @@ class TestOutput(TestCase):
         mask_scores[:, 1, :, :] = 100.0
         expected_map = torch.ones(10, 1, 32, 32, dtype=torch.int64)
 
-        o = trw.train.OutputSegmentation2(
+        o = trw.train.OutputSegmentation(
             output=mask_scores,
             output_truth=expected_map,
             weights=torch.ones(10, dtype=torch.float32),
@@ -120,7 +120,7 @@ class TestOutput(TestCase):
             l = mask_weight.view(10, 1, 32, 40) * found
             return l.sum([1, 2, 3])
 
-        o = trw.train.OutputSegmentation2(
+        o = trw.train.OutputSegmentation(
             output=mask_scores,
             output_truth=expected_map,
             per_voxel_weights=mask_weight,
@@ -137,7 +137,7 @@ class TestOutput(TestCase):
         assert torch.max(torch.abs(losses - expected_loss)) < 1e-3
 
         # make sure we support per_voxel_weights arguments
-        o = trw.train.OutputSegmentation2(
+        o = trw.train.OutputSegmentation(
             output=mask_scores,
             output_truth=expected_map,
             per_voxel_weights=torch.zeros_like(expected_map, dtype=torch.float32),
@@ -199,7 +199,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
         target_values = torch.from_numpy(np.asarray([1, 0], dtype=np.int64))
 
-        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target', criterion_fn=None)
+        o = trw.train.OutputClassification(input_values, target_values, classes_name='target', criterion_fn=None)
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -242,7 +242,7 @@ class TestOutput(TestCase):
         batch = {
             'classes': outputs,
         }
-        o = trw.train.OutputClassification2(inputs, batch['classes'], classes_name='classes')
+        o = trw.train.OutputClassification(inputs, batch['classes'], classes_name='classes')
         os = o.evaluate_batch(batch, is_training=True)
 
         nb_trues = int((os['output_truth'] == os['output']).sum())

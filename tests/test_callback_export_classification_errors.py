@@ -23,7 +23,7 @@ class Model(nn.Module):
     def forward(self, batch):
         x = batch['x']
         return {
-            'classification_output': trw.train.OutputClassification2(
+            'classification_output': trw.train.OutputClassification(
                 x,
                 batch['x'],
                 classes_name='x_truth',
@@ -78,7 +78,7 @@ class TestCallbackExportClassificationErrors(unittest.TestCase):
             'dataset1': {
                 'split1': {
                     'output1': {
-                        'output_ref': trw.train.OutputClassification2(None, None, classes_name='good'),
+                        'output_ref': trw.train.OutputClassification(None, None, classes_name='good'),
                         'output_raw': output_raw,
                         'output': np.argmax(output_raw, axis=1),
                         'output_truth': truth

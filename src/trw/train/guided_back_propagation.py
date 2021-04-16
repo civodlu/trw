@@ -29,7 +29,7 @@ def post_process_output_for_gradient_attribution(output):
         a :class:`torch.Tensor`
     """
     assert isinstance(output, outputs_trw.Output), 'must be a `trw.train.Output`'
-    if isinstance(output, outputs_trw.OutputClassification2):
+    if isinstance(output, outputs_trw.OutputClassification):
         return torch.softmax(output.output, dim=1)
 
     return output.output

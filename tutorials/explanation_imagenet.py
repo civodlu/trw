@@ -58,7 +58,7 @@ class Model(nn.Module):
         images = batch['images']
         output = self.model(images)
         return {
-            'output': trw.train.OutputClassification2(output, batch['ids'], classes_name='ids')
+            'output': trw.train.OutputClassification(output, batch['ids'], classes_name='ids')
         }
 
 

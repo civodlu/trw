@@ -15,7 +15,7 @@ def select_classification_errors(batch, loss_terms):
     indices_errors = collections.defaultdict(list)
     for name, loss_term in loss_terms.items():
         ref = loss_term.get('output_ref')
-        if ref is None or not isinstance(ref, outputs_trw.OutputClassification2):
+        if ref is None or not isinstance(ref, outputs_trw.OutputClassification):
             continue
 
         truth_name = ref.classes_name

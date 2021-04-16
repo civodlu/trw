@@ -660,8 +660,8 @@ class TestLayers2(TestCase):
         t = torch.zeros([1, 1, 8, 16], dtype=torch.long)
         outputs = deep_supervision(i, t)
         assert len(outputs) == 2
-        assert isinstance(outputs[0], trw.train.OutputSegmentation2)
+        assert isinstance(outputs[0], trw.train.OutputSegmentation)
         assert outputs[0].output.shape == (1, 2, 8, 16)
-        assert isinstance(outputs[1], trw.train.OutputSegmentation2)
+        assert isinstance(outputs[1], trw.train.OutputSegmentation)
         assert outputs[1].output.shape == (1, 2, 8, 16)
 

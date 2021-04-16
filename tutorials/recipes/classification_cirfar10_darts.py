@@ -19,7 +19,7 @@ class Net_simple(nn.Module):
         x = self.denses(x)
 
         return {
-            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
+            'softmax': trw.train.OutputClassification(x, batch['targets'], classes_name='targets')
         }
 
 
@@ -115,7 +115,7 @@ class Net_DARTS(nn.Module):
         logits = self.classifier(out.view(out.size(0), -1))
 
         return {
-            'softmax': trw.train.OutputClassification2(logits, batch['targets'], classes_name='targets')
+            'softmax': trw.train.OutputClassification(logits, batch['targets'], classes_name='targets')
         }
     
     def export_configuration(self, path):

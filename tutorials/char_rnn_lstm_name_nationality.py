@@ -26,7 +26,7 @@ class RNN(nn.Module):
         for n in range(i.shape[0]):
             output, hidden = self._forward(i[n], hidden)
         return {
-            'classification': trw.train.OutputClassification2(
+            'classification': trw.train.OutputClassification(
                 output, batch['category_id'], classes_name='category_id')
         }
 
@@ -61,7 +61,7 @@ class Lstm(nn.Module):
         outputs, _ = self.model(i.squeeze(0))
         cs = self.linear(outputs[-1])
         return {
-            'classification': trw.train.OutputClassification2(cs, batch['category_id'], classes_name='category_id')
+            'classification': trw.train.OutputClassification(cs, batch['category_id'], classes_name='category_id')
         }
 
 

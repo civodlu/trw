@@ -148,7 +148,7 @@ def fill_class_name(output, class_index, datasets_infos, dataset_name, split_nam
     """
 
     c_name = None
-    if isinstance(output, outputs_trw.OutputClassification2):
+    if isinstance(output, outputs_trw.OutputClassification):
         c_names = utilities.get_classification_mapping(datasets_infos, dataset_name, split_name, output.classes_name)
         if c_names is not None:
             c_names = c_names['mappinginv']
@@ -216,7 +216,7 @@ class CallbackExplainDecision(callback.Callback):
             return name
 
         for output_name, output in outputs.items():
-            if isinstance(output, outputs_trw.OutputClassification2):
+            if isinstance(output, outputs_trw.OutputClassification):
                 return output_name
 
         return None

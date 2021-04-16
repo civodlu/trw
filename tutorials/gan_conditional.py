@@ -9,7 +9,7 @@ import functools
 from trw.layers.gan import Gan
 from trw.train import OutputEmbedding, OutputLoss
 from trw.train.losses import one_hot, LossMsePacked
-from trw.train.outputs_trw import OutputClassification2
+from trw.train.outputs_trw import OutputClassification
 
 
 class Generator(nn.Module):
@@ -73,7 +73,7 @@ class Discriminator(nn.Module):
         o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
 
         return {
-            'classification': OutputClassification2(
+            'classification': OutputClassification(
                 o, o_expected,
                 criterion_fn=LossMsePacked,  # LSGan loss function
             )

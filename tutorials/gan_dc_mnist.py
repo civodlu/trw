@@ -8,7 +8,7 @@ import functools
 
 from trw.layers.gan import Gan
 from trw.train import LossMsePacked, OutputEmbedding
-from trw.train.outputs_trw import OutputClassification2
+from trw.train.outputs_trw import OutputClassification
 from trw.utils import global_average_pooling_2d
 
 
@@ -47,7 +47,7 @@ class Discriminator(nn.Module):
         batch['o_expected'] = o_expected
 
         return {
-            'classification': OutputClassification2(
+            'classification': OutputClassification(
                 o, o_expected,
                 criterion_fn=LossMsePacked,  # LSGan loss function
             )

@@ -10,7 +10,7 @@ from trw.layers import BlockConvNormActivation, default_layer_config, NormType
 from trw.layers.blocks import BlockUpsampleNnConvNormActivation
 from trw.layers.gan import Gan, GanDataPool
 from trw.train import OutputEmbedding, OutputLoss, LossMsePacked, apply_spectral_norm, MetricLoss
-from trw.train.outputs_trw import OutputClassification2
+from trw.train.outputs_trw import OutputClassification
 from torch.optim import lr_scheduler
 
 
@@ -105,7 +105,7 @@ class SubDiscriminator(nn.Module):
         o = self.convs(torch.cat([image, segmentation], dim=1))
         o_expected = torch.full([o.shape[0]] + list(o.shape[2:]), int(is_real), device=image.device, dtype=torch.long)
 
-        return OutputClassification2(
+        return OutputClassification(
             o, o_expected,
             criterion_fn=LossMsePacked,
         )

@@ -20,7 +20,7 @@ class Net(nn.Module):
         x = self.unet(x)
 
         return {
-            'segmentation': trw.train.OutputSegmentation2(x, batch['segmentation']),
+            'segmentation': trw.train.OutputSegmentation(x, batch['segmentation']),
             'mask': trw.train.OutputEmbedding(torch.sigmoid(x)),
         }
 

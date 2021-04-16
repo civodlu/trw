@@ -10,7 +10,7 @@ from trw.layers import BlockConvNormActivation, default_layer_config, NormType
 from trw.layers.blocks import BlockUpsampleNnConvNormActivation
 from trw.layers.gan import Gan, GanDataPool
 from trw.train import OutputEmbedding, OutputLoss, LossMsePacked, apply_spectral_norm, MetricLoss
-from trw.train.outputs_trw import OutputClassification2
+from trw.train.outputs_trw import OutputClassification
 from torch.optim import lr_scheduler
 
 
@@ -116,7 +116,7 @@ class Discriminator(nn.Module):
         o_expected = o_expected.unsqueeze(1).unsqueeze(1)
         o_expected = o_expected.repeat([1, o.shape[2], o.shape[3]])
         return {
-            'classification': OutputClassification2(
+            'classification': OutputClassification(
                 o, o_expected,
                 criterion_fn=LossMsePacked,  # LSGan loss function
             )

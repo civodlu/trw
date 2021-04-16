@@ -11,7 +11,7 @@ class Net(nn.Module):
         x = self.unet(batch['image'])
 
         return {
-            'segmentation': trw.train.OutputSegmentation2(output=x, output_truth=batch['mask']),
+            'segmentation': trw.train.OutputSegmentation(output=x, output_truth=batch['mask']),
             'segmentation_output': trw.train.OutputEmbedding(x.argmax(dim=1, keepdim=True))
         }
 

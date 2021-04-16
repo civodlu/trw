@@ -6,7 +6,7 @@ import torch
 from trw.basic_typing import Batch, Tensor, TorchTensorNCX, Activation, TensorNCX, ShapeCX
 from trw.layers import ModuleWithIntermediate, UNetBase, LayerConfig, default_layer_config
 from trw.layers.blocks import ConvBlockType, BlockConvNormActivation
-from trw.train import OutputEmbedding, OutputSegmentation2, Output, get_device
+from trw.train import OutputEmbedding, OutputSegmentation, Output, get_device
 import trw
 import torch.nn as nn
 from trw.transforms import random_fixed_geometry_within_geometries, SpatialInfo, resize
@@ -76,7 +76,7 @@ class UNetSegmentation(nn.Module):
         super().__init__()
         self.norm_input = nn.InstanceNorm3d(1)
         self.model = trw.layers.UNetBase(3, 1, channels=[32, 64, 128, 256, 320], output_channels=3)
-        self.multi_scale_loss = MultiScaleLossUnet(self.model, [1, 256, 256, 64], output_creator=trw.train.OutputSegmentation2)
+        self.multi_scale_loss = MultiScaleLossUnet(self.model, [1, 256, 256, 64], output_creator=trw.train.OutputSegmentation)
 
     def forward(self, batch):
         # a batch should be a dictionary of features
@@ -95,7 +95,7 @@ class UNetSegmentation(nn.Module):
             'x_2d': OutputEmbedding(x_2d),
             'o_2d': OutputEmbedding(nn.Sigmoid()(o_2d)),
             'labels_2d': OutputEmbedding(labels_2d),
-            #'softmax': OutputSegmentation2(o, labels)
+            #'softmax': OutputSegmentation(o, labels)
         }
         for i, o in enumerate(multiscale_o):
             outputs[f'softmax_{i}'] = o

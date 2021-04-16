@@ -45,7 +45,7 @@ class Net(nn.Module):
         x = self.denses(x)
 
         return {
-            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets'),
+            'softmax': trw.train.OutputClassification(x, batch['targets'], classes_name='targets'),
             'aligned': trw.train.OutputEmbedding(aligned_x)
         }
 

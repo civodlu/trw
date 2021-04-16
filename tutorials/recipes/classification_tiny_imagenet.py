@@ -30,7 +30,7 @@ class SimpleNet2(nn.Module):
         r = self.global_pooling(r).squeeze()
         assert len(r.shape) == 2
         return collections.OrderedDict([
-            ('classification', trw.train.OutputClassification2(r, batch['targets'], classes_name='targets'))
+            ('classification', trw.train.OutputClassification(r, batch['targets'], classes_name='targets'))
         ])
 
 
@@ -43,7 +43,7 @@ class Torchvision(nn.Module):
         images = batch['images'].float() / 255.0
         r = self.model.forward(images)
         return collections.OrderedDict([
-            ('classification', trw.train.OutputClassification2(r, batch['targets'], classes_name='targets'))
+            ('classification', trw.train.OutputClassification(r, batch['targets'], classes_name='targets'))
         ])
 
 

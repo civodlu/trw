@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 
 from ..basic_typing import ShapeCX, TorchTensorNCX, TensorNCX
-from ..train.outputs_trw import Output, OutputSegmentation2
+from ..train.outputs_trw import Output, OutputSegmentation
 from ..train import get_device
 from ..transforms import resize
 from typing_extensions import Literal, Protocol
@@ -53,7 +53,7 @@ class DeepSupervision(nn.Module):
             self,
             backbone: ModuleWithIntermediate,
             input_target_shape: ShapeCX,
-            output_creator: OutputCreator = OutputSegmentation2,
+            output_creator: OutputCreator = OutputSegmentation,
             output_block: ConvBlockType = BlockConvNormActivation,
             select_outputs_fn: Callable[[Sequence[TorchTensorNCX]], Sequence[TorchTensorNCX]] = select_third_to_last_skip_before_last,
             resize_mode: Literal['nearest', 'linear'] = 'linear',
