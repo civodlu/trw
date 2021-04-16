@@ -4,7 +4,7 @@ import functools
 
 from .simple_layers import SimpleLayerBase, SimpleOutputBase, SimpleModule, SimpleMergeBase
 from ..layers.utils import div_shape
-from ..train.outputs_trw import OutputClassification as OutputClassification_train
+from ..train.outputs_trw import OutputClassification2 as OutputClassification_train
 from ..train.outputs_trw import OutputEmbedding as OutputEmbedding_train
 from ..layers import Flatten as Flatten_layers
 import numpy as np
@@ -43,7 +43,7 @@ class OutputClassification(SimpleOutputBase):
         self.classes_name = classes_name
 
     def forward(self, inputs, batch):
-        return self.module_type(inputs, self.classes_name, **self.module_args)
+        return self.module_type(inputs, batch[self.classes_name], classes_name=self.classes_name, **self.module_args)
 
     def get_module(self):
         # output layer, doesn't have a `Module` implementation

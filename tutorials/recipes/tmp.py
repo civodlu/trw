@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import trw.utils
+from trw.callbacks import ModelWithLowestMetric
 from trw.train import apply_spectral_norm
 
 
@@ -32,7 +33,7 @@ class Net(nn.Module):
         # here we create a softmax output that will use
         # the `targets` feature as classification target
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
         }
 
 
@@ -42,10 +43,9 @@ def create_model(options):
 
 
 if __name__ == '__main__':
-    options = trw.train.create_default_options(num_epochs=1000, device=torch.device('cuda:1'))
-    #options = trw.train.create_default_options(num_epochs=100, device=torch.device('cpu'))
-    trainer = trw.train.Trainer(
-        callbacks_pre_training_fn=lambda: [
+    options = trw.train.create_default_options(num_epochs=1000)
+    trainer = trw.train.TrainerV2(
+        callbacks_pre_training=[
             trw.callbacks.CallbackReportingStartServer(),
             trw.callbacks.CallbackReportingModelSummary(),
             trw.callbacks.CallbackReportingExportSamples(
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             trw.callbacks.CallbackReportingAugmentations(),
         ],
 
-        callbacks_per_epoch_fn=lambda: [
+        callbacks_per_epoch=[
             trw.callbacks.CallbackEpochSummary(),
             trw.callbacks.CallbackReportingRecordHistory(),
             #trw.callbacks.CallbackReportingLayerStatistics(),
@@ -63,23 +63,22 @@ if __name__ == '__main__':
             #trw.callbacks.CallbackReportingBestMetrics(),
             trw.callbacks.CallbackSkipEpoch(10, [
                 trw.callbacks.CallbackReportingClassificationErrors(max_samples=100),
-                trw.callbacks.CallbackSaveLastModel(keep_model_with_lowest_metric=
-                                                trw.train.ModelWithLowestMetric(
-                                                    dataset_name='mnist',
-                                                    split_name='test',
-                                                    output_name='softmax',
-                                                    metric_name='loss'))
+                #trw.callbacks.CallbackSaveLastModel(keep_model_with_lowest_metric=ModelWithLowestMetric(
+                #                                    dataset_name='mnist',
+                #                                    split_name='test',
+                #                                    output_name='softmax',
+                #                                    metric_name='loss'))
             ], include_epoch_zero=True)
         ],
-        callbacks_post_training_fn=lambda: [
+        callbacks_post_training=[
             trw.callbacks.CallbackReportingClassificationErrors(max_samples=20)
         ])
 
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_mnist_dataset(),
-        run_prefix='tmp',
-        model_fn=lambda options: Net(),
+        datasets=trw.datasets.create_mnist_dataset(),
+        log_path='tmp',
+        model=Net(),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
             datasets=datasets, model=model, learning_rate=0.1, weight_decay=0.001))
 

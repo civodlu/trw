@@ -5,7 +5,7 @@ from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     get_classification_mapping, get_classification_mappings, make_triplet_indices, make_pair_indices, \
     make_unique_colors, make_unique_colors_f, apply_spectral_norm, apply_gradient_clipping
 
-from .outputs_trw import Output, OutputClassification, OutputClassification2, OutputRegression, OutputEmbedding, \
+from .outputs_trw import Output, OutputClassification2, OutputRegression, OutputEmbedding, \
     default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss, OutputSegmentation2
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked

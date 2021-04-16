@@ -60,7 +60,7 @@ class Net(nn.Module):
         center_loss = self.center_loss(embedding, classes)
 
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets'),
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets'),
             'center_loss': trw.train.OutputLoss(center_loss),
             'embedding': trw.train.OutputEmbedding(embedding)
         }

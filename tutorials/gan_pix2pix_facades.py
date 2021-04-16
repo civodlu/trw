@@ -188,9 +188,8 @@ trainer.fit(
     options,
     datasets=trw.datasets.create_facades_dataset(
         batch_size=1,
-        transforms_train=trw.transforms.TransformCompose([
-            trw.transforms.TransformRandomFlip(axis=3),
-        ])),
+        transforms_train=[trw.transforms.TransformRandomFlip(axis=3)]
+    ),
     eval_every_X_epoch=20,
     model=create_model(),
     log_path='facade_pix2pix',

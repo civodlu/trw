@@ -30,7 +30,7 @@ class SimpleNet2(nn.Module):
         r = self.global_pooling(r).squeeze()
         assert len(r.shape) == 2
         return collections.OrderedDict([
-            ('classification', trw.train.OutputClassification(r, 'targets'))
+            ('classification', trw.train.OutputClassification2(r, batch['targets'], classes_name='targets'))
         ])
 
 
@@ -43,7 +43,7 @@ class Torchvision(nn.Module):
         images = batch['images'].float() / 255.0
         r = self.model.forward(images)
         return collections.OrderedDict([
-            ('classification', trw.train.OutputClassification(r, 'targets'))
+            ('classification', trw.train.OutputClassification2(r, batch['targets'], classes_name='targets'))
         ])
 
 
@@ -57,33 +57,33 @@ def per_epoch_additional_callbacks():
 
 
 if __name__ == '__main__':
-    transforms_train = trw.transforms.TransformCompose([
+    transforms_train = [
         trw.transforms.TransformCast(feature_names=['images'], cast_type='float'),
         trw.transforms.TransformRandomCutout(
             cutout_size=functools.partial(trw.transforms.cutout_random_size, min_size=[3, 5, 5], max_size=[3, 15, 15]),
             cutout_value_fn=trw.transforms.cutout_random_ui8_torch),
         trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
-    ])
+    ]
 
-    transforms_valid = trw.transforms.TransformCompose([
+    transforms_valid = [
         trw.transforms.TransformCast(feature_names=['images'], cast_type='float'),
-    ])
+    ]
 
     options = trw.train.create_default_options(num_epochs=2000, device=torch.device('cuda:1'))
-    trainer = trw.train.Trainer(
-        callbacks_per_epoch_fn=lambda: trw.train.default_per_epoch_callbacks(
+    trainer = trw.train.TrainerV2(
+        callbacks_per_epoch=trw.train.default_per_epoch_callbacks(
             additional_callbacks=per_epoch_additional_callbacks())
     )
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_tiny_imagenet_dataset(
+        datasets=trw.datasets.create_tiny_imagenet_dataset(
             batch_size=64,
             num_images_per_class=500,
             transforms_train=transforms_train,
             transforms_valid=transforms_valid),
-        run_prefix='tiny_imagenet',
-        model_fn=lambda options: SimpleNet2(options),
+        log_path='tiny_imagenet',
+        model=SimpleNet2(options),
 
         eval_every_X_epoch=1,
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(

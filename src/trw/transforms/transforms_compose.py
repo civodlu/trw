@@ -1,16 +1,16 @@
 from typing import List
 
-from ..transforms import transforms
+from ..transforms.transforms import Transform
 import collections
 
 from ..basic_typing import Batch
 
 
-class TransformCompose(transforms.Transform):
+class TransformCompose(Transform):
     """
     Sequentially apply a list of transformations
     """
-    def __init__(self, transforms: List[transforms.Transform]):
+    def __init__(self, transforms: List[Transform]):
         """
 
         Args:

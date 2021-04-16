@@ -207,6 +207,8 @@ class TestSimplifiedNN(TestCase):
             'input_2': torch.zeros([5, 2]),
             'input_3': torch.zeros([5, 3]),
             'input_4': torch.zeros([5, 4]),
+            'output_1': torch.zeros([5], dtype=torch.int64),
+            'output_2': torch.zeros([5], dtype=torch.int64),
         }
 
         outputs = net(inputs)

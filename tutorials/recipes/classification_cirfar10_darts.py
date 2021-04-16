@@ -19,7 +19,7 @@ class Net_simple(nn.Module):
         x = self.denses(x)
 
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
         }
 
 
@@ -115,7 +115,7 @@ class Net_DARTS(nn.Module):
         logits = self.classifier(out.view(out.size(0), -1))
 
         return {
-            'softmax': trw.train.OutputClassification(logits, 'targets')
+            'softmax': trw.train.OutputClassification2(logits, batch['targets'], classes_name='targets')
         }
     
     def export_configuration(self, path):
@@ -124,14 +124,12 @@ class Net_DARTS(nn.Module):
             
         with open(os.path.join(path, 'genotype_reduction.txt'), 'w') as f:
             f.write(str(self.cell_reduction.get_genotype()))
-    
-    
 
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
     options = trw.train.create_default_options(num_epochs=600)
-    trainer = trw.train.Trainer(callbacks_post_training_fn=None)
+    trainer = trw.train.TrainerV2(callbacks_post_training=None)
 
     transforms = [
         trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
@@ -142,11 +140,11 @@ if __name__ == '__main__':
 
     model, results = trainer.fit(
         options,
-        #inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transforms=transforms, nb_workers=2, batch_size=20, data_processing_batch_size=10),
-        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transform_train=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
-        run_prefix='cifar10_darts_search',
+        datasets=trw.datasets.create_cifar10_dataset(
+            transform_train=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
+        log_path='cifar10_darts_search',
         #model_fn=lambda options: Net_DARTS(options),
-        model_fn=lambda options: Net_simple(options),
+        model=Net_simple(options),
         optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(
             datasets=datasets, model=model, learning_rate=0.01))
     

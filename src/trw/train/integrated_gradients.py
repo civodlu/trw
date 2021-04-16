@@ -75,7 +75,7 @@ class IntegratedGradients:
         model_output = outputs.get(target_class_name)
         if model_output is None:
             for output_name, output in outputs.items():
-                if isinstance(output, (outputs_trw.OutputClassification, outputs_trw.OutputClassification2)):
+                if isinstance(output, outputs_trw.OutputClassification2):
                     logger.info('IntegratedGradients.__call__: output found={}'.format(output_name))
                     target_class_name = output_name
                     model_output = output

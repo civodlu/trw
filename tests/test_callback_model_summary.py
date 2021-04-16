@@ -93,7 +93,7 @@ class ModelRNN(nn.Module):
         # Decode the hidden state of the last time step
         out = self.fc(out[:, -1, :])
         return {
-            'softmax': trw.train.OutputClassification(out, classes_name='targets')
+            'softmax': trw.train.OutputClassification2(out, batch['targets'], classes_name='targets')
         }
 
 
@@ -181,7 +181,8 @@ class TestCallbackModelSummary(TestCase):
     def test_rnn_model(self):
         model = ModelRNN(28, 256, 1, 10)
         batch = {
-            'images': torch.zeros([32, 1, 28, 28])
+            'images': torch.zeros([32, 1, 28, 28]),
+            'targets': torch.zeros([32], dtype=torch.int64),
         }
 
         summary, total_output_size, total_params_size, total_params, trainable_params = model_summary_base(model, batch)

@@ -124,14 +124,14 @@ class Net_simple(nn.Module):
         x = self.net(x)
 
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
         }
 
 
 if __name__ == '__main__':
     # configure and run the training/evaluation
     options = trw.train.create_default_options(num_epochs=200)
-    trainer = trw.train.Trainer(callbacks_post_training_fn=None)
+    trainer = trw.train.TrainerV2(callbacks_post_training=None)
     
     mean = np.asarray([0.4914, 0.4822, 0.4465], dtype=np.float32)
     std = np.asarray([0.2023, 0.1994, 0.2010], dtype=np.float32)
@@ -152,9 +152,11 @@ if __name__ == '__main__':
 
     model, results = trainer.fit(
         options,
-        inputs_fn=lambda: trw.datasets.create_cifar10_dataset(transform_train=transform_train, transform_valid=transform_valid, nb_workers=2, batch_size=100, data_processing_batch_size=None),
-        run_prefix='cifar10_resnet',
-        model_fn=lambda options: Net_simple(options),
+        datasets=trw.datasets.create_cifar10_dataset(
+            transform_train=transform_train, transform_valid=transform_valid, nb_workers=2,
+            batch_size=100, data_processing_batch_size=None),
+        log_path='cifar10_resnet',
+        model=Net_simple(options),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(
             datasets=datasets, model=model, learning_rate=0.05, momentum=0.9, weight_decay=5e-4, step_size=50, gamma=0.1))
 

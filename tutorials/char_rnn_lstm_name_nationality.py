@@ -26,7 +26,8 @@ class RNN(nn.Module):
         for n in range(i.shape[0]):
             output, hidden = self._forward(i[n], hidden)
         return {
-            'classification': trw.train.OutputClassification(output, 'category_id')
+            'classification': trw.train.OutputClassification2(
+                output, batch['category_id'], classes_name='category_id')
         }
 
     def _forward(self, input, hidden):
@@ -49,14 +50,18 @@ class Lstm(nn.Module):
             linear_in = 2 * hidden_size
         else:
             linear_in = hidden_size
-        self.linear = trw.layers.denses([linear_in, output_size], normalization_type=NormType.InstanceNorm, last_layer_is_output=True)
+        self.linear = trw.layers.denses(
+            [linear_in, output_size],
+            normalization_type=NormType.InstanceNorm,
+            last_layer_is_output=True
+        )
 
     def forward(self, batch):
         i = batch['name']
         outputs, _ = self.model(i.squeeze(0))
         cs = self.linear(outputs[-1])
         return {
-            'classification': trw.train.OutputClassification(cs, 'category_id')
+            'classification': trw.train.OutputClassification2(cs, batch['category_id'], classes_name='category_id')
         }
 
 

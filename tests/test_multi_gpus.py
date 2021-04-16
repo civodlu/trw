@@ -34,7 +34,7 @@ class NetClassic(nn.Module):
         # here we create a softmax output that will use
         # the `targets` feature as classification target
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
         }
 
 
@@ -144,7 +144,8 @@ class TestMultiGpus(TestCase):
         net = net.to(device)
 
         inputs = {
-            'input': torch.zeros([10, 32], dtype=torch.float32, device=device)
+            'input': torch.zeros([10, 32], dtype=torch.float32, device=device),
+            'classification': torch.zeros([5], dtype=torch.int64),
         }
 
         r = net(inputs)

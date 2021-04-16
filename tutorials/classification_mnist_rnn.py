@@ -25,7 +25,7 @@ class RNN(nn.Module):
         # Decode the hidden state of the last time step
         out = self.fc(out[:, -1, :])
         return {
-            'softmax': trw.train.OutputClassification(out, classes_name='targets')
+            'softmax': trw.train.OutputClassification2(out, batch['targets'], classes_name='targets')
         }
 
 

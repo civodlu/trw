@@ -99,7 +99,7 @@ class Net(nn.Module):
         x = self.net(x)
 
         return {
-            'softmax': trw.train.OutputClassification(x, 'targets')
+            'softmax': trw.train.OutputClassification2(x, batch['targets'], classes_name='targets')
         }
 
 

@@ -51,6 +51,7 @@ class Model_XOR(nn.Module):
 
 class TestParamsOptimizer(TestCase):
     def test_discrete_values(self):
+        trw.hparams.HyperParameterRepository.reset()
         np.random.seed(0)
         params = trw.hparams.HyperParameters()
 
@@ -74,7 +75,7 @@ class TestParamsOptimizer(TestCase):
         #
         # very simple test: minimize x, y given the loss l(x, y) = x^2 + y^2. Best params: x, y = (0, 0)
         #
-
+        trw.hparams.HyperParameterRepository.reset()
         mapping = {
             'value_0': 1000,
             'value_1': 800,
@@ -163,6 +164,7 @@ class TestParamsOptimizer(TestCase):
             loss = output['outputs']['dataset_1']['train']['regression']['loss']
             return {'loss': trw.utils.to_value(loss)}, [], 'no report'
 
+        trw.hparams.HyperParameterRepository.reset()
         np.random.seed(0)
         prefix = 'hparams'
         options = trw.train.create_default_options(num_epochs=1000)

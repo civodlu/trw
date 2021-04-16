@@ -64,7 +64,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
         target_values = torch.from_numpy(np.asarray([1, 0], dtype=np.int64))
 
-        o = trw.train.OutputClassification(input_values, classes_name='target')
+        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target')
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -80,7 +80,7 @@ class TestOutput(TestCase):
         target_values = torch.from_numpy(np.asarray([1, 1], dtype=np.int64))
         weights = torch.from_numpy(np.asarray([1, 0], dtype=float))
 
-        o = trw.train.OutputClassification(input_values, classes_name='target', weight_name='weights')
+        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target', weights=weights)
         batch = {'target': target_values, 'weights': weights}
         r = o.evaluate_batch(batch, False)
 
@@ -199,7 +199,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
         target_values = torch.from_numpy(np.asarray([1, 0], dtype=np.int64))
 
-        o = trw.train.OutputClassification(input_values, classes_name='target', criterion_fn=None)
+        o = trw.train.OutputClassification2(input_values, target_values, classes_name='target', criterion_fn=None)
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -242,7 +242,7 @@ class TestOutput(TestCase):
         batch = {
             'classes': outputs,
         }
-        o = trw.train.OutputClassification(inputs, 'classes')
+        o = trw.train.OutputClassification2(inputs, batch['classes'], classes_name='classes')
         os = o.evaluate_batch(batch, is_training=True)
 
         nb_trues = int((os['output_truth'] == os['output']).sum())
