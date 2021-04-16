@@ -1,5 +1,3 @@
-import warnings
-
 from . import sequence
 from . import sampler as sampler_trw
 import numpy as np
@@ -15,7 +13,13 @@ class SequenceArray(sequence.Sequence):
     """
     Create a sequence of batches from numpy arrays, lists and :class:`torch.Tensor`
     """
-    def __init__(self, split, sampler=sampler_trw.SamplerRandom(), transforms=None, use_advanced_indexing=True, sample_uid_name=sample_uid_name):
+    def __init__(
+            self,
+            split,
+            sampler=sampler_trw.SamplerRandom(),
+            transforms=None,
+            use_advanced_indexing=True,
+            sample_uid_name=sample_uid_name):
         """
 
         Args:
@@ -45,14 +49,20 @@ class SequenceArray(sequence.Sequence):
 
         # extract the indices
         indices = next(iter(subsample_sample))
-        subsampled_split = SequenceArray.get(
+        subsampled_split = get_batch_n(
             self.split,
             len_batch(self.split),
             indices,
             self.transforms,
-            use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
+            # use `use_advanced_indexing` so that we keep the types as close as possible to original
+            use_advanced_indexing=True
         )
-        return SequenceArray(subsampled_split, copy.deepcopy(self.sampler), transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
+        return SequenceArray(
+            subsampled_split,
+            copy.deepcopy(self.sampler),
+            transforms=self.transforms,
+            use_advanced_indexing=self.use_advanced_indexing
+        )
 
     def subsample_uids(self, uids, uids_name, new_sampler=None):
         uid_values = self.split.get(uids_name)
@@ -81,7 +91,8 @@ class SequenceArray(sequence.Sequence):
             len_batch(self.split),
             indices_to_keep,
             self.transforms,
-            use_advanced_indexing=True  # use `use_advanced_indexing` so that we keep the types as close as possible to original
+            # use `use_advanced_indexing` so that we keep the types as close as possible to original
+            use_advanced_indexing=True
         )
 
         if new_sampler is None:
@@ -89,12 +100,12 @@ class SequenceArray(sequence.Sequence):
         else:
             new_sampler = copy.deepcopy(new_sampler)
 
-        return SequenceArray(subsampled_split, new_sampler, transforms=self.transforms, use_advanced_indexing=self.use_advanced_indexing)
-
-    @staticmethod
-    def get(split, nb_samples, indices, transforms, use_advanced_indexing):
-        warnings.warn('deprecated. Use `trw.reporting.get_batch_n`')
-        return get_batch_n(split, nb_samples, indices, transforms, use_advanced_indexing)
+        return SequenceArray(
+            subsampled_split,
+            new_sampler,
+            transforms=self.transforms,
+            use_advanced_indexing=self.use_advanced_indexing
+        )
 
     def __iter__(self):
         # make sure the sampler is copied so that we can have multiple iterators of the

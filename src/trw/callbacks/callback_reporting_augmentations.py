@@ -5,7 +5,7 @@ from ..utils import to_value
 from ..reporting.table_sqlite import table_truncate, TableStream
 from ..train.utilities import create_or_recreate_folder, update_json_config
 from .callback import Callback
-from ..train import sequence_array
+from ..utils import get_batch_n
 from ..train import sequence
 import logging
 import os
@@ -108,7 +108,7 @@ class CallbackReportingAugmentations(Callback):
                     assert uids is not None, 'we must have a unique UID for each sample!'
                     nb_samples = len(uids)
                     for index, uid in enumerate(uids):
-                        sample = sequence_array.SequenceArray.get(
+                        sample = get_batch_n(
                             batch,
                             nb_samples,
                             [index],

@@ -5,7 +5,7 @@ from ..utils import len_batch, to_value
 from ..callbacks import callback
 from ..train import utilities
 from ..train import sample_export
-from ..train import sequence_array
+from ..utils import get_batch_n
 from ..train import outputs_trw as outputs_trw
 from ..train import guided_back_propagation
 from ..train import grad_cam
@@ -67,7 +67,7 @@ def run_classification_explanation(
     # do sample by sample to simplify the export procedure
     for n in range(nb_samples):
         logger.info('sample={}'.format(n))
-        batch_n = sequence_array.SequenceArray.get(
+        batch_n = get_batch_n(
             batch,
             len_batch(batch),
             np.asarray([n]),
