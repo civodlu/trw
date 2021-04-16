@@ -21,7 +21,8 @@ class CallbackEarlyStopping(Callback):
             loss_fn: Callable[[HistoryStep], float],
             raise_stop_fn: Optional[Callable[[float, History], bool]] = None,
             checkpoints: Sequence[float] = (0.1, 0.25, 0.5, 0.75),
-            discard_if_among_worst_X_performers: float = 0.8,
+            discard_if_among_worst_X_performers: float = 0.6,
+            only_consider_full_run: bool =True,
             min_number_of_runs: int = 10):
         """
 
@@ -37,7 +38,10 @@ class CallbackEarlyStopping(Callback):
             raise_stop_fn: specify if a run should be stopped. For example, this can be useful to discard
                 the parameters that make the model diverge very early. It takes as input (loss, history)
                 and return `True` if the run should be stopped
+            only_consider_full_run: if True, the checkpoints's threshold is calculated for the runs
+                that have been completed (i.e., aborted run will not be used)
         """
+        self.only_consider_full_run = only_consider_full_run
         self.raise_stop_fn = raise_stop_fn
         self.min_number_of_runs = min_number_of_runs
         self.discard_if_among_worst_X_performers = discard_if_among_worst_X_performers
@@ -64,12 +68,17 @@ class CallbackEarlyStopping(Callback):
 
         # collect loss for all runs at given checkpoints
         losses_by_step = collections.defaultdict(list)
-        for e in checkpoints_epoch:
-            for run in all_runs:
+        for run in all_runs:
+            run_losses_by_step = {}
+            for e in checkpoints_epoch:
                 if run.history is not None and len(run.history) > e:
                     loss = self.loss_fn(run.history[e - 1])
                     if loss is not None:
-                        losses_by_step[e].append(loss)
+                        run_losses_by_step[e] = loss
+
+            if (self.only_consider_full_run and len(run_losses_by_step) == len(checkpoints_epoch)) or not self.only_consider_full_run:
+                for e, v in run_losses_by_step.items():
+                    losses_by_step[e].append(v)
 
         # for each checkpoint, sort the losses, and calculate the worst X% of the runs
         # the current run MUST be better than the threshold or it will be pruned
