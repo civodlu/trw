@@ -23,7 +23,7 @@ class Net(nn.Module):
         encoded_x, decoded_x = self.encoder_decoder.forward_with_intermediate(x)
 
         return {
-            'regression': trw.train.OutputRegression(decoded_x, 'images'),
+            'regression': trw.train.OutputRegression(decoded_x, x),
         }
 
 

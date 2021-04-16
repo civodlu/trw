@@ -30,7 +30,7 @@ class ModelSimpleRegression(nn.Module):
 
     def forward(self, batch):
         x = self.w * batch['input']
-        o = trw.train.OutputRegression(output=x, target_name='output')
+        o = trw.train.OutputRegression(output=x, output_truth=batch['output'])
         return {'regression': o}
 
 

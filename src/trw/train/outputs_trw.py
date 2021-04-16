@@ -397,15 +397,16 @@ class OutputRegression(Output):
     def __init__(
             self,
             output,
-            target_name,
+            output_truth,
             criterion_fn=lambda: nn.MSELoss(reduction='none'),
             collect_output=True,
             collect_only_non_training_output=False,
             metrics=metrics.default_regression_metrics(),
             loss_reduction=mean_all,
-            weight_name=None,
+            weights=None,
             loss_scaling=1.0,
             output_postprocessing=lambda x: x,
+            target_name=None,
             sample_uid_name=default_sample_uid_name):
         """
 
@@ -416,7 +417,7 @@ class OutputRegression(Output):
         :param collect_only_non_training_output:
         :param metrics:
         :param loss_reduction:
-        :param weight_name: if not None, the weight name. the loss of each sample will be weighted by this vector
+        :param weights: if not None, the weight. the loss of each sample will be weighted by this vector
         :param loss_scaling: scale the loss by a scalar
         :param output_postprocessing:
         """
@@ -427,18 +428,16 @@ class OutputRegression(Output):
             sample_uid_name=sample_uid_name,
             metrics=metrics)
         self.target_name = target_name
+        self.output_truth = output_truth
         self.loss_reduction = loss_reduction
         self.output_postprocessing = output_postprocessing
         self.collect_only_non_training_output = collect_only_non_training_output
-        self.weight_name = weight_name
+        self.weights = weights
         self.loss_scaling = loss_scaling
 
     def evaluate_batch(self, batch, is_training):
-        truth = batch.get(self.target_name)
-        assert truth is not None, 'classes `{}` is missing in current batch!'.format(self.target_name)
-
         loss_term = {}
-        losses = self.criterion_fn()(self.output, truth)
+        losses = self.criterion_fn()(self.output, self.output_truth)
         assert isinstance(losses, torch.Tensor), 'must `loss` be a `torch.Tensor`'
         assert len_batch(batch) == losses.shape[0], 'loos must have 1 element per sample'
         if self.collect_output:
@@ -448,15 +447,15 @@ class OutputRegression(Output):
                 # can calculate statistics (e.g., accuracy, FP/FN...)
                 loss_term['output_raw'] = self.output
                 loss_term['output'] = self.output_postprocessing(self.output)
-                loss_term['output_truth'] = truth
+                loss_term['output_truth'] = self.output_truth
 
         # do NOT keep the original output else memory will be an issue
         del self.output
         self.output = None
 
-        if self.weight_name is not None:
-            weights = batch.get(self.weight_name)
-            assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
+        if self.weights is not None:
+            weights = self.weights
+            assert weights is not None, 'weight `` could not be found!'.format(self.weights)
             assert len(weights) == len(losses), 'must have a weight per sample'
             assert len(weights.shape) == 1, 'must be a 1D vector'
         else:

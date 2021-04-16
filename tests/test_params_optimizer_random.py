@@ -45,7 +45,7 @@ class Model_XOR(nn.Module):
         if self.dense2 is not None:
             x = F.relu(self.dense2(x))
         x = self.output(x)
-        o = trw.train.OutputRegression(output=x, target_name='var_y')
+        o = trw.train.OutputRegression(output=x, output_truth=batch['var_y'])
         return {'regression': o}
 
 

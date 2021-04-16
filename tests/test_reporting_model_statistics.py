@@ -27,7 +27,7 @@ class ModelLinearRegressionShell(nn.Module):
         x = batch['x']
         o = self.w(x)
         return {
-            'regression': trw.train.OutputRegression(o, target_name='y')
+            'regression': trw.train.OutputRegression(o, batch['y'])
         }
 
 

@@ -15,7 +15,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[1, 2], [3, 4]], dtype=float))
         target_values = torch.from_numpy(np.asarray([[1, 2], [3, 4]], dtype=float))
 
-        o = trw.train.OutputRegression(input_values, target_name='target')
+        o = trw.train.OutputRegression(input_values, target_values)
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -27,7 +27,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[1, 2], [3, 4]], dtype=float))
         target_values = torch.from_numpy(np.asarray([[0, 0], [0, 0]], dtype=float))
 
-        o = trw.train.OutputRegression(input_values, target_name='target')
+        o = trw.train.OutputRegression(input_values, target_values)
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -39,7 +39,7 @@ class TestOutput(TestCase):
         input_values = torch.from_numpy(np.asarray([[1, 2], [3, 4]], dtype=float))
         target_values = torch.from_numpy(np.asarray([[0, 0], [0, 0]], dtype=float))
 
-        o = trw.train.OutputRegression(input_values, target_name='target', loss_scaling=2.0)
+        o = trw.train.OutputRegression(input_values, target_values, loss_scaling=2.0)
         batch = {'target': target_values}
         r = o.evaluate_batch(batch, False)
 
@@ -52,7 +52,7 @@ class TestOutput(TestCase):
         target_values = torch.from_numpy(np.asarray([[0, 0], [0, 0]], dtype=float))
         weights = torch.from_numpy(np.asarray([1, 0], dtype=float))
 
-        o = trw.train.OutputRegression(input_values, target_name='target', weight_name='weights')
+        o = trw.train.OutputRegression(input_values, target_values, weights=weights)
         batch = {'target': target_values, 'weights': weights}
         r = o.evaluate_batch(batch, False)
 

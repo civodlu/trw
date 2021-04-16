@@ -39,7 +39,7 @@ class ComposedModel(nn.ModuleDict):
         w2 = trw.utils.to_value(self['dataset_2'].w)
         self.record[dataset_name].append({'w1': w1, 'w2': w2})
 
-        o = trw.train.OutputRegression(output=x_1 + x_2, target_name='output')
+        o = trw.train.OutputRegression(output=x_1 + x_2, output_truth=batch['output'])
         return {'regression': o}
 
 
@@ -55,7 +55,7 @@ class PartNotTrainedModel(nn.Module):
             x_1 = self.model1(batch)
         x_2 = self.model2(batch)
 
-        o = trw.train.OutputRegression(output=x_1 + x_2, target_name='output')
+        o = trw.train.OutputRegression(output=x_1 + x_2, output_truth=batch['output'])
         return {'regression': o}
 
 

@@ -125,7 +125,7 @@ class ModelDarts1D_fn_1(nn.Module):
         x = self.cell([x, x])
         x += self.bias
         return {
-            'output_fn': trw.train.OutputRegression(x, target_name='fx')
+            'output_fn': trw.train.OutputRegression(x, batch['fx'])
         }
 
 

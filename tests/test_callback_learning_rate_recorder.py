@@ -14,7 +14,7 @@ class ModelDense(nn.Module):
         x = batch['x']
         y = self.d1(x)
         return {
-            'regression': trw.train.OutputRegression(y, target_name='y')
+            'regression': trw.train.OutputRegression(y, batch['y'])
         }
 
 

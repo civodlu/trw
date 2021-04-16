@@ -78,7 +78,7 @@ class ModelSimpleRegression(nn.Module):
 
     def forward(self, batch):
         x = self.w * batch['input_1']
-        o = trw.train.OutputRegression(output=x, target_name='output')
+        o = trw.train.OutputRegression(output=x, output_truth=batch['output'])
         return {'regression': o}
 
 
@@ -93,7 +93,7 @@ class ModelEmbedding(nn.Module):
         x = self.dropout(x)
 
         return {
-            'regression': trw.train.OutputRegression(x, target_name='input_1')
+            'regression': trw.train.OutputRegression(x, batch['input_1'])
         }
 
 
