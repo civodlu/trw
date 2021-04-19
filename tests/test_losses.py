@@ -299,7 +299,8 @@ class TestLosses(TestCase):
         # test jointly the metric
         output = {
             'output_truth': t2,
-            'output_raw': t1
+            'output_raw': t1,
+            'output': t1.argmax(dim=1, keepdim=True),
         }
         metric = MetricSegmentationDice(dice_fn=trw.train.LossDiceMulticlass(normalization_fn=None, return_dice_by_class=True, smooth=0, eps=0))
         metric_values = metric(output)
@@ -342,7 +343,7 @@ class TestLosses(TestCase):
             foreground = generate_foreground()
             output = torch.cat([1 - foreground.float(), foreground.float()], dim=1)
             truth_output.append((truth, output))
-            i = metric({'output_truth': truth, 'output_raw': output})
+            i = metric({'output_truth': truth, 'output_raw': output, 'output': output.argmax(dim=1, keepdim=True)})
             metric_intermediates.append(i)
         metric_result_full_data = metric.aggregate_metrics(metric_intermediates)
 
@@ -360,7 +361,7 @@ class TestLosses(TestCase):
                     max_bb = min_bb + bloc_size
                     sub_output = output[:, :, min_bb[0]:max_bb[0], min_bb[1]:max_bb[1]]
                     sub_truth = truth[:, :, min_bb[0]:max_bb[0], min_bb[1]:max_bb[1]]
-                    i = metric_by_uid({'output_truth': sub_truth, 'output_raw': sub_output, 'uid': [uid]})
+                    i = metric_by_uid({'output_truth': sub_truth, 'output_raw': sub_output, 'output': sub_output.argmax(dim=1, keepdim=True), 'uid': [uid]})
                     metric_by_uid_intermediates.append(i)
 
         metric_result_sub = metric.aggregate_metrics(metric_by_uid_intermediates)

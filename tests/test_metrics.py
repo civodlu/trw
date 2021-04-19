@@ -5,7 +5,9 @@ import numpy as np
 import torch
 import sklearn
 from sklearn.metrics import confusion_matrix
-from trw.train.metrics import fast_confusion_matrix, MetricClassificationBinarySensitivitySpecificity
+from trw.train import one_hot
+from trw.train.metrics import fast_confusion_matrix, MetricClassificationBinarySensitivitySpecificity, \
+    MetricSegmentationDice
 
 
 class TestMetrics(TestCase):
@@ -275,3 +277,79 @@ class TestMetrics(TestCase):
         expected_specificity = 3.0 / (3.0 + 3.0)
         assert abs(r['1-sensitivity'] - (1 - expected_sensitivity)) < 1e-5
         assert abs(r['1-specificity'] - (1 - expected_specificity)) < 1e-5
+
+    def test_dice_by_uid(self):
+        found0 = torch.tensor([[[
+            [0, 0, 1],
+            [1, 1, 1],
+            [2, 2, 2],
+        ]]])
+
+        expected0 = torch.tensor([[[
+            [0, 1, 1],
+            [0, 1, 0],
+            [2, 2, 2],
+        ]]])
+
+        found1 = torch.tensor([[[
+            [0, 0, 1],
+            [1, 1, 1],
+            [2, 2, 2],
+        ]]])
+
+        expected1 = torch.tensor([[[
+            [1, 1, 1],
+            [1, 1, 0],
+            [0, 2, 2],
+        ]]])
+
+        metric = MetricSegmentationDice(aggregate_by='uid_test')
+        o1 = metric({'uid_test': ['uid1'], 'output_truth': expected1, 'output_raw': one_hot(found1, 3), 'output': found1})
+        o2 = metric({'uid_test': ['uid1'], 'output_truth': expected0, 'output_raw': one_hot(found0, 3), 'output': found0})
+        o3 = metric({'uid_test': ['uid2'], 'output_truth': expected0, 'output_raw': one_hot(found0, 3), 'output': found0})
+
+        # expected dice:
+        # uid2:
+        #  c0: 2 * 1 / (2 + 3) = 2 / 5
+        #  c1: 2 * 2 / (4 + 3) = 4 / 7
+        #  c2: 2 * 3 / (3 + 3) = 6 / 6
+
+        # uid1:
+        #   dice uid1, part1:
+        #   c0: 2 * 0 / (2 + 2) = 0 / 4
+        #   c1: 2 * 3 / (4 + 5) = 6 / 9
+        #   c2: 2 * 2 / (3 + 2) = 4 / 5
+
+        # aggregated dice1 (part1 + part2):
+        #  c0: 2 * (0 + 1) / (2 + 2 + 2 + 3) = 2 / 10
+        #  c1: 2 * (3 + 2) / (4 + 5 + 4 + 3) = 10 / 16
+        #  c2: 2 * (2 + 3) / (3 + 3 + 3 + 2) = 10 / 11
+
+        # all aggregated dice (ui1 + ui2)
+        # c0 = 1 - (2/10 + 2/5) / (2)
+        # c1 = 1 - (10/16 + 4/7) / 2
+        # c2 = 1 - (10/11 + 6/6) / 2
+
+        r = metric.aggregate_metrics([o1, o2, o3])
+        eps = 0.05
+        assert abs(r['1-dice[class=0]'] - 0.7) < eps
+        assert abs(r['1-dice[class=1]'] - 0.4017857142857143) < eps
+        assert abs(r['1-dice[class=2]'] - 0.045454545454545414) < eps
+        assert abs(r['1-dice'] - (0.7 + 0.4017857142857143 + 0.045454545454545414) / 3) < eps
+
+        metric = MetricSegmentationDice(aggregate_by=None)
+        o1 = metric({'uid_test': ['uid1'], 'output_truth': expected1, 'output_raw': one_hot(found1, 3), 'output': found1})
+        o2 = metric({'uid_test': ['uid1'], 'output_truth': expected0, 'output_raw': one_hot(found0, 3), 'output': found0})
+        o3 = metric({'uid_test': ['uid2'], 'output_truth': expected0, 'output_raw': one_hot(found0, 3), 'output': found0})
+        r = metric.aggregate_metrics([o1, o2, o3])
+        eps = 0.02
+
+        # all aggregated dice (ui1 + ui2)
+        # c0 = 1 - (0/4 + 2/5 + 2/5) / 3
+        # c1 = 1 - (6/9 + 4/7 + 4/7) / 3
+        # c2 = 1 - (4/5 + 6/6 + 6/6) / 3
+
+        assert abs(r['1-dice[class=0]'] - 0.7333333333333334) < eps
+        assert abs(r['1-dice[class=1]'] - 0.39682539682539686) < eps
+        assert abs(r['1-dice[class=2]'] - 0.06666666666666676) < eps
+        assert abs(r['1-dice'] - (0.7333333333333334 + 0.39682539682539686 + 0.06666666666666676) / 3) < eps

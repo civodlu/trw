@@ -1,4 +1,8 @@
+from abc import ABC, abstractmethod
+from typing import Dict, List, Optional
+
 import numpy as np
+
 from ..utils import to_value
 from . import losses
 from sklearn import metrics
@@ -50,13 +54,14 @@ def fast_confusion_matrix(
     return m
 
 
-class Metric:
+class Metric(ABC):
     """
     A metric base class
 
     Calculate interesting metric
     """
-    def __call__(self, outputs):
+    @abstractmethod
+    def __call__(self, outputs: Dict) -> Optional[Dict]:
         """
 
         Args:
@@ -65,11 +70,12 @@ class Metric:
         Returns:
             a dictionary of metric names/values or None
         """
-        metric_value = 0
-        return Metric, {'metric_name': metric_value}
+        pass
 
-    def aggregate_metrics(self, metric_by_batch):
+    @abstractmethod
+    def aggregate_metrics(self, metric_by_batch: List[Dict]) -> Dict[str, float]:
         """
+        Aggregate all the metrics into a consolidated metric.
 
         Args:
             metric_by_batch: a list of metrics, one for each batch
@@ -77,7 +83,7 @@ class Metric:
         Returns:
             a dictionary of result name and value
         """
-        raise NotImplementedError()
+        pass
 
 
 class MetricLoss(Metric):
@@ -182,43 +188,58 @@ class MetricSegmentationDice(Metric):
     def __init__(
             self,
             dice_fn=losses.LossDiceMulticlass(
-                normalization_fn=nn.Sigmoid,
+                normalization_fn=None,  # we use discrete values, not probabilities
                 return_dice_by_class=True,
                 smooth=0),
-            aggregate_by_uid=False):
+            aggregate_by: Optional[str] = None):
         """
 
         Args:
             dice_fn: the function to calculate the dice score of each class
-            aggregate_by_uid: if True, the dice scores will be aggregated first by UID. This can be useful
+            aggregate_by: if not None, the dice scores will be aggregated first by `aggregate_by`. This can be useful
                 when the metrics is calculated from pieces of the input data and we want to calculate a dice per
                 case
         """
         self.dice_fn = dice_fn
-        self.aggregate_by_uid = aggregate_by_uid
+        self.aggregate_by = aggregate_by
 
     def __call__(self, outputs):
         # keep the torch variable. We want to use GPU if available since it can
         # be slow use numpy for this
         truth = outputs.get('output_truth')
-        found = outputs.get('output_raw')
-        uid = outputs.get('uid')
+        found = outputs.get('output')
+        raw = outputs.get('output_raw')
+        assert raw is not None, 'missing value=`output_raw`'
+        assert found is not None, 'missing value=`output`'
+        assert truth is not None, 'missing value=`output_truth`'
+
+        nb_classes = raw.shape[1]
+
+        if self.aggregate_by is not None:
+            aggregate_by = outputs.get(self.aggregate_by)
+            assert aggregate_by is not None, f'cannot find the aggregate_by={self.aggregate_by} in batch!'
+        else:
+            aggregate_by = None
 
         #assert found.min() >= 0, 'Unexpected value: `output` must be in range [0..1]'
 
         if found is None or truth is None:
             return None
 
-        assert len(found.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, got={len(found.shape)}'
+        assert found.shape[1] == 1, 'output must have a single channel!'
+        found_one_hot = losses.one_hot(found[:, 0], nb_classes)
+        assert len(found_one_hot.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, ' \
+                                                             f'got={len(found_one_hot)}'
+        assert found_one_hot.shape[2:] == truth.shape[2:]
         with torch.no_grad():
-            numerator, cardinality = self.dice_fn(found, truth)
+            numerator, cardinality = self.dice_fn(found_one_hot, truth)
 
         return {
             # sum the samples: we have to do this to support variably sized
             # batch size
             'numerator': to_value(numerator),
             'cardinality': to_value(cardinality),
-            'uid': uid
+            'aggregate_by': aggregate_by
         }
 
     @staticmethod
@@ -249,10 +270,8 @@ class MetricSegmentationDice(Metric):
         for m in metric_by_batch:
             numerators = m['numerator']
             cardinalitys = m['cardinality']
-            nb_samples = len(numerators)
-            uids = m.get('uid')
-            if uids is None:
-                uids = ['missing'] * nb_samples
+            uids = m.get('aggregate_by')
+            assert uids is not None
             assert len(numerators) == len(cardinalitys)
             assert len(numerators) == len(uids)
             for numerator, cardinality, uid in zip(numerators, cardinalitys, uids):
@@ -277,7 +296,7 @@ class MetricSegmentationDice(Metric):
     def aggregate_metrics(self, metric_by_batch):
         nb_batches = len(metric_by_batch)
         if nb_batches > 0:
-            if not self.aggregate_by_uid:
+            if self.aggregate_by is None:
                 dice = MetricSegmentationDice._aggregate_dices(metric_by_batch)
             else:
                 dice = MetricSegmentationDice._aggregate_dices_by_uid(metric_by_batch)
