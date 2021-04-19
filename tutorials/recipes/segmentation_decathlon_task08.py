@@ -162,7 +162,7 @@ if __name__ == '__main__':
         get_spatial_info_from_batch_name=get_spatial_info_type,
     )
 
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         eval_every_X_epoch=10,
         inputs_fn=lambda: trw.datasets.create_decathlon_dataset(

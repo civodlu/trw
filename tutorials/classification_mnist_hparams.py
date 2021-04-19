@@ -34,7 +34,7 @@ def evaluate_hparams(hparams):
         callbacks_per_epoch=[trw.callbacks.callback_epoch_summary.CallbackEpochSummary()]
     )
     
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
         log_path='run',

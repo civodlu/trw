@@ -74,7 +74,7 @@ if __name__ == '__main__':
             trw.callbacks.CallbackReportingClassificationErrors(max_samples=20)
         ])
 
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_mnist_dataset(),
         log_path='tmp',

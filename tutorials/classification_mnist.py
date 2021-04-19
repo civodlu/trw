@@ -37,7 +37,7 @@ class Net(nn.Module):
 options = trw.train.Options(num_epochs=40)
 trainer = trw.train.TrainerV2()
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_cnn',

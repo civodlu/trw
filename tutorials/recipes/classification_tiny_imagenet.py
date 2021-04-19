@@ -75,7 +75,7 @@ if __name__ == '__main__':
         callbacks_per_epoch=trw.train.default_per_epoch_callbacks(
             additional_callbacks=per_epoch_additional_callbacks())
     )
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_tiny_imagenet_dataset(
             batch_size=64,

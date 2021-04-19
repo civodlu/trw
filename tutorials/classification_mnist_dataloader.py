@@ -68,7 +68,7 @@ if __name__ == '__main__':
     options = trw.train.Options(num_epochs=40)
     trainer = trw.train.TrainerV2()
     
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=create_data(),
         log_path='mnist_cnn_dataloader',

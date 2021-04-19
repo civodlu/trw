@@ -37,7 +37,7 @@ def per_epoch_callbacks():
 
 trainer = trw.train.TrainerV2(callbacks_per_epoch=per_epoch_callbacks())
 
-model, results = trainer.fit(
+results = trainer.fit(
     trw.train.Options(num_epochs=50),
     datasets=trw.datasets.create_fake_symbols_2d_dataset(
         nb_samples=1000,

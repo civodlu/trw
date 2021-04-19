@@ -166,7 +166,7 @@ class TrainerV2:
             with_final_evaluation=True,
             history=None,
             erase_logging_folder=True,
-            eval_every_X_epoch=1):
+            eval_every_X_epoch=1) -> RunMetadata:
         """
         Fit the model
 
@@ -256,9 +256,10 @@ class TrainerV2:
                 # are stopped in a controlled manner to avoid memory leaks
                 for dataset_name, dataset in datasets.items():
                     for split_name, split in dataset.items():
-                        logger.info(f'closing dataset={dataset_name} split={split_name}')
-                        split.close()
-                        logger.info(f'closed dataset={dataset_name} split={split_name}!')
+                        if hasattr(split, 'close'):
+                            logger.info(f'closing dataset={dataset_name} split={split_name}')
+                            split.close()
+                            logger.info(f'closed dataset={dataset_name} split={split_name}!')
 
                 # resource are released, just continue the shutdown
                 logger.info(f'datasets all closed!')
@@ -425,7 +426,7 @@ class TrainerV2:
         # do not explicitly clean up the datasets since these were
         # created outside the trainer
         clean_up(datasets=None)
-        return model, RunMetadata(
+        return RunMetadata(
             history=history,
             options=options,
             outputs=outputs_epoch,

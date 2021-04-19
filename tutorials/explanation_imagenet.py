@@ -69,7 +69,7 @@ trainer = trw.train.TrainerV2(
     callbacks_post_training=[trw.callbacks.CallbackExplainDecision()]
 )
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=input_dataset(),
     log_path='imagenet-explanation',

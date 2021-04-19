@@ -138,13 +138,14 @@ if __name__ == '__main__':
 
     #transforms = None
 
-    model, results = trainer.fit(
+    model = Net_simple(options)
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_cifar10_dataset(
             transform_train=transforms, nb_workers=2, batch_size=1000, data_processing_batch_size=500),
         log_path='cifar10_darts_search',
         #model_fn=lambda options: Net_DARTS(options),
-        model=Net_simple(options),
+        model=model,
         optimizers_fn=lambda datasets, model: trw.train.create_adam_optimizers_fn(
             datasets=datasets, model=model, learning_rate=0.01))
     

@@ -150,7 +150,7 @@ if __name__ == '__main__':
 
     # transforms = None
 
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_cifar10_dataset(
             transform_train=transform_train, transform_valid=transform_valid, nb_workers=2,

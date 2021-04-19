@@ -52,7 +52,7 @@ class TestCallbackExplainDecision(TestCase):
             callbacks_post_training=callbacks_post_training_fn(),
             callbacks_pre_training=None)
 
-        model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_dataset(),
             log_path='synthetic_explanation',

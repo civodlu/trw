@@ -612,47 +612,4 @@ def strip_unpickable(outputs):
     return o_d
 
 
-def run_trainer_repeat(
-        trainer,
-        options, inputs_fn, model_fn, optimizers_fn,
-        losses_fn=default_sum_all_losses,
-        loss_creator=create_losses_fn,
-        run_prefix='default',
-        eval_every_X_epoch=1,
-        number_of_training_runs=10):
-    """
-    Manages multiple run of a trainer for example to repeat the training and have an idea of the variance of a model
-
-    Args:
-        trainer:
-        options:
-        inputs_fn:
-        model_fn:
-        optimizers_fn:
-        losses_fn:
-        loss_creator:
-        run_prefix:
-        eval_every_X_epoch:
-        number_of_training_runs:
-
-    Returns:
-        a tuple `model, result` of the last model trained
-    """
-
-    model = None
-    result = None
-    for n in range(number_of_training_runs):
-        logger.info('training run=%d' % n)
-        model, result = trainer.fit(
-            options,
-            inputs_fn,
-            model_fn,
-            optimizers_fn,
-            losses_fn=losses_fn,
-            loss_creator=loss_creator,
-            run_prefix=run_prefix,
-            eval_every_X_epoch=eval_every_X_epoch)
-
-    return model, result
-
 

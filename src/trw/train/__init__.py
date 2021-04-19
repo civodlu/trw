@@ -10,7 +10,7 @@ from .outputs_trw import Output, OutputClassification, OutputRegression, OutputE
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
 from .trainer import create_losses_fn, epoch_train_eval, eval_loop, train_loop, \
-    run_trainer_repeat, default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
+    default_post_training_callbacks, default_per_epoch_callbacks, default_pre_training_callbacks, \
     default_sum_all_losses
 from .trainer_v2 import TrainerV2
 from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_scheduler_step_lr_fn, \

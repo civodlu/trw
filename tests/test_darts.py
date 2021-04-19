@@ -137,16 +137,17 @@ class TestDarts(TestCase):
         """
         options = trw.train.Options(num_epochs=50)
         trainer = trw.train.TrainerV2()
+        model = ModelDarts1D_fn_1()
         r = trainer.fit(
             options=options,
             datasets=create_darts_dataset_1d(),
-            model=ModelDarts1D_fn_1(),
+            model=model,
             optimizers_fn=lambda datasets, model: trw.arch.create_darts_adam_optimizers_fn(datasets, model, darts_weight_dataset_name='training_weights', learning_rate=0.01)
         )
 
         # this represents the architecture of a cell
         # Now, create a cell that implements this architecture
-        genotype = r[0].cell.get_genotype()
+        genotype = model.cell.get_genotype()
 
         # TODO  when we handle variable cell inputs, make sure we find the expected optimized parameters!
 

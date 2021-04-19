@@ -83,7 +83,7 @@ class Net(nn.Module):
 options = trw.train.Options(num_epochs=100)
 trainer = trw.train.TrainerV2()
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=trw.datasets.create_mnist_dataset(nb_workers=0),
     log_path='contrastive_loss_mnist',

@@ -79,7 +79,7 @@ model_type = 'lstm'
 options = trw.train.Options(num_epochs=10)
 trainer = trw.train.TrainerV2()
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=trw.datasets.create_name_nationality_dataset(),
     log_path='name_nationality_rnn',

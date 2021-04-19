@@ -44,7 +44,7 @@ trainer = trw.train.TrainerV2(
     callbacks_post_training=[trw.callbacks.CallbackReportingExportSamples(max_samples=2000)],
 )
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_autoencoder',

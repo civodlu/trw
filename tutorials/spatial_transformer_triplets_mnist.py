@@ -103,7 +103,7 @@ trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_fn(),
 )
 
-model, results = trainer.fit(
+results = trainer.fit(
     options,
     datasets=trw.datasets.create_mnist_cluttered_datasset(cluttered_size=(64, 64), nb_workers=0),
     log_path='mnist_cluttered_spatial_transformer_triplets',

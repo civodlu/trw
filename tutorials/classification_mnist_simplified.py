@@ -18,7 +18,7 @@ def create_net(options):
 # configure and run the training/evaluation
 trainer = trw.train.TrainerV2()
 
-model, results = trainer.fit(
+results = trainer.fit(
     trw.train.Options(num_epochs=10),
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_cnn',

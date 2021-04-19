@@ -51,7 +51,7 @@ class TestCallbackLearningRateFinder(unittest.TestCase):
             callbacks_post_training=None,
             callbacks_pre_training=[trw.callbacks.CallbackLearningRateFinder(set_new_learning_rate=True)]
         )
-        model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_simple_regression(factor=10.0),
             model=ModelSimpleRegression(),

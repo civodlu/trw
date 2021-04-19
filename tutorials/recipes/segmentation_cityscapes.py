@@ -27,7 +27,7 @@ class Net(nn.Module):
 
 if __name__ == '__main__':
     trainer = trw.train.Trainer(callbacks_pre_training_fn=None)
-    model, results = trainer.fit(
+    results = trainer.fit(
         trw.train.Options(num_epochs=200),
         inputs_fn=lambda: trw.datasets.create_cityscapes_dataset(batch_size=2, nb_workers=2),
         run_prefix='cityscapes_segmentation_unet',

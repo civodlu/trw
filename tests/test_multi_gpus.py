@@ -90,7 +90,7 @@ class TestMultiGpus(TestCase):
         )
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
-        final_model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_dataset(),
             model=create_model_classic(),
@@ -116,7 +116,7 @@ class TestMultiGpus(TestCase):
         )
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
-        final_model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_dataset(),
             model=create_model_simplified(),

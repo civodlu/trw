@@ -41,7 +41,7 @@ if __name__ == '__main__':
         trw.transforms.TransformRandomCropPad(padding=[0, 2, 2])
     ]
     
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_mnist_dataset(transforms=transforms, nb_workers=2),
         log_path='mnist_cnn_augmentation',

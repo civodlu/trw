@@ -110,12 +110,12 @@ class TestTrainerAdvanced(TestCase):
             callbacks_per_batch=None
         )
 
-        composed_model = ComposedModel()
+        model = ComposedModel()
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
-        model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_regression_double_dataset(),
-            model=composed_model,
+            model=model,
             optimizers_fn=optimizer_fn)
 
         # first make sure the model was trained perfectly
@@ -129,10 +129,10 @@ class TestTrainerAdvanced(TestCase):
         # we iterate one sample at a time with gradient update. So we expect that for dataset_1, the model 2 parameters
         # will be repeated N times then for dataset_2, the mdoel 1 parameters will be repeated N times. N being the
         # dataset size
-        print(len(composed_model.record['dataset_1']))
-        print(len(composed_model.record['dataset_2']))
-        r_1 = composed_model.record['dataset_1'][10:-1]  # realign the 2 sequences for easy comparison
-        r_2 = composed_model.record['dataset_2'][10:-1]
+        print(len(model.record['dataset_1']))
+        print(len(model.record['dataset_2']))
+        r_1 = model.record['dataset_1'][10:-1]  # realign the 2 sequences for easy comparison
+        r_2 = model.record['dataset_2'][10:-1]
         print(len(r_1))
         print(len(r_2))
         assert len(r_1) == len(r_2)
@@ -173,7 +173,7 @@ class TestTrainerAdvanced(TestCase):
         model = PartNotTrainedModel()
 
         optimizer_fn = functools.partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.01)
-        final_model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_regression_double_dataset(),
             model=model,
@@ -185,5 +185,5 @@ class TestTrainerAdvanced(TestCase):
         assert loss < 1e-3
 
         # we expect `model1` to not be trained (w=0)
-        w_1 = trw.utils.to_value(final_model.model1.w)[0]
+        w_1 = trw.utils.to_value(model.model1.w)[0]
         assert abs(w_1) < 1e-5

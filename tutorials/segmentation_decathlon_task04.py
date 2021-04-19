@@ -56,7 +56,7 @@ if __name__ == '__main__':
         ]
     )
 
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_decathlon_dataset(
             'Task04_Hippocampus',

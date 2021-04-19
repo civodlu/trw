@@ -155,7 +155,7 @@ class TestParamsOptimizer(TestCase):
                 callbacks_pre_training=None,
                 callbacks_post_training=None
             )
-            model, output = trainer.fit(
+            output = trainer.fit(
                 options,
                 datasets=inputs_fn(),
                 model=model_fn(),

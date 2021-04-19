@@ -129,7 +129,7 @@ if __name__ == '__main__':
         trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
-    model, results = trainer.fit(
+    results = trainer.fit(
         options,
         datasets=trw.datasets.create_cifar10_dataset(
             transform_train=transform_train,

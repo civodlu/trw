@@ -8,7 +8,7 @@ import torch.utils.data
 import trw
 import trw.train
 import trw.utils
-from trw.callbacks import Callback
+from trw.callbacks import Callback, CallbackEpochSummary
 from trw.train import default_pre_training_callbacks
 
 import utils
@@ -138,15 +138,34 @@ def create_trainer(callback_per_epoch=[], callback_per_batch=[], callback_per_ba
     )
 
 
+class CallbackRaiseExceptionAbortRun(Callback):
+    def __init__(self, epoch_raised=5):
+        self.epoch_raised = epoch_raised
+
+    def __call__(self, options, history, model, **kwargs):
+        if len(history) == self.epoch_raised:
+            raise trw.utils.ExceptionAbortRun(history=history, reason='callback raised this exception!')
+
+
+class CallbackRaiseRuntimeException(Callback):
+    def __init__(self, epoch_raised=5):
+        self.epoch_raised = epoch_raised
+
+    def __call__(self, options, history, model, **kwargs):
+        if len(history) == self.epoch_raised:
+            raise RuntimeError('callback failed!')
+
+
 class TestTrainer(TestCase):
     def test_simple_regression(self):
         # the simples API test for model fitting
         options = trw.train.Options(num_epochs=200)
         trainer = create_trainer()
-        model, results = trainer.fit(
+        model = create_model()
+        results = trainer.fit(
             options,
             datasets=create_simple_regression(),
-            model=create_model(),
+            model=model,
             optimizers_fn=optimizer_fn,
             eval_every_X_epoch=2)
 
@@ -162,7 +181,7 @@ class TestTrainer(TestCase):
         callback = CallbackCollectOutput()
         trainer = create_trainer(callback_per_epoch=[callback])
 
-        model, results = trainer.fit(
+        results = trainer.fit(
             options,
             datasets=create_random_input(),
             model=ModelEmbedding(),
@@ -209,7 +228,7 @@ class TestTrainer(TestCase):
         options = trw.train.Options(num_epochs=1)
         trainer = create_trainer(callback_per_batch=[callback_batch], callback_per_batch_loss_terms=[callback_batch_loss_terms])
 
-        _, _ = trainer.fit(
+        _ = trainer.fit(
             options,
             datasets=create_random_input(),
             model=ModelEmbedding(),
@@ -246,13 +265,54 @@ class TestTrainer(TestCase):
     def test_embedded_optimizer(self):
         options = trw.train.Options(num_epochs=200)
         trainer = create_trainer()
-        model, results = trainer.fit(
+        model = ModelEmbeddedOptimizer()
+        _ = trainer.fit(
             options,
             datasets=create_simple_regression(),
-            model=ModelEmbeddedOptimizer(),
+            model=model,
             optimizers_fn=None,  # no optimizer: it is embedded in the model!
             eval_every_X_epoch=2)
 
         coef_found = trw.utils.to_value(list(model.model.parameters())[0])
         print(coef_found)
         self.assertAlmostEqual(coef_found, 2.0, delta=1e-3)
+
+    def test_run_interrupted(self):
+        options = trw.train.Options(num_epochs=50)
+
+        trainer = trw.train.TrainerV2(
+            callbacks_per_epoch=[CallbackRaiseExceptionAbortRun(epoch_raised=5)],
+        )
+
+        try:
+            _ = trainer.fit(
+                options,
+                datasets=create_simple_regression(),
+                model=ModelEmbeddedOptimizer(),
+                optimizers_fn=None,  # no optimizer: it is embedded in the model!
+                eval_every_X_epoch=2)
+            assert 0, 'should have raised exception!'
+        except trw.utils.ExceptionAbortRun as e:
+            assert len(e.history) == 5
+
+    def test_run_callback_exceptions(self):
+        """
+        Exception in callbacks should not stop the run
+        """
+        options = trw.train.Options(num_epochs=50)
+
+        trainer = trw.train.TrainerV2(
+            callbacks_per_epoch=[CallbackEpochSummary(), CallbackRaiseRuntimeException()],
+            callbacks_post_training=[CallbackRaiseRuntimeException()],
+            callbacks_pre_training=[CallbackRaiseRuntimeException()]
+        )
+
+        r = trainer.fit(
+            options,
+            datasets=create_simple_regression(),
+            model=ModelEmbeddedOptimizer(),
+            optimizers_fn=None,  # no optimizer: it is embedded in the model!
+            eval_every_X_epoch=2)
+
+        assert len(r.history) == 50 + 1
+        assert len(r.outputs) >= 1
