@@ -11,33 +11,6 @@ from collections import abc
 logger = logging.getLogger(__name__)
 
 
-def collate_dicts_pytorch(list_of_dicts):
-    """
-    Collate a list of dictionaries into a batch (i.e., a dictionary of values by feature name)
-
-    Args:
-        list_of_dicts: a list of dictionaries
-
-    Returns:
-        a batch
-    """
-    assert isinstance(list_of_dicts, collections.Sequence), 'must be a list!'
-    assert isinstance(list_of_dicts[0], collections.Mapping), 'must be a dictionary!'
-    if len(list_of_dicts) == 0:
-        return {}
-
-    # re-use the default pytorch collate BUT concatenate the batch on axis 0 instead
-    d = torch.utils.data.dataloader.default_collate(list_of_dicts)
-    r = collections.OrderedDict()
-    for name, value in d.items():
-        if isinstance(value, (torch.Tensor)):
-            r[name] = value.view([-1] + list(value.shape)[2:])
-        else:
-            r[name] = value
-
-    return r
-
-
 def remove_nested_list(items):
     """
     Remove 2 nested list where items is just a list (one element) of list
