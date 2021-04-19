@@ -128,7 +128,7 @@ class TestCallbackEarlyStopping(unittest.TestCase):
         history = [{'1-accuracy': 0.9999} for n in range(nb_epochs)]
 
         def check_min_loss(loss, history):
-            return loss >= 0.9
+            return loss >= 0.9, f'loss={0.9}'
 
         early_stopping = CallbackEarlyStopping(
             store=store,

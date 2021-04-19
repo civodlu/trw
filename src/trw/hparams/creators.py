@@ -2,6 +2,7 @@
 Here we implement useful default hyper-parameter creators that are registered
 in the :class:`trw.hparams.HyperParameterRepository`
 """
+import logging
 from typing import Sequence, Tuple, Optional
 import torch
 from torch import nn
@@ -13,6 +14,9 @@ from .params import create_discrete_value, create_boolean, create_continuous_pow
 from ..train.optimizers import create_sgd_optimizers_fn, create_adam_optimizers_fn
 from ..basic_typing import Datasets
 from ..layers.layer_config import NormType, PoolType
+
+
+logger = logging.getLogger(__name__)
 
 
 def create_optimizers_fn(
@@ -94,6 +98,7 @@ def create_optimizers_fn(
 
 def create_activation(
         name: str,
+        default_value: nn.Module,
         functions: Sequence[nn.Module] = (
                 nn.ReLU,
                 nn.ReLU6,
@@ -112,15 +117,18 @@ def create_activation(
     Args:
         name: the name of the hyper-parameter
         functions: the activation functions
+        default_value: the default value at creation
 
     Returns:
         a functor to create the activation function
     """
-    return create_discrete_value(name, default_value=functions[0], values=list(functions))
+    assert default_value in functions
+    return create_discrete_value(name, default_value=default_value, values=list(functions))
 
 
 def create_norm_type(
         name: str,
+        default_value: Optional[NormType],
         norms: Sequence[Optional[NormType]] = (
                 NormType.BatchNorm,
                 NormType.InstanceNorm,
@@ -131,15 +139,18 @@ def create_norm_type(
     Args:
         name: the name of the hyper-parameter
         norms: a sequence of :class:`NormType`
+        default_value: the default value at creation
 
     Returns:
         a normalization layer type
     """
-    return create_discrete_value(name, default_value=norms[0], values=list(norms))
+    assert default_value in norms
+    return create_discrete_value(name, default_value=default_value, values=list(norms))
 
 
 def create_pool_type(
     name: str,
+    default_value: PoolType,
     pools: Sequence[PoolType] = (
             PoolType.MaxPool,
             PoolType.AvgPool,
@@ -150,8 +161,10 @@ def create_pool_type(
     Args:
         name: the name of the hyper-parameter
         pools: the available pooling types
+        default_value: the default value at creation
 
     Returns:
         a pooling type
     """
-    return create_discrete_value(name, default_value=pools[0], values=list(pools))
+    assert default_value in pools
+    return create_discrete_value(name, default_value=default_value, values=list(pools))

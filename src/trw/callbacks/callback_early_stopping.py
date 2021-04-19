@@ -1,5 +1,5 @@
 import collections
-from typing import Callable, Sequence, Optional
+from typing import Callable, Sequence, Optional, Tuple
 
 from ..utils import ExceptionAbortRun
 from ..basic_typing import HistoryStep, History
@@ -19,7 +19,7 @@ class CallbackEarlyStopping(Callback):
             self,
             store: RunStore,
             loss_fn: Callable[[HistoryStep], float],
-            raise_stop_fn: Optional[Callable[[float, History], bool]] = None,
+            raise_stop_fn: Optional[Callable[[float, History], Tuple[bool, str]]] = None,
             checkpoints: Sequence[float] = (0.1, 0.25, 0.5, 0.75),
             discard_if_among_worst_X_performers: float = 0.6,
             only_consider_full_run: bool =True,
@@ -73,6 +73,7 @@ class CallbackEarlyStopping(Callback):
             for e in checkpoints_epoch:
                 if run.history is not None and len(run.history) > e:
                     loss = self.loss_fn(run.history[e - 1])
+                    assert isinstance(loss, float)
                     if loss is not None:
                         run_losses_by_step[e] = loss
 
@@ -113,9 +114,9 @@ class CallbackEarlyStopping(Callback):
         if self.raise_stop_fn is not None:
             # check if we are satisfying early termination criteria
             # e.g., Nan, very slow loss decrease...
-            should_be_stopped = self.raise_stop_fn(loss, history)
+            should_be_stopped, reason = self.raise_stop_fn(loss, history)
             if should_be_stopped:
-                logger.info(f'epoch={epoch}, loss={loss}, early termination!')
+                logger.info(f'epoch={epoch}, loss={loss}, early termination. Reason={reason}')
                 raise ExceptionAbortRun(
                     history=history,
                     reason=f'Early termination (epoch={len(history)}). loss={loss}. raise_stop_fn returned true!')

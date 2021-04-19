@@ -37,17 +37,17 @@ class TestParamCreator(unittest.TestCase):
 
     def test_activation(self):
         trw.hparams.HyperParameterRepository.reset()
-        v = trw.hparams.create_activation('hp1')
+        v = trw.hparams.create_activation('hp1', default_value=nn.ReLU)
         assert isinstance(v(), nn.Module)
 
     def test_pool_type(self):
         trw.hparams.HyperParameterRepository.reset()
-        v = trw.hparams.create_pool_type('hp1')
+        v = trw.hparams.create_pool_type('hp1', default_value=PoolType.MaxPool)
         assert isinstance(v, PoolType)
 
     def test_norm_type(self):
         trw.hparams.HyperParameterRepository.reset()
-        v = trw.hparams.create_norm_type('hp1')
+        v = trw.hparams.create_norm_type('hp1', default_value=NormType.BatchNorm)
         assert isinstance(v, NormType)
 
 

@@ -4,6 +4,10 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Dict, Any
 
 import numpy as np
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class HyperParam(ABC):
@@ -74,6 +78,7 @@ class DiscreteValue(HyperParam):
 def create_discrete_value(name: str, default_value: Any, values: List[Any]) -> Any:
     p = DiscreteValue(name, default_value, values)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
 
@@ -117,6 +122,7 @@ class DiscreteMapping(HyperParam):
 def create_discrete_mapping(name: str, default_value: Any, mapping: Dict[Any, Any]) -> Any:
     p = DiscreteMapping(name, default_value, mapping)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
 
@@ -149,6 +155,7 @@ class DiscreteInteger(HyperParam):
 def create_discrete_integer(name: str, default_value: Any, min_range: int, max_range: int) -> Any:
     p = DiscreteInteger(name, default_value, min_range, max_range)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
 
@@ -177,6 +184,7 @@ class DiscreteBoolean(HyperParam):
 def create_boolean(name: str, default_value: Any) -> bool:
     p = DiscreteBoolean(name, default_value)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
 
@@ -209,6 +217,7 @@ class ContinuousUniform(HyperParam):
 def create_continuous_uniform(name: str, default_value: float, min_range: float, max_range: float) -> float:
     p = ContinuousUniform(name, default_value, min_range, max_range)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
     
@@ -252,6 +261,7 @@ class ContinuousPower(HyperParam):
 def create_continuous_power(name: str, default_value: float, exponent_min: float, exponent_max: float) -> float:
     p = ContinuousPower(name, default_value, exponent_min, exponent_max)
     v = register_hparam(p)
+    logger.debug(f'param={name}, value={v}')
     return v
 
 
