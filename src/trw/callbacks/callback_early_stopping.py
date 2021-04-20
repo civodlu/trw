@@ -73,8 +73,8 @@ class CallbackEarlyStopping(Callback):
             for e in checkpoints_epoch:
                 if run.history is not None and len(run.history) > e:
                     loss = self.loss_fn(run.history[e - 1])
-                    assert isinstance(loss, float)
                     if loss is not None:
+                        assert isinstance(loss, float)
                         run_losses_by_step[e] = loss
 
             if (self.only_consider_full_run and len(run_losses_by_step) == len(checkpoints_epoch)) or not self.only_consider_full_run:
