@@ -31,7 +31,7 @@ def affine_transformation_translation(t: Sequence[float]) -> torch.Tensor:
 
 def affine_transformation_scale(s: Sequence[float]) -> torch.Tensor:
     """
-        Defines an affine scaling transformation
+        Defines an affine scaling transformation (2D or 3D)
 
         For a 3D transformation, returns:
                | Sx 0  0  0 |
@@ -170,6 +170,27 @@ def affine_transformation_rotation_3d_z(angle_radian: float) -> torch.Tensor:
         [0,                      0,                              0,  1]
     ], dtype=torch.float32)
     return rotation
+
+
+def apply_homogeneous_affine_transform(transform: torch.Tensor, position: torch.Tensor):
+    """
+    Apply an homogeneous affine transform (4x4 for 3D or 3x3 for 2D) to a position
+
+    Args:
+        transform: an homogeneous affine transformation
+        position: XY(Z) position
+
+    Returns:
+        a transformed position XY(Z)
+    """
+    assert len(transform.shape) == 2
+    assert len(position.shape) == 1
+    dim = position.shape[0]
+    assert transform.shape[0] == transform.shape[1]
+    assert transform.shape[0] == dim + 1
+    # decompose the transform as a (3x3 transform, translation) components
+    position = position.unsqueeze(1).type(transform.dtype)
+    return transform[:dim, :dim].mm(position).squeeze(1) + transform[:dim, dim]
 
 
 def to_voxel_space_transform(matrix: torch.Tensor, image_shape: ShapeCX) -> torch.Tensor:

@@ -16,7 +16,7 @@ from .normalize import normalize
 from .renormalize import renormalize
 from .resample import resample_3d
 from .affine import affine_transformation_translation, affine_transformation_rotation2d, affine_transformation_scale, \
-    affine_transform, to_voxel_space_transform
+    affine_transform, to_voxel_space_transform, apply_homogeneous_affine_transform
 from .spatial_info import SpatialInfo
 
 from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_4_or_above

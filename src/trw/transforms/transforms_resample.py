@@ -1,7 +1,8 @@
 import collections
 import functools
-import numbers
 from typing import Union, Callable, Dict, List, Sequence
+
+from typing_extensions import Literal
 
 from ..transforms import transforms
 from ..transforms.resample import resample_3d
@@ -21,9 +22,8 @@ def _transform_resample_fn(
         batch,
         resampling_geometry,
         get_spatial_info_from_batch_name,
-        background_type,
-        spline_order,
-        constant_background_value):
+        interpolation_mode,
+        padding_mode):
     geometry_by_name = {}
     for name in feature_names:
         geometry = get_spatial_info_from_batch_name(batch, name)
@@ -31,11 +31,6 @@ def _transform_resample_fn(
 
     if not isinstance(resampling_geometry, SpatialInfo):
         resampling_geometry = resampling_geometry(geometry_by_name)
-
-    if isinstance(constant_background_value, numbers.Number):
-        background_by_name = dict(zip(feature_names, [constant_background_value] * len(feature_names)))
-    else:
-        background_by_name = constant_background_value
 
     batch_transformed = collections.OrderedDict()
     for name in feature_names:
@@ -50,7 +45,6 @@ def _transform_resample_fn(
         min_bb_mm = resampling_geometry.origin
         max_bb_mm = np.asarray(resampling_geometry.origin) + \
                     np.asarray(resampling_geometry.spacing) * np.asarray(resampling_geometry.shape)
-        background = background_by_name[name]
         v_r = resample_3d(
             v[0, 0],  # single volume single channel tensor
             np_volume_spacing=geometry.spacing,
@@ -58,9 +52,8 @@ def _transform_resample_fn(
             min_bb_mm=min_bb_mm,
             max_bb_mm=max_bb_mm,
             resampled_spacing=resampling_geometry.spacing,
-            order=spline_order,
-            mode=background_type,
-            constant_value=background
+            interpolation_mode=interpolation_mode,
+            padding_mode=padding_mode,
         )
 
         # put back the N and C channels
@@ -132,22 +125,16 @@ class TransformResample(transforms.TransformBatchWithCriteria):
             resampling_geometry: Union[SpatialInfo, Callable[[Dict[str, SpatialInfo]], SpatialInfo]],
             get_spatial_info_from_batch_name: get_spatial_info_type,
             criteria_fn: Callable[[Batch], List[str]] = transforms.criteria_is_array_4_or_above,
-            background_type: str = 'constant',
-            spline_order: int = 1,
-            constant_background_value: constant_background_value_type = 0):
+            interpolation_mode: Literal['linear', 'nearest'] = 'linear',
+            padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros'):
         """
         Args:
             resampling_geometry: the geometric info to be used for the resampling. This can be a fixed
                 geometry or a function taking as input a dict of geometries (for each selected volume)
             get_spatial_info_from_batch_name: function to calculate the spatial info of a (batch, name)
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
-            spline_order: the spline interpolation. Range [0..5]. See :func:`scipy.ndimage.affine_transform`
-            background_type: specify how the background voxels are calculated (voxels that fall outside the
-                field of view of a volume). Can be `constant`,
-                `nearest`, `wrap`, `reflect`, `mirror`. See See :func:`scipy.ndimage.affine_transform`
-                for more details
-            constant_background_value: a numeric or a Dict mapping input name to numeric (e.g., background value
-                of a volume will be different from background value of a volume)
+            interpolation_mode:  interpolation mode
+            padding_mode: indicate how to pad missing data
         """
         super().__init__(
             criteria_fn=criteria_fn,
@@ -155,6 +142,5 @@ class TransformResample(transforms.TransformBatchWithCriteria):
                 _transform_resample_fn,
                 resampling_geometry=resampling_geometry,
                 get_spatial_info_from_batch_name=get_spatial_info_from_batch_name,
-                background_type=background_type,
-                spline_order=spline_order,
-                constant_background_value=constant_background_value))
+                interpolation_mode=interpolation_mode,
+                padding_mode=padding_mode))
