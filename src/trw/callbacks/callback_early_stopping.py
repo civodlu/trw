@@ -1,4 +1,5 @@
 import collections
+from numbers import Number
 from typing import Callable, Sequence, Optional, Tuple
 
 from ..utils import ExceptionAbortRun
@@ -74,7 +75,7 @@ class CallbackEarlyStopping(Callback):
                 if run.history is not None and len(run.history) > e:
                     loss = self.loss_fn(run.history[e - 1])
                     if loss is not None:
-                        assert isinstance(loss, float)
+                        assert isinstance(loss, Number), f'expected `float`, got={loss}'
                         run_losses_by_step[e] = loss
 
             if (self.only_consider_full_run and len(run_losses_by_step) == len(checkpoints_epoch)) or not self.only_consider_full_run:
