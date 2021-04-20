@@ -100,7 +100,7 @@ def resample_spatial_info(
         raise ValueError(f'not supported interpolation={interpolation}')
 
     target_shape = [1, 1] + list(geometry_fixed.shape)
-    grid = F.affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners)
+    grid = F.affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners).to(moving_volume.device)
     resampled_torch = grid_sample(
         moving_volume.type(grid.dtype),
         grid,
