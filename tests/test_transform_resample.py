@@ -3,7 +3,9 @@ from unittest import TestCase
 import trw
 import numpy as np
 import torch
-from trw.transforms import resample_3d, SpatialInfo, random_fixed_geometry_within_geometries
+from trw.transforms import resample_3d, SpatialInfo, random_fixed_geometry_within_geometries, \
+    affine_transformation_translation
+from trw.transforms.affine import affine_transformation_rotation_3d_x, affine_transformation_scale
 
 
 class TestTransformResample(TestCase):
@@ -177,3 +179,13 @@ class TestTransformResample(TestCase):
         batch_transformed = transform(batch)
         assert len(batch_transformed) == 2
         assert batch_transformed['v1'].shape == batch_transformed['v2'].shape
+
+    def test_spatial_info_pst(self):
+        pst = affine_transformation_translation([10, 11, 12]).mm(
+              affine_transformation_rotation_3d_x(0.3)).mm(
+              affine_transformation_scale([2, 3, 4]))
+
+        si = SpatialInfo(shape=[20, 21, 22], patient_scale_transform=pst)
+
+        assert (si.spacing == np.asarray([4, 3, 2])).all()
+        assert (si.origin == np.asarray([12, 11, 10])).all()

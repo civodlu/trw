@@ -115,6 +115,41 @@ def affine_transformation_rotation_3d_y(angle_radian: float) -> torch.Tensor:
     return rotation
 
 
+def affine_transformation_get_spacing(pst: torch.Tensor) -> torch.Tensor:
+    """
+    Return the spacing (expansion factor) of the transformation per dimension XY[Z]
+
+    Args:
+        pst: a 3x3 or 4x4 transformation matrix
+
+    Returns:
+        XY[Z] spacing
+    """
+    assert len(pst.shape) == 2
+    assert pst.shape[0] == pst.shape[1]
+    dim = pst.shape[0] - 1
+    pst_rot = pst[:dim, :dim]
+
+    spacing = torch.linalg.norm(pst_rot, ord=2, dim=0)
+    return spacing
+
+
+def affine_transformation_get_origin(pst: torch.Tensor) -> torch.Tensor:
+    """
+    Return the origin of the transformation per dimension XY[Z]
+
+    Args:
+        pst: a 3x3 or 4x4 transformation matrix
+
+    Returns:
+        XY[Z] origin
+    """
+    assert len(pst.shape) == 2
+    assert pst.shape[0] == pst.shape[1]
+    dim = pst.shape[0] - 1
+    return pst[:dim, dim]
+
+
 def affine_transformation_rotation_3d_z(angle_radian: float) -> torch.Tensor:
     """
     Rotation in 3D around the y axis
