@@ -120,7 +120,7 @@ class CallbackEarlyStopping(Callback):
                 logger.info(f'epoch={epoch}, loss={loss}, early termination. Reason={reason}')
                 raise ExceptionAbortRun(
                     history=history,
-                    reason=f'Early termination (epoch={len(history)}). loss={loss}. raise_stop_fn returned true!')
+                    reason=f'Early termination (epoch={len(history)}). loss={loss}. Reason={reason}!')
 
         # return ONLY after the `raise_stop_fn` check: often,
         # the `loss` will be based on the validation (potentially mostly none)

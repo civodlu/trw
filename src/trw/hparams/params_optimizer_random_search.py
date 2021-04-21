@@ -68,22 +68,28 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
         while self.repeat != iteration:
             # by default, evaluate the given hyper parameter default value
             try:
+                status = 'SUCCESS'
                 metrics, history, info = self.evaluate_fn(hyper_parameters)
             except ExceptionAbortRun as e:
                 # the run was aborted early. Record only the history of the run
                 metrics = e.metrics
                 history = e.history
                 info = e.reason
+                status = 'FAILED'
                 self.log_string(f'iteration={iteration} was terminated early (epoch={len(history)}). Reason={e.reason}')
             except RuntimeError as e:
                 metrics = None
                 history = None
+                status = 'FAILED'
                 info = f'Run FAILED. Exception={e}'
                 self.log_string(f'iteration={iteration} FAILED. Exception={e}')
 
             if iteration == 0:
                 self.log_string(f'hyper_parameters (first run)={hyper_parameters}')
-            self.log_string(f'iteration={iteration}, metrics={metrics}, params={str(hyper_parameters.hparams)}')
+                
+            if status == 'SUCCESS':
+                self.log_string(f'status={status} iteration={iteration}, metrics={metrics}, '
+                                f'params={str(hyper_parameters.hparams)}')
 
             run_result = RunResult(
                 metrics=metrics,
