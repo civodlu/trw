@@ -1,7 +1,13 @@
 import collections
+import logging
 import numbers
+import sys
+
 import torch
 import numpy as np
+
+
+logger = logging.getLogger(__name__)
 
 
 def collate_tensors(values, device, pin_memory=False, non_blocking=False):
@@ -85,7 +91,20 @@ def collate_dicts(batch, device, pin_memory=False, non_blocking=False):
 
     collated = collections.OrderedDict()
     for name, values in batch.items():
-        collated[name] = collate_tensors(values=values, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
+        try:
+            collated[name] = collate_tensors(
+                values=values,
+                device=device,
+                pin_memory=pin_memory,
+                non_blocking=non_blocking
+            )
+        except Exception as e:
+            # useful debugging info
+            info = f'collate_dicts with name={name}. Exception={e}'
+            print(info, file=sys.stderr)
+            logger.error(info)
+            raise e
+
     return collated
 
 
@@ -107,9 +126,16 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
 
     d = collections.OrderedDict()
     for key in batches[0]:
-        bs = [b[key] for b in batches]
-        bs = collate_tensors(bs, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
-        d[key] = bs
+        try:
+            bs = [b[key] for b in batches]
+            bs = collate_tensors(bs, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
+            d[key] = bs
+        except Exception as e:
+            # useful debugging info
+            info = f'collate_list_of_dicts with name={key}. Exception={e}'
+            print(info, file=sys.stderr)
+            logger.error(info)
+            raise e
 
     return d
 
