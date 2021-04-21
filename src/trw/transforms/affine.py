@@ -193,6 +193,22 @@ def apply_homogeneous_affine_transform(transform: torch.Tensor, position: torch.
     return transform[:dim, :dim].mm(position).squeeze(1) + transform[:dim, dim]
 
 
+def apply_homogeneous_affine_transform_zyx(transform: torch.Tensor, position_zyx: torch.Tensor):
+    """
+    Apply an homogeneous affine transform (4x4 for 3D or 3x3 for 2D) to a position
+
+    Args:
+        transform: an homogeneous affine transformation
+        position: (Z)YX position
+
+    Returns:
+        a transformed position (Z)YX
+    """
+    position_xyz = torch.flip(position_zyx, (0,))
+    p_xyz = apply_homogeneous_affine_transform(transform, position=position_xyz)
+    return torch.flip(p_xyz, (0,))
+
+
 def to_voxel_space_transform(matrix: torch.Tensor, image_shape: ShapeCX) -> torch.Tensor:
     """
     Express the affine transformation in image space coordinate

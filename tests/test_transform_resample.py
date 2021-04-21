@@ -6,7 +6,7 @@ import torch
 from trw.transforms import resample_3d, SpatialInfo, random_fixed_geometry_within_geometries, \
     affine_transformation_translation
 from trw.transforms.affine import affine_transformation_rotation_3d_x, affine_transformation_scale, \
-    apply_homogeneous_affine_transform
+    apply_homogeneous_affine_transform, apply_homogeneous_affine_transform_zyx
 from trw.transforms.resample import resample_spatial_info
 
 
@@ -138,25 +138,27 @@ class TestTransformResample(TestCase):
         pst = affine_transformation_translation(origin).mm(affine_transformation_scale(spacing))
         si = SpatialInfo(shape=[20, 21, 22], patient_scale_transform=pst)
 
-        si_2 = SpatialInfo(shape=[20, 21, 22], origin=origin.flip((0,)), spacing=spacing.flip((0,)))
+        origin_flipped = torch.flip(origin, (0,))
+        spacing_flipped = torch.flip(spacing, (0,))
+        si_2 = SpatialInfo(shape=[20, 21, 22], origin=origin_flipped, spacing=spacing_flipped)
         assert (si.patient_scale_transform - si_2.patient_scale_transform).abs().max() < 1e-5
 
         # index (0, 0, 0) is origin!
-        p = si.index_to_position(torch.tensor([0, 0, 0]))
+        p = si.index_to_position(index_zyx=torch.tensor([0, 0, 0]))
         assert len(p.shape) == 1
         assert p.shape[0] == 3
 
-        assert (p - torch.tensor([10, 11, 12])).abs().max() < 1e-5
-        assert (si.position_to_index(p) - torch.tensor([0, 0, 0])).abs().max() < 1e-5
+        assert (p - torch.tensor([12, 11, 10])).abs().max() < 1e-5
+        assert (si.position_to_index(position_zyx=p) - torch.tensor([0, 0, 0])).abs().max() < 1e-5
 
         # move in one direction from the origin
         for n in range(20):
             dp = torch.empty(3).uniform_(0, 10).type(torch.float32)
-            p = origin + dp * spacing
-            i = si.position_to_index(p)
+            p = origin_flipped + dp * spacing_flipped
+            i = si.position_to_index(position_zyx=p)
             assert (i - dp).abs().max() < 1e-5
 
-            p_back = si.index_to_position(i)
+            p_back = si.index_to_position(index_zyx=i)
             assert (p - p_back).abs().max() < 1e-5
 
     def test_random_volumes(self):
@@ -202,38 +204,38 @@ class TestTransformResample(TestCase):
                 tfm=tfm
             )
 
-            shape_moving_xyz = torch.tensor(shape_moving_zyx[::-1])
-
             error = 0.0
             nb_voxels = 0
 
+            shape_moving_zyx = torch.tensor(shape_fixed_zyx)
+
             for _ in range(nb_points):
                 index_fixed = torch.tensor([
-                    torch.randint(shape_fixed_zyx[2], size=(1,)),
+                    torch.randint(shape_fixed_zyx[0], size=(1,)),
                     torch.randint(shape_fixed_zyx[1], size=(1,)),
-                    torch.randint(shape_fixed_zyx[0], size=(1,))
+                    torch.randint(shape_fixed_zyx[2], size=(1,))
                 ], dtype=torch.float32)
 
                 index_fixed_i = index_fixed.type(torch.long)
 
                 # transform: index (fixed) -> position in world space
-                p = fixed_geometry.index_to_position(index_fixed)
+                p = fixed_geometry.index_to_position(index_zyx=index_fixed)
 
                 # apply moving transform
-                p = apply_homogeneous_affine_transform(tfm, p)
+                p = apply_homogeneous_affine_transform_zyx(tfm, p)
 
                 # transform position -> index (moving)
-                index_moving = moving_geometry.position_to_index(p)
+                index_moving = moving_geometry.position_to_index(position_zyx=p)
 
                 index_moving_rounded = index_moving.round().type(torch.long)
                 if (index_moving_rounded >= 0).all() and \
-                        ((index_moving_rounded - shape_moving_xyz) < 0).all():
-                    value_resampled = fixed[0, 0][index_fixed_i[2], index_fixed_i[1], index_fixed_i[0]]
+                        ((index_moving_rounded - shape_moving_zyx) < 0).all():
+                    value_resampled = fixed[0, 0][index_fixed_i[0], index_fixed_i[1], index_fixed_i[2]]
                     if value_resampled <= 2:
                         # discard background values
                         continue
                     value_fixed = moving[0, 0][
-                        index_moving_rounded[2], index_moving_rounded[1], index_moving_rounded[0]]
+                        index_moving_rounded[0], index_moving_rounded[1], index_moving_rounded[2]]
                     error += (value_resampled - value_fixed).abs()
                     nb_voxels += 1
 
@@ -243,3 +245,22 @@ class TestTransformResample(TestCase):
             assert avg_error <= 25.0
             all_avg_errors.append(avg_error)
         assert np.mean(all_avg_errors) < 15
+
+    def test_sub_geometry(self):
+        pst = affine_transformation_translation([10, 11, 12]).mm(
+            affine_transformation_rotation_3d_x(0.3)).mm(
+            affine_transformation_scale([2, 3, 4]))
+
+        si = SpatialInfo(shape=[20, 21, 22], patient_scale_transform=pst)
+        start_zyx = torch.tensor([5, 6, 7])
+        end_zyx = torch.tensor([8, 10, 13])
+        si_sub = si.sub_geometry(start_index_zyx=start_zyx, end_index_zyx_inclusive=end_zyx)
+
+        o = si_sub.index_to_position(index_zyx=torch.tensor([0, 0, 0]))
+        expected_o = si.index_to_position(index_zyx=start_zyx)
+        assert (o - expected_o).abs().max() == 0
+
+        index_e = end_zyx - start_zyx
+        pos_e = si_sub.index_to_position(index_zyx=index_e)
+        pos_e_expected = si.index_to_position(index_zyx=end_zyx)
+        assert (pos_e - pos_e_expected).abs().max() <= 1e-5
