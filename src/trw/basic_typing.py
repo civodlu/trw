@@ -29,6 +29,9 @@ Tensor = Union[np.ndarray, torch.Tensor]
 """Generic Tensor as numpy or torch. Must be shaped as [N, C, D, H, W, ...]"""
 TensorNCX = Union[np.ndarray, torch.Tensor]
 
+"""Generic Tensor as numpy or torch. Must be shaped as [C, D, H, W, ...]"""
+TensorCX = Union[np.ndarray, torch.Tensor]
+
 """Generic Tensor as numpy or torch. Must be shaped as 2D array [N, X]"""
 TensorNX = Union[np.ndarray, torch.Tensor]
 

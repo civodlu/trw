@@ -132,7 +132,7 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
             d[key] = bs
         except Exception as e:
             # useful debugging info
-            info = f'collate_list_of_dicts with name={key}. Exception={e}'
+            info = f'ERROR collate_list_of_dicts with name={key}. Exception={e}'
             print(info, file=sys.stderr)
             logger.error(info)
             raise e
