@@ -29,7 +29,7 @@ def resample_spatial_info(
         tfm: torch.Tensor,
         interpolation: Literal['linear', 'nearest'] = 'linear',
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
-        align_corners=True) -> TorchTensorNCX:
+        align_corners=False) -> TorchTensorNCX:
     """
     Apply an affine transformation to a given (moving) volume into a given geometry (fixed)
 
