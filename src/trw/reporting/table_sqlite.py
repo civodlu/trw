@@ -1,11 +1,16 @@
 import collections
+import logging
 
 
 # this tag is used to specify the type of data stored on the local drive
 # for example BLOB_NUMPY for numpy arrays or BLOB_IMAGE_PNG for PNG images
 import sqlite3
+import traceback
 
 SQLITE_TYPE_PATTERN = '_type'
+
+
+logger = logging.getLogger(__name__)
 
 
 def table_create(cursor, table_name, name_type_list, primary_key):
@@ -51,10 +56,16 @@ def table_insert(cursor, table_name, names, values):
         assert len(values) == len(names)
         insert_fn = cursor.execute
 
-    names_str = ','.join(names)
-    values_str = ','.join(['?'] * len(names))
-    sql_command = f"INSERT INTO '{table_name}' ({names_str}) VALUES ({values_str})"
-    insert_fn(sql_command, values)
+    try:
+        names_str = ','.join(names)
+        values_str = ','.join(['?'] * len(names))
+        sql_command = f"INSERT INTO '{table_name}' ({names_str}) VALUES ({values_str})"
+        insert_fn(sql_command, values)
+    except Exception as e:
+        # catch the exception to add additional debug info
+        logger.error(f'Table insertion failed with exception={e}. Keys={names}')
+        logging.error(traceback.format_exc())
+        raise e
 
 
 def table_drop(cursor, table_name):

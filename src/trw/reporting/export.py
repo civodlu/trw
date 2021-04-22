@@ -224,6 +224,12 @@ def export_sample(
     batch_size = len_batch(batch)
     base_name = safe_filename(base_name)
 
+    supported_type = (
+        np.ndarray,
+        numbers.Number,
+        str,
+    )
+
     # transform the first dim of numpy arrays as lists
     batch_list = collections.OrderedDict()
     for name, value in batch.items():
@@ -242,8 +248,16 @@ def export_sample(
         elif isinstance(value, list):
             # if a list, make sure we make a copy so that the original batch is not modified
             value = list(value)
+            if len(value) > 0:
+                if type(value[0]) not in supported_type:
+                    # the type is NOT supported! get a string representation of it
+                    value = [str(v) for v in value]
+
         elif value is None:
             # discard any ``None``
+            continue
+        else:
+            # discard any value type not recognized
             continue
         batch_list[name] = value
 
