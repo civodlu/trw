@@ -1,5 +1,7 @@
 import torch
 import torch.nn as nn
+from typing_extensions import Literal
+
 from ..basic_typing import ShapeNCX, TensorNCX, TorchTensorNCX, ShapeX
 
 
@@ -45,7 +47,7 @@ def _upsample_int_3d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     return tensor_interp
 
 
-def upsample(tensor: TensorNCX, size: ShapeX, mode='linear') -> TensorNCX:
+def upsample(tensor: TensorNCX, size: ShapeX, mode: Literal['linear', 'nearest']='linear') -> TensorNCX:
     """
     Upsample a 1D, 2D, 3D tensor
 
