@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from typing import Sequence
 
-from ..basic_typing import TensorNCX, TensorCX
+from ..basic_typing import TensorNCX
 
 
 def _crop_5d(image, min, max):
@@ -177,7 +177,7 @@ def transform_batch_random_crop_joint(
         crop_shape: Sequence[Union[None, int]],
         return_offsets: bool = False) -> Union[List[TensorNCX], Tuple[List[TensorNCX], TensorNCX]]:
     """
-    Randomly crop a list of numpy arrays. Apply the same cropping for each array element
+    Randomly crop a list of arrays. Apply the same cropping for each array element
 
     Args:
         arrays: a list of numpy or Torch arrays. Samples are stored in the first dimension

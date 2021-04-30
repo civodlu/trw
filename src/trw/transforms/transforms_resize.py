@@ -3,6 +3,8 @@ import collections
 import functools
 from typing import List
 
+from trw.basic_typing import ShapeX
+
 from ..transforms import transforms
 from ..transforms.resize import resize
 
@@ -24,14 +26,14 @@ class TransformResize(transforms.TransformBatchWithCriteria):
     """
     Resize a tensor to a fixed size
     """
-    def __init__(self, size: List[int], criteria_fn=None, mode='linear'):
+    def __init__(self, size: ShapeX, criteria_fn=None, mode='linear'):
         """
         Args:
             size: the size to reshape to. Excluding the sample and filter
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
             mode: the resampling method. Can be `linear` or `nearest`
         """
-        assert isinstance(size, list), 'must be a list!'
+        size = list(size)
 
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_4_or_above

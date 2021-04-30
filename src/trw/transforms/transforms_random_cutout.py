@@ -7,15 +7,19 @@ from ..basic_typing import Batch, ShapeX, ShapeCX, TensorNCX
 from ..transforms import transforms
 from ..transforms import cutout_function
 from ..transforms.copy import copy
+import torch
 
 
-def _transform_random_cutout(feature_names, batch, cutout_size, cutout_value_fn):
+def _transform_random_cutout(feature_names, batch, cutout_size, cutout_value_fn, probability):
     # make sure we do NOT modify the original images
     assert len(feature_names) == 1, 'joint CUTOUT is not yet implemented!'  # TODO implement joint cutout
 
     feature_value = copy(batch[feature_names[0]])
-    for sample in feature_value:
-        cutout_function.cutout(sample, cutout_size=cutout_size, cutout_value_fn=cutout_value_fn)
+
+    apply_cutout = torch.rand(len(feature_value)) <= probability
+    for with_cutout, sample in zip(apply_cutout, feature_value):
+        if with_cutout:
+            cutout_function.cutout(sample, cutout_size=cutout_size, cutout_value_fn=cutout_value_fn)
     transformed_arrays = [feature_value]
 
     new_batch = collections.OrderedDict(zip(feature_names, transformed_arrays))
@@ -34,6 +38,7 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
             self,
             cutout_size: Union[ShapeCX, Callable[[], ShapeCX]],
             criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+            probability: float = 1.0,
             cutout_value_fn: Callable[[TensorNCX], None] = functools.partial(
                 cutout_function.cutout_value_fn_constant,
                 value=0)
@@ -44,6 +49,7 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
                 a tuple representing the size of the region to occlude (with ``N`` dimension removed)
             cutout_value_fn: a function to fill the cutout images. Should directly modify the image
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
+            probability: the probability of cutout
         """
         assert isinstance(cutout_size, tuple) or callable(cutout_size), 'must be a tuple or a callable!'
         if criteria_fn is None:
@@ -54,4 +60,5 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
             transform_fn=functools.partial(
                 _transform_random_cutout,
                 cutout_size=cutout_size,
+                probability=probability,
                 cutout_value_fn=cutout_value_fn))
