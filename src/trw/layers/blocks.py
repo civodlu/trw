@@ -97,17 +97,18 @@ def _posprocess_padding(config: LayerConfig, conv_kwargs: Dict, ops: List[nn.Mod
             del conv_kwargs['padding_mode']
 
 
-class BlockConvNormActivation(nn.Module):
-    def __init__(
-            self,
-            config: LayerConfig,
-            input_channels: int,
-            output_channels: int,
-            *,
-            kernel_size: Optional[KernelSize] = None,
-            padding: Optional[Padding] = None,
-            stride: Optional[Stride] = None,
-            padding_mode: Optional[str] = None):
+class BlockConv(nn.Module):
+    def __init__(self,
+                 config: LayerConfig,
+                 input_channels: int,
+                 output_channels: int,
+                 *,
+                 kernel_size: Optional[KernelSize] = None,
+                 padding: Optional[Padding] = None,
+                 stride: Optional[Stride] = None,
+                 padding_mode: Optional[str] = None,
+                 groups: int = 1,
+                 bias: bool = True):
 
         super().__init__()
 
@@ -126,17 +127,53 @@ class BlockConvNormActivation(nn.Module):
         _posprocess_padding(config, conv_kwargs, ops)
 
         assert config.conv is not None
-        conv = config.conv(
+        self.ops = config.conv(
             in_channels=input_channels,
             out_channels=output_channels,
+            groups=groups,
+            bias=bias,
             **conv_kwargs)
-        ops.append(conv)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.ops(x)
+
+
+class BlockConvNormActivation(nn.Module):
+    def __init__(
+            self,
+            config: LayerConfig,
+            input_channels: int,
+            output_channels: int,
+            *,
+            kernel_size: Optional[KernelSize] = None,
+            padding: Optional[Padding] = None,
+            stride: Optional[Stride] = None,
+            padding_mode: Optional[str] = None,
+            groups: int = 1,
+            bias: bool = True):
+
+        super().__init__()
+
+        conv = BlockConv(
+            config=config,
+            input_channels=input_channels,
+            output_channels=output_channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            stride=stride,
+            padding_mode=padding_mode,
+            groups=groups,
+            bias=bias
+        )
+
+        ops: List[nn.Module] = [conv]
 
         if config.norm is not None:
             ops.append(config.norm(num_features=output_channels, **config.norm_kwargs))
 
         if config.activation is not None:
             ops.append(config.activation(**config.activation_kwargs))
+
         self.ops = nn.Sequential(*ops)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -297,7 +334,7 @@ class BlockUpDeconvSkipConv(nn.Module):
         assert skip.shape[1] == self.skip_channels
         assert previous.shape[1] == self.input_channels
         x = self.ops_deconv(previous)
-        assert x.shape == skip.shape, f'got shape={x.shape}, expected={skip.shape}'
+        assert x.shape[2:] == skip.shape[2:], f'got shape={x.shape[2:]}, expected={skip.shape[2:]}'
         x = torch.cat([skip, x], dim=1)
         x = self.ops_conv(x)
         return x
@@ -306,8 +343,7 @@ class BlockUpDeconvSkipConv(nn.Module):
 class ConvTransposeBlockType(Protocol):
     def __call__(
             self,
-            config:
-            LayerConfig,
+            config: LayerConfig,
             input_channels: int,
             output_channels: int,
             *,
@@ -332,6 +368,47 @@ class ConvBlockType(Protocol):
             stride: Optional[Stride] = None,
             padding_mode: Optional[str] = None) -> nn.Module:
         ...
+
+
+class BlockSqueezeExcite(nn.Module):
+    """
+    Squeeze-and-excitation block
+
+    References:
+        [1] "Squeeze-and-Excitation Networks", https://arxiv.org/pdf/1709.01507.pdf
+    """
+
+    def __init__(self,
+                 config: LayerConfig,
+                 input_channels: int,
+                 r: int = 24):
+        super().__init__()
+
+        self.squeeze = config.ops.adaptative_avg_pool_fn(1)
+
+        squeezed_channels = input_channels // r
+        assert squeezed_channels > 1, f'invalid channels! input_channels={input_channels}, r={r}'
+
+        conv_1 = BlockConv(
+            config=config,
+            input_channels=input_channels,
+            output_channels=squeezed_channels,
+            kernel_size=1)
+
+        activation = config.activation()
+
+        conv_2 = BlockConv(
+            config=config,
+            input_channels=squeezed_channels,
+            output_channels=input_channels,
+            kernel_size=1)
+
+        self.excitation = nn.Sequential(conv_1, activation, conv_2, nn.Sigmoid())
+
+    def forward(self, x):
+        y = self.squeeze(x)
+        y = self.excitation(y)
+        return x * y
 
 
 class BlockRes(nn.Module):

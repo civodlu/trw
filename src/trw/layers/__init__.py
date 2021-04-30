@@ -1,6 +1,7 @@
 from .ops_conversion import OpsConversion
 from .layer_config import LayerConfig, default_layer_config, NormType
-from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpDeconvSkipConv, BlockPool, BlockRes
+from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpDeconvSkipConv, BlockPool, BlockRes, \
+    BlockConv, BlockSqueezeExcite
 
 from .utils import div_shape
 from .flatten import Flatten
@@ -22,3 +23,5 @@ from .autoencoder_convolutional_variational_conditional import AutoencoderConvol
 from .gan import Gan, GanDataPool
 from .encoder_decoder_resnet import EncoderDecoderResnet
 from .deep_supervision import DeepSupervision
+from .backbone_decoder import BackboneDecoder
+from .efficient_net import EfficientNet, MBConvN

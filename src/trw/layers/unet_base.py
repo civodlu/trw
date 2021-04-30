@@ -20,7 +20,6 @@ class DownType(Protocol):
             bloc_level: int,
             input_channels: int,
             output_channels: int,
-            block: nn.Module,
             **kwargs) -> nn.Module:
         ...
 
@@ -55,7 +54,6 @@ class UpType(Protocol):
             skip_channels: int,
             input_channels: int,
             output_channels: int,
-            block: nn.Module,
             **kwargs) -> nn.Module:
         ...
 
@@ -89,7 +87,6 @@ class MiddleType(Protocol):
             input_channels: int,
             output_channels: int,
             latent_channels: Optional[int],
-            block: nn.Module,
             **kwargs) -> nn.Module:
         ...
 
@@ -125,6 +122,9 @@ class LatentConv(nn.Module):
 
     def forward(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> torch.Tensor:
         if latent is not None:
+            assert x.shape[0] == latent.shape[0]
+            assert len(x.shape) == len(latent.shape)
+
             assert latent.shape[1] == self.latent_channels
             assert len(latent.shape) == self.dim + 2
             if latent.shape[2:] != x.shape[2:]:
@@ -278,6 +278,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
         # is because we do NOT want to add the activation for the
         # result layer (i.e., often, the output is normalized [-1, 1]
         # and we would discard the negative portion)
+        config = copy.copy(config)
         config.norm = None
         config.activation = None
         config.dropout = None

@@ -665,3 +665,36 @@ class TestLayers2(TestCase):
         assert isinstance(outputs[1], trw.train.OutputSegmentation)
         assert outputs[1].output.shape == (1, 2, 8, 16)
 
+    def test_backbone_upsampler(self):
+        encoder = trw.layers.convs_2d(1, [4, 8, 16])
+        encoder_decoder = trw.layers.BackboneDecoder(
+            dim=2,
+            output_channels=6,
+            backbone=encoder,
+            decoding_channels=(5, 4, 3),
+            backbone_transverse_connections=(0, 1, 2),
+            backbone_input_shape=(1, 1, 16, 24))
+
+        # `backbone_input_shape` is just used to calculate channels,
+        # we must be able to use for different sizes
+        r = encoder_decoder.forward(torch.zeros((2, 1, 32, 48), dtype=torch.float32))
+
+        print('DONE')
+        assert r.shape == (2, 6, 32, 48)
+
+    def test_backbone_upsampler_latent(self):
+        encoder = trw.layers.convs_2d(1, [4, 8, 16])
+        encoder_decoder = trw.layers.BackboneDecoder(
+            output_channels=6,
+            backbone=encoder,
+            decoding_channels=(5, 4, 3),
+            backbone_transverse_connections=(0, 1, 2),
+            latent_channels=2,
+            backbone_input_shape=(1, 1, 16, 24))
+
+        # use a latent
+        latent = torch.zeros([2, 2, 1, 1], dtype=torch.float32)
+        r = encoder_decoder.forward(torch.zeros((2, 1, 32, 48), dtype=torch.float32), latent=latent)
+
+        print('DONE')
+        assert r.shape == (2, 6, 32, 48)
