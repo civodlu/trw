@@ -1,97 +1,22 @@
+import os
+# we already use worker threads, limit each process to 1 thread!
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
+from trw.layers.efficient_net import EfficientNet
+
+
 import trw
 import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
-
-
-class Block(nn.Module):
-    '''expand + depthwise + pointwise + squeeze-excitation'''
-
-    def __init__(self, in_planes, out_planes, expansion, stride):
-        super(Block, self).__init__()
-        self.stride = stride
-
-        planes = expansion * in_planes
-        self.conv1 = nn.Conv2d(
-            in_planes, planes, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn1 = nn.BatchNorm2d(planes)
-        self.conv2 = nn.Conv2d(planes, planes, kernel_size=3,
-                               stride=stride, padding=1, groups=planes, bias=False)
-        self.bn2 = nn.BatchNorm2d(planes)
-        self.conv3 = nn.Conv2d(
-            planes, out_planes, kernel_size=1, stride=1, padding=0, bias=False)
-        self.bn3 = nn.BatchNorm2d(out_planes)
-
-        self.shortcut = nn.Sequential()
-        if stride == 1 and in_planes != out_planes:
-            self.shortcut = nn.Sequential(
-                nn.Conv2d(in_planes, out_planes, kernel_size=1,
-                          stride=1, padding=0, bias=False),
-                nn.BatchNorm2d(out_planes),
-            )
-
-        # SE layers
-        self.fc1 = nn.Conv2d(out_planes, out_planes//16, kernel_size=1)
-        self.fc2 = nn.Conv2d(out_planes//16, out_planes, kernel_size=1)
-
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = F.relu(self.bn2(self.conv2(out)))
-        out = self.bn3(self.conv3(out))
-        shortcut = self.shortcut(x) if self.stride == 1 else out
-        # Squeeze-Excitation
-        w = F.avg_pool2d(out, out.size(2))
-        w = F.relu(self.fc1(w))
-        w = self.fc2(w).sigmoid()
-        out = out * w + shortcut
-        return out
-
-
-class EfficientNet(nn.Module):
-    def __init__(self, cfg, num_classes=10):
-        super(EfficientNet, self).__init__()
-        self.cfg = cfg
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=3,
-                               stride=1, padding=1, bias=False)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.layers = self._make_layers(in_planes=32)
-        self.linear = nn.Linear(cfg[-1][1], num_classes)
-
-    def _make_layers(self, in_planes):
-        layers = []
-        for expansion, out_planes, num_blocks, stride in self.cfg:
-            strides = [stride] + [1]*(num_blocks-1)
-            for stride in strides:
-                layers.append(Block(in_planes, out_planes, expansion, stride))
-                in_planes = out_planes
-        return nn.Sequential(*layers)
-
-    def forward(self, x):
-        out = F.relu(self.bn1(self.conv1(x)))
-        out = self.layers(out)
-        out = out.view(out.size(0), -1)
-        out = self.linear(out)
-        return out
-
-
-def EfficientNetB0():
-    # (expansion, out_planes, num_blocks, stride)
-    cfg = [(1,  16, 1, 2),
-           (6,  24, 2, 1),
-           (6,  40, 2, 2),
-           (6,  80, 3, 2),
-           (6, 112, 3, 1),
-           (6, 192, 4, 2),
-           (6, 320, 1, 2)]
-    return EfficientNet(cfg)
 
 
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.net = EfficientNetB0()
+        self.net = EfficientNet(dimensionality=2, input_channels=3, output_channels=10)
 
     def forward(self, batch):
         # a batch should be a dictionary of features
@@ -112,31 +37,41 @@ def create_model():
 if __name__ == '__main__':
     # configure and run the training/evaluation
     assert torch.cuda.device_count() >= 2, 'not enough CUDA devices for this multi-GPU tutorial!'
-    options = trw.train.Options(num_epochs=600)
-    trainer = trw.train.TrainerV2(callbacks_post_training=None)
+    options = trw.train.Options(num_epochs=200)
+    trainer = trw.train.TrainerV2(
+        callbacks_post_training=None,
+        callbacks_pre_training=None,
+    )
 
     mean = np.asarray([0.485, 0.456, 0.406], dtype=np.float32)
     std = np.asarray([0.229, 0.224, 0.225], dtype=np.float32)
 
     transform_train = [
-        trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16)),
-        trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
         trw.transforms.TransformRandomFlip(axis=3),
+        trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16), probability=0.2),
+        trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
+        trw.transforms.TransformResize(size=[224, 224]),
         trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
     transform_valid = [
+        trw.transforms.TransformResize(size=[224, 224]),
         trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
+    datasets = trw.datasets.create_cifar10_dataset(
+        transform_train=transform_train,
+        transform_valid=transform_train, nb_workers=16,
+        batch_size=100, data_processing_batch_size=50,
+    )
+
     results = trainer.fit(
         options,
-        datasets=trw.datasets.create_cifar10_dataset(
-            transform_train=transform_train,
-            transform_valid=transform_valid, nb_workers=0,
-            batch_size=400, data_processing_batch_size=None),
-        log_path='cifar10_resnet50_multigpu',
+        datasets=datasets,
+        log_path='cifar10_efficient_net_multigpu',
         model=create_model(),
         optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_scheduler_step_lr_fn(
-            datasets=datasets, model=model, learning_rate=0.1, momentum=0.9, weight_decay=5e-4, step_size=100,
+            datasets=datasets, model=model, learning_rate=0.05, momentum=0.9, weight_decay=0, step_size=50,
             gamma=0.3))
+
+    # should converge to 94% accuracy
