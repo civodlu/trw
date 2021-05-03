@@ -5,8 +5,10 @@ from typing import Optional
 import torch
 
 import torch.nn as nn
-from trw.basic_typing import KernelSize, Stride, TorchTensorNCX, ModuleCreator
-from trw.layers import LayerConfig, BlockConvNormActivation, BlockSqueezeExcite, default_layer_config
+from ..basic_typing import KernelSize, Stride, TorchTensorNCX, ModuleCreator
+from .layer_config import LayerConfig, default_layer_config
+from .blocks import BlockConvNormActivation, BlockSqueezeExcite
+from ..train.compatibility import Swish
 
 
 class DropSample(nn.Module):
@@ -156,7 +158,13 @@ def scale_width(w, w_factor):
 
 class EfficientNet(nn.Module):
     """
-    Generic EfficientNet that takes in the width and depth scale factors and scales accordingly
+    Generic EfficientNet that takes in the width and depth scale factors and scales accordingly.
+
+    With default settings, it operates on 224x224 images.
+
+    References:
+        [1] EfficientNet: Rethinking Model Scaling for Convolutional Neural Networks
+        https://arxiv.org/abs/1905.11946
     """
     def __init__(self,
                  dimensionality: int,
@@ -165,7 +173,7 @@ class EfficientNet(nn.Module):
                  *,
                  w_factor: float = 1,
                  d_factor: float = 1,
-                 activation: Optional[ModuleCreator] = torch.nn.SiLU,
+                 activation: Optional[ModuleCreator] = Swish,
                  base_widths=(
                      (32, 16),
                      (16, 24),
@@ -190,21 +198,6 @@ class EfficientNet(nn.Module):
             config.activation = activation
 
         # default parameters for B0
-        """
-        base_widths = [
-            (32, 16),
-            (16, 24),
-            (24, 40),
-            (40, 80),
-            (80, 112),
-            (112, 192),
-            (192, 320),
-            (320, 1280)
-        ]
-        #base_depths = [1, 2, 2, 3, 3, 4, 1]
-        # kernel_sizes = [3, 3, 5, 3, 5, 5, 3]
-        # strides = [1, 2, 2, 2, 1, 2, 1]
-        """
         scaled_widths = [(scale_width(w[0], w_factor), scale_width(w[1], w_factor)) for w in base_widths]
         scaled_depths = [math.ceil(d_factor * d) for d in base_depths]
         ps = [0, 0.029, 0.057, 0.086, 0.114, 0.143, 0.171]

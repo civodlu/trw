@@ -1,4 +1,5 @@
 import torch.nn.functional
+from torch import nn
 
 
 def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
@@ -21,3 +22,14 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
             mode=mode,
             padding_mode=padding_mode,
             align_corners=align_corners)
+
+
+if hasattr(nn, 'SiLU'):
+    Swish = nn.SiLU
+else:
+    class Swish(nn.Module):
+        """
+        For compatibility with old PyTorch versions
+        """
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return x * torch.sigmoid(x)
