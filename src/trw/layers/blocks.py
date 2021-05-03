@@ -108,7 +108,7 @@ class BlockConv(nn.Module):
                  stride: Optional[Stride] = None,
                  padding_mode: Optional[str] = None,
                  groups: int = 1,
-                 bias: bool = True):
+                 bias: Optional[bool] = None):
 
         super().__init__()
 
@@ -122,17 +122,21 @@ class BlockConv(nn.Module):
             conv_kwargs['stride'] = stride
         if padding_mode is not None:
             conv_kwargs['padding_mode'] = padding_mode
+        if bias is not None:
+            conv_kwargs['bias'] = bias
 
         ops: List[nn.Module] = []
         _posprocess_padding(config, conv_kwargs, ops)
 
         assert config.conv is not None
-        self.ops = config.conv(
+        conv = config.conv(
             in_channels=input_channels,
             out_channels=output_channels,
             groups=groups,
-            bias=bias,
             **conv_kwargs)
+        ops.append(conv)
+
+        self.ops = nn.Sequential(*ops)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.ops(x)
@@ -150,7 +154,7 @@ class BlockConvNormActivation(nn.Module):
             stride: Optional[Stride] = None,
             padding_mode: Optional[str] = None,
             groups: int = 1,
-            bias: bool = True):
+            bias: Optional[bool] = None):
 
         super().__init__()
 

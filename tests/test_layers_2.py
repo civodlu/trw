@@ -123,8 +123,8 @@ class TestLayers2(TestCase):
         conf = trw.layers.default_layer_config(2)
         block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=(5, 5))
         assert len(block.ops) == 3
-        assert isinstance(block.ops[0], nn.Conv2d)
-        assert block.ops[0].weight.shape == (8, 1, 5, 5)
+        assert isinstance(block.ops[0].ops[0], nn.Conv2d)
+        assert block.ops[0].ops[0].weight.shape == (8, 1, 5, 5)
         assert isinstance(block.ops[1], nn.BatchNorm2d)
         assert isinstance(block.ops[2], nn.ReLU)
 
@@ -140,10 +140,10 @@ class TestLayers2(TestCase):
 
         block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=5, stride=2)
         assert len(block.ops) == 3
-        assert isinstance(block.ops[0], nn.Conv2d)
-        assert block.ops[0].weight.shape == (8, 1, 5, 5)
-        assert block.ops[0].bias is None
-        assert block.ops[0].stride == (2, 2)
+        assert isinstance(block.ops[0].ops[0], nn.Conv2d)
+        assert block.ops[0].ops[0].weight.shape == (8, 1, 5, 5)
+        assert block.ops[0].ops[0].bias is None
+        assert block.ops[0].ops[0].stride == (2, 2)
         assert isinstance(block.ops[1], nn.BatchNorm2d)
         assert block.ops[1].eps == 0.001
         assert isinstance(block.ops[2], nn.ReLU)
@@ -165,8 +165,8 @@ class TestLayers2(TestCase):
         ops = list(block[0].ops)
         assert isinstance(block[0], trw.layers.BlockConvNormActivation)
         assert len(ops) == 3
-        assert isinstance(ops[0], nn.Conv2d)
-        assert ops[0].padding == (2, 2)
+        assert isinstance(ops[0].ops[0], nn.Conv2d)
+        assert ops[0].ops[0].padding == (2, 2)
         assert isinstance(ops[1], nn.BatchNorm2d)
         assert isinstance(ops[2], nn.ReLU)
 
@@ -175,8 +175,8 @@ class TestLayers2(TestCase):
         ops = list(block[0].ops)
         assert isinstance(block[0], trw.layers.BlockConvNormActivation)
         assert len(ops) == 3
-        assert isinstance(ops[0], nn.Conv2d)
-        assert ops[0].padding == (3, 3)
+        assert isinstance(ops[0].ops[0], nn.Conv2d)
+        assert ops[0].ops[0].padding == (3, 3)
         assert isinstance(ops[1], nn.BatchNorm2d)
         assert isinstance(ops[2], nn.ReLU)
 
@@ -185,8 +185,8 @@ class TestLayers2(TestCase):
         ops = list(block[0].ops)
         assert isinstance(block[0], trw.layers.BlockConvNormActivation)
         assert len(ops) == 1
-        assert isinstance(ops[0], nn.Conv2d)
-        assert ops[0].padding == (4, 4)
+        assert isinstance(ops[0].ops[0], nn.Conv2d)
+        assert ops[0].ops[0].padding == (4, 4)
 
         o = net(torch.zeros([5, 1, 64, 64]))
         assert o.shape == (5, 10, 64 // 2 ** 3, 64 // 2 ** 3)
@@ -213,17 +213,17 @@ class TestLayers2(TestCase):
 
         children_00 = list(net.layers[0][0].ops)
         assert len(children_00) == 3
-        assert isinstance(children_00[0], nn.Conv3d)
-        assert children_00[0].weight.shape[1] == 2
-        assert children_00[0].stride == (1, 1, 1)
+        assert isinstance(children_00[0].ops[0], nn.Conv3d)
+        assert children_00[0].ops[0].weight.shape[1] == 2
+        assert children_00[0].ops[0].stride == (1, 1, 1)
         assert isinstance(children_00[1], nn.InstanceNorm3d)
         assert isinstance(children_00[2], nn.LeakyReLU)
 
         children_01 = list(net.layers[0][1].ops)
         assert len(children_01) == 3
-        assert isinstance(children_01[0], nn.Conv3d)
-        assert children_01[0].weight.shape[1] == 4
-        assert children_01[0].stride == (2, 2, 2)
+        assert isinstance(children_01[0].ops[0], nn.Conv3d)
+        assert children_01[0].ops[0].weight.shape[1] == 4
+        assert children_01[0].ops[0].stride == (2, 2, 2)
         assert isinstance(children_01[1], nn.InstanceNorm3d)
         assert isinstance(children_01[2], nn.LeakyReLU)
 
@@ -238,17 +238,17 @@ class TestLayers2(TestCase):
 
         children_10 = list(net.layers[1][0].ops)
         assert len(children_10) == 3
-        assert isinstance(children_10[0], nn.Conv3d)
-        assert children_10[0].weight.shape[1] == 4
-        assert children_10[0].stride == (1, 1, 1)
+        assert isinstance(children_10[0].ops[0], nn.Conv3d)
+        assert children_10[0].ops[0].weight.shape[1] == 4
+        assert children_10[0].ops[0].stride == (1, 1, 1)
         assert isinstance(children_10[1], nn.InstanceNorm3d)
         assert isinstance(children_10[2], nn.LeakyReLU)
 
         children_11 = list(net.layers[1][1].ops)
         assert len(children_11) == 3
-        assert isinstance(children_11[0], nn.Conv3d)
-        assert children_11[0].weight.shape[1] == 8
-        assert children_11[0].stride == (2, 2, 2)
+        assert isinstance(children_11[0].ops[0], nn.Conv3d)
+        assert children_11[0].ops[0].weight.shape[1] == 8
+        assert children_11[0].ops[0].stride == (2, 2, 2)
         assert isinstance(children_11[1], nn.InstanceNorm3d)
         assert isinstance(children_11[2], nn.LeakyReLU)
 
@@ -263,15 +263,15 @@ class TestLayers2(TestCase):
 
         children_20 = list(net.layers[2][0].ops)
         assert len(children_20) == 3
-        assert isinstance(children_20[0], nn.Conv3d)
-        assert children_20[0].stride == (1, 1, 1)
+        assert isinstance(children_20[0].ops[0], nn.Conv3d)
+        assert children_20[0].ops[0].stride == (1, 1, 1)
         assert isinstance(children_20[1], nn.InstanceNorm3d)
         assert isinstance(children_20[2], nn.LeakyReLU)
 
         children_21 = list(net.layers[2][1].ops)
         assert len(children_21) == 1
-        assert isinstance(children_21[0], nn.Conv3d)
-        assert children_11[0].stride == (2, 2, 2)
+        assert isinstance(children_21[0].ops[0], nn.Conv3d)
+        assert children_11[0].ops[0].stride == (2, 2, 2)
 
         children_22 = net.layers[2][2].op
         assert isinstance(children_22, nn.MaxPool3d)
@@ -291,14 +291,15 @@ class TestLayers2(TestCase):
         """
         conf = trw.layers.default_layer_config(2)
         block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=4)
-        assert len(block.ops) == 4
-        assert isinstance(block.ops[0], nn.ConstantPad2d)
-        assert block.ops[0].padding == (2, 1, 2, 1)
+        assert len(block.ops) == 3
+        assert len(block.ops[0].ops) == 2
+        assert isinstance(block.ops[0].ops[0], nn.ConstantPad2d)
+        assert block.ops[0].ops[0].padding == (2, 1, 2, 1)
 
-        assert isinstance(block.ops[1], nn.Conv2d)
-        assert block.ops[1].weight.shape == (8, 1, 4, 4)
-        assert isinstance(block.ops[2], nn.BatchNorm2d)
-        assert isinstance(block.ops[3], nn.ReLU)
+        assert isinstance(block.ops[0].ops[1], nn.Conv2d)
+        assert block.ops[0].ops[1].weight.shape == (8, 1, 4, 4)
+        assert isinstance(block.ops[1], nn.BatchNorm2d)
+        assert isinstance(block.ops[2], nn.ReLU)
 
         i = torch.zeros([4, 1, 6, 6])
         o = block(i)
@@ -310,14 +311,15 @@ class TestLayers2(TestCase):
         """
         conf = trw.layers.default_layer_config(2)
         block = trw.layers.BlockConvNormActivation(conf, 1, 8, kernel_size=(4, 6))
-        assert len(block.ops) == 4
-        assert isinstance(block.ops[0], nn.ConstantPad2d)
-        assert block.ops[0].padding == (3, 2, 2, 1)
+        assert len(block.ops) == 3
+        assert len(block.ops[0].ops) == 2
+        assert isinstance(block.ops[0].ops[0], nn.ConstantPad2d)
+        assert block.ops[0].ops[0].padding == (3, 2, 2, 1)
 
-        assert isinstance(block.ops[1], nn.Conv2d)
-        assert block.ops[1].weight.shape == (8, 1, 4, 6)
-        assert isinstance(block.ops[2], nn.BatchNorm2d)
-        assert isinstance(block.ops[3], nn.ReLU)
+        assert isinstance(block.ops[0].ops[1], nn.Conv2d)
+        assert block.ops[0].ops[1].weight.shape == (8, 1, 4, 6)
+        assert isinstance(block.ops[1], nn.BatchNorm2d)
+        assert isinstance(block.ops[2], nn.ReLU)
 
         i = torch.zeros([2, 1, 10, 10])
         o = block(i)
@@ -539,17 +541,17 @@ class TestLayers2(TestCase):
 
         ops_b = list(b.block_1.ops)
         assert len(ops_b) == 3
-        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        assert isinstance(ops_b[0].ops[0], torch.nn.Conv2d)
         if version != '1.0':
-            assert ops_b[0].padding_mode == 'reflect'
+            assert ops_b[0].ops[0].padding_mode == 'reflect'
         assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
         assert isinstance(ops_b[2], torch.nn.ReLU)
 
         ops_b = list(b.block_2.ops)
         assert len(ops_b) == 2
-        assert isinstance(ops_b[0], torch.nn.Conv2d)
+        assert isinstance(ops_b[0].ops[0], torch.nn.Conv2d)
         if version != '1.0':
-            assert ops_b[0].padding_mode == 'reflect'
+            assert ops_b[0].ops[0].padding_mode == 'reflect'
         assert isinstance(ops_b[1], torch.nn.BatchNorm2d)
 
     def test_encoder_decoder_res(self):
@@ -574,28 +576,28 @@ class TestLayers2(TestCase):
         assert o.shape == (5, 2, 32, 64)
 
         assert len(model.initial.ops) == 3
-        assert model.initial.ops[0].kernel_size == (7, 7)
-        assert model.initial.ops[0].bias is None
+        assert model.initial.ops[0].ops[0].kernel_size == (7, 7)
+        assert model.initial.ops[0].ops[0].bias is None
         assert isinstance(model.initial.ops[2], nn.LeakyReLU)
 
         assert len(model.encoders) == 3
 
         ops = model.encoders[0].ops
         assert len(ops) == 3
-        assert ops[0].kernel_size == (5, 5)
-        assert ops[0].bias is None
+        assert ops[0].ops[0].kernel_size == (5, 5)
+        assert ops[0].ops[0].bias is None
         assert isinstance(ops[2], nn.LeakyReLU)
 
         ops = model.encoders[1].ops
         assert len(ops) == 3
-        assert ops[0].kernel_size == (5, 5)
-        assert ops[0].bias is None
+        assert ops[0].ops[0].kernel_size == (5, 5)
+        assert ops[0].ops[0].bias is None
         assert isinstance(ops[2], nn.LeakyReLU)
 
         ops = model.encoders[2].ops
         assert len(ops) == 3
-        assert ops[0].kernel_size == (5, 5)
-        assert ops[0].bias is None
+        assert ops[0].ops[0].kernel_size == (5, 5)
+        assert ops[0].ops[0].bias is None
         assert isinstance(ops[2], nn.LeakyReLU)
 
 
@@ -608,8 +610,8 @@ class TestLayers2(TestCase):
 
         ops = model.out.ops
         assert len(ops) == 2
-        assert ops[0].kernel_size == (7, 7)
-        assert ops[0].bias is None
+        assert ops[0].ops[0].kernel_size == (7, 7)
+        assert ops[0].ops[0].bias is None
         assert isinstance(ops[1], nn.BatchNorm2d)
 
     def test_encoder_decoder_res_k4(self):
@@ -668,7 +670,6 @@ class TestLayers2(TestCase):
     def test_backbone_upsampler(self):
         encoder = trw.layers.convs_2d(1, [4, 8, 16])
         encoder_decoder = trw.layers.BackboneDecoder(
-            dim=2,
             output_channels=6,
             backbone=encoder,
             decoding_channels=(5, 4, 3),
