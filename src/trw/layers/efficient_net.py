@@ -166,6 +166,19 @@ class EfficientNet(nn.Module):
                  w_factor: float = 1,
                  d_factor: float = 1,
                  activation: Optional[ModuleCreator] = torch.nn.SiLU,
+                 base_widths=(
+                     (32, 16),
+                     (16, 24),
+                     (24, 40),
+                     (40, 80),
+                     (80, 112),
+                     (112, 192),
+                     (192, 320),
+                     (320, 1280)
+                 ),
+                 base_depths=(1, 2, 2, 3, 3, 4, 1),
+                 kernel_sizes=(3, 3, 5, 3, 5, 5, 3),
+                 strides=(1, 2, 2, 2, 1, 2, 1),
                  config: LayerConfig = default_layer_config(dimensionality=None)):
         super().__init__()
 
@@ -177,6 +190,7 @@ class EfficientNet(nn.Module):
             config.activation = activation
 
         # default parameters for B0
+        """
         base_widths = [
             (32, 16),
             (16, 24),
@@ -187,11 +201,12 @@ class EfficientNet(nn.Module):
             (192, 320),
             (320, 1280)
         ]
-        base_depths = [1, 2, 2, 3, 3, 4, 1]
+        #base_depths = [1, 2, 2, 3, 3, 4, 1]
+        # kernel_sizes = [3, 3, 5, 3, 5, 5, 3]
+        # strides = [1, 2, 2, 2, 1, 2, 1]
+        """
         scaled_widths = [(scale_width(w[0], w_factor), scale_width(w[1], w_factor)) for w in base_widths]
         scaled_depths = [math.ceil(d_factor * d) for d in base_depths]
-        kernel_sizes = [3, 3, 5, 3, 5, 5, 3]
-        strides = [1, 2, 2, 2, 1, 2, 1]
         ps = [0, 0.029, 0.057, 0.086, 0.114, 0.143, 0.171]
 
         self.stem = BlockConvNormActivation(

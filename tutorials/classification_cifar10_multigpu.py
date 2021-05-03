@@ -16,7 +16,15 @@ import torch.nn as nn
 class Net(nn.Module):
     def __init__(self):
         super().__init__()
-        self.net = EfficientNet(dimensionality=2, input_channels=3, output_channels=10)
+        # base image is 224x224 for efficient net, but cifar10 is 32x32
+        # so remove 3 levels of strides so that they the network has
+        # similar field of view
+        self.net = EfficientNet(
+            dimensionality=2,
+            input_channels=3,
+            output_channels=10,
+            strides=(1, 1, 1, 1, 1, 2, 1)
+        )
 
     def forward(self, batch):
         # a batch should be a dictionary of features
@@ -50,12 +58,12 @@ if __name__ == '__main__':
         trw.transforms.TransformRandomFlip(axis=3),
         trw.transforms.TransformRandomCutout(cutout_size=(3, 16, 16), probability=0.2),
         trw.transforms.TransformRandomCropPad(padding=[0, 4, 4]),
-        trw.transforms.TransformResize(size=[224, 224]),
+        #trw.transforms.TransformResize(size=[224, 224]),
         trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
     transform_valid = [
-        trw.transforms.TransformResize(size=[224, 224]),
+        #trw.transforms.TransformResize(size=[224, 224]),
         trw.transforms.TransformNormalizeIntensity(mean=mean, std=std)
     ]
 
