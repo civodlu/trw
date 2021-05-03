@@ -11,6 +11,7 @@ import copy
 
 from trw.callbacks.callback_debug_processes import log_all_tree
 
+
 START_TIME = time.time()
 
 
@@ -42,6 +43,7 @@ def load_fake_volumes_small_npy(item):
 def load_fake_volumes_torch(item):
     time_start = time.time()
     print('torch_fake_before')
+
     v = torch.ones([32, 32, 64], dtype=torch.float32)
     print('torch_fake_created')
     v.fill_(float(item['values']))
@@ -122,6 +124,31 @@ def double_values(item):
 
 
 class TestSequenceMap(TestCase):
+    def test_a_map_async_20_pytorch(self):
+        # TODO in some instances, depending on the test position (e.g., at the end rather than
+        #   at the beginning of the tests), pytorch can deadlock for unknown reason between
+        #   `torch_fake_before` and `torch_fake_created` statements.
+        #   see: https://github.com/pytorch/pytorch/issues/17199
+        #        https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58378
+        torch.set_num_threads(1)
+
+        # large pytorch arrays, this should be much faster to share compare to numpy arrays as
+        # only descriptors are effectively sent through the queue
+        split_np = {'values': np.arange(100, 120)}
+        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_torch, nb_workers=1, max_jobs_at_once=1)
+
+        time_start = time.time()
+        vs = []
+        for v in split:
+            vs.append(v['volume'].shape)
+            print(v['volume'].shape)
+        time_end = time.time()
+        print('test_map_async_1.TIME=', time_end - time_start)
+
+        assert(len(vs) == 20)
+        split.close()
+        print('DONE')
+
     def test_map_async_10(self):
         # create very large numpy arrays and send it through multiprocessing.Queue: this is expected to be slow!
         split_np = {'values': np.arange(0, 10)}
@@ -198,24 +225,6 @@ class TestSequenceMap(TestCase):
             vs.append(v['volume'].shape)
 
         assert(len(vs) == 20 * 5)
-        split.close()
-        print('DONE')
-
-    def test_map_async_20_pytorch(self):
-        # large pytorch arrays, this should be much faster to share compare to numpy arrays as
-        # only descriptors are effectively sent through the queue
-        split_np = {'values': np.arange(100, 120)}
-        split = trw.train.SequenceArray(split_np).map(load_fake_volumes_torch, nb_workers=2)
-
-        time_start = time.time()
-        vs = []
-        for v in split:
-            vs.append(v['volume'].shape)
-            print(v['volume'].shape)
-        time_end = time.time()
-        print('test_map_async_1.TIME=', time_end - time_start)
-
-        assert(len(vs) == 20)
         split.close()
         print('DONE')
 
