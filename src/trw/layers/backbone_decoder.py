@@ -10,6 +10,7 @@ from ..utils import upsample
 from .blocks import BlockConvNormActivation, ConvBlockType
 from .layer_config import LayerConfig, default_layer_config
 from .unet_base import UpType, MiddleType, LatentConv
+from ..train.utilities import get_device
 
 
 class BlockUpResizeDeconvSkipConv(nn.Module):
@@ -79,7 +80,7 @@ class BackboneDecoder(nn.Module, ModuleWithIntermediate):
                  ):
         """
         Args:
-            decoding_channels: the channels used for the decoding. Must have the same size
+            decoding_channels: the channels used for the decoding. Must have the same length
                 as ``backbone_transverse_connections``. From bottom layer to top layer (i.e., reverse of the
                 encoder)
             output_channels: the number of desired output channels
@@ -102,8 +103,9 @@ class BackboneDecoder(nn.Module, ModuleWithIntermediate):
         self.decoding_channels = decoding_channels
         self.backbone_input_shape = backbone_input_shape
 
+        backbone_device = get_device(backbone)
         backbone_intermediate = backbone.forward_with_intermediate(
-            torch.zeros(tuple(backbone_input_shape), dtype=torch.float32),
+            torch.zeros(tuple(backbone_input_shape), dtype=torch.float32, device=backbone_device),
         )
 
         self.backbone = backbone
@@ -132,7 +134,6 @@ class BackboneDecoder(nn.Module, ModuleWithIntermediate):
         self.up_block_fn = up_block_fn
         self.output_channels = output_channels
 
-        self.upsample_layers = []
         last_encoder_channels = backbone_intermediate[-1].shape[1]
 
         self.middle_block = middle_block_fn(

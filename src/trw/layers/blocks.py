@@ -416,6 +416,12 @@ class BlockSqueezeExcite(nn.Module):
 
 
 class BlockRes(nn.Module):
+    """
+    Original Residual block design
+
+    References:
+        [1] "Deep Residual Learning for Image Recognition", https://arxiv.org/abs/1512.03385
+    """
     def __init__(
             self,
             config: LayerConfig,
@@ -458,3 +464,5 @@ class BlockRes(nn.Module):
         o = self.block_1(x)
         o = self.block_2(o)
         return self.activation(x + o)
+
+
