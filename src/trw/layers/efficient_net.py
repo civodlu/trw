@@ -1,10 +1,11 @@
 import copy
 import math
 from functools import partial
-from typing import Optional
+from typing import Optional, Sequence
 import torch
 
 import torch.nn as nn
+from .convs import ModuleWithIntermediate
 from ..basic_typing import KernelSize, Stride, TorchTensorNCX, ModuleCreator
 from .layer_config import LayerConfig, default_layer_config
 from .blocks import BlockConvNormActivation, BlockSqueezeExcite
@@ -62,7 +63,6 @@ class MBConvN(nn.Module):
             output_channels=expanded,
             kernel_size=1,
             bias=False
-
         )
 
         self.depthwise = BlockConvNormActivation(
@@ -156,7 +156,7 @@ def scale_width(w, w_factor):
     return int(new_w)
 
 
-class EfficientNet(nn.Module):
+class EfficientNet(nn.Module, ModuleWithIntermediate):
     """
     Generic EfficientNet that takes in the width and depth scale factors and scales accordingly.
 
@@ -190,6 +190,10 @@ class EfficientNet(nn.Module):
                  config: LayerConfig = default_layer_config(dimensionality=None)):
         super().__init__()
 
+        assert len(base_widths) - 1 == len(base_depths)
+        assert len(base_widths) - 1 == len(kernel_sizes)
+        assert len(base_widths) - 1 == len(strides)
+
         self.dimensionality = dimensionality
         config = copy.copy(config)
         config.set_dim(dimensionality)
@@ -211,17 +215,17 @@ class EfficientNet(nn.Module):
             bias=False
         )
 
-        stages = []
+        stages = nn.ModuleList()
         for i in range(7):
-            input_channels = scaled_widths[i][0]
-            output_channels = scaled_widths[i][1]
+            i_ch = scaled_widths[i][0]
+            o_ch = scaled_widths[i][1]
 
             layer_type = MBConv1 if (i == 0) else MBConv6
             r = 4 if (i == 0) else 24
             stage = create_stage(
                 config=config,
-                input_channels=input_channels,
-                output_channels=output_channels,
+                input_channels=i_ch,
+                output_channels=o_ch,
                 num_layers=scaled_depths[i],
                 layer_type=layer_type,
                 kernel_size=kernel_sizes[i],
@@ -231,7 +235,8 @@ class EfficientNet(nn.Module):
             )
 
             stages.append(stage)
-        self.stages = nn.Sequential(*stages)
+
+        self.stages = stages
 
         self.pre_head = BlockConvNormActivation(
             config=config,
@@ -246,13 +251,24 @@ class EfficientNet(nn.Module):
             nn.Linear(scaled_widths[-1][1], output_channels)
         )
 
-    def feature_extractor(self, x):
-        x = self.stem(x)
-        x = self.stages(x)
-        x = self.pre_head(x)
-        return x
+    def forward_with_intermediate(self, x: torch.Tensor, **kwargs) -> Sequence[torch.Tensor]:
+        assert len(kwargs) == 0, f'unexpected arguments={kwargs.keys()}'
+        intermediates = []
 
-    def forward(self, x):
+        x = self.stem(x)
+        intermediates.append(x)
+        for stage in self.stages:
+            x = stage(x)
+            intermediates.append(x)
+        x = self.pre_head(x)
+        intermediates.append(x)
+
+        return intermediates
+
+    def feature_extractor(self, x: torch.Tensor) -> torch.Tensor:
+        return self.forward_with_intermediate(x)[-1]
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.feature_extractor(x)
         x = self.head(x)
         return x
