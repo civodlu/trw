@@ -85,7 +85,7 @@ class LossDiceMulticlass(nn.Module):
         self.normalization = None
         self.return_dice_by_class = return_dice_by_class
         self.smooth = smooth
-        self.per_class_weights = torch.tensor(per_class_weights) if per_class_weights is not None else None
+        self.per_class_weights = torch.tensor(per_class_weights).unsqueeze(0) if per_class_weights is not None else None
         self.power = power
 
         if normalization_fn is not None:
@@ -121,7 +121,6 @@ class LossDiceMulticlass(nn.Module):
         indices_to_sum = tuple(range(2, len(proba.shape)))
         numerator = 2 * intersection.sum(indices_to_sum) + self.smooth
         if self.power != 1.0:
-
             cardinality = proba ** self.power + encoded_target ** self.power
         else:
             cardinality = proba + encoded_target
@@ -129,10 +128,13 @@ class LossDiceMulticlass(nn.Module):
 
         if not self.return_dice_by_class:
             # loss per samples (classes are averaged)
-            average_loss_per_channel = (1 - numerator / cardinality).mean(dim=1)
+            average_loss_per_channel = (1 - numerator / cardinality)
+            
             if self.per_class_weights is not None:
-                self.per_class_weights = self.per_class_weights.to(average_loss_per_channel.device)
-                average_loss_per_channel = average_loss_per_channel * self.per_class_weights
+                # apply the per class weighting
+                average_loss_per_channel = average_loss_per_channel * self.per_class_weights.detach()
+
+            average_loss_per_channel = average_loss_per_channel.mean(dim=1)
             return average_loss_per_channel
         else:
             return numerator, cardinality
