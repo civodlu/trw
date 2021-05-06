@@ -425,7 +425,7 @@ class BlockRes(nn.Module):
     def __init__(
             self,
             config: LayerConfig,
-            channels: int,
+            input_channels: int,
             *,
             kernel_size: Optional[KernelSize] = None,
             padding: Optional[Padding] = None,
@@ -447,7 +447,7 @@ class BlockRes(nn.Module):
 
         stride = 1
         self.block_1 = base_block(
-            config, channels, channels,
+            config, input_channels, input_channels,
             kernel_size=kernel_size, padding=padding,
             stride=stride, padding_mode=padding_mode)
 
@@ -456,7 +456,7 @@ class BlockRes(nn.Module):
 
         config.activation = None
         self.block_2 = base_block(
-            config, channels, channels,
+            config, input_channels, input_channels,
             kernel_size=kernel_size, padding=padding,
             stride=stride, padding_mode=padding_mode)
 
