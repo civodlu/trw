@@ -32,6 +32,7 @@ class TrainerV2:
             callbacks_post_training=default_post_training_callbacks(),
             trainer_callbacks_per_batch=trainer_callbacks_per_batch,
             run_epoch_fn=epoch_train_eval,
+            logging_level=logging.DEBUG,
             skip_eval_epoch_0=True):
         """
 
@@ -53,6 +54,7 @@ class TrainerV2:
         self.trainer_callbacks_per_batch = trainer_callbacks_per_batch
         self.run_epoch_fn = run_epoch_fn
         self.skip_eval_epoch_0 = skip_eval_epoch_0
+        self.logging_level = logging_level
 
     @staticmethod
     def save_model(model, metadata: RunMetadata, path, pickle_module=pickle):
@@ -230,8 +232,10 @@ class TrainerV2:
             logging.basicConfig(
                 filename=os.path.join(logging_directory, 'trainer_logging.log'),
                 format='%(asctime)s %(levelname)s %(name)s %(message)s',
-                level=logging.DEBUG,
+                level=self.logging_level,
                 filemode='w')
+        else:
+            logging.root.setLevel(self.logging_level)
 
         # create the reporting SQL database
         sql_path = os.path.join(log_path, 'reporting_sqlite.db')
@@ -244,7 +248,7 @@ class TrainerV2:
         handler = logging.FileHandler(os.path.join(log_path, 'trainer.log'))
         formatter = RuntimeFormatter('%(asctime)s %(levelname)s %(name)s %(message)s')
         handler.setFormatter(formatter)
-        handler.setLevel(logging.DEBUG)
+        handler.setLevel(self.logging_level)
         logging.root.addHandler(handler)
 
         # instantiate the datasets, model, optimizers and losses
@@ -417,7 +421,7 @@ class TrainerV2:
         except (KeyboardInterrupt, RuntimeError, ExceptionAbortRun) as e:
             # since we are about to exit the process, explicitly
             # dispose the datasets to make sure resources are properly disposed of
-            logger.info(f'Exception received. closing datasets explicitly. Exception={e}')
+            logger.info(f'Exception received. closing datasets explicitly. Exception={e}', exc_info=True)
             clean_up(datasets)
 
             # since the resources are released, we can now re-raise the exception

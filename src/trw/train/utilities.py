@@ -38,7 +38,7 @@ def log_info(msg):
     :param msg:
     :return:
     """
-    logger.debug(msg)
+    logger.info(msg)
 
 
 def log_and_print(msg):
@@ -47,7 +47,7 @@ def log_and_print(msg):
     :param msg:
     :return:
     """
-    logger.debug(msg)
+    logger.info(msg)
     # make sure we flush the output to have reliable reading
     # in case the output is redirected to a file (e.g., SLURM job)
     print(msg, flush=True)
