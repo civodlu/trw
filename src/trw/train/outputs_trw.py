@@ -287,7 +287,7 @@ class OutputClassification(Output):
             # average the per-sample loss
             weighted_losses = flatten(weighted_losses).mean(dim=1)
 
-        #assert truth.shape[0] == losses.shape[0], 'loos must have 1 element per sample'
+        assert truth.shape[0] == losses.shape[0], 'loos must have 1 element per sample'
 
         loss_term['output_raw'] = self.output
         output_postprocessed = self.output_postprocessing(self.output)

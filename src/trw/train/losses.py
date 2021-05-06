@@ -1,3 +1,5 @@
+from typing import Sequence
+
 import torch
 import torch.nn as nn
 import numpy as np
@@ -41,11 +43,21 @@ def one_hot(targets, num_classes, dtype=torch.float32, device=None):
 
 class LossDiceMulticlass(nn.Module):
     """
-    Implementation of the Dice Loss (multi-class) for N-d images
+    Implementation of the soft Dice Loss (multi-class) for N-d images
     
     If multi-class, compute the loss for each class then average the losses
+
+    References:
+        [1] "V-Net: Fully Convolutional Neural Networks for Volumetric Medical
+        Image Segmentation" https://arxiv.org/pdf/1606.04797.pdf
     """
-    def __init__(self, normalization_fn=nn.Sigmoid, eps=0.001, return_dice_by_class=False, smooth=1.0):
+    def __init__(self,
+                 normalization_fn=nn.Sigmoid,
+                 eps=0.001,
+                 return_dice_by_class=False,
+                 smooth=1.0,
+                 power=1.0,
+                 per_class_weights: Sequence[float] = None):
         """
 
         Args:
@@ -55,6 +67,8 @@ class LossDiceMulticlass(nn.Module):
             return_dice_by_class: if True, returns the (numerator, cardinality) by class and by sample from
                 the dice can be calculated, else returns the per sample dice loss `1 - average(dice by class)`
             smooth: a smoothing factor
+            per_class_weights: a weighting of the classes
+            power: power of the denominator components
 
         Notes:
         * if return_dice_by_class is True, to calculate dice by class by sample:
@@ -71,6 +85,8 @@ class LossDiceMulticlass(nn.Module):
         self.normalization = None
         self.return_dice_by_class = return_dice_by_class
         self.smooth = smooth
+        self.per_class_weights = torch.tensor(per_class_weights) if per_class_weights is not None else None
+        self.power = power
 
         if normalization_fn is not None:
             self.normalization = normalization_fn()
@@ -104,12 +120,19 @@ class LossDiceMulticlass(nn.Module):
         intersection = proba * encoded_target
         indices_to_sum = tuple(range(2, len(proba.shape)))
         numerator = 2 * intersection.sum(indices_to_sum) + self.smooth
-        cardinality = proba + encoded_target
+        if self.power != 1.0:
+
+            cardinality = proba ** self.power + encoded_target ** self.power
+        else:
+            cardinality = proba + encoded_target
         cardinality = cardinality.sum(indices_to_sum) + self.eps + self.smooth
 
         if not self.return_dice_by_class:
             # loss per samples (classes are averaged)
             average_loss_per_channel = (1 - numerator / cardinality).mean(dim=1)
+            if self.per_class_weights is not None:
+                self.per_class_weights = self.per_class_weights.to(average_loss_per_channel.device)
+                average_loss_per_channel = average_loss_per_channel * self.per_class_weights
             return average_loss_per_channel
         else:
             return numerator, cardinality
