@@ -3,6 +3,8 @@ import collections
 import functools
 from typing import Optional, Callable, List
 
+from typing_extensions import Literal
+
 from ..utils import batch_pad_joint
 from ..transforms import transforms
 from ..transforms import crop
@@ -75,7 +77,7 @@ class TransformRandomCropPad(transforms.TransformBatchWithCriteria):
             self,
             padding: Optional[ShapeCX],
             criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
-            mode: str = 'edge',
+            mode: Literal['constant', 'edge', 'symmetric'] = 'constant',
             constant_value: Numeric = 0,
             shape: Optional[ShapeCX] = None):
 
