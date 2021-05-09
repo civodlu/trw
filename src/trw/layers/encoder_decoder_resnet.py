@@ -62,7 +62,7 @@ class EncoderDecoderResnet(nn.Module):
 
         self.residuals = nn.ModuleList()  # do NOT store in a list, else the layer parameters will not be found!
         for n in range(nb_residual_blocks):
-            self.residuals.append(middle_block(config=config_enc, channels=cur, kernel_size=convolution_kernel))
+            self.residuals.append(middle_block(config=config_enc, input_channels=cur, kernel_size=convolution_kernel))
 
         #
         # decoding path
