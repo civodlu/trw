@@ -1,4 +1,6 @@
 import copy
+from numbers import Number
+
 import torch
 from ..basic_typing import Activation, NestedIntSequence, ConvKernels, ConvStrides, PoolingSizes, Paddings
 from .utils import div_shape
@@ -68,13 +70,17 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
         config.pool_kwargs = {**pool_kwargs, **config.pool_kwargs}
         config.norm_kwargs = {**norm_kwargs, **config.norm_kwargs}
         config.activation_kwargs = {**activation_kwargs, **config.activation_kwargs}
+        self.dimensionality = dimensionality
 
         # normalize the arguments
         nb_convs = len(channels)
         if not isinstance(convolution_kernels, list):
             convolution_kernels = [convolution_kernels] * nb_convs
         if not isinstance(strides, list):
+            assert isinstance(strides, Number) or (isinstance(strides, tuple) and isinstance(strides[0], Number)), \
+                'stride must be a number or a tuple!'
             strides = [strides] * nb_convs
+
         if not isinstance(pooling_size, list) and pooling_size is not None:
             pooling_size = [pooling_size] * nb_convs
         if isinstance(convolution_repeats, int):
@@ -142,6 +148,8 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
 
     def forward_with_intermediate(self, x: torch.Tensor, **kwargs) -> List[torch.Tensor]:
         assert len(kwargs) == 0, f'unsupported arguments={kwargs}'
+        assert len(x.shape) == self.dimensionality + 2, \
+            f'Expecting a tensor (batch and channel included) of dim={self.dimensionality + 2}, got={len(x.shape)}'
 
         r = []
         for layer in self.layers:
