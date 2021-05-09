@@ -53,7 +53,7 @@ class LossDiceMulticlass(nn.Module):
     """
     def __init__(self,
                  normalization_fn=nn.Sigmoid,
-                 eps=0.001,
+                 eps=1e-5,
                  return_dice_by_class=False,
                  smooth=1.0,
                  power=1.0,
@@ -120,7 +120,7 @@ class LossDiceMulticlass(nn.Module):
         intersection = proba * encoded_target
         indices_to_sum = tuple(range(2, len(proba.shape)))
         numerator = 2 * intersection.sum(indices_to_sum) + self.smooth
-        if self.power != 1.0:
+        if self.power is not None and self.power != 1.0:
             cardinality = proba ** self.power + encoded_target ** self.power
         else:
             cardinality = proba + encoded_target
@@ -129,7 +129,7 @@ class LossDiceMulticlass(nn.Module):
         if not self.return_dice_by_class:
             # loss per samples (classes are averaged)
             average_loss_per_channel = (1 - numerator / cardinality)
-            
+
             if self.per_class_weights is not None:
                 # apply the per class weighting
                 average_loss_per_channel = average_loss_per_channel * self.per_class_weights.detach()
