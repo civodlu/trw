@@ -3,7 +3,7 @@ from typing import Sequence
 
 import torch
 import torch.nn as nn
-from ..train.compatibility import grid_sample
+from ..train.compatibility import grid_sample, torch_linalg_norm
 from ..basic_typing import ShapeCX, TorchTensorNCX
 
 
@@ -130,7 +130,7 @@ def affine_transformation_get_spacing(pst: torch.Tensor) -> torch.Tensor:
     dim = pst.shape[0] - 1
     pst_rot = pst[:dim, :dim]
 
-    spacing = torch.linalg.norm(pst_rot, ord=2, dim=0)
+    spacing = torch_linalg_norm(pst_rot, ord=2, dim=0)
     return spacing
 
 

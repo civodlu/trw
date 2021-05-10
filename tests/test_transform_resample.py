@@ -18,7 +18,7 @@ class TestTransformResample(TestCase):
         t = torch.arange(10 * 9 * 8).reshape((10, 9, 8)).numpy()
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (2, 3, 4), (4, 5, 6), (1, 1, 1), align_corners=False)
         t_expected = t[2:4, 3:5, 4:6]
-        assert (t_r == t_expected).all()
+        assert np.abs(t_r - t_expected).max() < 1e-5
 
     def test_resample_numpy_with_background(self):
         """
@@ -28,7 +28,7 @@ class TestTransformResample(TestCase):
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (2, 3, 4), (4, 5, 20), (1, 1, 1), align_corners=False)
         t_r_valid = t_r[:, :, :2]
         t_expected = t[2:4, 3:5, 4:6]
-        assert (t_r_valid == t_expected).all()
+        assert np.abs((t_r_valid - t_expected)).max() < 1e-5
 
         # outside voxel should be background value
         t_r_background = t_r[:, :, 4:]
@@ -62,7 +62,7 @@ class TestTransformResample(TestCase):
         """
         t = torch.arange(10 * 9 * 8).reshape((10, 9, 8))
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (0, 0, 0), (10, 9, 8), (1, 1, 1), interpolation_mode='nearest')
-        assert (t == t_r).all()
+        assert np.abs(t.float() - t_r).max() < 1e-5
 
     @staticmethod
     def get_spatial_info_generic(batch, name, geometry) -> SpatialInfo:
@@ -148,8 +148,8 @@ class TestTransformResample(TestCase):
         assert len(p.shape) == 1
         assert p.shape[0] == 3
 
-        assert (p - torch.tensor([12, 11, 10])).abs().max() < 1e-5
-        assert (si.position_to_index(position_zyx=p) - torch.tensor([0, 0, 0])).abs().max() < 1e-5
+        assert (p - torch.tensor([12, 11, 10], dtype=torch.float32)).abs().max() < 1e-5
+        assert (si.position_to_index(position_zyx=p) - torch.tensor([0, 0, 0], dtype=torch.float32)).abs().max() < 1e-5
 
         # move in one direction from the origin
         for n in range(20):

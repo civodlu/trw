@@ -249,3 +249,6 @@ class ExceptionAbortRun(BaseException):
         self.reason = reason
         self.history = history
         self.metrics = metrics
+
+    def __str__(self):
+        return f'ExceptionAbortRun(reason={self.reason})'

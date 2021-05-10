@@ -6,7 +6,7 @@ from scipy.ndimage import affine_transform
 import numpy as np
 
 from ..basic_typing import Numeric, Length, NumpyTensorX, TensorX, TorchTensorNCX
-from ..train.compatibility import grid_sample
+from ..train.compatibility import grid_sample, affine_grid
 from .affine import affine_transformation_translation, affine_transformation_scale
 from .spatial_info import SpatialInfo
 from typing_extensions import Literal
@@ -100,7 +100,7 @@ def resample_spatial_info(
         raise ValueError(f'not supported interpolation={interpolation}')
 
     target_shape = [1, 1] + list(geometry_fixed.shape)
-    grid = F.affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners).to(moving_volume.device)
+    grid = affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners).to(moving_volume.device)
     resampled_torch = grid_sample(
         moving_volume.type(grid.dtype),
         grid,
@@ -187,11 +187,11 @@ def resample_3d(
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
         align_corners=True) -> TensorX:
 
-    min_bb_mm = torch.tensor(min_bb_mm)
-    max_bb_mm = torch.tensor(max_bb_mm)
-    np_volume_origin = torch.tensor(np_volume_origin)
-    np_volume_spacing = torch.tensor(np_volume_spacing)
-    resampled_spacing = torch.tensor(resampled_spacing)
+    min_bb_mm = torch.tensor(min_bb_mm, dtype=torch.float32)
+    max_bb_mm = torch.tensor(max_bb_mm, dtype=torch.float32)
+    np_volume_origin = torch.tensor(np_volume_origin, dtype=torch.float32)
+    np_volume_spacing = torch.tensor(np_volume_spacing, dtype=torch.float32)
+    resampled_spacing = torch.tensor(resampled_spacing, dtype=torch.float32)
 
     was_numpy = False
     if isinstance(volume, np.ndarray):
