@@ -1,4 +1,5 @@
 import copy
+from functools import partial
 from numbers import Number
 from typing import Sequence, Optional, Union, Any, List
 
@@ -8,7 +9,7 @@ from typing_extensions import Protocol  # backward compatibility for python 3.6-
 import torch
 import torch.nn as nn
 from ..utils import upsample
-from .blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType
+from .blocks import BlockConvNormActivation, BlockUpDeconvSkipConv, ConvBlockType, BlockUpsampleNnConvNormActivation
 from .layer_config import LayerConfig, default_layer_config
 import numpy as np
 
@@ -77,6 +78,9 @@ class Up(nn.Module):
 
     def forward(self, skip: torch.Tensor, previous: torch.Tensor) -> torch.Tensor:
         return self.ops(skip, previous)
+
+
+UpResize = partial(Up, block=partial(BlockUpDeconvSkipConv, deconv_block=BlockUpsampleNnConvNormActivation))
 
 
 class MiddleType(Protocol):
@@ -148,7 +152,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             channels: Sequence[int],
             output_channels: int,
             down_block_fn: DownType = Down,
-            up_block_fn: UpType = Up,
+            up_block_fn: UpType = UpResize,
             init_block_fn: ConvBlockType = BlockConvNormActivation,
             middle_block_fn: MiddleType = LatentConv,
             output_block_fn: ConvBlockType = BlockConvNormActivation,
@@ -156,7 +160,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             latent_channels: Optional[int] = None,
             kernel_size: Optional[int] = 3,
             strides: Union[int, Sequence[int]] = 2,
-            activation: Optional[Any] = None,
+            activation: Optional[Any] = nn.PReLU,
             config: LayerConfig = default_layer_config(dimensionality=None),
             add_last_downsampling_to_intermediates: bool = False
     ):

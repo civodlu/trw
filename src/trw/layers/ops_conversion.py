@@ -27,7 +27,7 @@ class OpsConversion:
     """
     Helper to create standard N-d operations
     """
-    def __init__(self, upsample_mode: Literal['nearest', 'linear'] = 'nearest'):
+    def __init__(self, upsample_mode: Literal['nearest', 'linear'] = 'linear'):
         self.dim: Optional[int] = None
         self.group_norm_fn: Optional[ModuleCreator] = None
         self.upsample_mode = upsample_mode
