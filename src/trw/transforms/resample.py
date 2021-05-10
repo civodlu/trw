@@ -29,7 +29,7 @@ def resample_spatial_info(
         tfm: torch.Tensor,
         interpolation: Literal['linear', 'nearest'] = 'linear',
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
-        align_corners=False) -> TorchTensorNCX:
+        align_corners: bool = False) -> TorchTensorNCX:
     """
     Apply an affine transformation to a given (moving) volume into a given geometry (fixed)
 
@@ -75,16 +75,21 @@ def resample_spatial_info(
     space_transform_moving = affine_transformation_scale([s / 2 for s in moving_shape])
     space_transform_fixed = affine_transformation_scale([s / 2 for s in fixed_shape])
 
+    # TODO check wether we need to shift by half voxed (i.e., `0` at the center or the corner?)
+    #half_voxel = affine_transformation_translation([-0.5, -0.5, -0.5])
+
     # apply a series of coordinate transform to map the transformed moving geometry
     # to the fixed volume geometry
     tfm_torch3x4 = mm_list([
         space_transform_moving.inverse(),
+        #half_voxel.inverse(),
         pst_moving.inverse(),
         tfm_center_moving,
         tfm,
         tfm_center_fixed.inverse(),
         pst_fixed,
-        space_transform_fixed
+        #half_voxel,
+        space_transform_fixed,
     ])
     tfm_torch3x4 = tfm_torch3x4[:dim]
 
@@ -185,7 +190,7 @@ def resample_3d(
         resampled_spacing: Length,
         interpolation_mode: Literal['linear', 'nearest'] = 'linear',
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
-        align_corners=True) -> TensorX:
+        align_corners=False) -> TensorX:
 
     min_bb_mm = torch.tensor(min_bb_mm, dtype=torch.float32)
     max_bb_mm = torch.tensor(max_bb_mm, dtype=torch.float32)
