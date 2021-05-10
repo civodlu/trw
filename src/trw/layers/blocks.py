@@ -3,6 +3,8 @@ import warnings
 from numbers import Number
 
 import torch
+
+from ..utils import flatten
 from ..basic_typing import TorchTensorNCX, Padding, KernelSize, Stride
 from .utils import div_shape
 from .layer_config import LayerConfig
@@ -466,3 +468,81 @@ class BlockRes(nn.Module):
         return self.activation(x + o)
 
 
+class BlockResPreAct(nn.Module):
+    """
+    Pre-activation residual block
+    """
+    def __init__(self,
+                 config: LayerConfig,
+                 input_channels: int,
+                 planes: int,
+                 stride: Optional[Stride] = None,
+                 kernel_size: Optional[KernelSize] = 3):
+
+        super().__init__()
+
+        config = copy.copy(config)
+
+        self.act1 = config.activation()
+        self.bn1 = config.norm(input_channels)
+        self.conv1 = BlockConv(
+            config,
+            input_channels,
+            planes,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding='same',
+            bias=False
+        )
+
+        self.act2 = config.activation()
+        self.bn2 = config.norm(planes)
+        self.conv2 = BlockConv(
+            config,
+            planes,
+            planes,
+            kernel_size=kernel_size,
+            stride=1,
+            padding='same',
+            bias=False
+        )
+
+        if stride is None:
+            stride = 1
+        stride_np = np.asarray(stride)
+
+        if (stride_np == 1).all() or input_channels != planes:
+            self.shortcut = nn.Sequential(
+                BlockConv(
+                    config,
+                    input_channels,
+                    planes,
+                    kernel_size=1,
+                    stride=stride,
+                    bias=False
+                )
+            )
+        else:
+            self.shortcut = None
+
+    def forward(self, x):
+        out = self.act1(self.bn1(x))
+        shortcut = self.shortcut(out) if self.shortcut is not None else x
+
+        out = self.conv1(out)
+        out = self.conv2(self.act2(self.bn2(out)))
+        out += shortcut
+        return out
+
+
+class BlockPoolClassifier(nn.Module):
+    def __init__(self, config: LayerConfig, input_channels: int, output_channels: int, pooling_kernel=4):
+        super().__init__()
+        self.linear = nn.Linear(input_channels, output_channels)
+        self.pooling = config.pool(pooling_kernel)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = self.pooling(x)
+        x = flatten(x)
+        x = self.linear(x)
+        return x

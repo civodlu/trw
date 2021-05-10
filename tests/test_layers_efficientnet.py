@@ -1,12 +1,13 @@
-from trw.layers import EfficientNet, default_layer_config, MBConvN
+from trw.layers import EfficientNet, default_layer_config
 import torch
-from torch import nn
 from unittest import TestCase
+
+from trw.train.compatibility import Swish
 
 
 class TestEfficientNet(TestCase):
     def test_efficient_net_construction(self):
-        config = default_layer_config(dimensionality=2, activation=torch.nn.SiLU)
+        config = default_layer_config(dimensionality=2, activation=Swish)
 
         torch.random.manual_seed(0)
         i = torch.randn([4, 3, 224, 224])
