@@ -1,7 +1,7 @@
 import copy
 from functools import partial
 from numbers import Number
-from typing import Sequence, List
+from typing import Sequence, List, Optional
 
 import torch
 import torch.nn as nn
@@ -31,7 +31,7 @@ class PreActResNet(nn.Module, ModuleWithIntermediate):
             self,
             dimensionality: int,
             input_channels: int,
-            output_channels: int,
+            output_channels: Optional[int],
             *,
             block=BlockResPreAct,
             num_blocks: Sequence[int] = (2, 2, 2, 2),
@@ -61,7 +61,10 @@ class PreActResNet(nn.Module, ModuleWithIntermediate):
             blocks.append(b)
         self.blocks = blocks
 
-        self.classifier = output_block_fn(config, channels[-1], output_channels)
+        if output_channels is not None:
+            self.classifier = output_block_fn(config, channels[-1], output_channels)
+        else:
+            self.classifier = None
 
     def _make_layer(self, config, block, planes, num_blocks, stride):
         strides = [stride] + [1]*(num_blocks-1)
@@ -86,8 +89,10 @@ class PreActResNet(nn.Module, ModuleWithIntermediate):
 
     def forward(self, x):
         intermediates = self.forward_with_intermediate(x)
-        out = self.classifier(intermediates[-1])
-        return out
+        if self.classifier is not None:
+            out = self.classifier(intermediates[-1])
+            return out
+        return intermediates[-1]
 
 
 PreActResNet18 = partial(
