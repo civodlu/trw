@@ -336,3 +336,15 @@ class TestUtilities(TestCase):
         except:
             pass
 
+    def test_bytes_2_human(self):
+        assert trw.utils.bytes2human(10000) == '9.8K'
+        assert trw.utils.bytes2human(100001221) == '95.4M'
+        assert trw.utils.bytes2human(1.3962936401367188) == '1.40'
+        assert trw.utils.bytes2human(10000.5) == '9.8K'
+
+    def test_number_2_human(self):
+        assert trw.utils.number2human(1000) == '1.0K'
+        assert trw.utils.number2human(1200000) == '1.2M'
+        assert trw.utils.number2human(1200000000) == '1.2G'
+        assert trw.utils.number2human(0.123456) == '0.12'
+        assert trw.utils.number2human(999.99999) == '1000.00'

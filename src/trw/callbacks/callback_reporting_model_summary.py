@@ -5,7 +5,7 @@ import os
 import torch
 import numpy as np
 from ..reporting.export import export_sample
-from ..utils import collect_hierarchical_module_name, to_value
+from ..utils import collect_hierarchical_module_name, to_value, number2human, bytes2human
 from ..reporting.table_sqlite import table_truncate, TableStream
 from ..train.utilities import create_or_recreate_folder, find_default_dataset_and_split_names, transfer_batch_to_device
 from .callback import Callback
@@ -61,7 +61,7 @@ def model_summary_base(model, batch):
 
             total_trainable_params = 0  # ALL parameters of the layer (including sub-module parameters)
             params = 0  # if we have recursion, these are the unique parameters
-            for p in module.parameters():
+            for p in module.parameters(recurse=False):
                 if p.requires_grad:
                     total_trainable_params += np.prod(np.asarray(p.shape))
 
@@ -106,8 +106,8 @@ def model_summary_base(model, batch):
         trainable_params += values["nb_params"]
 
     # assume 4 bytes/number (float on cuda)
-    total_output_size = abs(2. * total_output * 4. / (1024 ** 2.))  # x2 for gradients
-    total_params_size = abs(to_value(total_params) * 4. / (1024 ** 2.))
+    total_output_size = abs(2. * total_output * 4)  # x2 for gradients
+    total_params_size = abs(to_value(total_params) * 4)
     return summary, total_output_size, total_params_size, total_params, trainable_params
 
 
@@ -208,8 +208,8 @@ class CallbackReportingModelSummary(Callback):
             layer_name.append(module_name)
             input_shape.append(str(values['input_shape']))
             output_shape.append(str(values['output_shape']))
-            nb_params.append(str(values['nb_params']))
-            nb_trainable_params.append(str(values['total_trainable_params']))
+            nb_params.append(str(number2human(values['nb_params'])))
+            nb_trainable_params.append(str(number2human(values['total_trainable_params'])))
 
         batch = collections.OrderedDict([
             ('layer name', layer_name),
@@ -220,14 +220,41 @@ class CallbackReportingModelSummary(Callback):
         ])
 
         preamble = html_list([
-            f'Total parameters: {total_params / 1000000:.2f}M',
-            f'Trainable parameters: {trainable_params / 1000000:.2f}M',
-            f'Non-trainable parameters: {(total_params - trainable_params)}',
-            f'Forward/backward pass size: {total_output_size:.2f} MB',
-            f'Params size: {total_params_size:.2f} MB'
+            f'Total parameters: {number2human(total_params)}',
+            f'Trainable parameters: {number2human(trainable_params)}',
+            # keep this number without rounding, often a very small number!
+            f'Non-trainable parameters: {total_params - trainable_params}',
+            f'Forward/backward pass size: {bytes2human(total_output_size)}',
+            f'Params size: {bytes2human(total_params_size)}'
         ], header='Model infos')
 
-        export_table(options, table_name,  batch, table_role='data_tabular', clear_existing_data=True,
-                     table_preamble=preamble)
+        export_table(
+            options,
+            table_name,
+            batch,
+            table_role='data_tabular',
+            clear_existing_data=True,
+            table_preamble=preamble
+        )
 
+        # rotate the column based values to row
+        matrix = list(zip(*batch.values()))
+        matrix.insert(0, batch.keys())
+
+        # credit to georg https://stackoverflow.com/questions/13214809/pretty-print-2d-python-list
+        # to elegantly formatting a table
+        lens = [max(map(len, col)) for col in zip(*matrix)]
+        fmt = '\t'.join('{{:{}}}'.format(x) for x in lens)
+        table = [fmt.format(*row) for row in matrix]
+        import io
+
+        f = io.StringIO()
+        nb_elements = len(table[0])
+        print(f'\n{"-" * nb_elements}', file=f)
+        print(f'{" " * (nb_elements // 2)} Model', file=f)
+        print(f'{"-" * nb_elements}', file=f)
+        print('\n'.join(table), file=f)
+        print(f'{"-" * nb_elements}', file=f)
+
+        logger.info(f.getvalue())
         logger.info('CallbackReportingModelSummary exporting model done!')

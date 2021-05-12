@@ -58,9 +58,12 @@ class BlockUpResizeDeconvSkipConv(nn.Module):
 
 class BackboneDecoder(nn.Module, ModuleWithIntermediate):
     """
-    U-net like model with backbone used as encoder
+    U-net like model with backbone used as encoder.
 
-    Intermediate
+    Examples:
+        >>> import trw
+        >>> encoder = trw.layers.convs_3d(1, channels=[64, 128, 256])
+        >>> segmenter = trw.layers.BackboneDecoder([256, 128, 64], 3, encoder, [0, 1, 2], [1, 1, 64, 64, 64])
     """
     def __init__(self,
                  decoding_channels: Sequence[int],

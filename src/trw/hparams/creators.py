@@ -122,7 +122,7 @@ def create_activation(
     Returns:
         a functor to create the activation function
     """
-    assert default_value in functions
+    assert default_value in functions, f'missing value={default_value} in possible values!'
     return create_discrete_value(name, default_value=default_value, values=list(functions))
 
 

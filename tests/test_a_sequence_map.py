@@ -126,8 +126,9 @@ def double_values(item):
 class TestSequenceMap(TestCase):
     def test_a_map_async_20_pytorch(self):
         # TODO in some instances, depending on the test position (e.g., at the end rather than
-        #   at the beginning of the tests), pytorch can deadlock for unknown reason between
-        #   `torch_fake_before` and `torch_fake_created` statements.
+        #   at the beginning of the tests), pytorch can deadlock between
+        #   `torch_fake_before` and `torch_fake_created` statements. This seems to be related
+        #   to the openmp library used
         #   see: https://github.com/pytorch/pytorch/issues/17199
         #        https://gcc.gnu.org/bugzilla/show_bug.cgi?id=58378
         torch.set_num_threads(1)
