@@ -154,7 +154,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
             down_block_fn: DownType = Down,
             up_block_fn: UpType = UpResize,
             init_block_fn: ConvBlockType = BlockConvNormActivation,
-            middle_block_fn: MiddleType = LatentConv,
+            middle_block_fn: MiddleType = partial(LatentConv, block=partial(BlockConvNormActivation, kernel_size=5)),
             output_block_fn: ConvBlockType = BlockConvNormActivation,
             init_block_channels: Optional[int] = None,
             latent_channels: Optional[int] = None,
@@ -169,7 +169,8 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
         The original UNet architecture is decomposed in 5 blocks:
             - init_block_fn: will first be applied on the input
             - down_block_fn: the encoder
-            - middle_block_fn: the junction between the encoder and decoder
+            - middle_block_fn: the junction between the encoder and decoder, typically, this layer has
+                a large kernel to increase the model field of view
             - up_block_fn: the decoder
             - output_block_fn: the output layer
 

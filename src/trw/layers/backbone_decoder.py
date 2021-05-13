@@ -1,4 +1,5 @@
 import copy
+from functools import partial
 from typing import Sequence, Optional, Union, Any, List
 import torch
 import torch.nn as nn
@@ -73,7 +74,7 @@ class BackboneDecoder(nn.Module, ModuleWithIntermediate):
                  backbone_input_shape: ShapeNCX,
                  *,
                  up_block_fn: UpType = BlockUpResizeDeconvSkipConv,
-                 middle_block_fn: MiddleType = LatentConv,
+                 middle_block_fn: MiddleType = partial(LatentConv, block=partial(BlockConvNormActivation, kernel_size=5)),
                  output_block_fn: ConvBlockType = BlockConvNormActivation,
                  latent_channels: Optional[int] = None,
                  kernel_size: Optional[int] = 3,
