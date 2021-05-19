@@ -1,12 +1,13 @@
+from functools import partial
+
 import copy
 from typing import Sequence, Optional, Any
 
 import torch.nn as nn
 from ..basic_typing import ConvStrides, Activation, TorchTensorNCX
-from .layer_config import LayerConfig, default_layer_config
+from .layer_config import LayerConfig, default_layer_config, NormType
 from .blocks import ConvBlockType, BlockConvNormActivation, \
     ConvTransposeBlockType, BlockDeconvNormActivation, BlockRes
-import numpy as np
 
 
 class EncoderDecoderResnet(nn.Module):
@@ -22,13 +23,17 @@ class EncoderDecoderResnet(nn.Module):
             convolution_kernel: int = 3,
             encoding_strides: ConvStrides = 2,
             decoding_strides: ConvStrides = 2,
-            activation: Optional[Activation] = nn.ReLU,
+            activation: Optional[Activation] = None,
             encoding_block: ConvBlockType = BlockConvNormActivation,
             decoding_block: ConvTransposeBlockType = BlockDeconvNormActivation,
-            init_block: ConvBlockType = BlockConvNormActivation,
+            init_block=partial(BlockConvNormActivation, kernel_size=7),
             middle_block: Any = BlockRes,
-            out_block: ConvBlockType = BlockConvNormActivation,
-            config: LayerConfig = default_layer_config(dimensionality=None)):
+            out_block=partial(BlockConvNormActivation, kernel_size=7),
+            config: LayerConfig = default_layer_config(
+                conv_kwargs={'padding': 'same', 'bias': False, 'padding_mode': 'reflect'},
+                deconv_kwargs={'padding': 'same', 'bias': False},
+                norm_type=NormType.BatchNorm,
+                activation=nn.ReLU)):
         super().__init__()
 
         #
@@ -44,15 +49,17 @@ class EncoderDecoderResnet(nn.Module):
         if activation is not None:
             config_enc.activation = activation
 
+        intermediate_channels = encoding_channels[0] // 2
+
         cur = input_channels
         prev = input_channels
         if init_block is not None:
             self.initial = init_block(
                 config=config_enc,
                 input_channels=input_channels,
-                output_channels=encoding_channels[0],
+                output_channels=intermediate_channels,
                 stride=1)
-            prev = encoding_channels[0]
+            prev = intermediate_channels
 
         self.encoders = nn.ModuleList()  # do NOT store in a list, else the layer parameters will not be found!
         for cur, stride in zip(encoding_channels, encoding_strides):
@@ -67,6 +74,7 @@ class EncoderDecoderResnet(nn.Module):
         #
         # decoding path
         #
+
         config_dec = copy.copy(config)
         config_dec.set_dim(dimensionality)
         if activation is not None:
@@ -90,6 +98,7 @@ class EncoderDecoderResnet(nn.Module):
             self.decoders.append(block)
 
         config_dec.activation = None  # no activation for the last layer
+        config_dec.norm = None
         self.out = out_block(config_dec, prev, output_channels)
 
     def forward(self, x: TorchTensorNCX) -> TorchTensorNCX:

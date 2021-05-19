@@ -556,7 +556,7 @@ class TestLosses(TestCase):
             # plt.show()
 
     def test_mse_packed(self):
-        metric = trw.train.LossMsePacked()
+        metric = trw.train.LossMsePacked(reduction='none')
 
         targets = torch.randint(0, 3, [10, 5, 6], dtype=torch.long)
         outputs = torch.randint(0, 1, [10, 3, 5, 6], dtype=torch.float32)

@@ -189,7 +189,7 @@ class Gan(nn.Module):
         if isinstance(images_fake_orig, collections.Sequence) and not isinstance(images_fake_orig, torch.Tensor):
             assert isinstance(images_fake_orig[0], torch.Tensor), 'if list, elements must be tensors!'
 
-        if batch['split_name'] != self.train_split_name:
+        if batch['split_name'] != self.train_split_name or not self.training:
             # we are in valid/test mode, return only the generated image!
             all_outputs = self._merge_generator_discriminator_outputs(
                 generator_outputs,
@@ -197,22 +197,9 @@ class Gan(nn.Module):
                 None)
             return all_outputs
 
-        if batch.get('batch_id') == 0:
-            # the first batch of each epoch should change the
-            # learning rate
-            if self.scheduler_generator is not None:
-                self.scheduler_generator.step()
-            if self.scheduler_discriminator is not None:
-                self.scheduler_discriminator.step()
-
         #
         # train discriminator
         #
-
-        # discriminator: train with all real
-        self.optmizer_discriminator.zero_grad()
-        batch_real = batch
-        discriminator_outputs_real = self.discriminator(batch_real, images_real, is_real=True)
 
         # discriminator: train with all fakes
         batch_fake = batch
@@ -229,6 +216,11 @@ class Gan(nn.Module):
         else:
             fake = images_fake.detach()
         discriminator_outputs_fake = self.discriminator(batch_fake, fake, is_real=False)
+
+        # discriminator: train with all real
+        self.optmizer_discriminator.zero_grad()
+        batch_real = batch
+        discriminator_outputs_real = self.discriminator(batch_real, images_real, is_real=True)
 
         # extend the real, fake label to the size of the discriminator output (e.g., PatchGan)
         discriminator_loss_fake = self.loss_from_outputs_fn(discriminator_outputs_fake, batch_fake, is_training=True)
@@ -254,6 +246,14 @@ class Gan(nn.Module):
         if generator_loss.requires_grad:
             generator_loss.backward()
             self.optmizer_generator.step()
+
+        if self.training and batch.get('batch_id') == 0:
+            # the first batch of each epoch should change the
+            # learning rate
+            if self.scheduler_generator is not None:
+                self.scheduler_generator.step()
+            if self.scheduler_discriminator is not None:
+                self.scheduler_discriminator.step()
 
         all_outputs = self._merge_generator_discriminator_outputs(
             generator_outputs,

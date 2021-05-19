@@ -1,9 +1,10 @@
-from typing import Sequence
+from typing import Sequence, Optional
 
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
+from typing_extensions import Literal
 
 
 def one_hot(targets, num_classes, dtype=torch.float32, device=None):
@@ -455,8 +456,9 @@ class LossMsePacked(nn.Module):
 
     The ``packed_target`` will be one hot encoded and the mean squared error is applied with the ``tensor``.
     """
-    def __init__(self):
+    def __init__(self, reduction: Literal['mean', 'none'] = 'mean'):
         super().__init__()
+        self.reduction = reduction
 
     def forward(self, tensor, packed_target):
         assert len(tensor.shape) == len(packed_target.shape) + 1, '`tensor` must be encoded as NxCx... while' \
@@ -470,4 +472,13 @@ class LossMsePacked(nn.Module):
         assert packed_target.max() < nb_classes, f'error: target larger than the number ' \
                                                  f'of classes ({packed_target.max()} vs {nb_classes})'
 
-        return (tensor - one_hot(packed_target, nb_classes)) ** 2
+        target = one_hot(packed_target, nb_classes)
+        loss = F.mse_loss(tensor, target, reduction='none')
+        if self.reduction == 'none':
+            pass
+        elif self.reduction == 'mean':
+            dims = torch.arange(1, len(loss.shape))
+            loss = loss.mean(axis=tuple(dims))
+        else:
+            raise ValueError(f'reduction={self.reduction} not implemented!')
+        return loss
