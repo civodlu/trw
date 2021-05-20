@@ -41,7 +41,10 @@ class ShiftScale(nn.Module):
 
         Returns: return a flattened tensor
         """
-        self.mean = transfer_to_device(self.mean, x.device)
-        self.standard_deviation = transfer_to_device(self.standard_deviation, x.device)
-        o = (x - self.mean) / self.standard_deviation
+        mean = transfer_to_device(self.mean, x.device)
+        standard_deviation = transfer_to_device(self.standard_deviation, x.device)
+        o = (x - mean) / standard_deviation
+
+        self.mean = mean
+        self.standard_deviation = standard_deviation
         return o.type(self.output_dtype)
