@@ -600,8 +600,20 @@ class TestLayers2(TestCase):
         assert ops[0].ops[0].bias is None
         assert isinstance(ops[2], nn.LeakyReLU)
 
-
         assert len(model.decoders) == 3
+
+        ops = model.decoders[0].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
+        ops = model.decoders[1].ops
+        assert len(ops) == 3
+        assert ops[0].kernel_size == (5, 5)
+        assert ops[0].bias is None
+        assert isinstance(ops[2], nn.LeakyReLU)
+
         ops = model.decoders[2].ops
         assert len(ops) == 3
         assert ops[0].kernel_size == (5, 5)
@@ -609,10 +621,10 @@ class TestLayers2(TestCase):
         assert isinstance(ops[2], nn.LeakyReLU)
 
         ops = model.out.ops
-        assert len(ops) == 2
+        assert len(ops) == 1
+        assert len(ops[0].ops) == 1
         assert ops[0].ops[0].kernel_size == (7, 7)
         assert ops[0].ops[0].bias is None
-        assert isinstance(ops[1], nn.BatchNorm2d)
 
     def test_encoder_decoder_res_k4(self):
         config = default_layer_config(
