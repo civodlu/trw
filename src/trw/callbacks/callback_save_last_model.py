@@ -1,4 +1,7 @@
-from typing import List, Callable, Optional
+import math
+from typing import List, Callable, Optional, Sequence
+
+import torch
 
 from ..basic_typing import Datasets
 from ..utils import safe_lookup
@@ -60,6 +63,19 @@ def exclude_large_embeddings(outputs: Datasets, counts_greater_than=10000) -> Op
     return outputs
 
 
+def should_not_export_model(last_step, revert_if_nan_metrics):
+    for name_dataset, dataset in last_step.items():
+        for name_split, split in dataset.items():
+            for name_metric, metrics in split.items():
+                for m in revert_if_nan_metrics:
+                    value = metrics.get(m)
+                    if value is not None and math.isnan(value):
+                        # NaN should NOT be exported
+                        logger.warning(f'NaN detected! {name_dataset}/{name_split}/{name_metric}/{m}')
+                        return True
+    return False
+
+
 class CallbackSaveLastModel(Callback):
     """
     Save the current model to disk as well as metadata (history, outputs, infos).
@@ -72,11 +88,12 @@ class CallbackSaveLastModel(Callback):
     def __init__(
             self,
             model_name='last',
-            with_outputs=True,
+            with_outputs=False,
             is_versioned=False,
             rolling_size=None,
             keep_model_with_lowest_metric: ModelWithLowestMetric = None,
             best_model_name='best',
+            revert_if_nan_metrics: Optional[Sequence[str]] = ('loss',),
             post_process_outputs: Optional[Callable[[Datasets], Datasets]] = exclude_large_embeddings,
     ):
         """
@@ -91,6 +108,7 @@ class CallbackSaveLastModel(Callback):
             best_model_name: the name to be used by the best model
             post_process_outputs: a function to post-process the outputs just before export. For example,
                 if can be used to remove large embeddings to save smaller output files.
+            revert_if_nan_metrics: if any of the metrics have NaN, reload the model from the last checkpoint
         """
         self.best_model_name = best_model_name
         if keep_model_with_lowest_metric is not None:
@@ -103,6 +121,8 @@ class CallbackSaveLastModel(Callback):
         self.rolling_size = rolling_size
         self.last_models: List[str] = []
         self.post_process_outputs = post_process_outputs
+        self.revert_if_nan_metrics = revert_if_nan_metrics
+        self.last_model_path = None
 
     def __call__(self, options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
@@ -126,9 +146,31 @@ class CallbackSaveLastModel(Callback):
             name = f'{self.model_name}.model'
         export_path = os.path.join(options.workflow_options.current_logging_directory, name)
 
-        logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
+        # verify the metrics are not NaN
         from ..train.trainer_v2 import TrainerV2
+        from trw.train.utilities import get_device
+        if self.revert_if_nan_metrics is not None and len(history) > 0:
+            should_not_export = should_not_export_model(history[-1], self.revert_if_nan_metrics)
+
+            if should_not_export:
+                if self.last_model_path is not None:
+                    # revert the model
+                    device = get_device(model)
+                    model_state = torch.load(self.last_model_path, map_location=device)
+                    model.load_state_dict(model_state)
+
+                    # do not export it again so return!
+                    logger.info(f'model was reverted from={self.last_model_path}')
+                    return
+                else:
+                    # abort!
+                    logger.info('model was not reverted, no previously exported model!')
+                    return
+
+        logger.info('started CallbackSaveLastModel.__call__ path={}'.format(export_path))
         TrainerV2.save_model(model, metadata, export_path)
+        self.last_model_path = export_path
+
         if self.rolling_size is not None and self.rolling_size > 0:
             self.last_models.append(export_path)
 
