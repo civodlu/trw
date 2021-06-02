@@ -105,7 +105,7 @@ class TestCallbackSaveLastModel(TestCase):
         assert len(models) == 1
 
     def test_post_process_outputs(self):
-        callback = trw.callbacks.CallbackSaveLastModel(post_process_outputs=exclude_large_embeddings)
+        callback = trw.callbacks.CallbackSaveLastModel(post_process_outputs=exclude_large_embeddings, with_outputs=True)
 
         model = ModelDense()
         logging_directory = tempfile.mkdtemp()
