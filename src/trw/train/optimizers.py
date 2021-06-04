@@ -74,7 +74,8 @@ def create_adam_optimizers_fn(
         weight_decay=0,
         betas=(0.9, 0.999),
         eps=1e-8,
-        scheduler_fn=None):
+        scheduler_fn=None,
+        per_step_scheduler_fn=None):
     """
     Create an ADAM optimizer for each of the dataset with optional scheduler
 
@@ -87,12 +88,18 @@ def create_adam_optimizers_fn(
         betas: coefficients used for computing running averages of gradient
             and its square (default: (0.9, 0.999))
         eps: term to add to denominator to avoid division by zero
+        per_step_scheduler_fn: the functor to instantiate scheduler to be run per-step (batch)
 
     Returns:
         An optimizer
     """
     optimizer_fn = functools.partial(torch.optim.Adam, lr=learning_rate, weight_decay=weight_decay, betas=betas, eps=eps)
-    return create_optimizers_fn(datasets, model, optimizer_fn, scheduler_fn)
+    return create_optimizers_fn(
+        datasets,
+        model,
+        optimizer_fn=optimizer_fn,
+        scheduler_fn=scheduler_fn,
+        per_step_scheduler_fn=per_step_scheduler_fn)
 
 
 def create_adam_optimizers_scheduler_step_lr_fn(datasets, model, learning_rate, step_size, gamma, weight_decay=0, betas=(0.9, 0.999)):
@@ -135,6 +142,7 @@ def create_sgd_optimizers_fn(datasets, model, learning_rate, momentum=0.9, weigh
             momentum: the momentum of the SGD
             weight_decay: the weight decay
             nesterov: enables Nesterov momentum
+            per_step_scheduler_fn: the functor to instantiate scheduler to be run per-step (batch)
 
         Returns:
             An optimizer
@@ -245,3 +253,64 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
         per_step_scheduler_fn=scheduler_fn,
         momentum=1.0,  # the scheduler will entirely manage the momentum
         nesterov=nesterov)
+
+
+@torch_requires(min_version='1.3')
+def create_adam_optimizers_scheduler_one_cycle_lr_fn(
+        datasets,
+        model,
+        max_learning_rate,
+        epochs,
+        steps_per_epoch,
+        additional_scheduler_kwargs=None,
+        weight_decay=0,
+        betas=(0.9, 0.999),
+        eps=1e-8,
+        learning_rate_start_div_factor=25,
+        learning_rate_end_div_factor=10000):
+    """
+        Create a ADAM optimizer for each of the dataset with step learning rate scheduler
+
+        Args:
+            datasets: a dictionary of dataset
+            model: a model to optimize
+            max_learning_rate: the maximum learning rate
+            epochs: The number of epochs to train for
+            steps_per_epoch: The number of steps per epoch
+            learning_rate_start_div_factor: defines the initial learning rate for the first step as
+                initial_learning = learning_rate_start_multiplier * max_learning_rate
+            learning_rate_end_div_factor: defines the initial learning rate for the first step as
+                learning_end_start_multiplier * initial_learning
+            additional_scheduler_kwargs: additional arguments provided to the scheduler
+            weight_decay: the weight decay
+            betas: `betas` of the ADAM optimizer
+            eps: `eps` of the ADAM optimizer
+
+        Returns:
+            An optimizer with a step scheduler
+        """
+    scheduler_kwargs = {
+        'div_factor': learning_rate_start_div_factor,
+        'final_div_factor': learning_rate_end_div_factor
+    }
+    if additional_scheduler_kwargs is None:
+        additional_scheduler_kwargs = {}
+    if scheduler_kwargs is not None:
+        scheduler_kwargs = {**scheduler_kwargs, **additional_scheduler_kwargs}
+
+    scheduler_fn = lambda optimizer: torch.optim.lr_scheduler.OneCycleLR(
+            optimizer,
+            max_lr=max_learning_rate,
+            steps_per_epoch=steps_per_epoch,
+            epochs=epochs,
+            **scheduler_kwargs
+        )
+
+    return create_adam_optimizers_fn(
+        datasets,
+        model,
+        learning_rate=1.0,  # the scheduler will entirely manage the learning rate
+        weight_decay=weight_decay,
+        per_step_scheduler_fn=scheduler_fn,
+        betas=betas,
+        eps=eps)
