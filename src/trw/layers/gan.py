@@ -181,13 +181,6 @@ class Gan(nn.Module):
         o = self.generator(batch, latent)
         assert isinstance(o, tuple) and len(o) == 2, 'must return a tuple (torch.Tensor, dict of outputs)'
         images_fake_orig, generator_outputs = o
-        images_real = self.real_image_from_batch_fn(batch)
-        assert type(images_real) == type(images_fake_orig) or \
-            (isinstance(images_fake_orig, list) and type(images_fake_orig[0]) == type(images_real)), \
-            'return must be of the same type!'
-
-        if isinstance(images_fake_orig, collections.Sequence) and not isinstance(images_fake_orig, torch.Tensor):
-            assert isinstance(images_fake_orig[0], torch.Tensor), 'if list, elements must be tensors!'
 
         if batch['split_name'] != self.train_split_name or not self.training:
             # we are in valid/test mode, return only the generated image!
@@ -196,6 +189,14 @@ class Gan(nn.Module):
                 None,
                 None)
             return all_outputs
+
+        images_real = self.real_image_from_batch_fn(batch)
+        assert type(images_real) == type(images_fake_orig) or \
+            (isinstance(images_fake_orig, list) and type(images_fake_orig[0]) == type(images_real)), \
+            'return must be of the same type!'
+
+        if isinstance(images_fake_orig, collections.Sequence) and not isinstance(images_fake_orig, torch.Tensor):
+            assert isinstance(images_fake_orig[0], torch.Tensor), 'if list, elements must be tensors!'
 
         #
         # train discriminator
