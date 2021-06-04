@@ -17,7 +17,8 @@ from trw.callbacks import callback_epoch_summary, callback_export_classification
     callback_learning_rate_recorder, callback_reporting_augmentations, callback_reporting_best_metrics, \
     callback_reporting_dataset_summary, callback_reporting_epoch_summary, callback_reporting_export_samples, \
     callback_reporting_layer_statistics, callback_reporting_model_summary, callback_reporting_start_server, \
-    callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources
+    callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources, \
+    callback_reporting_learning_rate_recorder
 
 from .utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch, transfer_batch_to_device, \
     log_and_print
@@ -522,6 +523,7 @@ def default_per_epoch_callbacks(
         callback_epoch_summary.CallbackEpochSummary(logger=logger),
         callback_reporting_epoch_summary.CallbackReportingRecordHistory(),
         callback_reporting_best_metrics.CallbackReportingBestMetrics(),
+        callback_reporting_learning_rate_recorder.CallbackReportingLearningRateRecorder(),
     ]
 
     if convolutional_kernel_export_frequency is not None:
