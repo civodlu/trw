@@ -216,12 +216,14 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
             model: a model to optimize
             max_learning_rate: the maximum learning rate
             epochs: The number of epochs to train for
-            steps_per_epoch: The number of steps per epoch
+            steps_per_epoch: The number of steps per epoch. If 0 or `None`, the schedule will be based on mumber of
+                epochs only
             learning_rate_start_div_factor: defines the initial learning rate for the first step as
-                initial_learning = learning_rate_start_multiplier * max_learning_rate
-            learning_rate_end_div_factor: defines the initial learning rate for the first step as
-                learning_end_start_multiplier * initial_learning
-            percentage_cycle_increase: The percentage of the cycle (in number of steps) spent increasing the learning rate
+                initial_learning = max_learning_rate / learning_rate_start_div_factor
+            learning_rate_end_div_factor: defines the end learning rate for the last step as
+                final_learning_rate = max_learning_rate / learning_rate_start_div_factor / learning_rate_end_div_factor
+            percentage_cycle_increase: The percentage of the cycle (in number of steps) spent
+                increasing the learning rate
             additional_scheduler_kwargs: additional arguments provided to the scheduler
             weight_decay: the weight decay
             nesterov: enables Nesterov momentum
@@ -240,22 +242,33 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
     if scheduler_kwargs is not None:
         scheduler_kwargs = {**scheduler_kwargs, **additional_scheduler_kwargs}
 
+    steps_per_epoch_effective = steps_per_epoch
+    if steps_per_epoch is None or steps_per_epoch == 0:
+        steps_per_epoch_effective = 1
+        epochs += 1
+
     scheduler_fn = lambda optimizer: torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=max_learning_rate,
-            steps_per_epoch=steps_per_epoch,
+            steps_per_epoch=steps_per_epoch_effective,
             epochs=epochs,
             **scheduler_kwargs
         )
+
+    if steps_per_epoch_effective <= 1:
+        kwargs = {'scheduler_fn': scheduler_fn}
+    else:
+        kwargs = {'per_step_scheduler_fn': scheduler_fn}
 
     return create_sgd_optimizers_fn(
         datasets,
         model,
         learning_rate=1.0,  # the scheduler will entirely manage the learning rate
         weight_decay=weight_decay,
-        per_step_scheduler_fn=scheduler_fn,
         momentum=1.0,  # the scheduler will entirely manage the momentum
-        nesterov=nesterov)
+        nesterov=nesterov,
+        **kwargs
+    )
 
 
 @torch_requires(min_version='1.3')
@@ -280,11 +293,12 @@ def create_adam_optimizers_scheduler_one_cycle_lr_fn(
             model: a model to optimize
             max_learning_rate: the maximum learning rate
             epochs: The number of epochs to train for
-            steps_per_epoch: The number of steps per epoch
+            steps_per_epoch: The number of steps per epoch. If 0 or `None`, the schedule will be based on mumber of
+                epochs only
             learning_rate_start_div_factor: defines the initial learning rate for the first step as
                 initial_learning = learning_rate_start_multiplier * max_learning_rate
-            learning_rate_end_div_factor: defines the initial learning rate for the first step as
-                learning_end_start_multiplier * initial_learning
+            learning_rate_end_div_factor: defines the end learning rate for the last step as
+                final_learning_rate = max_learning_rate / learning_rate_start_div_factor / learning_rate_end_div_factor
             percentage_cycle_increase: The percentage of the cycle (in number of steps) spent increasing
                 the learning rate
             additional_scheduler_kwargs: additional arguments provided to the scheduler
@@ -305,19 +319,29 @@ def create_adam_optimizers_scheduler_one_cycle_lr_fn(
     if scheduler_kwargs is not None:
         scheduler_kwargs = {**scheduler_kwargs, **additional_scheduler_kwargs}
 
+    steps_per_epoch_effective = steps_per_epoch
+    if steps_per_epoch is None or steps_per_epoch == 0:
+        steps_per_epoch_effective = 1
+        epochs += 1
+
     scheduler_fn = lambda optimizer: torch.optim.lr_scheduler.OneCycleLR(
             optimizer,
             max_lr=max_learning_rate,
-            steps_per_epoch=steps_per_epoch,
+            steps_per_epoch=steps_per_epoch_effective,
             epochs=epochs,
             **scheduler_kwargs
         )
+
+    if steps_per_epoch_effective <= 1:
+        kwargs = {'scheduler_fn': scheduler_fn}
+    else:
+        kwargs = {'per_step_scheduler_fn': scheduler_fn}
 
     return create_adam_optimizers_fn(
         datasets,
         model,
         learning_rate=1.0,  # the scheduler will entirely manage the learning rate
         weight_decay=weight_decay,
-        per_step_scheduler_fn=scheduler_fn,
         betas=betas,
-        eps=eps)
+        eps=eps,
+        **kwargs)
