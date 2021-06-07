@@ -206,6 +206,7 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
         weight_decay=0,
         learning_rate_start_div_factor=25,
         learning_rate_end_div_factor=10000,
+        percentage_cycle_increase=0.3,
         nesterov=False):
     """
         Create a Stochastic gradient descent optimizer for each of the dataset with step learning rate scheduler
@@ -220,6 +221,7 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
                 initial_learning = learning_rate_start_multiplier * max_learning_rate
             learning_rate_end_div_factor: defines the initial learning rate for the first step as
                 learning_end_start_multiplier * initial_learning
+            percentage_cycle_increase: The percentage of the cycle (in number of steps) spent increasing the learning rate
             additional_scheduler_kwargs: additional arguments provided to the scheduler
             weight_decay: the weight decay
             nesterov: enables Nesterov momentum
@@ -230,7 +232,8 @@ def create_sgd_optimizers_scheduler_one_cycle_lr_fn(
         """
     scheduler_kwargs = {
         'div_factor': learning_rate_start_div_factor,
-        'final_div_factor': learning_rate_end_div_factor
+        'final_div_factor': learning_rate_end_div_factor,
+        'pct_start': percentage_cycle_increase
     }
     if additional_scheduler_kwargs is None:
         additional_scheduler_kwargs = {}
@@ -267,7 +270,8 @@ def create_adam_optimizers_scheduler_one_cycle_lr_fn(
         betas=(0.9, 0.999),
         eps=1e-8,
         learning_rate_start_div_factor=25,
-        learning_rate_end_div_factor=10000):
+        learning_rate_end_div_factor=10000,
+        percentage_cycle_increase=0.3):
     """
         Create a ADAM optimizer for each of the dataset with step learning rate scheduler
 
@@ -281,6 +285,8 @@ def create_adam_optimizers_scheduler_one_cycle_lr_fn(
                 initial_learning = learning_rate_start_multiplier * max_learning_rate
             learning_rate_end_div_factor: defines the initial learning rate for the first step as
                 learning_end_start_multiplier * initial_learning
+            percentage_cycle_increase: The percentage of the cycle (in number of steps) spent increasing
+                the learning rate
             additional_scheduler_kwargs: additional arguments provided to the scheduler
             weight_decay: the weight decay
             betas: `betas` of the ADAM optimizer
@@ -291,7 +297,8 @@ def create_adam_optimizers_scheduler_one_cycle_lr_fn(
         """
     scheduler_kwargs = {
         'div_factor': learning_rate_start_div_factor,
-        'final_div_factor': learning_rate_end_div_factor
+        'final_div_factor': learning_rate_end_div_factor,
+        'pct_start': percentage_cycle_increase
     }
     if additional_scheduler_kwargs is None:
         additional_scheduler_kwargs = {}
