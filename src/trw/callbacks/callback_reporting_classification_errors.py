@@ -18,8 +18,7 @@ def select_classification_errors(batch, loss_terms):
         if ref is None or not isinstance(ref, outputs_trw.OutputClassification):
             continue
 
-        truth_name = ref.classes_name
-        truth_values = to_value(batch[truth_name])
+        truth_values = to_value(loss_term['output_truth'])
         found_values = to_value(loss_term['output'])
         samples_with_errors = np.where(found_values != truth_values)[0]
         for i in samples_with_errors:
