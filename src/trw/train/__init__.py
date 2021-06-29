@@ -6,7 +6,8 @@ from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     make_unique_colors, make_unique_colors_f, apply_spectral_norm, apply_gradient_clipping
 
 from .outputs_trw import Output, OutputClassification, OutputRegression, OutputEmbedding, \
-    default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss, OutputSegmentation
+    default_sample_uid_name, segmentation_criteria_ce_dice, OutputTriplets, OutputLoss, OutputSegmentation, \
+    OutputSegmentationBinary
 from .losses import LossDiceMulticlass, LossFocalMulticlass, LossTriplets, LossCenter, LossContrastive, \
     total_variation_norm, LossCrossEntropyCsiMulticlass, LossBinaryF1, one_hot, LossMsePacked
 from .trainer import create_losses_fn, epoch_train_eval, eval_loop, train_loop, \

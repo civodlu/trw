@@ -189,7 +189,7 @@ def apply_homogeneous_affine_transform(transform: torch.Tensor, position: torch.
     assert transform.shape[0] == transform.shape[1]
     assert transform.shape[0] == dim + 1
     # decompose the transform as a (3x3 transform, translation) components
-    position = position.unsqueeze(1).type(transform.dtype)
+    position = position.unsqueeze(1).type(torch.float32)
     return transform[:dim, :dim].mm(position).squeeze(1) + transform[:dim, dim]
 
 

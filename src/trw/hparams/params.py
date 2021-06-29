@@ -59,7 +59,8 @@ class DiscreteValue(HyperParam):
     """
     def __init__(self, name: str, default_value: Any, values: List[Any]):
         assert isinstance(values, list)
-        assert default_value in values
+        assert default_value in values, f'invalid default! name={name} default_value={default_value} ' \
+                                        f'not in values. Choices={values}'
         self.values = values
         super().__init__(name, default_value=default_value)
 

@@ -116,7 +116,12 @@ class LossDiceMulticlass(nn.Module):
 
         # for each class (including background!), create a mask
         # so that class N is encoded as one hot at dimension 1
-        encoded_target = one_hot(target[:, 0], proba.shape[1], dtype=proba.dtype)
+        if output.shape[1] > 1:
+            encoded_target = one_hot(target[:, 0], proba.shape[1], dtype=proba.dtype)
+        else:
+            # the target is already in a one-hot encoded when class is 0-1
+            assert target.max() <= 1, 'should be binary classification!'
+            encoded_target = target
         
         intersection = proba * encoded_target
         indices_to_sum = tuple(range(2, len(proba.shape)))
@@ -133,6 +138,8 @@ class LossDiceMulticlass(nn.Module):
 
             if self.per_class_weights is not None:
                 # apply the per class weighting
+                if self.per_class_weights.device != average_loss_per_channel.device:
+                    self.per_class_weights = self.per_class_weights.to(average_loss_per_channel.device)
                 average_loss_per_channel = average_loss_per_channel * self.per_class_weights.detach()
 
             average_loss_per_channel = average_loss_per_channel.mean(dim=1)
@@ -199,6 +206,7 @@ class LossFocalMulticlass(nn.Module):
         assert reduction in (None, 'mean')
 
     def forward(self, outputs, targets):
+        #assert len(outputs.shape) >= 3, 'must have NCX shape!'
         assert len(outputs.shape) == len(targets.shape), 'output: must have W x C x d0 x ... x dn shape and ' \
                                                          'target: must have W x 1 x d0 x ... x dn shape'
         assert targets.shape[1] == 1, '`C` must be size 1'
@@ -209,15 +217,22 @@ class LossFocalMulticlass(nn.Module):
             if self.alpha.device != outputs.device:
                 self.alpha = self.alpha.to(outputs.device)
 
-        ce_loss = torch.nn.functional.cross_entropy(outputs, targets, reduction='none', weight=self.alpha)
+        if outputs.shape[1] == 1:
+            # binary cross entropy when we have a single class output
+            ce_loss = torch.nn.functional.binary_cross_entropy_with_logits(outputs, targets.unsqueeze(1).float(), reduction='none', weight=self.alpha)
+        else:
+            ce_loss = torch.nn.functional.cross_entropy(outputs, targets, reduction='none', weight=self.alpha)
         pt = torch.exp(-ce_loss)
         focal_loss = (1 - pt) ** self.gamma * ce_loss
 
         # for segmentation maps, make sure we average all values by sample
-        nb_samples = len(outputs)
-
         if self.reduction == 'mean':
-            return focal_loss.view((nb_samples, -1)).mean(dim=1)
+            axes = tuple(range(1, focal_loss.dim()))
+            if len(axes) == 0:
+                # we already have a 1D loss vector. if we do focal_loss.mean(dim=()),
+                # it is the same as focal_loss.mean(), which we don't want!
+                return focal_loss
+            return focal_loss.mean(dim=axes)
         elif self.reduction is None:
             return focal_loss
         else:

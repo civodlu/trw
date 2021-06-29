@@ -127,9 +127,10 @@ class SpatialInfo:
         assert len(patient_scale_transform.shape) == 2, 'must be a 2D array'
         assert patient_scale_transform.shape[0] == patient_scale_transform.shape[1], 'must be square!'
         assert patient_scale_transform.shape[0] == len(self.shape) + 1, 'N-dimensional must have a (N+1) x (N+1) PST'
+        assert isinstance(patient_scale_transform, torch.Tensor)
 
         self.patient_scale_transform = patient_scale_transform
-        self.patient_scale_transform_inv = patient_scale_transform.inverse()
+        self.patient_scale_transform_inv = torch.linalg.inv(patient_scale_transform)
 
     @property
     def spacing(self) -> np.ndarray:

@@ -372,20 +372,37 @@ class TestLosses(TestCase):
             assert abs(value_sub - value) < 1e-6
             print(value_sub - value)
 
-    def test_focal_loss_binary_id(self):
+    def test_focal_loss_binary__multiclass_id(self):
         # in this configuration, the cross entropy loss and the focal loss MUST be identical
+        # using the multi-class formulation (C=2)
         targets = torch.from_numpy(np.asarray([0, 1, 1, 0, 1], dtype=np.int64))
         outputs = torch.from_numpy(np.asarray([[0.5, 0.1], [0.1, 0.9], [0.1, 0.8], [0.6, 0.1], [0.3, 0.6]], dtype=np.float32))
         alpha = np.asarray([1.0, 1.0], dtype=np.float32)
 
         loss_focal_fn = trw.train.LossFocalMulticlass(alpha=alpha, gamma=0.0)
         loss_focal = loss_focal_fn(outputs, targets.unsqueeze(dim=1))
+        assert loss_focal.shape == (5,)
 
         loss_ce_fn = torch.nn.CrossEntropyLoss(reduction='none')
         loss_ce = loss_ce_fn(outputs, targets)
 
         # gamma == 0 means we MUST retrun cross entropy
         assert float((loss_focal - loss_ce).abs().max()) <= 1e-6
+
+    def test_focal_loss_binary_id(self):
+        # in this configuration, the cross entropy loss and the focal loss MUST be identical
+        # using the binary formulation (C=1)
+        targets = torch.from_numpy(np.asarray([0, 1, 1, 0, 1], dtype=np.int64))
+        outputs = torch.from_numpy(np.asarray([0.4, 0.9, 0.8, 0.4, 0.6], dtype=np.float32)).unsqueeze(1)
+
+        loss_focal_fn = trw.train.LossFocalMulticlass(gamma=0.0)
+        loss_focal = loss_focal_fn(outputs, targets.unsqueeze(dim=1))
+        assert loss_focal.shape == (5,)
+
+        loss_ce = torch.nn.functional.binary_cross_entropy_with_logits(outputs, targets.unsqueeze(1).float(), reduction='none')
+
+        # gamma == 0 means we MUST retrun cross entropy
+        assert float((loss_focal.squeeze() - loss_ce.squeeze()).abs().max()) <= 1e-6
 
     def test_focal_loss_binary_ordering(self):
         # make sure the more confident classes get less loss weigth

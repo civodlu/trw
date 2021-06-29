@@ -8,7 +8,7 @@ from . import metrics
 from .sequence_array import sample_uid_name as default_sample_uid_name
 from . import losses
 from ..utils import flatten, to_value, len_batch
-from .losses import LossDiceMulticlass
+from .losses import LossDiceMulticlass, LossFocalMulticlass
 
 
 def dict_torch_values_to_numpy(d):
@@ -138,7 +138,7 @@ class OutputEmbedding(Output):
             self.output = None
 
 
-def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weight=0.5, per_class_weights=None):
+def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weight=0.5, per_class_weights=None, power=1.0, smooth=1.0, focal_gamma=None):
     """
     loss combining cross entropy and multi-class dice
 
@@ -163,7 +163,14 @@ def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weig
     assert truth.shape[1] == 1, f'expected a single channel! Got={truth.shape[1]}'
 
     if ce_weight > 0:
-        cross_entropy_loss = nn.CrossEntropyLoss(reduction='none', weight=per_class_weights)(output, truth.squeeze(1))
+        if focal_gamma is None or focal_gamma <= 0:
+            if output.shape[1] == 1:
+                cross_entropy_loss = nn.BCEWithLogitsLoss(reduction='none', weight=per_class_weights)(output, truth.float())
+            else:
+                cross_entropy_loss = nn.CrossEntropyLoss(reduction='none', weight=per_class_weights)(output, truth.squeeze(1))
+        else:
+            cross_entropy_loss = LossFocalMulticlass(gamma=focal_gamma)(output, truth)
+
         if per_voxel_weights is not None:
             cross_entropy_loss = cross_entropy_loss * per_voxel_weights
         cross_entropy_loss = cross_entropy_loss.mean(tuple(range(1, len(cross_entropy_loss.shape))))
@@ -171,7 +178,7 @@ def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weig
         cross_entropy_loss = 0
 
     if ce_weight < 1:
-        dice_loss = losses.LossDiceMulticlass()(output, truth)
+        dice_loss = losses.LossDiceMulticlass(power=power, smooth=smooth)(output, truth)
     else:
         dice_loss = 0
 
@@ -303,6 +310,7 @@ class OutputClassification(Output):
             loss_term['uid'] = uid
 
         # TODO label smoothing
+        print(weighted_losses)
         loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term['weights'] = weights
@@ -345,7 +353,7 @@ class OutputSegmentation(OutputClassification):
         """
 
         Args:
-            output: the raw output values
+            output: the raw output values (`criterion_fn` will apply normalization such as sigmoid)
             output_truth: the tensor to be used as target. Targets must be compatible with ``criterion_fn``
             criterion_fn: the criterion to minimize between the output and the output_truth. If ``None``, the returned
                 loss will be 0
@@ -379,6 +387,46 @@ class OutputSegmentation(OutputClassification):
             maybe_optional=maybe_optional,
             sample_uid_name=sample_uid_name,
             per_voxel_weights=per_voxel_weights
+        )
+
+
+class OutputSegmentationBinary(OutputSegmentation):
+    """
+    Output for binary segmentation.
+
+    Parameters:
+        output: shape N * 1 * X format, must be raw logits
+        output_truth: should have N * 1 * X format, with values 0 or 1
+    """
+    def __init__(
+            self,
+            output: torch.Tensor,
+            output_truth: torch.Tensor,
+            criterion_fn: Callable[[], Any] = LossDiceMulticlass,
+            collect_output: bool = False,
+            collect_only_non_training_output: bool = False,
+            metrics: List[metrics.Metric] = metrics.default_segmentation_metrics(),
+            loss_reduction: Callable[[torch.Tensor], torch.Tensor] = torch.mean,
+            weights=None,
+            per_voxel_weights=None,
+            loss_scaling=1.0,
+            output_postprocessing=lambda x: (torch.sigmoid(x) > 0.5).type(torch.long),  # =1 as we export the class
+            maybe_optional=False,
+            sample_uid_name=default_sample_uid_name):
+        super().__init__(
+            output=output,
+            output_truth=output_truth,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            collect_only_non_training_output=collect_only_non_training_output,
+            metrics=metrics,
+            loss_reduction=loss_reduction,
+            weights=weights,
+            per_voxel_weights=per_voxel_weights,
+            loss_scaling=loss_scaling,
+            output_postprocessing=output_postprocessing,
+            maybe_optional=maybe_optional,
+            sample_uid_name=sample_uid_name
         )
 
 

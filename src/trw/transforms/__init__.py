@@ -14,7 +14,7 @@ from .resize import resize
 from .stack import stack
 from .normalize import normalize
 from .renormalize import renormalize
-from .resample import resample_3d
+from .resample import resample_3d, resample_spatial_info
 from .affine import affine_transformation_translation, affine_transformation_rotation2d, affine_transformation_scale, \
     affine_transform, to_voxel_space_transform, apply_homogeneous_affine_transform, \
     apply_homogeneous_affine_transform_zyx

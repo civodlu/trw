@@ -130,7 +130,7 @@ def export_table(options, table_name, batch, table_role, clear_existing_data, ba
         table_role=table_role,
         table_preamble=table_preamble)
 
-    logger.info(f'export table={table_name} started...')
+    logging.info(f'export table={table_name} started...')
     export_sample(
         root,
         sql_table,
@@ -142,7 +142,7 @@ def export_table(options, table_name, batch, table_role, clear_existing_data, ba
     if commit:
         sql_database.commit()
 
-    logger.info(f'export table done!')
+    logging.info(f'export table done!')
 
 
 def html_list(items, header=None):

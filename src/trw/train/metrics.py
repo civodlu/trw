@@ -217,7 +217,9 @@ class MetricSegmentationDice(Metric):
 
         if self.aggregate_by is not None:
             aggregate_by = outputs.get(self.aggregate_by)
-            assert aggregate_by is not None, f'cannot find the aggregate_by={self.aggregate_by} in batch!'
+            assert aggregate_by is not None, f'cannot find the aggregate_by={self.aggregate_by} in batch! if using ' \
+                                             f'`trw.train.OutputSegmentation`, make sure to set `sample_uid_name`' \
+                                             f'appropriately'
         else:
             aggregate_by = None
 
@@ -227,10 +229,16 @@ class MetricSegmentationDice(Metric):
             return None
 
         assert found.shape[1] == 1, 'output must have a single channel!'
-        found_one_hot = losses.one_hot(found[:, 0], nb_classes)
-        assert len(found_one_hot.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, ' \
-                                                             f'got={len(found_one_hot)}'
-        assert found_one_hot.shape[2:] == truth.shape[2:]
+        if raw.shape[1] > 1:
+            # one hot encode the output
+            found_one_hot = losses.one_hot(found[:, 0], nb_classes)
+            assert len(found_one_hot.shape) == len(truth.shape), f'expecting dim={len(truth.shape)}, ' \
+                                                                 f'got={len(found_one_hot)}'
+            assert found_one_hot.shape[2:] == truth.shape[2:]
+        else:
+            # it is already one hot encoded for a binary classification!
+            found_one_hot = found
+
         with torch.no_grad():
             numerator, cardinality = self.dice_fn(found_one_hot, truth)
 

@@ -7,7 +7,8 @@ import torch
 import functools
 import torch.nn as nn
 import trw.utils
-from trw.train import segmentation_criteria_ce_dice
+from trw.train import segmentation_criteria_ce_dice, LossDiceMulticlass
+from trw.train.metrics import MetricSegmentationDice
 
 
 class TestOutput(TestCase):
@@ -253,3 +254,81 @@ class TestOutput(TestCase):
             if isinstance(metric, trw.train.MetricClassificationError):
                 h_classification = h
         assert h_classification['nb_trues'] == 12
+
+    def test_binary_segmentation(self):
+        i1 = [
+            [1000, 0.01, 0.0001],
+            [-0.8, -0.5, -10000],
+        ]
+
+        o1 = [
+            [0, 1, 1],
+            [1, 0, 0],
+        ]
+
+        i2 = [
+            [-0.0001, 1000, 0.01],
+            [-0.1, -0.2, -0.3],
+        ]
+
+        o2 = [
+            [0, 1, 1],
+            [0, 0, 0],
+        ]
+
+        # NCX format
+        i1 = torch.as_tensor(i1, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        i2 = torch.as_tensor(i2, dtype=torch.float32).unsqueeze(0).unsqueeze(0)
+        o1 = torch.as_tensor(o1, dtype=torch.long).unsqueeze(0).unsqueeze(0)
+        o2 = torch.as_tensor(o2, dtype=torch.long).unsqueeze(0).unsqueeze(0)
+
+        metrics = [MetricSegmentationDice()]
+        criterion_fn = functools.partial(LossDiceMulticlass, smooth=0, power=1, eps=0)
+
+        output = trw.train.OutputSegmentationBinary(i1, o1, metrics=metrics, criterion_fn=criterion_fn)
+        v1 = output.evaluate_batch({}, is_training=True)
+
+        assert (v1['output_raw'] == i1).all()
+        expected_o1 = torch.tensor([
+            [1, 1, 1],
+            [0, 0, 0]
+        ], dtype=torch.long)
+        assert (v1['output'] == expected_o1).all()
+
+        # calculate the dice (i1)
+        p = torch.sigmoid(i1)
+        intersection = (p * o1).sum()
+        cardinality = p.sum() + o1.sum()
+        loss = 1 - 2 * intersection / cardinality
+        assert abs(loss - v1['loss']) < 1e-4
+
+        metric = list(v1['metrics_results'].values())[0]
+        assert abs(metric['numerator'].squeeze() - 4) < 1e-4
+        assert abs(metric['cardinality'].squeeze() - 6) < 1e-4
+
+        output = trw.train.OutputSegmentationBinary(i2, o2, metrics=metrics, criterion_fn=criterion_fn)
+        v2 = output.evaluate_batch({}, is_training=True)
+        expected_o2 = torch.tensor([
+            [0, 1, 1],
+            [0, 0, 0]
+        ], dtype=torch.long)
+        assert (v2['output'] == expected_o2).all()
+
+        p = torch.sigmoid(i2)
+        intersection = (p * o2).sum()
+        cardinality = p.sum() + o2.sum()
+        loss = 1 - 2 * intersection / cardinality
+        assert abs(loss - v2['loss']) < 1e-4
+
+        metric = list(v2['metrics_results'].values())[0]
+        assert abs(metric['numerator'].squeeze() - 4) < 1e-4
+        assert abs(metric['cardinality'].squeeze() - 4) < 1e-4
+
+        output_metric = metrics[0].aggregate_metrics([
+            list(v1['metrics_results'].values())[0],
+            list(v2['metrics_results'].values())[0]
+        ])
+
+        output_metric_expected = 1 - (4 + 4) / (6 + 4)
+        assert abs(output_metric['1-dice'] - output_metric_expected) < 1e-4
+        assert abs(output_metric['1-dice[class=0]'] - output_metric_expected) < 1e-4
