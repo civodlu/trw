@@ -310,7 +310,6 @@ class OutputClassification(Output):
             loss_term['uid'] = uid
 
         # TODO label smoothing
-        print(weighted_losses)
         loss_term['losses'] = weighted_losses
         loss_term['loss'] = self.loss_scaling * self.loss_reduction(weighted_losses)
         loss_term['weights'] = weights
