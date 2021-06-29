@@ -1,7 +1,7 @@
 from functools import partial
 
 import copy
-from typing import Sequence, Optional, Any
+from typing import Sequence, Optional, Any, List
 
 import torch.nn as nn
 from ..basic_typing import ConvStrides, Activation, TorchTensorNCX
@@ -102,12 +102,22 @@ class EncoderDecoderResnet(nn.Module):
         self.out = out_block(config_dec, prev, output_channels)
 
     def forward(self, x: TorchTensorNCX) -> TorchTensorNCX:
+        intermediates = self.forward_with_intermediate(x)
+        return intermediates[-1]
+
+    def forward_with_intermediate(self, x: TorchTensorNCX) -> List[TorchTensorNCX]:
+        intermediates = []
+
         x = self.initial(x)
         for encoder in self.encoders:
             x = encoder(x)
+            intermediates.append(x)
         for residual in self.residuals:
             x = residual(x)
+            intermediates.append(x)
         for decoder in self.decoders:
             x = decoder(x)
+            intermediates.append(x)
         x = self.out(x)
-        return x
+        intermediates.append(x)
+        return intermediates
