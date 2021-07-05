@@ -26,9 +26,12 @@ def pic_to_numpy(pic: Image) -> np.ndarray:
 
 
 def download_and_extract_archive(url: str, dataset_path: str) -> None:
-    version = [int(x) for x in torchvision.__version__.split('.')]
-    if version[0] == 0 and version[1] <= 2:
-        raise NotImplementedError('Can\'t download dataset with torchvision <= 0.2')
+    from packaging.version import Version
+    current_version = Version(torchvision.__version__)
+
+    min_version = Version('0.2')
+    if current_version < Version('0.2'):
+        raise NotImplementedError(f'Can\'t download dataset with torchvision <= {min_version}')
 
     from torchvision.datasets.utils import download_and_extract_archive
     download_and_extract_archive(url, dataset_path)

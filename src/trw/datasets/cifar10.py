@@ -45,7 +45,7 @@ def create_cifar10_dataset(
         d = np.transpose(dataset.data.astype(np.float32), (0, 3, 1, 2)) / normalization_factor
         return torch.from_numpy(d)
 
-    ds = {'images': convert_image(train_dataset), 'targets': np.asarray(train_dataset.targets, dtype=np.int64)}
+    ds = {'images': convert_image(train_dataset), 'targets': np.asarray(train_dataset.targets, dtype=np.int64).reshape((-1, 1))}
     
     def create_sequence(transforms, ds):
         if transforms is None:
@@ -60,7 +60,7 @@ def create_cifar10_dataset(
     splits = collections.OrderedDict()
     splits['train'] = create_sequence(transform_train, ds).collate()
 
-    ds = {'images': convert_image(test_dataset), 'targets': np.asarray(test_dataset.targets, dtype=np.int64)}
+    ds = {'images': convert_image(test_dataset), 'targets': np.asarray(test_dataset.targets, dtype=np.int64).reshape((-1, 1))}
     splits['test'] = create_sequence(transform_valid, ds).collate()
     return {
         'cifar10': splits

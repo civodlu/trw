@@ -8,7 +8,7 @@ from PIL import Image
 import numpy as np
 from ..train import SequenceArray, SamplerSequential, SamplerRandom
 from ..basic_typing import Datasets, DatasetsInfo
-from ..transforms import Transform
+from ..transforms import Transform, TransformCompose
 
 
 class TinyImageNet(Dataset):
@@ -113,6 +113,7 @@ def create_tiny_imagenet_dataset(
         split = SequenceArray(split, sampler=sampler)
 
         if transform_fn is not None:
+            transform_fn = TransformCompose(transforms=transform_fn)
             if is_train:
                 split = split.async_reservoir(
                     max_reservoir_samples=300,
