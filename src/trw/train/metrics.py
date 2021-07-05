@@ -107,7 +107,8 @@ class MetricClassificationBinaryAUC(Metric):
     """
     Calculate the Area under the Receiver operating characteristic (ROC) curve.
 
-    For this, the output needs to provide an ``output_raw`` of shape [N, 2] (i.e., binary classification).
+    For this, the output needs to provide an ``output_raw`` of shape [N, 2] (i.e., binary
+    classification framed as a multi-class classification) or of shape [N, 1] (binary classification)
     """
     def __call__(self, outputs):
         truth = to_value(outputs.get('output_truth'))
@@ -116,7 +117,7 @@ class MetricClassificationBinaryAUC(Metric):
             # data is missing
             return None
 
-        if len(found.shape) != len(truth.shape) + 1 or len(found.shape) < 2 or found.shape[1] != 2:
+        if len(found.shape) != len(truth.shape) or found.shape[1] > 2:
             # dimensions are of the expected shape
             return None
 
@@ -134,7 +135,8 @@ class MetricClassificationBinaryAUC(Metric):
         all_output_raw = np.concatenate(all_output_raw)
         all_output_truth = [m['output_truth'] for m in metric_by_batch]
         all_output_truth = np.concatenate(all_output_truth)
-        auc = auroc(all_output_truth, all_output_raw[:, 1])
+
+        auc = auroc(all_output_truth, all_output_raw[:, -1])
         if np.isnan(auc):
             auc = 0.0
         return {'1-auc': 1.0 - auc}
@@ -148,6 +150,7 @@ class MetricClassificationError(Metric):
         truth = to_value(outputs.get('output_truth'))
         found = to_value(outputs.get('output'))
         weights = to_value(outputs.get('weights'))
+        assert found.shape == truth.shape
         if truth is not None and found is not None:
             if weights is not None:
                 min_weight = weights.min()
@@ -346,7 +349,7 @@ class MetricClassificationF1(Metric):
             return None
 
         self.max_classes = max(self.max_classes, output_raw.shape[1])
-        found = np.argmax(output_raw, axis=1)
+        found = to_value(outputs['output'])
         return {
             'truth': truth,
             'found': found
@@ -382,8 +385,8 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
             return None
 
         # here we MUST have binary classification problem
-        # so make sure the `C` == 2
-        if len(output_raw.shape) < 2 or output_raw.shape[1] != 2:
+        # so make sure the `C` == 2 (binary classification with a single output, or multi-class with 2 outputs)
+        if len(output_raw.shape) < 2 or output_raw.shape[1] > 2:
             return None
 
         truth = outputs.get('output_truth')
@@ -397,7 +400,7 @@ class MetricClassificationBinarySensitivitySpecificity(Metric):
         found = found.reshape((-1))
         if truth is not None and found is not None:
             with torch.no_grad():
-                cm = fast_confusion_matrix(y_pred=found, y=truth, num_classes=output_raw.shape[1]).numpy()
+                cm = fast_confusion_matrix(y_pred=found, y=truth, num_classes=2).numpy()
 
             if len(cm) == 2:
                 # special case: only binary classification

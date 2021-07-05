@@ -1,9 +1,11 @@
+import warnings
 from typing import Callable, Any, List
 
 import torch
 import functools
 import collections
 import torch.nn as nn
+import torch.nn.functional as F
 from . import metrics
 from .sequence_array import sample_uid_name as default_sample_uid_name
 from . import losses
@@ -186,17 +188,24 @@ def segmentation_criteria_ce_dice(output, truth, per_voxel_weights=None, ce_weig
     return loss
 
 
+def criterion_softmax_cross_entropy(output, output_truth):
+    assert len(output.shape) == len(output_truth.shape), '`output` and `output_truth` must have the same dimensionality'
+    assert output_truth.shape[1] == 1, 'truth must have a single channel'
+    assert output_truth.shape[2:] == output.shape[2:], 'all the input must be covered by truth'
+    #return F.cross_entropy(output, output_truth.squeeze(1), reduction='none')
+    return nn.CrossEntropyLoss(reduction='none')(output, output_truth.squeeze(1))
+
+
 class OutputClassification(Output):
     """
     Classification output
     """
-
     def __init__(
             self,
             output,
             output_truth,
             *,
-            criterion_fn=lambda: nn.CrossEntropyLoss(reduction='none'),
+            criterion_fn=lambda: criterion_softmax_cross_entropy,
             collect_output=True,
             collect_only_non_training_output=False,
             metrics: List[metrics.Metric] = metrics.default_classification_metrics(),
@@ -204,15 +213,16 @@ class OutputClassification(Output):
             weights=None,
             per_voxel_weights=None,
             loss_scaling=1.0,
-            output_postprocessing=functools.partial(torch.argmax, dim=1),  # =1 as we export the class
+            output_postprocessing=functools.partial(torch.argmax, dim=1, keepdim=True),  # =1 as we export the class
             maybe_optional=False,
             classes_name='unknown',
             sample_uid_name=default_sample_uid_name):
         """
 
         Args:
-            output: the raw output values
-            output_truth: the tensor to be used as target. Targets must be compatible with ``criterion_fn``
+            output: the raw output values (no activation applied, i.e., logits). Should be of shape [N, C, ...]
+            output_truth: the tensor to be used as target. Should be of shape [N, C, ...] and be
+                compatible with ``criterion_fn``
             criterion_fn: the criterion to minimize between the output and the output_truth. If ``None``, the returned
                 loss will be 0
             collect_output: if True, the output values will be collected (and possibly exported for debug purposes)
@@ -250,6 +260,14 @@ class OutputClassification(Output):
         if self.per_voxel_weights is not None:
             assert self.per_voxel_weights.shape[2:] == self.output.shape[2:]
             assert len(self.per_voxel_weights) == len(self.output)
+
+        if len(output.shape) != len(output_truth.shape):
+            if len(output.shape) == len(output_truth.shape) + 1:
+                warnings.warn('output and output_truth must have the same shape!'
+                              'For binary classification, output_truth.shape == (X, 1).'
+                              'This will be disabled in the future! Simply replace by'
+                              '`output_truth` by `output_truth.unsqueeze(1)`', FutureWarning)
+                self.output_truth = output_truth.unsqueeze(1)
 
     def evaluate_batch(self, batch, is_training):
         truth = self.output_truth
@@ -331,6 +349,69 @@ class OutputClassification(Output):
             del loss_term['output_raw']
             del loss_term['output']
             del loss_term['output_truth']
+
+
+bce_logits_loss = lambda output, target: nn.functional.binary_cross_entropy_with_logits(
+    output,
+    target.type(output.dtype),
+    reduction='none'
+)
+
+
+class OutputClassificationBinary(OutputClassification):
+    """
+    Classification output for binary classification
+
+    Args:
+        output: the output with shape [N, 1, {X}], without any activation applied (i.e., logits)
+        output_truth: the truth with shape [N, 1, {X}]
+    """
+    def __init__(
+            self,
+            output,
+            output_truth,
+            *,
+            criterion_fn=lambda: bce_logits_loss,
+            collect_output=True,
+            collect_only_non_training_output=False,
+            metrics: List[metrics.Metric] = metrics.default_classification_metrics(),
+            loss_reduction=torch.mean,
+            weights=None,
+            per_voxel_weights=None,
+            loss_scaling=1.0,
+            output_postprocessing=lambda x: (torch.sigmoid(x) >= 0.5).long(),
+            maybe_optional=False,
+            classes_name='unknown',
+            sample_uid_name=default_sample_uid_name):
+
+        if len(output.shape) != len(output_truth.shape):
+            if len(output.shape) == len(output_truth.shape) + 1:
+                warnings.warn('output and output_truth must have the same shape!'
+                              'For binary classification, output_truth.shape == (X, 1).'
+                              'This will be disabled in the future! Simply replace by'
+                              '`output_truth` by `output_truth.unsqueeze(1)`', FutureWarning)
+                output_truth = output_truth.unsqueeze(1)
+
+        assert len(output.shape) == len(output_truth.shape), 'must have the same dimensionality!'
+        assert output.shape[1] == 1, 'binary classification!'
+        assert output_truth.shape[1] == 1, 'binary classification!'
+
+        super().__init__(
+            output=output,
+            output_truth=output_truth,
+            criterion_fn=criterion_fn,
+            collect_output=collect_output,
+            collect_only_non_training_output=collect_only_non_training_output,
+            metrics=metrics,
+            loss_reduction=loss_reduction,
+            weights=weights,
+            per_voxel_weights=per_voxel_weights,
+            loss_scaling=loss_scaling,
+            output_postprocessing=output_postprocessing,  # =1 as we export the class
+            maybe_optional=maybe_optional,
+            classes_name=classes_name,
+            sample_uid_name=sample_uid_name
+        )
 
 
 class OutputSegmentation(OutputClassification):

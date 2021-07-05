@@ -8,7 +8,9 @@ import functools
 import torch.nn as nn
 import trw.utils
 from trw.train import segmentation_criteria_ce_dice, LossDiceMulticlass
-from trw.train.metrics import MetricSegmentationDice
+from trw.train.metrics import MetricSegmentationDice, MetricLoss, MetricClassificationError, \
+    MetricClassificationBinarySensitivitySpecificity, MetricClassificationBinaryAUC, MetricClassificationF1
+from trw.train.trainer import generic_aggregate_loss_terms
 
 
 class TestOutput(TestCase):
@@ -74,7 +76,7 @@ class TestOutput(TestCase):
         self.assertTrue(loss < 1e-6)
 
         assert r.get('output') is not None
-        self.assertTrue((trw.utils.to_value(r['output']) == [1, 0]).all())
+        self.assertTrue((trw.utils.to_value(r['output']).squeeze(1) == [1, 0]).all())
 
     def test_classification_weight(self):
         input_values = torch.from_numpy(np.asarray([[0.0, 100.0], [100.0, 0.0]], dtype=float))
@@ -332,3 +334,28 @@ class TestOutput(TestCase):
         output_metric_expected = 1 - (4 + 4) / (6 + 4)
         assert abs(output_metric['1-dice'] - output_metric_expected) < 1e-4
         assert abs(output_metric['1-dice[class=0]'] - output_metric_expected) < 1e-4
+
+    def test_binary_classification(self):
+        i1 = [1000, -0.01, -0.0001, 0.01, 0.51, -10000]
+        i1 = torch.tensor(i1).unsqueeze(1)
+
+        o1 = [1, 0, 0, 1, 1, 0]
+        o1 = torch.tensor(o1).unsqueeze(1)
+
+        metrics_fns = [
+            MetricLoss(),
+            MetricClassificationError(),
+            MetricClassificationBinarySensitivitySpecificity(),
+            MetricClassificationBinaryAUC(),
+            MetricClassificationF1(),
+        ]
+        output = trw.train.OutputClassificationBinary(i1, o1, metrics=metrics_fns)
+        v2 = output.evaluate_batch({}, is_training=True)
+        assert (v2['output'] == o1).all()
+
+        _, aggregated_metrics = generic_aggregate_loss_terms([{'test': v2}])
+        assert aggregated_metrics['test']['classification error'] == 0
+        assert aggregated_metrics['test']['1-f1[binary]'] == 0
+        assert aggregated_metrics['test']['1-sensitivity'] == 0
+        assert aggregated_metrics['test']['1-specificity'] == 0
+        assert aggregated_metrics['test']['1-auc'] == 0

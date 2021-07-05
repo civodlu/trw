@@ -194,10 +194,9 @@ class TestMetrics(TestCase):
         target_values = torch.from_numpy(target)
 
         metric = trw.train.MetricClassificationBinaryAUC()
-        auc = metric({'output_truth': input_values, 'output_raw': target_values})
+        auc = metric({'output_truth': input_values.unsqueeze(1), 'output_raw': target_values, 'output': target_values.argmax(1, keepdim=True)})
         auc = metric.aggregate_metrics([auc])
         assert abs(auc['1-auc'] - 0.5) < 0.1
-        print('DONE')
 
     def test_auc_perfect(self):
         # perfect classification: AUC should be 1.0 (so metric should be 0.0)
@@ -212,7 +211,7 @@ class TestMetrics(TestCase):
         input_values = (1 - r > 0.5).astype(int)
 
         metric = trw.train.MetricClassificationBinaryAUC()
-        auc = metric({'output_truth': input_values, 'output_raw': target_values})
+        auc = metric({'output_truth': input_values.reshape((-1, 1)), 'output_raw': target_values, 'output': target_values.argmax(1, keepdim=True)})
         auc = metric.aggregate_metrics([auc])
         assert abs(auc['1-auc'] - 0.0) < 0.001
 
@@ -228,7 +227,7 @@ class TestMetrics(TestCase):
         input_values = np.random.uniform(0, 1, size=[nb_samples]) >= 0.5
 
         metric = trw.train.MetricClassificationF1(average='binary')
-        one_minus_f1 = metric({'output_truth': input_values, 'output_raw': target_values})
+        one_minus_f1 = metric({'output_truth': input_values, 'output_raw': target_values, 'output': target_values.argmax(1, keepdim=True)})
         one_minus_f1 = metric.aggregate_metrics([one_minus_f1])
 
         cm = sklearn.metrics.confusion_matrix(np.argmax(target, axis=1), input_values)

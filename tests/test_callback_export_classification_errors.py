@@ -78,7 +78,7 @@ class TestCallbackExportClassificationErrors(unittest.TestCase):
             'dataset1': {
                 'split1': {
                     'output1': {
-                        'output_ref': trw.train.OutputClassification(None, None, classes_name='good'),
+                        'output_ref': trw.train.OutputClassification(torch.zeros([10, 2]), torch.zeros([10, 1]).long(), classes_name='good'),
                         'output_raw': output_raw,
                         'output': np.argmax(output_raw, axis=1),
                         'output_truth': truth
