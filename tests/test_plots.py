@@ -79,13 +79,58 @@ class TestPlots(TestCase):
         d = 100
         trues = np.random.randint(0, 1 + 1, d)
         found = np.random.randn(d, 2)
+        found_class = np.argmax(found, axis=1)
         class_mapping = {
             0: 'class_0',
             1: 'class_1',
         }
-        r = trw.train.classification_report(found, trues, class_mapping)
+        r = trw.train.classification_report(found_class, found, trues, class_mapping)
 
-        found_class = np.argmax(found, axis=1)
+        expected_accuracy = float(np.sum(found_class == trues)) / len(trues)
+        assert abs(r['accuracy'] - expected_accuracy) < 1e-5
+
+        fp = 0
+        tp = 0
+        tn = 0
+        fn = 0
+        for i in range(d):
+            value_true = trues[i]
+            value_found = found_class[i]
+            if value_true == value_found:
+                if value_true == 0:
+                    tn += 1
+                else:
+                    tp += 1
+            else:
+                if value_true == 0:
+                    fp += 1
+                else:
+                    fn += 1
+        specificity = tn / (tn + fp)
+        sensitivity = tp / (tp + fn)
+        assert abs(r['specificity'] - specificity) < 1e-5
+        assert abs(r['sensitivity'] - sensitivity) < 1e-5
+
+        cm_lines = [r['confusion_matrix'].replace('[', '').replace(']', '').split('\n')[n] for n in range(2)]
+        cm_lines = [np.fromstring(line.strip(), sep=' ') for line in cm_lines]
+        cm = np.asarray(cm_lines)
+        assert cm[1, 1] == tp
+        assert cm[0, 0] == tn
+        assert cm[1, 0] == fn
+        assert cm[0, 1] == fp
+
+    def test_classification_report_binary(self):
+        d = 100
+        trues = np.random.randint(0, 1 + 1, d)
+        found = np.random.rand(d)
+        found_class = (found >= 0.5).astype(int)
+
+        class_mapping = {
+            0: 'class_0',
+            1: 'class_1',
+        }
+        r = trw.train.classification_report(found_class, found, trues, class_mapping)
+
         expected_accuracy = float(np.sum(found_class == trues)) / len(trues)
         assert abs(r['accuracy'] - expected_accuracy) < 1e-5
 

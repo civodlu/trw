@@ -288,18 +288,20 @@ def list_classes_from_mapping(mappinginv: collections.Mapping, default_name='unk
 
 
 def classification_report(
+        predictions: np.ndarray,
         prediction_scores: np.ndarray,
         trues: collections.Sequence,
         class_mapping: collections.Mapping=None):
     """
     Summarizes the important statistics for a classification problem
+    :param predictions: the classes predicted
     :param prediction_scores: the scores for each, for each sample
     :param trues: the true class for each sample
     :param class_mapping: the class mapping (class id, class name)
     :return: a dictionary of statistics or sub-report
     """
+    assert trues.shape == predictions.shape
     assert isinstance(trues[0], numbers.Integral), 'must be a list of classes'
-    predictions = np.argmax(prediction_scores, axis=1)
 
     cm = sklearn.metrics.confusion_matrix(y_pred=predictions, y_true=trues)
     labels = list_classes_from_mapping(class_mapping)
@@ -341,7 +343,11 @@ def classification_report(
         d['sensitivity'] = tp / (tp + fn)
         d['specificity'] = tn / (fp + tn)
 
-        prediction_1_scores = prediction_scores[:, 1]
+        if len(prediction_scores.shape) > 1:
+            prediction_1_scores = prediction_scores[:, -1]
+        else:
+            # handle binary outputs
+            prediction_1_scores = prediction_scores
         d['auroc'] = auroc(trues=trues, found_1_scores=prediction_1_scores)
 
     # calculate the most common errors

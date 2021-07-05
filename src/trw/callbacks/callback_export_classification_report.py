@@ -87,7 +87,7 @@ class CallbackExportClassificationReport(Callback):
                         )
 
                     if self.with_ROC:
-                        if len(raw_values.shape) == 2 and raw_values.shape[1] == 2:
+                        if len(raw_values.shape) == 2 and (raw_values.shape[1] == 2 or raw_values.shape[1] == 1):
                             logger.info('exporting ROC curve')
                             # classical ROC is only valid for binary classification
                             title = '{}-{}-{}-ROC'.format(output_name, dataset_name, split_name)
@@ -95,7 +95,7 @@ class CallbackExportClassificationReport(Callback):
                             analysis_plots.plot_roc(
                                 export_path=root,
                                 trues=trues_values,
-                                found_scores_1=raw_values[:, 1],
+                                found_scores_1=raw_values[:, -1],
                                 title=title,
                             )
 
@@ -104,6 +104,7 @@ class CallbackExportClassificationReport(Callback):
                         prediction_scores = raw_values
 
                         report = analysis_plots.classification_report(
+                            predictions=output_values,
                             prediction_scores=prediction_scores,
                             trues=trues_values,
                             class_mapping=mapping
