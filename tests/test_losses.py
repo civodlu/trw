@@ -575,9 +575,22 @@ class TestLosses(TestCase):
     def test_mse_packed(self):
         metric = trw.train.LossMsePacked(reduction='none')
 
-        targets = torch.randint(0, 3, [10, 5, 6], dtype=torch.long)
+        targets = torch.randint(0, 3, [10, 1, 5, 6], dtype=torch.long)
         outputs = torch.randint(0, 1, [10, 3, 5, 6], dtype=torch.float32)
         losses = metric(outputs, targets)
 
-        expected_loss = (trw.train.one_hot(targets, 3) - outputs) ** 2
+        expected_loss = (trw.train.one_hot(targets.squeeze(1), 3) - outputs) ** 2
+        assert (losses - expected_loss).abs().max() < 1e-5
+
+    def test_mse_packed_binary(self):
+        """
+        Test output of a binary classifier
+        """
+        metric = trw.train.LossMsePacked(reduction='none')
+
+        targets = torch.randint(0, 1, [10, 1, 5, 6], dtype=torch.long)
+        outputs = torch.randint(0, 1, [10, 1, 5, 6], dtype=torch.float32)
+        losses = metric(outputs, targets)
+
+        expected_loss = (targets.type(torch.float32) - outputs) ** 2
         assert (losses - expected_loss).abs().max() < 1e-5

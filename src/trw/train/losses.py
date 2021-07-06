@@ -476,18 +476,29 @@ class LossMsePacked(nn.Module):
         self.reduction = reduction
 
     def forward(self, tensor, packed_target):
-        assert len(tensor.shape) == len(packed_target.shape) + 1, '`tensor` must be encoded as NxCx... while' \
-                                                                  '`packed_target` must be encoded as Nx...'
+        """
+        Args:
+            tensor: a NxCx... tensor
+            packed_target:  a Nx1x... tensor
+        """
+        assert len(tensor.shape) == len(packed_target.shape), '`tensor` must be encoded as NxCx... while' \
+                                                              '`packed_target` must be encoded as Nx1x...'
         assert tensor.shape[0] == packed_target.shape[0]
-        assert tensor.shape[2:] == packed_target.shape[1:], '`tensor` and `packed_target` must have the same shape' \
+        assert packed_target.shape[1] == 1, 'target MUST be a'
+        assert tensor.shape[2:] == packed_target.shape[2:], '`tensor` and `packed_target` must have the same shape' \
                                                             '(except the N, C components)'
 
         nb_classes = tensor.shape[1]
-        assert nb_classes >= 2, f'expected at least 2 classes! Got={nb_classes}'
-        assert packed_target.max() < nb_classes, f'error: target larger than the number ' \
-                                                 f'of classes ({packed_target.max()} vs {nb_classes})'
+        if nb_classes >= 2:
+            assert packed_target.max() < nb_classes, f'error: target larger than the number ' \
+                                                     f'of classes ({packed_target.max()} vs {nb_classes})'
+            target = one_hot(packed_target.squeeze(1), nb_classes)
+        else:
+            # no need of unpacking when we have binary classifier
+            assert nb_classes == 1
+            target = packed_target.type(tensor.dtype)
 
-        target = one_hot(packed_target, nb_classes)
+        assert tensor.shape == target.shape
         loss = F.mse_loss(tensor, target, reduction='none')
         if self.reduction == 'none':
             pass

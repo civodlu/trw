@@ -43,7 +43,7 @@ class Discriminator(nn.Module):
     def forward(self, batch, image, is_real):
         o = self.model(image)
         o = global_average_pooling_2d(o)
-        o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long)
+        o_expected = int(is_real) * torch.ones(len(image), device=image.device, dtype=torch.long).unsqueeze(1)
         batch['o_expected'] = o_expected
 
         return {
