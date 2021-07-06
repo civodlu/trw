@@ -5,13 +5,11 @@ import trw.datasets
 import torch
 import torch.nn as nn
 import functools
-from torch.nn import init
 from trw.layers import BlockConvNormActivation, default_layer_config, NormType
-from trw.layers.gan import Gan, GanDataPool, process_outputs_and_extract_loss
-from trw.train import OutputEmbedding, OutputLoss, LossMsePacked, apply_spectral_norm, MetricLoss, get_device
-from trw.train.outputs_trw import OutputClassification
+from trw.layers.gan import Gan
+from trw.train import OutputEmbedding, OutputLoss, LossMsePacked, apply_spectral_norm
+from trw.train.outputs_trw import OutputClassificationBinary
 from torch.optim import lr_scheduler
-from trw.utils import len_batch
 
 
 class Generator(nn.Module):
@@ -23,8 +21,14 @@ class Generator(nn.Module):
             dimensionality=2,
             input_channels=3,
             output_channels=3,
-            encoding_channels=[128, 256],
-            decoding_channels=[128, 64],
+            encoding_channels=[128, 256, 512],
+            decoding_channels=[256, 128, 64],
+            config=default_layer_config(
+                conv_kwargs={'padding': 'same', 'bias': True, 'padding_mode': 'reflect'},
+                deconv_kwargs={'padding': 'same', 'bias': True},
+                norm_type=NormType.InstanceNorm,
+                norm_kwargs={'affine': False},
+                activation=nn.ReLU)
         )
 
     def forward(self, batch, latent):
@@ -42,52 +46,70 @@ class Generator(nn.Module):
         ])
 
 
+def base_discriminator():
+    init_block = BlockConvNormActivation(
+        config=default_layer_config(
+            norm_type=None,
+            dimensionality=2,
+            activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
+        ),
+        input_channels=6,
+        output_channels=64,
+        kernel_size=4,
+        stride=2
+    )
+
+    convs = trw.layers.convs_2d(
+        input_channels=64,
+        channels=[128, 256, 1],
+        convolution_kernels=4,
+        strides=[2, 2, 1],
+        convolution_repeats=[3, 2, 1],
+        pooling_size=None,
+        norm_type=NormType.InstanceNorm,
+        last_layer_is_output=True,
+        activation=functools.partial(nn.LeakyReLU, negative_slope=0.2)
+    )
+
+    return nn.Sequential(init_block, convs)
+
+
 class Discriminator(nn.Module):
     def __init__(self):
         super().__init__()
 
-        self.init_block = BlockConvNormActivation(
-            config=default_layer_config(
-                norm_type=None,
-                dimensionality=2,
-                activation=functools.partial(nn.LeakyReLU, negative_slope=0.2),
-            ),
-            input_channels=6,
-            output_channels=64,
-            kernel_size=4,
-            stride=2
-        )
+        self.discriminators = nn.ModuleList()
+        for i in range(3):
+            self.discriminators.append(base_discriminator())
 
-        self.convs = trw.layers.convs_2d(
-            input_channels=64,
-            channels=[128, 256, 512, 2],
-            convolution_kernels=4,
-            strides=[2, 2, 1, 1],
-            pooling_size=None,
-            last_layer_is_output=True,
-            activation=functools.partial(nn.LeakyReLU, negative_slope=0.2)
-        )
+        self.downsample = nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
 
     def forward(self, batch, image, is_real):
         segmentation = get_segmentation(batch)['segmentation']
 
         # introduce the target as one hot encoding input to the netD
         i = torch.cat([image, segmentation], dim=1)
-        o = self.init_block(i)
-        o = self.convs(o)
 
-        o_expected = torch.full(
-            [i.shape[0]] + list(o.shape[2:]),
-            int(is_real),
-            device=image.device, dtype=torch.long
-        )
+        i_downscaled = i
+        outputs = {}
+        for d_n, d in enumerate(self.discriminators):
+            o = d(i_downscaled)
 
-        return {
-            'classification': OutputClassification(
+            o_expected = torch.full(
+                [i.shape[0]] + list(o.shape[2:]),
+                int(is_real),
+                device=image.device, dtype=torch.long
+            ).unsqueeze(1)
+
+            outputs[f'classification_{d_n}'] = OutputClassificationBinary(
                 o, o_expected,
-               criterion_fn=LossMsePacked,  # LSGan loss function
+                criterion_fn=LossMsePacked,  # LSGan loss function
             )
-        }
+
+            if d_n + 1 != len(self.discriminators):
+                i_downscaled = self.downsample(i_downscaled)
+
+        return outputs
 
 
 def get_image(batch):
@@ -115,8 +137,7 @@ def optimizer_fn(params, lr):
 def create_model():
     latent_size = 0
 
-    #netD = apply_spectral_norm(Discriminator())
-    discriminator = Discriminator()
+    discriminator = apply_spectral_norm(Discriminator())
     generator = Generator()
 
     lr_base = 0.0002
@@ -126,7 +147,7 @@ def create_model():
         generator=generator,
         latent_size=latent_size,
         optimizer_discriminator_fn=functools.partial(optimizer_fn, lr=lr_base),  # TTUR
-        optimizer_generator_fn=functools.partial(optimizer_fn, lr=lr_base),
+        optimizer_generator_fn=functools.partial(optimizer_fn, lr=lr_base * 0.7),
         real_image_from_batch_fn=get_image,
     )
 
@@ -150,14 +171,14 @@ def pre_training_callbacks():
 
 
 num_epochs = 200
-options = trw.train.Options(num_epochs=num_epochs, device='cuda:1')
+options = trw.train.Options(num_epochs=num_epochs)
 
 trainer = trw.train.TrainerV2(
     callbacks_per_epoch=per_epoch_callbacks(),
 )
 
 datasets = trw.datasets.create_facades_dataset(
-    batch_size=1,
+    batch_size=5,
     nb_workers=4,
     transforms_train=[
         trw.transforms.TransformResize(size=[286, 286]),
