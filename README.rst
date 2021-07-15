@@ -1,7 +1,7 @@
 Torch Research Workflows
 ************************
 
-.. image:: https://travis-ci.org/civodlu/trw.svg?branch=master
+.. image:: https://travis-ci.com/civodlu/trw.svg?branch=master
     :target: https://travis-ci.org/civodlu/trw
    
 
