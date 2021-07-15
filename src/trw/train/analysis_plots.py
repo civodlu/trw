@@ -57,7 +57,7 @@ def gallery(
         x_axis_text: the text for each x
         y_axis_text: the text for each y
         title: the title of the gallery
-        save_path: where to save the fixuge
+        save_path: where to save the figure
 
     Returns:
         a figure
