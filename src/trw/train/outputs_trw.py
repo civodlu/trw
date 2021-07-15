@@ -192,6 +192,7 @@ def criterion_softmax_cross_entropy(output, output_truth):
     assert len(output.shape) == len(output_truth.shape), '`output` and `output_truth` must have the same dimensionality'
     assert output_truth.shape[1] == 1, 'truth must have a single channel'
     assert output_truth.shape[2:] == output.shape[2:], 'all the input must be covered by truth'
+    assert output.shape[1] >= 2, 'output must have N channels, one for each class! (else binary version should be used!)'
     #return F.cross_entropy(output, output_truth.squeeze(1), reduction='none')
     return nn.CrossEntropyLoss(reduction='none')(output, output_truth.squeeze(1))
 
