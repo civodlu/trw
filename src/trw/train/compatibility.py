@@ -61,7 +61,20 @@ else:
 
 if hasattr(torch, 'linalg'):
     torch_linalg_norm = torch.linalg.norm
+    inv = torch.linalg.inv
 else:
     def torch_linalg_norm(input, ord, dim):
         return torch.norm(input, p=ord, dim=dim)
 
+    inv = torch.inverse
+
+
+if hasattr(torch.nn, 'Identity'):
+    Identity = torch.nn.Identity
+else:
+    class Identity(nn.Module):
+        def __init__(self):
+            super(Identity, self).__init__()
+
+        def forward(self, x):
+            return x

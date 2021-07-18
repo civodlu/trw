@@ -299,7 +299,7 @@ class TestOutput(TestCase):
 
         # calculate the dice (i1)
         p = torch.sigmoid(i1)
-        intersection = (p * o1).sum()
+        intersection = (p * o1.float()).sum()
         cardinality = p.sum() + o1.sum()
         loss = 1 - 2 * intersection / cardinality
         assert abs(loss - v1['loss']) < 1e-4
@@ -317,7 +317,7 @@ class TestOutput(TestCase):
         assert (v2['output'] == expected_o2).all()
 
         p = torch.sigmoid(i2)
-        intersection = (p * o2).sum()
+        intersection = (p * o2.float()).sum()
         cardinality = p.sum() + o2.sum()
         loss = 1 - 2 * intersection / cardinality
         assert abs(loss - v2['loss']) < 1e-4

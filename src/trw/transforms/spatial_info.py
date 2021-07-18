@@ -1,7 +1,7 @@
 from typing import Optional
 
 import torch
-
+from ..train.compatibility import inv
 from ..basic_typing import Length, ShapeX
 import numpy as np
 from .affine import affine_transformation_get_spacing, affine_transformation_get_origin,\
@@ -130,7 +130,7 @@ class SpatialInfo:
         assert isinstance(patient_scale_transform, torch.Tensor)
 
         self.patient_scale_transform = patient_scale_transform
-        self.patient_scale_transform_inv = torch.linalg.inv(patient_scale_transform)
+        self.patient_scale_transform_inv = inv(patient_scale_transform)
 
     @property
     def spacing(self) -> np.ndarray:

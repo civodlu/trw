@@ -121,7 +121,7 @@ class LossDiceMulticlass(nn.Module):
         else:
             # the target is already in a one-hot encoded when class is 0-1
             assert target.max() <= 1, 'should be binary classification!'
-            encoded_target = target
+            encoded_target = target.type(proba.dtype)
         
         intersection = proba * encoded_target
         indices_to_sum = tuple(range(2, len(proba.shape)))

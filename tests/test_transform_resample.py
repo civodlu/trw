@@ -8,9 +8,13 @@ from trw.transforms import resample_3d, SpatialInfo, random_fixed_geometry_withi
 from trw.transforms.affine import affine_transformation_rotation_3d_x, affine_transformation_scale, \
     apply_homogeneous_affine_transform, apply_homogeneous_affine_transform_zyx
 from trw.transforms.resample import resample_spatial_info
+from trw.utils import torch_requires
 
 
 class TestTransformResample(TestCase):
+    # align_corners not supported in pytorch 1.0-1.2, `resample_spatial_info` will not be accurate
+    # for these versions! Disable the test
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_resample_numpy_copy_subvolume(self):
         """
         Simply copy a sub-volume
@@ -20,6 +24,9 @@ class TestTransformResample(TestCase):
         t_expected = t[2:4, 3:5, 4:6]
         assert np.abs(t_r - t_expected).max() < 1e-5
 
+    # align_corners not supported in pytorch 1.0-1.2, `resample_spatial_info` will not be accurate
+    # for these versions! Disable the test
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_resample_numpy_with_background(self):
         """
         Simply copy a sub-volume with background voxels

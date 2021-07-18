@@ -5,11 +5,12 @@ from typing import Optional, Sequence
 import torch
 
 import torch.nn as nn
+from .flatten import Flatten
 from .convs import ModuleWithIntermediate
 from ..basic_typing import KernelSize, Stride, TorchTensorNCX, ModuleCreator
 from .layer_config import LayerConfig, default_layer_config
 from .blocks import BlockConvNormActivation, BlockSqueezeExcite
-from ..train.compatibility import Swish
+from ..train.compatibility import Swish, Identity
 
 
 class DropSample(nn.Module):
@@ -57,7 +58,7 @@ class MBConvN(nn.Module):
         expanded = expansion_factor * input_channels
         self.skip_connection = (input_channels == output_channels) and (stride == 1)
 
-        self.expand_pw = nn.Identity() if (expansion_factor == 1) else BlockConvNormActivation(
+        self.expand_pw = Identity() if (expansion_factor == 1) else BlockConvNormActivation(
             config=config,
             input_channels=input_channels,
             output_channels=expanded,
@@ -247,7 +248,7 @@ class EfficientNet(nn.Module, ModuleWithIntermediate):
 
         self.head = nn.Sequential(
             nn.AdaptiveAvgPool2d(1),
-            nn.Flatten(),
+            Flatten(),
             nn.Linear(scaled_widths[-1][1], output_channels)
         )
 

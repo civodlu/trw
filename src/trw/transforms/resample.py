@@ -1,7 +1,7 @@
+import warnings
 from typing import List
 
 import torch
-import torch.nn.functional as F
 from scipy.ndimage import affine_transform
 import numpy as np
 
@@ -10,6 +10,7 @@ from ..train.compatibility import grid_sample, affine_grid
 from .affine import affine_transformation_translation, affine_transformation_scale
 from .spatial_info import SpatialInfo
 from typing_extensions import Literal
+from packaging.version import Version
 
 
 def mm_list(matrices: List[torch.Tensor]):
@@ -48,6 +49,11 @@ def resample_spatial_info(
     Notes:
         the gradient will be propagated through the transform
     """
+    current_version = Version(torch.__version__)
+    if current_version < Version('1.3'):
+        warnings.warn('`trw.transforms.resample_spatial_info` will not produce accurate results with '
+                      'pytorch < 1.3 due to the `align_corners` changes. If accurate results needed, '
+                      'upgrade to pytorch >= 1.3')
 
     # work in XYZ space, not ZYX!
     moving_shape = np.asarray(geometry_moving.shape)[::-1]
