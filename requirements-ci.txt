@@ -4,3 +4,4 @@ coverage
 coveralls
 twine
 psutil
+mypy
