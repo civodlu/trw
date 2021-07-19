@@ -1,6 +1,6 @@
 from .options import Options
 from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
-    time_it, CleanAddedHooks, safe_filename, \
+    CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
     get_classification_mapping, get_classification_mappings, make_triplet_indices, make_pair_indices, \
     make_unique_colors, make_unique_colors_f, apply_spectral_norm, apply_gradient_clipping

@@ -348,3 +348,25 @@ class TestUtilities(TestCase):
         assert trw.utils.number2human(1200000000) == '1.2G'
         assert trw.utils.number2human(0.123456) == '0.12'
         assert trw.utils.number2human(999.99999) == '1000.00'
+
+    def test_spectral_norm(self):
+        model = nn.Conv2d(1, 1, kernel_size=1)
+        model = trw.train.apply_spectral_norm(model)
+        optimizer = torch.optim.SGD(model.parameters(), lr=0.1)
+
+        input = torch.ones([1, 1, 1, 1], dtype=torch.float32)
+        output = 10 * torch.ones([1, 1, 1, 1], dtype=torch.float32)
+        loss_fn = nn.L1Loss()
+
+        for i in range(200):
+            found = model(input)
+            loss = loss_fn(output, found)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            print(loss)
+
+        # largest eigen value should be == 1
+        assert abs(1 - model.weight.squeeze().abs()) == 0

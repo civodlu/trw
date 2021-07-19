@@ -102,36 +102,6 @@ def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
     return False
 
 
-class time_it:
-    """
-    Simple decorator to measure the time taken to execute a function
-    :param time_name: the name of the function to time, else we will use `fn.__str__()`
-    :param log: how to log the timing
-    """
-    def __init__(self, time_name=None, log=None):
-        self.time_name = time_name
-        self.log = log
-
-    def __call__(self, fn, *args, **kwargs):
-        def fn_decorated(*args, **kwargs):
-            start_time = time.time()
-            r = fn(*args, **kwargs)
-            end_time = time.time()
-
-            if self.time_name is None:
-                time_name = fn
-            else:
-                time_name = self.time_name
-
-            string = 'time={} fn={}'.format(end_time - start_time, time_name)
-            if self.log is None:
-                print(string)
-            else:
-                self.log(string)
-            return r
-        return fn_decorated
-
-
 def make_unique_colors():
     """
     Return a set of unique and easily distinguishable colors
