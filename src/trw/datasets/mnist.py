@@ -61,7 +61,7 @@ def create_mnist_dataset(
     normalization_factor = 1.0
     if normalize_0_1:
         normalization_factor = 255.0
-    ds = {'images': train_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': train_dataset.targets}
+    ds = {'images': train_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': train_dataset.targets.view(-1, 1)}
     if select_classes_train is not None:
         indices = np.where(np.in1d(train_dataset.targets, np.asarray(select_classes_train)))
         ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}
@@ -76,7 +76,7 @@ def create_mnist_dataset(
 
     splits['train'] = sequence.collate()
 
-    ds = {'images': test_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': test_dataset.targets}
+    ds = {'images': test_dataset.data.view((-1, 1, 28, 28)).float().numpy() / normalization_factor, 'targets': test_dataset.targets.view(-1, 1)}
     if select_classes_test is not None:
         indices = np.where(np.in1d(test_dataset.targets, np.asarray(select_classes_test)))
         ds = {'images': ds['images'][indices], 'targets': ds['targets'][indices]}

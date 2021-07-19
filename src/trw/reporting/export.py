@@ -175,8 +175,13 @@ def export_as_text(batch, feature_name, name, sample_id, export_root, feature_at
     samples = to_value(batch[feature_name])
     if isinstance(samples, list) and isinstance(
             samples[sample_id],
-            (np.ndarray, torch.Tensor, list, collections.Mapping, numbers.Number)):
-        samples[sample_id] = str(samples[sample_id])
+            (np.ndarray, list, collections.Mapping, numbers.Number)):
+
+        v = samples[sample_id]
+        if isinstance(v, np.ndarray) and v.size == 1:
+            # special case: an array of dim >= 1 but of size 1
+            v = v.item()
+        samples[sample_id] = str(v)
     return True, None
 
 

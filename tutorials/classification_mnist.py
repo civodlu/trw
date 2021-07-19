@@ -1,3 +1,5 @@
+from functools import partial
+
 import trw
 import torch.nn as nn
 import torch.nn.functional as F
@@ -29,7 +31,7 @@ class Net(nn.Module):
         # here we create a softmax output that will use
         # the `targets` feature as classification target
         return {
-            'softmax': OutputClassification(x, batch['targets'])
+            'classification': OutputClassification(x, batch['targets'])
         }
 
 
@@ -42,10 +44,9 @@ results = trainer.fit(
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_cnn',
     model=Net(),
-    optimizers_fn=lambda datasets, model: trw.train.create_sgd_optimizers_fn(
-        datasets=datasets, model=model, learning_rate=0.1))
+    optimizers_fn=partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.1))
 
 # calculate statistics of the final epoch
-output = results.outputs['mnist']['test']['softmax']
+output = results.outputs['mnist']['test']['classification']
 accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
 assert accuracy >= 0.95
