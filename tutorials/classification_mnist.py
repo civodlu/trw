@@ -1,8 +1,5 @@
 from functools import partial
-
-import trw
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 import trw.utils
 from trw.train.outputs_trw import OutputClassification
@@ -14,19 +11,20 @@ class Net(nn.Module):
     """
     def __init__(self):
         super().__init__()
-        self.conv1 = nn.Conv2d(1, 20, 5, 2)
-        self.fc1 = nn.Linear(20 * 6 * 6, 500)
-        self.fc2 = nn.Linear(500, 10)
+
+        self.model = nn.Sequential(
+            nn.Conv2d(1, 20, 5, 2),
+            nn.ReLU(),
+            nn.MaxPool2d(2, 2),
+            nn.Flatten(),
+            nn.Linear(20 * 6 * 6, 500),
+            nn.ReLU(),
+            nn.Linear(500, 10)
+        )
 
     def forward(self, batch):
         # a batch should be a dictionary of features
-        x = batch['images']
-
-        x = F.relu(self.conv1(x))
-        x = F.max_pool2d(x, 2, 2)
-        x = trw.utils.flatten(x)
-        x = F.relu(self.fc1(x))
-        x = self.fc2(x)
+        x = self.model(batch['images'])
 
         # here we create a softmax output that will use
         # the `targets` feature as classification target
