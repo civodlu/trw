@@ -136,7 +136,7 @@ def make_unique_colors_f():
         (94 / 255.0, 140 / 255.0, 49 / 255.0),  # maximum green
         (255 / 255.0, 203 / 255.0, 164 / 255.0),  # peach
         (200 / 255.0, 200 / 255.0, 205 / 255.0),  # blue-Gray
-        (255 / 255.0, 255 / 255.0, 255 / 255.0),  # white
+        (245 / 255.0, 245 / 255.0, 245 / 255.0),  # white (not fully white, the background is often white!)
         (115 / 255.0, 46 / 255.0, 108 / 255.0),  # violet(I)
         (157 / 255.0, 224 / 255.0, 147 / 255.0),  # granny-smith
     ]
@@ -427,7 +427,7 @@ def make_pair_indices(targets, same_target_ratio=0.5):
     samples_by_class = collections.defaultdict(list)
     classes = to_value(targets)
     for index, c in enumerate(classes):
-        samples_by_class[c].append(index)
+        samples_by_class[c.item()].append(index)
     samples_by_class = {name: np.asarray(value) for name, value in samples_by_class.items()}
 
     # create the (sample, sample+, sample-) groups
