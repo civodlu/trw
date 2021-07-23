@@ -142,6 +142,8 @@ class TrainerV2:
         Returns:
             a tuple `model, metadata`
         """
+        assert os.path.exists(path), f'model={path} could not be found!'
+
         result_path = path + '.metadata'
         with open(result_path, 'rb') as f:
             metadata = pickle_module.load(f)
