@@ -86,7 +86,7 @@ def gallery(
     return fig
 
 
-def export_figure(path, name, maximum_length=259, dpi=300):
+def export_figure(path, name, maximum_length=259, dpi=None):
     """
     Export a figure
 
