@@ -19,13 +19,14 @@ def export_scatter(embedding, output_truth, name, min_values=None, max_values=No
         ax.set_ylim(ymin=min_values[0], ymax=max_values[0])
 
     for c in range(0, 10):
-        c_indices = np.where(output_truth == c)
+        c_indices = np.where(output_truth.squeeze(1) == c)
         x = embedding[c_indices][:, 1]
         y = embedding[c_indices][:, 0]
         ax.scatter(x, y, alpha=0.8, c=colors[c], edgecolors='none', s=10, label=str(c))
 
     plt.title(name)
     plt.legend(loc=2)
+    plt.savefig(name)
     trw.train.export_figure(options.workflow_options.current_logging_directory, name)
 
 
@@ -114,3 +115,7 @@ for split in splits:
         min_values=min_values,
         max_values=max_values
     )
+
+
+while True:
+    pass
