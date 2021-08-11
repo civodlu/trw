@@ -171,7 +171,7 @@ class TestUtilities(TestCase):
     def test_pairs(self):
         targets = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 4, 5, 5, 5]
 
-        samples_0, samples_1, same_target = trw.train.make_pair_indices(targets)
+        samples_0, samples_1, same_target = trw.train.make_pair_indices(np.asarray(targets))
 
         assert len(samples_0) == len(samples_1)
         assert len(samples_0) == len(same_target)
