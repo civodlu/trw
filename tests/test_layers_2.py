@@ -708,6 +708,25 @@ class TestLayers2(TestCase):
         # use a latent
         latent = torch.zeros([2, 2, 1, 1], dtype=torch.float32)
         r = encoder_decoder.forward(torch.zeros((2, 1, 32, 48), dtype=torch.float32), latent=latent)
-
-        print('DONE')
         assert r.shape == (2, 6, 32, 48)
+
+    def test_skip_up_deconv(self):
+        config = default_layer_config(dimensionality=2)
+        l = trw.layers.BlockUpDeconvSkipConv(
+            config,
+            skip_channels=3,
+            input_channels=1,
+            output_channels=3,
+            nb_repeats=4,
+            mode='sum',
+            kernel_size=3,
+            padding=1,
+            output_padding=1,
+            stride=2
+        )
+
+        skip = torch.zeros([4, 3, 32, 32], dtype=torch.float32)
+        down = torch.zeros([4, 1, 16, 16], dtype=torch.float32)
+        up = l(skip, down)
+        assert up.shape == (4, 3, 32, 32)
+        assert len(l.ops_conv) == 4
