@@ -48,7 +48,8 @@ def gallery(
         x_axis_text: List[str],
         y_axis_text: List[str],
         title: Optional[str] = None,
-        save_path: Optional[str] = None):
+        save_path: Optional[str] = None,
+        dpi: Optional[int] = None):
     """
     Create a gallery of images
 
@@ -58,6 +59,7 @@ def gallery(
         y_axis_text: the text for each y
         title: the title of the gallery
         save_path: where to save the figure
+        dpi: dpi of the figure
 
     Returns:
         a figure
@@ -81,7 +83,7 @@ def gallery(
         fig.suptitle(title)
 
     if save_path is not None:
-        fig.savefig(save_path)
+        fig.savefig(save_path, dpi=dpi)
 
     return fig
 
