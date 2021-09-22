@@ -60,10 +60,11 @@ def model_summary_base(model, batch):
             summary[module]['output_shape'] = input_shape(output)
 
             total_trainable_params = 0  # ALL parameters of the layer (including sub-module parameters)
+            trainable_params = 0  # ALL parameters of the layer (but not sub-modules)
             params = 0  # if we have recursion, these are the unique parameters
             for p in module.parameters(recurse=False):
                 if p.requires_grad:
-                    total_trainable_params += np.prod(np.asarray(p.shape))
+                    trainable_params += np.prod(np.asarray(p.shape))
 
                 if p not in parameters_counted:
                     # make sure there is double counted parameters!
@@ -71,7 +72,12 @@ def model_summary_base(model, batch):
                     if p.requires_grad:
                         params += np.prod(np.asarray(p.shape))
 
+            for p in module.parameters(recurse=True):
+                if p.requires_grad:
+                    total_trainable_params += np.prod(np.asarray(p.shape))
+
             summary[module]["nb_params"] = params
+            summary[module]["trainable_params"] = trainable_params
             summary[module]["total_trainable_params"] = total_trainable_params
 
         hooks.append(module.register_forward_hook(hook))
@@ -200,6 +206,7 @@ class CallbackReportingModelSummary(Callback):
         output_shape = []
         nb_params = []
         nb_trainable_params = []
+        total_trainable_params = []
         for module, values in summary.items():
             module_name = module_to_name.get(module)
             if module_name is None:
@@ -209,7 +216,8 @@ class CallbackReportingModelSummary(Callback):
             input_shape.append(str(values['input_shape']))
             output_shape.append(str(values['output_shape']))
             nb_params.append(str(number2human(values['nb_params'])))
-            nb_trainable_params.append(str(number2human(values['total_trainable_params'])))
+            nb_trainable_params.append(str(number2human(values['trainable_params'])))
+            total_trainable_params.append(str(number2human(values['total_trainable_params'])))
 
         batch = collections.OrderedDict([
             ('layer name', layer_name),
@@ -217,16 +225,18 @@ class CallbackReportingModelSummary(Callback):
             ('output_shape', output_shape),
             ('parameters', nb_params),
             ('trainable parameters', nb_trainable_params),
+            ('total_trainable_params', total_trainable_params),
         ])
 
-        preamble = html_list([
+        infos = [
             f'Total parameters: {number2human(total_params)}',
             f'Trainable parameters: {number2human(trainable_params)}',
             # keep this number without rounding, often a very small number!
             f'Non-trainable parameters: {total_params - trainable_params}',
             f'Forward/backward pass size: {bytes2human(total_output_size)}',
             f'Params size: {bytes2human(total_params_size)}'
-        ], header='Model infos')
+        ]
+        preamble = html_list(infos, header='Model infos')
 
         export_table(
             options,
@@ -255,6 +265,9 @@ class CallbackReportingModelSummary(Callback):
         print(f'{"-" * nb_elements}', file=f)
         print('\n'.join(table), file=f)
         print(f'{"-" * nb_elements}', file=f)
-
+        print(f'{" " * (nb_elements // 2)} Infos', file=f)
+        print('\n'.join(infos), file=f)
+        print(f'{"-" * nb_elements}', file=f)
         logger.info(f.getvalue())
+
         logger.info('CallbackReportingModelSummary exporting model done!')
