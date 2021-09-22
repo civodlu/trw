@@ -6,6 +6,7 @@ import numpy as np
 import trw.utils
 import torch.nn as nn
 import torch.nn.functional as F
+from trw.train.utilities import NullableContextManager
 from trw.utils import torch_requires
 
 
@@ -33,6 +34,17 @@ class Cnn(nn.Module):
         return {
             'softmax': trw.train.OutputClassification(x, batch['targets'])
         }
+
+
+class ContextRecorder:
+    def __init__(self):
+        self.context = []
+
+    def __enter__(self):
+        self.context.append('enter')
+
+    def __exit__(self, type, value, traceback):
+        self.context.append('exit')
 
 
 class TestUtilities(TestCase):
@@ -370,3 +382,30 @@ class TestUtilities(TestCase):
 
         # largest eigen value should be == 1
         assert abs(1 - model.weight.squeeze().abs()) == 0
+
+    def test_nullable_context_ok(self):
+        base_context = ContextRecorder()
+        with NullableContextManager(base_context):
+            pass
+        with NullableContextManager(base_context):
+            pass
+
+        assert base_context.context == ['enter', 'exit', 'enter', 'exit']
+
+    def test_nullable_context_none(self):
+        with NullableContextManager(None):
+            pass
+        # should not throw
+
+    def test_nullable_context_exception(self):
+        """
+        Even if we have an exception, context should be closed
+        """
+        base_context = ContextRecorder()
+        try:
+            with NullableContextManager(base_context):
+                raise RuntimeError('Expected exception!')
+        except RuntimeError:
+            pass
+
+        assert base_context.context == ['enter', 'exit']

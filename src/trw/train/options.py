@@ -1,14 +1,28 @@
 from typing import Optional, Any
 import os
 import torch
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 class TrainingParameters:
     """
     Define here specific training parameters
     """
-    def __init__(self, num_epochs: int):
+    def __init__(self, num_epochs: int, mixed_precision_enabled: bool = False):
         self.num_epochs = num_epochs
+
+        self.gradient_scaler = None
+        if mixed_precision_enabled:
+            try:
+                from torch.cuda.amp import GradScaler
+                self.gradient_scaler = GradScaler()
+
+            except Exception as e:
+                # mixed precision is not enabled
+                logger.error(f'Mixed precision not enabled! Exception={e}')
 
 
 class WorkflowOptions:
@@ -41,7 +55,9 @@ class Options:
     def __init__(self,
                  logging_directory: Optional[str] = None,
                  num_epochs: int = 50,
-                 device: Optional[torch.device] = None):
+                 device: Optional[torch.device] = None,
+                 mixed_precision_enabled: bool = False
+                 ):
         """
 
         Args:
@@ -50,9 +66,9 @@ class Options:
                 directory. Else a default folder will be used
 
             num_epochs: the number of epochs
-
             device: the device to train the model on. If `None`, we will try first any available GPU then
                 revert to CPU
+            mixed_precision_enabled: if `True`, enable mixed precision for the training
         """
         if logging_directory is None:
             logging_directory = os.environ.get('TRW_LOGGING_ROOT')
@@ -69,6 +85,12 @@ class Options:
             else:
                 device = torch.device('cpu')
 
-        self.training_parameters: TrainingParameters = TrainingParameters(num_epochs=num_epochs)
-        self.workflow_options: WorkflowOptions = WorkflowOptions(logging_directory=logging_directory, device=device)
+        self.training_parameters: TrainingParameters = TrainingParameters(
+            num_epochs=num_epochs,
+            mixed_precision_enabled=mixed_precision_enabled
+        )
+        self.workflow_options: WorkflowOptions = WorkflowOptions(
+            logging_directory=logging_directory,
+            device=device
+        )
         self.runtime: Runtime = Runtime()

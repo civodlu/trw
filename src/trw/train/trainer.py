@@ -9,7 +9,13 @@ import os
 import time
 import itertools
 
-from ..utils import to_value, len_batch
+try:
+    from torch.cuda.amp import autocast
+except ModuleNotFoundError:
+    # PyTorch version did not support autocast
+    autocast = None
+
+from ..utils import to_value, len_batch, is_autocast_module_decorated
 
 from . import outputs_trw
 from trw.callbacks import callback_epoch_summary, callback_export_classification_report, callback_explain_decision, \
@@ -20,8 +26,8 @@ from trw.callbacks import callback_epoch_summary, callback_export_classification
     callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources, \
     callback_reporting_learning_rate_recorder
 
-from .utilities import prepare_loss_terms, default_sum_all_losses, postprocess_batch, transfer_batch_to_device, \
-    log_and_print
+from .utilities import prepare_loss_terms, postprocess_batch, transfer_batch_to_device, \
+    log_and_print, default_sum_all_losses, NullableContextManager
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +179,8 @@ def train_loop(
         loss_fn,
         history,
         callbacks_per_batch,
-        callbacks_per_batch_loss_terms):
+        callbacks_per_batch_loss_terms,
+        gradient_scaler=None):
     """
     Run the train loop (i.e., the model parameters will be updated)
 
@@ -193,12 +200,18 @@ def train_loop(
         history: a list of history step
         callbacks_per_batch: the callbacks to be performed on each batch. if `None`, no callbacks to be run
         callbacks_per_batch_loss_terms: the callbacks to be performed on each loss term. if `None`, no callbacks to be run
+        gradient_scaler: if mixed precision is enabled, this is the scale to be used for the gradient update
 
     Notes:
         if ``optimizer`` is None, there MUST be a ``.backward()`` to free graph and memory.
     """
     # make sure the model is in training mode (e.g., batch norm, dropout)
     model.train()
+
+    # if mixed prevision, the model must have the autocast decorator
+    if gradient_scaler is not None:
+        assert is_autocast_module_decorated(model), 'When operating in mixed mode precision, the model\'s forward' \
+                                                    'method must be decorated with torch.cuda.amp.autocast'
 
     all_loss_terms = []
     
@@ -226,20 +239,24 @@ def train_loop(
             if optimizer is not None:
                 optimizer.zero_grad()
 
-            assert model.training
-            outputs = model(batch)
-            if outputs is None:
-                # skip this batch
-                continue
+            with NullableContextManager(autocast() if gradient_scaler is not None else None):
+                assert model.training
+                outputs = model(batch)
+                if outputs is None:
+                    # skip this batch
+                    continue
 
-            assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
-            loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
-            loss = loss_fn(dataset_name, batch, loss_terms)
+                assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
+                loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
+                loss = loss_fn(dataset_name, batch, loss_terms)
 
             if optimizer is not None and isinstance(loss, torch.Tensor):
                 if isinstance(loss, torch.Tensor):
                     # if there is no optimizer, it means we did not want to change the parameters
-                    loss.backward()
+                    if gradient_scaler is None:
+                        loss.backward()
+                    else:
+                        gradient_scaler.scale(loss).backward()
                 else:
                     logger.warning('No backward calculated for={}/{}'.format(dataset_name, split_name))
             loss_terms['overall_loss'] = {'loss': float(to_value(loss))}
@@ -258,7 +275,11 @@ def train_loop(
 
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
             if optimizer is not None:
-                optimizer.step()
+                if gradient_scaler is None:
+                    optimizer.step()
+                else:
+                    gradient_scaler.step(optimizer)
+                    gradient_scaler.update()
 
             if per_step_scheduler is not None:
                 per_step_scheduler.step()
@@ -434,7 +455,8 @@ def epoch_train_eval(
                     loss_fn,
                     history,
                     callbacks_per_batch=callbacks_per_batch,
-                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms)
+                    callbacks_per_batch_loss_terms=callbacks_per_batch_loss_terms,
+                    gradient_scaler=options.training_parameters.gradient_scaler)
             else:
                 if not run_eval or eval_loop_fn is None:
                     # we should not run the evaluation. Skip this!

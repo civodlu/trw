@@ -236,6 +236,25 @@ def transfer_batch_to_device(batch, device, non_blocking=True):
     return device_batch
 
 
+class NullableContextManager:
+    """
+    Accept `None` context manager. In that case do nothing, else execute
+    the context manager enter and exit.
+
+    This is a helper class to simplify the handling of possibly None context manager.
+    """
+    def __init__(self, base_context_manager: Optional[Any]):
+        self.base_context_manager = base_context_manager
+
+    def __enter__(self):
+        if self.base_context_manager is not None:
+            self.base_context_manager.__enter__()
+
+    def __exit__(self, type, value, traceback):
+        if self.base_context_manager is not None:
+            self.base_context_manager.__exit__(type, value, traceback)
+
+
 class CleanAddedHooks:
     """
     Context manager that automatically track added hooks on the model and remove them when
