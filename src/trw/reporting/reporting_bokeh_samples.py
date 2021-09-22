@@ -28,7 +28,7 @@ class PanelDataSamplesTabular(BokehUi):
             name,
             'default',
             'with_column_title_rotation',
-            default='1'))
+            default='1')) > 0
 
         ui, self.table = process_data_samples__tabular(
             options,
@@ -131,11 +131,12 @@ def process_data_samples__tabular(options, name, data, data_types, type_categori
         """)
         div.visible = False  # hide the div to avoid position issues
     else:
-        div = Div()
+        div = None
 
     row_height = options.font_size
     if with_images:
         row_height = options.image_size
+
     data_table = DataTable(
         source=data_source,
         columns=columns,
@@ -143,7 +144,9 @@ def process_data_samples__tabular(options, name, data, data_types, type_categori
         #fit_columns=True,
         css_classes=[f"trw_reporting_table_{name}"])
 
-    return Panel(child=column(data_table, div, sizing_mode='stretch_both'), title=title), data_table
+    columns = [data_table, div] if div is not None else [data_table]
+
+    return Panel(child=column(*columns, sizing_mode='stretch_both'), title=title), data_table
 
 
 def scatter(all_data, groups, scatter_name, type_category):
