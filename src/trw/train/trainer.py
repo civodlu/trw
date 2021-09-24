@@ -24,7 +24,7 @@ from trw.callbacks import callback_epoch_summary, callback_export_classification
     callback_reporting_dataset_summary, callback_reporting_epoch_summary, callback_reporting_export_samples, \
     callback_reporting_layer_statistics, callback_reporting_model_summary, callback_reporting_start_server, \
     callback_save_last_model, callback_worst_samples_by_epoch, callback_zip_sources, \
-    callback_reporting_learning_rate_recorder
+    callback_reporting_learning_rate_recorder, callback_profiler
 
 from .utilities import prepare_loss_terms, postprocess_batch, transfer_batch_to_device, \
     log_and_print, default_sum_all_losses, NullableContextManager
@@ -501,6 +501,7 @@ def default_pre_training_callbacks(
         with_lr_finder=False,
         with_export_augmentations=True,
         with_reporting_server=True,
+        with_profiler=False,
         additional_callbacks=None):
     """
     Default callbacks to be performed before the fitting of the model
@@ -517,6 +518,9 @@ def default_pre_training_callbacks(
         callback_reporting_dataset_summary.CallbackReportingDatasetSummary(),
         callback_reporting_export_samples.CallbackReportingExportSamples(table_name='random_samples'),
     ]
+
+    if with_profiler:
+        callbacks.append(callback_profiler.CallbackProfiler())
     
     if with_export_augmentations:
         callbacks.append(callback_reporting_augmentations.CallbackReportingAugmentations())

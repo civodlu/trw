@@ -29,3 +29,4 @@ from .callback_worst_samples_by_epoch import CallbackWorstSamplesByEpoch
 from .callback_zip_sources import CallbackZipSources
 from .callback_early_stopping import CallbackEarlyStopping
 from .callback_reporting_learning_rate_recorder import CallbackReportingLearningRateRecorder
+from .callback_profiler import CallbackProfiler

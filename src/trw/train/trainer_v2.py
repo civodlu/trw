@@ -341,7 +341,7 @@ class TrainerV2:
                     try:
                         callback(options, history, model, losses=losses, outputs=None,
                                  datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                                 optimizers_fn=optimizers_fn, optimizers=optimizers)
+                                 optimizers_fn=optimizers_fn, optimizers=optimizers, trainer=self)
                     except Exception as e:
                         f = StringIO()
                         traceback.print_exc(file=f)
@@ -377,7 +377,7 @@ class TrainerV2:
                     try:
                         callback(options, history, model, losses=losses, outputs=outputs_epoch,
                                  datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                                 optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch)
+                                 optimizers_fn=optimizers_fn, optimizers=optimizers, last_epoch=last_epoch, trainer=self)
                     except Exception as e:
                         f = StringIO()
                         traceback.print_exc(file=f)
@@ -411,7 +411,7 @@ class TrainerV2:
                     try:
                         callback(options, history, model, losses=losses, outputs=outputs_epoch,
                                  datasets=datasets, datasets_infos=datasets_infos, callbacks_per_batch=callbacks_per_batch,
-                                 optimizers_fn=optimizers_fn)
+                                 optimizers_fn=optimizers_fn, trainer=self)
                     except Exception as e:
                         f = StringIO()
                         traceback.print_exc(file=f)
