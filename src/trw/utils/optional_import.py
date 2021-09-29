@@ -12,7 +12,7 @@ class _LazyRaise:
         raise RuntimeError(self.msg)
 
 
-def optional_import(module_name: str):
+def optional_import(module_name: str, additional_error_message=''):
     """
     Optional module import.
 
@@ -20,6 +20,7 @@ def optional_import(module_name: str):
 
     Args:
         module_name: the name of the module to import
+        additional_error_message: add a custom error message
 
     Returns:
         the module
@@ -34,4 +35,4 @@ def optional_import(module_name: str):
             return m
     except:
         return _LazyRaise(f'optional module cannot be imported `{module_name}`. '
-                          f'To use this functionality, this module must be installed!')
+                          f'To use this functionality, this module must be installed! {additional_error_message}')

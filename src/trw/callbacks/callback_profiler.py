@@ -13,11 +13,19 @@ from ..train.utilities import create_or_recreate_folder, find_default_dataset_an
 from .callback import Callback
 from ..train.collate import default_collate_fn
 
-
 logger = logging.getLogger(__name__)
 
 
-class MyIterableDataset(torch.utils.data.IterableDataset):
+# pytorch compatibility layer
+if Version(torch.__version__) >= Version('1.2'):
+    from torch.utils.data import IterableDataset
+else:
+    class IterableDataset:
+        def __iter__(self):
+            raise NotImplementedError('requires pytorch >= 1.2')
+
+
+class MyIterableDataset(IterableDataset):
     def __getitem__(self, index):
         return self.sequence[index]
 
