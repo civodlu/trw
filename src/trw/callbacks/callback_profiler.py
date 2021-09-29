@@ -77,7 +77,7 @@ class CallbackProfiler(Callback):
                 profiler results (requires large RAM as the whole epoch will be stored in RAM)
         """
         if schedule_kwargs is None:
-            schedule_kwargs = {'wait': 2, 'warmup': 1, 'active': 10, 'repeat': 0}
+            schedule_kwargs = {'wait': 2, 'warmup': 1, 'active': 10, 'repeat': 1}
 
         self.split_name = split_name
         self.dataset_name = dataset_name
@@ -111,7 +111,6 @@ class CallbackProfiler(Callback):
     def __call__(self, options, history, model_orig, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
         logger.info('CallbackProfiler profiling model...')
-        from torch.profiler import tensorboard_trace_handler
 
         if self.root_output is None:
             self.first_time(options, datasets)
@@ -120,6 +119,8 @@ class CallbackProfiler(Callback):
         if current_version <= Version('1.8.1'):
             logger.error(f'PyTorch version={torch.__version__} does not support torch.profiler')
             return
+
+        from torch.profiler import tensorboard_trace_handler
 
         # copy the model! We don't want to start the real training just yet
         # as this would influence the training if this callback is present
@@ -144,7 +145,7 @@ class CallbackProfiler(Callback):
         profiler_schedule = torch.profiler.schedule(**self.schedule_kwargs)
         with torch.profiler.profile(
                 schedule=profiler_schedule,
-                profile_memory=True,
+                profile_memory=False,
                 with_stack=True,
                 on_trace_ready=tensorboard_trace_handler(self.root_output),
         ) as profiler:
