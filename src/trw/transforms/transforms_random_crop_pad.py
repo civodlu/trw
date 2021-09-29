@@ -35,18 +35,17 @@ def _transform_random_crop_pad(features_names, batch, padding, mode='edge', cons
     if shape is None:
         shape = batch[features_names[0]].shape[1:]
 
-    if padding is not None:
-        assert len(shape) == len(padding)
-        shape = [s - 2 * p for s, p in zip(shape, padding)]
-
     arrays = [batch[name] for name in features_names]
-    cropped_arrays = crop.transform_batch_random_crop_joint(arrays, shape)
     if padding is not None:
-        cropped_arrays = batch_pad_joint(
-            cropped_arrays,
+        padded_arrays = batch_pad_joint(
+            arrays,
             padding=padding,
             mode=mode,
             constant_value=constant_value)
+    else:
+        padded_arrays = arrays
+
+    cropped_arrays = crop.transform_batch_random_crop_joint(padded_arrays, shape)
 
     new_batch = collections.OrderedDict(zip(features_names, cropped_arrays))
     for feature_name, feature_value in batch.items():
