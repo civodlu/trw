@@ -7,7 +7,6 @@ from packaging.version import Version
 
 import torch
 import torch.utils.data
-from torch.profiler import tensorboard_trace_handler
 
 
 from ..train.utilities import create_or_recreate_folder, find_default_dataset_and_split_names, get_device
@@ -104,6 +103,8 @@ class CallbackProfiler(Callback):
     def __call__(self, options, history, model_orig, losses, outputs, datasets, datasets_infos, callbacks_per_batch,
                  **kwargs):
         logger.info('CallbackProfiler profiling model...')
+        from torch.profiler import tensorboard_trace_handler
+
         if self.root_output is None:
             self.first_time(options, datasets)
 
