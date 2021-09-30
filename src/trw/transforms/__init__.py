@@ -32,3 +32,4 @@ from .transforms_cast import TransformCast
 from .transforms_random_crop_resize import TransformRandomCropResize
 from .transforms_resize_modulo_pad_crop import TransformResizeModuloCropPad
 from .transforms_resample import TransformResample, random_fixed_geometry_within_geometries, find_largest_geometry
+from .transforms_one_of import TransformOneOf

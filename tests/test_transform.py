@@ -1,3 +1,4 @@
+import collections
 from unittest import TestCase
 import trw.train
 import trw.transforms
@@ -5,6 +6,16 @@ import numpy as np
 import torch
 import functools
 import trw.utils
+
+
+class TransformRecorder(trw.transforms.Transform):
+    def __init__(self, kvp, tfm_id):
+        self.kvp = kvp
+        self.tfm_id = tfm_id
+
+    def __call__(self, batch):
+        self.kvp[self.tfm_id] += 1
+        return batch
 
 
 class TestTransform(TestCase):
@@ -480,3 +491,29 @@ class TestTransform(TestCase):
         assert batch_tfm['float'].dtype == torch.float32
         assert batch_tfm['long'].dtype == torch.long
         assert batch_tfm['byte'].dtype == torch.int8
+
+    def test_one_of(self):
+        np.random.seed(0)
+        nb_samples = 10000
+        split = {
+            'float': torch.zeros([nb_samples], dtype=torch.long),
+        }
+
+        kvp = collections.defaultdict(lambda: 0)
+
+        transforms = [
+            TransformRecorder(kvp, 0),
+            TransformRecorder(kvp, 1),
+            TransformRecorder(kvp, 2),
+        ]
+        tfm = trw.transforms.TransformOneOf(transforms)
+        for b in trw.train.SequenceArray(split):
+            _ = tfm(b)
+
+        nb_transforms_applied = sum(kvp.values())
+
+        assert nb_transforms_applied == nb_samples
+        tolerance = 0.01 * nb_samples
+        for tfm, tfm_count in kvp.items():
+            deviation = abs(tfm_count - nb_samples / len(transforms))
+            assert deviation < tolerance, f'deviation={deviation}, tolerance={tolerance}'
