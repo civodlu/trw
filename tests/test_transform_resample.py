@@ -22,7 +22,7 @@ class TestTransformResample(TestCase):
         t = torch.arange(10 * 9 * 8).reshape((10, 9, 8)).numpy()
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (2, 3, 4), (4, 5, 6), (1, 1, 1), align_corners=False)
         t_expected = t[2:4, 3:5, 4:6]
-        assert np.abs(t_r - t_expected).max() < 1e-5
+        assert np.abs(t_r - t_expected).max() < 1e-4
 
     # align_corners not supported in pytorch 1.0-1.2, `resample_spatial_info` will not be accurate
     # for these versions! Disable the test
@@ -35,7 +35,7 @@ class TestTransformResample(TestCase):
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (2, 3, 4), (4, 5, 20), (1, 1, 1), align_corners=False)
         t_r_valid = t_r[:, :, :2]
         t_expected = t[2:4, 3:5, 4:6]
-        assert np.abs((t_r_valid - t_expected)).max() < 1e-5
+        assert np.abs((t_r_valid - t_expected)).max() < 1e-4
 
         # outside voxel should be background value
         t_r_background = t_r[:, :, 4:]
@@ -187,7 +187,7 @@ class TestTransformResample(TestCase):
         torch.manual_seed(0)
         nb_points = 10000
         all_avg_errors = []
-        for e in range(5):
+        for e in range(10):
             tfm = torch.from_numpy(np.asarray([
                 [0.95, 0, 0, -0.5],
                 [0, 0.9, 0, -5],
@@ -208,6 +208,7 @@ class TestTransformResample(TestCase):
                 geometry_moving=moving_geometry,
                 moving_volume=moving,
                 geometry_fixed=fixed_geometry,
+                interpolation='nearest',
                 tfm=tfm
             )
 
@@ -249,9 +250,9 @@ class TestTransformResample(TestCase):
             avg_error = error / nb_voxels
             print('avg=', error / nb_voxels, 'nb_voxels=', nb_voxels)
             # empirical value
-            assert avg_error <= 25.0
+            assert avg_error <= .5
             all_avg_errors.append(avg_error)
-        assert np.mean(all_avg_errors) < 15
+        assert np.mean(all_avg_errors) < 0.1
 
     def test_sub_geometry(self):
         pst = affine_transformation_translation([10, 11, 12]).mm(
@@ -271,3 +272,21 @@ class TestTransformResample(TestCase):
         pos_e = si_sub.index_to_position(index_zyx=index_e)
         pos_e_expected = si.index_to_position(index_zyx=end_zyx)
         assert (pos_e - pos_e_expected).abs().max() <= 1e-5
+
+    def test_geometry_center(self):
+        pst = affine_transformation_translation([10, 11, 12]).mm(
+            affine_transformation_rotation_3d_x(0.3)).mm(
+            affine_transformation_scale([2, 3, 4]))
+        si = SpatialInfo(shape=[3, 5, 7], patient_scale_transform=pst)
+
+        center_mm_zyx = si.center
+
+        center_xyz = (np.asarray(si.shape[::-1]) - 1) / 2
+        center_mm_xyz = center_xyz[0] * pst[:3, 0] + \
+                        center_xyz[1] * pst[:3, 1] + \
+                        center_xyz[2] * pst[:3, 2] + \
+                        pst[:3, 3]
+        center_mm_zyx_expected = (center_mm_xyz.numpy())[::-1]
+        error = ((center_mm_zyx - center_mm_zyx_expected) ** 2).sum()
+        assert error < 1e-6
+

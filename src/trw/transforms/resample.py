@@ -57,46 +57,36 @@ def resample_spatial_info(
 
     # work in XYZ space, not ZYX!
     moving_shape = np.asarray(geometry_moving.shape)[::-1]
-    moving_spacing = np.asarray(geometry_moving.spacing)[::-1]
-
     fixed_shape = np.asarray(geometry_fixed.shape)[::-1]
-    fixed_spacing = np.asarray(geometry_fixed.spacing)[::-1]
-    dim = len(moving_spacing)
-
-    # move the DDF to max [-1, 1]
-    center_moving_xyz = moving_shape * moving_spacing * 0.5
-    assert isinstance(center_moving_xyz, np.ndarray)
-    assert len(center_moving_xyz) == 3
-    tfm_center_moving = affine_transformation_translation(-center_moving_xyz)
-
-    # move the DDF to max [-1, 1]
-    center_fixed_xyz = fixed_shape * fixed_spacing * 0.5
-    assert isinstance(center_fixed_xyz, np.ndarray)
-    assert len(center_fixed_xyz) == 3
-    tfm_center_fixed = affine_transformation_translation(-center_fixed_xyz)
+    dim = len(moving_shape)
 
     pst_moving = geometry_moving.patient_scale_transform
     pst_fixed = geometry_fixed.patient_scale_transform
 
-    space_transform_moving = affine_transformation_scale([s / 2 for s in moving_shape])
-    space_transform_fixed = affine_transformation_scale([s / 2 for s in fixed_shape])
+    ddf_shift = affine_transformation_translation([1] * 3)
+    ddf_shift_half = affine_transformation_translation([0.5] * 3).inverse()
 
-    # TODO check wether we need to shift by half voxed (i.e., `0` at the center or the corner?)
-    #half_voxel = affine_transformation_translation([-0.5, -0.5, -0.5])
+    scale_2 = affine_transformation_scale([2] * 3)
+    space_transform_moving = affine_transformation_scale([s for s in moving_shape])
+    space_transform_fixed = affine_transformation_scale([s for s in fixed_shape])
 
     # apply a series of coordinate transform to map the transformed moving geometry
-    # to the fixed volume geometry
+    # to the fixed volume geometry. It should be read from bottom to top,
+    # mapping the DDF with range [-1, 1] from fixed to moving geometry
     tfm_torch3x4 = mm_list([
-        space_transform_moving.inverse(),
-        #half_voxel.inverse(),
-        pst_moving.inverse(),
-        tfm_center_moving,
-        tfm,
-        tfm_center_fixed.inverse(),
-        pst_fixed,
-        #half_voxel,
-        space_transform_fixed,
+        ddf_shift.inverse(),    # [0, 2] -> [-1, 1]
+        scale_2,                # [0, 1] -> [0, 2]
+        space_transform_moving.inverse(),  # [0, X] -> [0, 1]
+        ddf_shift_half.inverse(),  # move voxel center from (0.5, 0.5) to (0, 0)
+        pst_moving.inverse(),   # [0, mm] -> [0, X]
+        tfm,                    # [0, mm] -> [0, mm]
+        pst_fixed,              # [0, X] -> [0, mm]
+        ddf_shift_half,         # move voxel center from (0, 0) to (0.5, 0.5)
+        space_transform_fixed,  # [0, 1] -> [0, X]
+        scale_2.inverse(),      # [0, 2] -> [0, 1]
+        ddf_shift               # [-1, 1] -> [0, 2]
     ])
+
     tfm_torch3x4 = tfm_torch3x4[:dim]
 
     if interpolation == 'linear':

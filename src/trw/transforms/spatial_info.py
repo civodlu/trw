@@ -145,6 +145,14 @@ class SpatialInfo:
         """
         return patient_scale_transform_get_origin(self.patient_scale_transform).numpy()  # TODO refactor! this should be Tensor. Remove `resample.resample_3d`
 
+    @property
+    def center(self) -> np.ndarray:
+        """
+        Return the center in world space (expressed as ZYX order).
+        """
+        center_index = (np.asarray(self.shape) - 1) / 2.0
+        return self.index_to_position(index_zyx=torch.from_numpy(center_index)).numpy()
+
     def index_to_position(self, *, index_zyx: torch.Tensor) -> torch.Tensor:
         """
         Map an index to world space

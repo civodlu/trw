@@ -3,7 +3,7 @@ from typing import Sequence
 
 import torch
 import torch.nn as nn
-from ..train.compatibility import grid_sample, torch_linalg_norm
+from ..train.compatibility import grid_sample, torch_linalg_norm, affine_grid
 from ..basic_typing import ShapeCX, TorchTensorNCX
 
 
@@ -11,7 +11,8 @@ def affine_transformation_translation(t: Sequence[float]) -> torch.Tensor:
     """
     Defines an affine translation for 2D or 3D data
 
-    For a 3D transformation, returns:
+    For a 3D transformation, returns a 4x4 matrix:
+
            | 1 0 0 X |
        M = | 0 1 0 Y |
            | 0 0 1 Z |
@@ -33,7 +34,8 @@ def affine_transformation_scale(s: Sequence[float]) -> torch.Tensor:
     """
         Defines an affine scaling transformation (2D or 3D)
 
-        For a 3D transformation, returns:
+        For a 3D transformation, returns 4x4 matrix:
+
                | Sx 0  0  0 |
            M = | 0  Sy 0  0 |
                | 0  0  Sz 0 |
@@ -60,7 +62,7 @@ def affine_transformation_rotation2d(angle_radian: float) -> torch.Tensor:
         angle_radian: the rotation angle in radian
 
     Returns:
-        a transformation matrix
+        a 3x3 transformation matrix
     """
 
     rotation = torch.tensor([
@@ -199,7 +201,7 @@ def apply_homogeneous_affine_transform_zyx(transform: torch.Tensor, position_zyx
 
     Args:
         transform: an homogeneous affine transformation
-        position: (Z)YX position
+        position_zyx: (Z)YX position
 
     Returns:
         a transformed position (Z)YX
@@ -211,7 +213,7 @@ def apply_homogeneous_affine_transform_zyx(transform: torch.Tensor, position_zyx
 
 def to_voxel_space_transform(matrix: torch.Tensor, image_shape: ShapeCX) -> torch.Tensor:
     """
-    Express the affine transformation in image space coordinate
+    Express the affine transformation in image space coordinate in range (-1, 1)
 
     Args:
         matrix: a transformation matrix for 2D or 3D transformation
@@ -260,7 +262,7 @@ def affine_transform(
         interpolation: the interpolation method. Can be `nearest` or `bilinear`
         padding_mode: the padding to be used for resampled voxels outside the image. Can be ``'zeros'`` | ``'border'``
             | ``'reflection'``
-        align_corners: Geometrically, we consider the pixels of the input  as squares rather than points.
+        align_corners: Geometrically, we consider the pixels of the input as squares rather than points.
 
     Returns:
         images transformed
@@ -285,7 +287,7 @@ def affine_transform(
     else:
         raise NotImplementedError(f'dimension not supported! Must be 2 or 3, current={dim}')
 
-    grid = nn.functional.affine_grid(affine_matrices, list(images.shape))
+    grid = affine_grid(affine_matrices, list(images.shape), align_corners=align_corners)
     resampled_images = grid_sample(
         images,
         grid,
