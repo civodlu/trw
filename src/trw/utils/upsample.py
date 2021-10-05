@@ -47,7 +47,7 @@ def _upsample_int_3d(tensor: TorchTensorNCX, size: ShapeNCX) -> TorchTensorNCX:
     return tensor_interp
 
 
-def upsample(tensor: TensorNCX, size: ShapeX, mode: Literal['linear', 'nearest']='linear') -> TensorNCX:
+def upsample(tensor: TensorNCX, size: ShapeX, mode: Literal['linear', 'nearest'] = 'linear') -> TensorNCX:
     """
     Upsample a 1D, 2D, 3D tensor
 

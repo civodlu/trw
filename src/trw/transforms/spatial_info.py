@@ -106,8 +106,10 @@ class SpatialInfo:
                 already defines the origin and spacing
         """
         assert (patient_scale_transform is not None and origin is None and spacing is None) or \
-               (patient_scale_transform is None and (origin is not None or spacing is not None)), \
-            'define only `patient_scale_transform` OR [`origin`, `spacing`]. PST already encodes `origin` and `spacing`'
+               (patient_scale_transform is None and (origin is not None or spacing is not None)) or \
+               (patient_scale_transform is None and origin is None and spacing is None), \
+                'define only `patient_scale_transform` OR [`origin`, `spacing`]. ' \
+                'PST already encodes `origin` and `spacing`'
 
         self.shape: Optional[ShapeX] = shape
 

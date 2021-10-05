@@ -23,6 +23,66 @@ def mm_list(matrices: List[torch.Tensor]):
     return m
 
 
+def affine_grid_fixed_to_moving(
+        geometry_moving: SpatialInfo,
+        geometry_fixed: SpatialInfo,
+        tfm: torch.Tensor,
+        align_corners: bool = False) -> torch.Tensor:
+    """
+    Calculate a grid that maps a fixed geometry to a transformed moving geometry.
+
+    This can be used to resampled a volume to a different geometry / transformation.
+
+    Args:
+        geometry_moving: the moving geometry. This geometry will have an affine transformation `tfm` applied
+            (e.g., translation, scaling)
+        geometry_fixed: the fixed geometry
+        tfm: a linear transformation that will move `moving_volume`
+        align_corners: should be false
+
+    Returns:
+        a N x D x C x H x W x dim grid
+    """
+    # work in XYZ space, not ZYX!
+    moving_shape = np.asarray(geometry_moving.shape)[::-1]
+    fixed_shape = np.asarray(geometry_fixed.shape)[::-1]
+    dim = len(geometry_moving.shape)
+    assert dim == 2 or dim == 3, 'unsupported dim!'
+    assert tfm.shape == (dim + 1, dim + 1)
+
+    pst_moving = geometry_moving.patient_scale_transform
+    pst_fixed = geometry_fixed.patient_scale_transform
+
+    ddf_shift = affine_transformation_translation([1] * dim)
+    ddf_shift_half = affine_transformation_translation([-0.5] * dim)
+
+    scale_2 = affine_transformation_scale([2] * dim)
+    space_transform_moving = affine_transformation_scale([s for s in moving_shape])
+    space_transform_fixed = affine_transformation_scale([s for s in fixed_shape])
+
+    # apply a series of coordinate transform to map the transformed moving geometry
+    # to the fixed volume geometry. It should be read from bottom to top,
+    # mapping the DDF with range [-1, 1] from fixed to moving geometry
+    tfm_torch3x4 = mm_list([
+        ddf_shift.inverse(),  # [0, 2] -> [-1, 1]
+        scale_2,  # [0, 1] -> [0, 2]
+        space_transform_moving.inverse(),  # [0, X] -> [0, 1]
+        ddf_shift_half.inverse(),  # move voxel center from (0.5, 0.5) to (0, 0)
+        pst_moving.inverse(),  # [0, mm] -> [0, X]
+        tfm,  # [0, mm] -> [0, mm]
+        pst_fixed,  # [0, X] -> [0, mm]
+        ddf_shift_half,  # move voxel center from (0, 0) to (0.5, 0.5)
+        space_transform_fixed,  # [0, 1] -> [0, X]
+        scale_2.inverse(),  # [0, 2] -> [0, 1]
+        ddf_shift  # [-1, 1] -> [0, 2]
+    ])
+
+    tfm_torch3x4 = tfm_torch3x4[:dim]
+    target_shape = [1, 1] + list(geometry_fixed.shape)
+    grid = affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners)
+    return grid
+
+
 def resample_spatial_info(
         geometry_moving: SpatialInfo,
         moving_volume: TorchTensorNCX,
@@ -38,7 +98,7 @@ def resample_spatial_info(
         geometry_moving: Defines the geometric space of the moving volume
         moving_volume: the moving volume (2D or 3D)
         geometry_fixed: define the geometric space to be resampled
-        tfm: an affine transformation matrix that moves the moving volume
+        tfm: an (dim + 1) x (dim + 1) affine transformation matrix that moves the moving volume
         interpolation: how to interpolate the moving volume
         padding_mode: defines how to handle missing (moving) data
         align_corners: specifies how to align the voxel grids
@@ -55,40 +115,18 @@ def resample_spatial_info(
                       'pytorch < 1.3 due to the `align_corners` changes. If accurate results needed, '
                       'upgrade to pytorch >= 1.3')
 
-    # work in XYZ space, not ZYX!
-    moving_shape = np.asarray(geometry_moving.shape)[::-1]
-    fixed_shape = np.asarray(geometry_fixed.shape)[::-1]
-    dim = len(moving_shape)
+    dim = len(geometry_moving.shape)
+    assert len(moving_volume.shape) == dim + 2, f'expected dim={len(moving_volume.shape)}, got={dim}'
+    assert (np.asarray(moving_volume.shape[2:]) == np.asarray(geometry_moving.shape)).all()
 
-    pst_moving = geometry_moving.patient_scale_transform
-    pst_fixed = geometry_fixed.patient_scale_transform
+    grid = affine_grid_fixed_to_moving(
+        geometry_moving=geometry_moving,
+        geometry_fixed=geometry_fixed,
+        tfm=tfm,
+        align_corners=align_corners
+    ).to(moving_volume.device)
 
-    ddf_shift = affine_transformation_translation([1] * 3)
-    ddf_shift_half = affine_transformation_translation([0.5] * 3).inverse()
-
-    scale_2 = affine_transformation_scale([2] * 3)
-    space_transform_moving = affine_transformation_scale([s for s in moving_shape])
-    space_transform_fixed = affine_transformation_scale([s for s in fixed_shape])
-
-    # apply a series of coordinate transform to map the transformed moving geometry
-    # to the fixed volume geometry. It should be read from bottom to top,
-    # mapping the DDF with range [-1, 1] from fixed to moving geometry
-    tfm_torch3x4 = mm_list([
-        ddf_shift.inverse(),    # [0, 2] -> [-1, 1]
-        scale_2,                # [0, 1] -> [0, 2]
-        space_transform_moving.inverse(),  # [0, X] -> [0, 1]
-        ddf_shift_half.inverse(),  # move voxel center from (0.5, 0.5) to (0, 0)
-        pst_moving.inverse(),   # [0, mm] -> [0, X]
-        tfm,                    # [0, mm] -> [0, mm]
-        pst_fixed,              # [0, X] -> [0, mm]
-        ddf_shift_half,         # move voxel center from (0, 0) to (0.5, 0.5)
-        space_transform_fixed,  # [0, 1] -> [0, X]
-        scale_2.inverse(),      # [0, 2] -> [0, 1]
-        ddf_shift               # [-1, 1] -> [0, 2]
-    ])
-
-    tfm_torch3x4 = tfm_torch3x4[:dim]
-
+    dim = len(moving_volume.shape) - 2
     if interpolation == 'linear':
         if dim == 2 or dim == 3:
             # pytorch is abusing the `bilinear` naming (it is actually trilinear for 3D)
@@ -100,8 +138,6 @@ def resample_spatial_info(
     else:
         raise ValueError(f'not supported interpolation={interpolation}')
 
-    target_shape = [1, 1] + list(geometry_fixed.shape)
-    grid = affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners).to(moving_volume.device)
     resampled_torch = grid_sample(
         moving_volume.type(grid.dtype),
         grid,
@@ -203,7 +239,7 @@ def resample_3d(
     moving_geometry = SpatialInfo(shape=volume.shape, spacing=np_volume_spacing, origin=np_volume_origin)
 
     fixed_origin = min_bb_mm
-    fixed_shape = ((max_bb_mm - min_bb_mm) / (resampled_spacing)).round().type(torch.long)
+    fixed_shape = ((max_bb_mm - min_bb_mm) / resampled_spacing).round().type(torch.long)
     fixed_geometry = SpatialInfo(shape=fixed_shape, spacing=resampled_spacing, origin=fixed_origin)
 
     resampled = resample_spatial_info(
