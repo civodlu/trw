@@ -103,3 +103,13 @@ PreActResNet18 = partial(
     block=BlockResPreAct,
     num_blocks=[2, 2, 2, 2]
 )
+
+PreActResNet34 = partial(
+    PreActResNet,
+    dimensionality=2,
+    input_channels=3,
+    output_channels=10,
+    block=BlockResPreAct,
+    num_blocks=[3, 4, 6, 3]
+)
+

@@ -44,7 +44,7 @@ class TestDeform(unittest.TestCase):
         mean_value = images_deformed_torch.mean()
         expected_mean = 255.0 / 2
         print(f'test_image_2d mean={mean_value}, expected={expected_mean}')
-        assert abs(mean_value - expected_mean) < 0.5, 'difference is too big! Images need to be inspected visually!'
+        assert abs(mean_value - expected_mean) < 1.0, 'difference is too big! Images need to be inspected visually!'
 
     def test_transform(self):
         transform = trw.transforms.TransformRandomDeformation(
@@ -72,7 +72,7 @@ class TestDeform(unittest.TestCase):
         mean_value = images_deformed_torch.mean()
         expected_mean = 255.0 / 2
         print(f'test_image_2d mean={mean_value}, expected={expected_mean}')
-        assert abs(mean_value - expected_mean) < 0.5, 'difference is too big! Images need to be inspected visually!'
+        assert abs(mean_value - expected_mean) < 1.0, 'difference is too big! Images need to be inspected visually!'
 
 
 if __name__ == '__main__':

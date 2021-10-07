@@ -50,7 +50,7 @@ def affine_transformation_scale(s: Sequence[float]) -> torch.Tensor:
     assert d == 2 or d == 3
     tfm = torch.zeros((d + 1, d + 1), dtype=torch.float32)
     for n in range(d):
-        tfm[n, n] = s[n]
+        tfm[n, n] = float(s[n])
     tfm[d, d] = 1
     return tfm
 

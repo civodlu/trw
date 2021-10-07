@@ -41,6 +41,7 @@ class TestTransformResample(TestCase):
         t_r_background = t_r[:, :, 4:]
         assert (t_r_background == 0).all()
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_resample_numpy_id(self):
         """
         identity
@@ -49,6 +50,7 @@ class TestTransformResample(TestCase):
         t_r = resample_3d(t, (1, 1, 1), (0, 0, 0), (0, 0, 0), (10, 9, 8), (1, 1, 1), interpolation_mode='nearest')
         assert np.abs(t - t_r).max() < 1e-4
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_resample_numpy_interpolate_x(self):
         """
         Interpolate in x axis
@@ -61,8 +63,9 @@ class TestTransformResample(TestCase):
                 for x in range(t_r.shape[2] - 1):  # avoid the background value at the end
                     v = t_r[z, y, x]
                     v_expected = t[z, y, x // 2]
-                    assert abs(v - v_expected) < 1e-4
+                    assert abs(v - v_expected) < 1e-3
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_resample_torch_id(self):
         """
         identity
@@ -84,6 +87,7 @@ class TestTransformResample(TestCase):
         )
         return g
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_transform_resampling_random_dependent(self):
         """
         Use a functors to randomly generate a resampling geometry.
@@ -109,6 +113,7 @@ class TestTransformResample(TestCase):
         assert batch_transformed['other'] == 'other_value'
         assert batch_transformed['v1'].shape == batch_transformed['v2'].shape
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_transform_resampling_random_fixed(self):
         batch = {
             'v1': torch.arange(10 * 9 * 8).reshape((1, 1, 10, 9, 8)),
@@ -168,6 +173,7 @@ class TestTransformResample(TestCase):
             p_back = si.index_to_position(index_zyx=i)
             assert (p - p_back).abs().max() < 1e-5
 
+    @torch_requires(min_version='1.3', silent_fail=True)
     def test_random_volumes(self):
         def fill_volume(v, nb):
             for n in range(nb):
