@@ -17,11 +17,12 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
     """
     def __init__(
             self,
-            control_points: Union[int, Sequence[int]],
-            max_displacement: Optional[Union[float, Sequence[float]]] = None,
+            control_points: Union[int, Sequence[int]] = 6,
+            max_displacement: Optional[Union[float, Sequence[float]]] = 0.5,
             criteria_fn: Callable[[Batch], List[str]] = None,
             interpolation: Literal['linear', 'nearest'] = 'linear',
             padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
+            gaussian_filter_sigma: Optional[float] = 1.5,
             align_corners: bool = False):
         """
 
@@ -34,6 +35,8 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
             interpolation: the interpolation of the image with displacement field
             padding_mode: how to handle data outside the volume geometry
             align_corners: should be False. The (0, 0) is the center of a voxel
+            gaussian_filter_sigma: if not None, smooth the deformation field using a gaussian filter.
+                The smoothing is done in the control point space
             criteria_fn: a function to select applicable features in a batch
         """
 
@@ -42,6 +45,7 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
         self.max_displacement = max_displacement
         self.control_points = control_points
         self.padding_mode = padding_mode
+        self.gaussian_filter_sigma = gaussian_filter_sigma
         self.criteria_fn = criteria_fn
 
         if criteria_fn is None:
@@ -73,7 +77,8 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
             max_displacement=self.max_displacement,
             interpolation=self.interpolation,
             padding_mode=self.padding_mode,
-            align_corners=self.align_corners
+            align_corners=self.align_corners,
+            gaussian_filter_sigma=self.gaussian_filter_sigma
         )
 
         # copy features that are not images

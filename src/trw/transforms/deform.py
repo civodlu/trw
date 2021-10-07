@@ -1,8 +1,11 @@
+import math
+
 import warnings
 
 from numbers import Number
 
 import torch
+from ..train.filter_gaussian import FilterGaussian
 from typing import Union, Sequence, Optional, List
 from typing_extensions import Literal
 import numpy as np
@@ -22,6 +25,7 @@ def random_grid_using_control_points(
         geometry_moving: Optional[SpatialInfo] = None,
         tfm: Optional[torch.Tensor] = None,
         geometry_fixed: Optional[SpatialInfo] = None,
+        gaussian_filter_sigma: Optional[float] = None,
         align_corners: bool = False) -> torch.Tensor:
     """
     Generate random deformation grid (one for each sample)
@@ -48,6 +52,8 @@ def random_grid_using_control_points(
         geometry_fixed: geometry output (dictate the final geometry). If None, use the same
             as the geometry_moving
         tfm: the transformation to be applied to the `geometry_moving`
+        gaussian_filter_sigma: if not None, smooth the deformation field using a gaussian filter.
+            The smoothing is done in the control point space
 
     Returns:
         N * X * dim displacement field
@@ -61,6 +67,15 @@ def random_grid_using_control_points(
         tfm = torch.eye(dim + 1, dtype=torch.float32)
     assert (np.asarray(shape[1:]) == np.asarray(geometry_moving.shape)).all(), \
         f'shape mismatch! Got={geometry_moving.shape}, expected={shape}'
+
+    filter_gaussian = None
+    if gaussian_filter_sigma is not None:
+        filter_gaussian = FilterGaussian(
+            input_channels=1,
+            nb_dims=dim,
+            sigma=gaussian_filter_sigma,
+            kernel_sizes=2 * math.ceil(gaussian_filter_sigma) + 1)
+
 
     dtype = torch.float32
     grid = affine_grid_fixed_to_moving(
@@ -93,6 +108,9 @@ def random_grid_using_control_points(
     deformable_component = torch.zeros(shape_def, dtype=dtype)
     for i in range(dim):
         deformable_component[..., i].uniform_(-max_displacement[i], max_displacement[i])
+        if filter_gaussian is not None:
+            v = deformable_component[..., i].unsqueeze(1)
+            v[:] = filter_gaussian(v)[:]
 
     # add a margin to make the displacement 0 around the edges
     # then interpolate the deformable displacement
@@ -118,6 +136,7 @@ def deform_image_random(
         geometry: Optional[SpatialInfo] = None,
         interpolation: Literal['linear', 'nearest'] = 'linear',
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
+        gaussian_filter_sigma: Optional[float] = None,
         align_corners: bool = False) -> List[TorchTensorNCX]:
     """
     Non linearly deform an image based on a grid of control points.
@@ -145,6 +164,8 @@ def deform_image_random(
         interpolation: the interpolation of the image with displacement field
         padding_mode: how to handle data outside the volume geometry
         align_corners: should be False. The (0, 0) is the center of a voxel
+        gaussian_filter_sigma: if not None, smooth the deformation field using a gaussian filter.
+            The smoothing is done in the control point space
 
     Returns:
         a deformed image
@@ -160,7 +181,8 @@ def deform_image_random(
         shape_nx,
         control_points=control_points,
         max_displacement=max_displacement,
-        geometry_moving=geometry
+        geometry_moving=geometry,
+        gaussian_filter_sigma=gaussian_filter_sigma
     ).to(moving_volumes[0].device)
 
     if interpolation == 'linear':

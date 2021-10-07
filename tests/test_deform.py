@@ -49,7 +49,8 @@ class TestDeform(unittest.TestCase):
     def test_transform(self):
         transform = trw.transforms.TransformRandomDeformation(
             control_points=6,
-            max_displacement=[0.05, 0.05])
+            gaussian_filter_sigma=1.5,
+            max_displacement=[0.5, 0.5])
 
         image = Image.open(os.path.join(here, 'images/checkerboard.png'))
         image = np.array(image) * 255
