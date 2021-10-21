@@ -46,6 +46,7 @@ def affine_grid_fixed_to_moving(
     # work in XYZ space, not ZYX!
     moving_shape = np.asarray(geometry_moving.shape)[::-1]
     fixed_shape = np.asarray(geometry_fixed.shape)[::-1]
+    assert geometry_moving.shape is not None
     dim = len(geometry_moving.shape)
     assert dim == 2 or dim == 3, 'unsupported dim!'
     assert tfm.shape == (dim + 1, dim + 1)
@@ -78,6 +79,7 @@ def affine_grid_fixed_to_moving(
     ])
 
     tfm_torch3x4 = tfm_torch3x4[:dim]
+    assert geometry_fixed.shape is not None
     target_shape = [1, 1] + list(geometry_fixed.shape)
     grid = affine_grid(tfm_torch3x4.unsqueeze(0), target_shape, align_corners)
     return grid
@@ -115,6 +117,7 @@ def resample_spatial_info(
                       'pytorch < 1.3 due to the `align_corners` changes. If accurate results needed, '
                       'upgrade to pytorch >= 1.3')
 
+    assert geometry_moving.shape is not None
     dim = len(geometry_moving.shape)
     assert len(moving_volume.shape) == dim + 2, f'expected dim={len(moving_volume.shape)}, got={dim}'
     assert (np.asarray(moving_volume.shape[2:]) == np.asarray(geometry_moving.shape)).all()
@@ -127,21 +130,22 @@ def resample_spatial_info(
     ).to(moving_volume.device)
 
     dim = len(moving_volume.shape) - 2
-    if interpolation == 'linear':
+    interpolation_actual = interpolation
+    if interpolation_actual == 'linear':
         if dim == 2 or dim == 3:
             # pytorch is abusing the `bilinear` naming (it is actually trilinear for 3D)
-            interpolation = 'bilinear'
+            interpolation_actual = 'bilinear'  # type: ignore
         else:
             raise ValueError('expected only 2D/3D data!')
-    elif interpolation == 'nearest':
+    elif interpolation_actual == 'nearest':
         pass
     else:
-        raise ValueError(f'not supported interpolation={interpolation}')
+        raise ValueError(f'not supported interpolation={interpolation_actual}')
 
     resampled_torch = grid_sample(
         moving_volume.type(grid.dtype),
         grid,
-        mode=interpolation,
+        mode=interpolation_actual,
         padding_mode=padding_mode,
         align_corners=align_corners)
 
@@ -239,7 +243,7 @@ def resample_3d(
     moving_geometry = SpatialInfo(shape=volume.shape, spacing=np_volume_spacing, origin=np_volume_origin)
 
     fixed_origin = min_bb_mm
-    fixed_shape = ((max_bb_mm - min_bb_mm) / resampled_spacing).round().type(torch.long)
+    fixed_shape = ((max_bb_mm - min_bb_mm) / resampled_spacing).round().type(torch.long).tolist()
     fixed_geometry = SpatialInfo(shape=fixed_shape, spacing=resampled_spacing, origin=fixed_origin)
 
     resampled = resample_spatial_info(

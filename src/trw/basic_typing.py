@@ -62,7 +62,7 @@ NumpyTensorX = np.ndarray
 Batch = Dict[str, Any]
 
 """Length shaped as D, H, W, ..."""
-Length = Sequence[float]
+Length = Union[Sequence[float], np.ndarray, torch.Tensor]
 
 """Represent a data split, a dictionary of any value"""
 Split = Any

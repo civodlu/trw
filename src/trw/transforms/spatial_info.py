@@ -206,4 +206,4 @@ class SpatialInfo:
         new_origin_xyz = torch.flip(new_origin_zyx, (0,))
         new_pst[:dim, dim] = new_origin_xyz
 
-        return SpatialInfo(shape=new_shape_zyx, patient_scale_transform=new_pst)
+        return SpatialInfo(shape=list(new_shape_zyx), patient_scale_transform=new_pst)

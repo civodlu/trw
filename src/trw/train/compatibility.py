@@ -1,3 +1,5 @@
+from typing import Union
+
 import warnings
 
 import torch.nn.functional
@@ -48,15 +50,20 @@ def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corner
             align_corners=align_corners)
 
 
+class SwishCompat(nn.Module):
+    """
+    For compatibility with old PyTorch versions
+    """
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return x * torch.sigmoid(x)
+
+
+Swish: Union[nn.SiLU, SwishCompat]
+
 if hasattr(nn, 'SiLU'):
     Swish = nn.SiLU
 else:
-    class Swish(nn.Module):
-        """
-        For compatibility with old PyTorch versions
-        """
-        def forward(self, x: torch.Tensor) -> torch.Tensor:
-            return x * torch.sigmoid(x)
+    Swish = SwishCompat
 
 
 if hasattr(torch, 'linalg'):

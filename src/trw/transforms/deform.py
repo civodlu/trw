@@ -2,7 +2,7 @@ import math
 
 import warnings
 
-from numbers import Number
+from numbers import Integral, Real
 
 import torch
 from ..train.filter_gaussian import FilterGaussian
@@ -20,12 +20,12 @@ from ..utils import batch_pad
 
 def random_grid_using_control_points(
         shape: ShapeNX,
-        control_points: Union[int, Sequence[int]],
-        max_displacement: Optional[Union[float, Sequence[float]]] = None,
+        control_points: Union[Integral, Sequence[Integral]],
+        max_displacement: Optional[Union[Real, Sequence[Real]]] = None,
         geometry_moving: Optional[SpatialInfo] = None,
         tfm: Optional[torch.Tensor] = None,
         geometry_fixed: Optional[SpatialInfo] = None,
-        gaussian_filter_sigma: Optional[float] = None,
+        gaussian_filter_sigma: Optional[Real] = None,
         align_corners: bool = False) -> torch.Tensor:
     """
     Generate random deformation grid (one for each sample)
@@ -76,7 +76,6 @@ def random_grid_using_control_points(
             sigma=gaussian_filter_sigma,
             kernel_sizes=2 * math.ceil(gaussian_filter_sigma) + 1)
 
-
     dtype = torch.float32
     grid = affine_grid_fixed_to_moving(
         geometry_moving=geometry_moving,
@@ -85,7 +84,7 @@ def random_grid_using_control_points(
         align_corners=align_corners
     ).type(dtype)
 
-    if isinstance(control_points, Number):
+    if isinstance(control_points, Integral):
         control_points = [control_points] * dim
     else:
         assert len(control_points) == dim
@@ -94,7 +93,7 @@ def random_grid_using_control_points(
     if max_displacement is None:
         max_displacement = 2.0 / (2.0 * control_points * 5)
 
-    if isinstance(max_displacement, Number):
+    if isinstance(max_displacement, Real):
         max_displacement = [max_displacement] * dim
     else:
         assert len(max_displacement) == dim
@@ -131,12 +130,12 @@ def random_grid_using_control_points(
 
 def deform_image_random(
         moving_volumes: List[TorchTensorNCX],
-        control_points: Union[int, Sequence[int]],
-        max_displacement: Optional[Union[float, Sequence[float]]] = None,
+        control_points: Union[Integral, Sequence[Integral]],
+        max_displacement: Optional[Union[Real, Sequence[Real]]] = None,
         geometry: Optional[SpatialInfo] = None,
         interpolation: Literal['linear', 'nearest'] = 'linear',
         padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
-        gaussian_filter_sigma: Optional[float] = None,
+        gaussian_filter_sigma: Optional[Real] = None,
         align_corners: bool = False) -> List[TorchTensorNCX]:
     """
     Non linearly deform an image based on a grid of control points.
@@ -186,7 +185,7 @@ def deform_image_random(
     ).to(moving_volumes[0].device)
 
     if interpolation == 'linear':
-        interpolation = 'bilinear'
+        interpolation = 'bilinear'  # type: ignore
 
     all_resampled_torch = []
     for v in moving_volumes:

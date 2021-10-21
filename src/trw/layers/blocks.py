@@ -353,6 +353,7 @@ class BlockUpDeconvSkipConv(nn.Module):
             )
             convs.append(conv)
 
+        self.ops_conv: Union[nn.Sequential, BlockConvNormActivation]
         if len(convs) == 1:
             self.ops_conv = convs[0]
         else:
@@ -422,6 +423,7 @@ class BlockSqueezeExcite(nn.Module):
                  r: int = 24):
         super().__init__()
 
+        assert config.ops.adaptative_avg_pool_fn is not None
         self.squeeze = config.ops.adaptative_avg_pool_fn(1)
 
         squeezed_channels = input_channels // r
@@ -433,6 +435,7 @@ class BlockSqueezeExcite(nn.Module):
             output_channels=squeezed_channels,
             kernel_size=1)
 
+        assert config.activation is not None
         activation = config.activation()
 
         conv_2 = BlockConv(
@@ -515,7 +518,9 @@ class BlockResPreAct(nn.Module):
 
         config = copy.copy(config)
 
+        assert config.activation is not None
         self.act1 = config.activation()
+        assert config.norm is not None
         self.bn1 = config.norm(input_channels)
         self.conv1 = BlockConv(
             config,
@@ -543,6 +548,7 @@ class BlockResPreAct(nn.Module):
             stride = 1
         stride_np = np.asarray(stride)
 
+        self.shortcut: Optional[nn.Sequential]
         if (stride_np == 1).all() or input_channels != planes:
             self.shortcut = nn.Sequential(
                 BlockConv(
@@ -571,6 +577,7 @@ class BlockPoolClassifier(nn.Module):
     def __init__(self, config: LayerConfig, input_channels: int, output_channels: int, pooling_kernel=4):
         super().__init__()
         self.linear = nn.Linear(input_channels, output_channels)
+        assert config.pool is not None
         self.pooling = config.pool(pooling_kernel)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

@@ -71,7 +71,7 @@ class TestSequenceReservoir(TestCase):
 
         time_start = time.time()
         samples = collections.defaultdict(lambda: 0)
-        nb_epochs = 40000
+        nb_epochs = 100000
         for i in range(1, nb_epochs):
             batches = []
             for batch in sequence:
@@ -206,7 +206,7 @@ class TestSequenceReservoir(TestCase):
 
         samples_0 = collections.defaultdict(lambda: 0)
         samples_1 = collections.defaultdict(lambda: 0)
-        nb_epochs = 10000
+        nb_epochs = 100000
         for i in range(1, nb_epochs):
             it_0 = iter(sequence)
             it_1 = iter(sequence)
