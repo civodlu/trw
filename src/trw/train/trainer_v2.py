@@ -105,7 +105,8 @@ class TrainerV2:
             model: nn.Module,
             path: str,
             device: torch.device = None,
-            pickle_module: Any = pickle) -> None:
+            pickle_module: Any = pickle,
+            strict: bool = True) -> None:
         """
         Load the state of a model
 
@@ -114,9 +115,12 @@ class TrainerV2:
             path: where the model's state was saved
             device: where to locate the model
             pickle_module: how to read the model parameters and metadata
+            strict: whether to strictly enforce that the keys
+                in :attr:`state_dict` match the keys returned by this module's
+                :meth:`~torch.nn.Module.state_dict` function
         """
         model_state = torch.load(path, map_location=device, pickle_module=pickle_module)
-        model.load_state_dict(model_state)
+        model.load_state_dict(model_state, strict=strict)
 
     @staticmethod
     def load_model(
