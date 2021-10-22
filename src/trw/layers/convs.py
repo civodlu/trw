@@ -1,3 +1,5 @@
+import collections
+
 import copy
 from numbers import Number
 
@@ -74,14 +76,14 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
 
         # normalize the arguments
         nb_convs = len(channels)
-        if not isinstance(convolution_kernels, list):
+        if not isinstance(convolution_kernels, collections.Sequence):
             convolution_kernels = [convolution_kernels] * nb_convs
-        if not isinstance(strides, list):
-            assert isinstance(strides, Number) or (isinstance(strides, tuple) and isinstance(strides[0], Number)), \
+        if not isinstance(strides, collections.Sequence):
+            assert isinstance(strides, int) or (isinstance(strides, tuple) and isinstance(strides[0], int)), \
                 'stride must be a number or a tuple!'
-            strides = [strides] * nb_convs
+            strides = [strides] * nb_convs  # type: ignore
 
-        if not isinstance(pooling_size, list) and pooling_size is not None:
+        if not isinstance(pooling_size, collections.Sequence) and pooling_size is not None:
             pooling_size = [pooling_size] * nb_convs
         if isinstance(convolution_repeats, int):
             convolution_repeats = [convolution_repeats] * nb_convs
