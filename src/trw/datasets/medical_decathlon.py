@@ -103,7 +103,7 @@ class MedicalDecathlonDataset:
         return len(self.metadata[self.collection])
 
 
-def _load_case_adaptor(batch: Batch, dataset: Dataset, transform_fn: Optional[Transform]):
+def _load_case_adaptor(batch: Batch, dataset: MedicalDecathlonDataset, transform_fn: Optional[Transform]):
     ids = batch['sample_uid']
     assert len(ids) == 1, 'only load a single case at a time!'
     data = dataset(ids[0])

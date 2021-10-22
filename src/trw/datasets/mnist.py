@@ -1,11 +1,10 @@
-import collections
-from typing import List, Sequence, Optional
+from typing import List, Sequence, Optional, Tuple
 
 import os
 import torchvision
 import numpy as np
 from ..train import SamplerRandom, SequenceArray
-from ..basic_typing import Datasets
+from ..basic_typing import Datasets, DatasetsInfo
 from ..transforms import Transform
 
 
@@ -21,7 +20,7 @@ def create_mnist_dataset(
         data_processing_batch_size: int = 200,
         normalize_0_1: bool = False,
         select_classes_train: Optional[Sequence[int]] = None,
-        select_classes_test: Optional[Sequence[int]] = None) -> Datasets:
+        select_classes_test: Optional[Sequence[int]] = None) -> Tuple[Datasets, DatasetsInfo]:
     """
 
     Args:
@@ -57,7 +56,7 @@ def create_mnist_dataset(
         train=False,
         download=True)
 
-    splits = collections.OrderedDict()
+    splits = {}
     normalization_factor = 1.0
     if normalize_0_1:
         normalization_factor = 255.0

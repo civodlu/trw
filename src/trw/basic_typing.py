@@ -69,10 +69,11 @@ Split = Any
 
 """Represent a dataset which is composed of named data splits"""
 Dataset = Dict[str, Split]
+DatasetInfo = Dict[str, Any]
 
 """Represent a collection of datasets"""
 Datasets = Dict[str, Dataset]
-DatasetsInfo = Datasets
+DatasetsInfo = Dict[str, DatasetInfo]
 
 HistoryStep = Dict[str, Number]
 History = List[HistoryStep]

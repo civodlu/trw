@@ -149,7 +149,7 @@ def create_mnist_cluttered_datasset(
         }
     }
 
-    splits = collections.OrderedDict()
+    splits = dict()
     splits['train'] = train_sequence
     splits['test'] = test_sequence
 

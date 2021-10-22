@@ -126,7 +126,7 @@ def create_tiny_imagenet_dataset(
                 split = split.map(transform_fn, nb_workers=0)
         return split
 
-    splits = collections.OrderedDict([
+    splits = dict([
         ('train', create_split(dataset_train, transforms_train, is_train=True)),
         ('valid', create_split(dataset_valid, transforms_valid, is_train=False))
     ])
