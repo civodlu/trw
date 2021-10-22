@@ -4,7 +4,7 @@ from typing import Sequence, Union, Optional, Any, Dict, Callable, List
 
 import torch
 import torch.nn as nn
-from ..basic_typing import IntTupleList
+from ..basic_typing import IntTupleList, ConvKernels, ConvStrides, Paddings
 from .utils import div_shape
 from .convs import ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
 from .blocks import BlockDeconvNormActivation, ConvTransposeBlockType
@@ -25,9 +25,9 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
             input_channels: int,
             channels: Sequence[int],
             *,
-            convolution_kernels: Union[int, List[int], IntTupleList] = 5,
-            strides: Union[int, List[int], IntTupleList] = 2,
-            paddings: Optional[Union[str, int, List[int], IntTupleList]] = None,
+            convolution_kernels: ConvKernels = 5,
+            strides: ConvStrides = 2,
+            paddings: Optional[Paddings] = None,
             activation: Any = nn.ReLU,
             activation_kwargs: Dict = {},
             dropout_probability: Optional[float] = None,
@@ -69,19 +69,21 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
 
         # normalize the arguments
         nb_convs = len(channels)
-        if not isinstance(convolution_kernels, list):
+        if not isinstance(convolution_kernels, collections.Sequence):
             convolution_kernels = [convolution_kernels] * nb_convs
-        if not isinstance(strides, list):
+        if not isinstance(strides, collections.Sequence):
             strides = [strides] * nb_convs
         if paddings is None:
-            paddings = [div_shape(kernel, 2) for kernel in convolution_kernels]
-        elif isinstance(paddings, numbers.Integral):
+            paddings = [div_shape(kernel, 2) for kernel in convolution_kernels]  # type: ignore
+        elif isinstance(paddings, int):
             paddings = [paddings] * nb_convs
         else:
             assert isinstance(paddings, collections.Sequence) and len(paddings) == nb_convs
 
         assert nb_convs == len(convolution_kernels), 'must be specified for each convolutional layer'
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
+        assert isinstance(paddings, collections.Sequence)
+        assert len(paddings) == nb_convs
 
         layers = nn.ModuleList()
 
@@ -98,7 +100,6 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
                 config.dropout = None
 
             ops = []
-
             ops.append(deconv_block_fn(
                 config,
                 prev,
@@ -106,7 +107,7 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
                 kernel_size=convolution_kernels[n],
                 stride=strides[n],
                 padding=p,
-                output_padding=strides[n] - 1,
+                output_padding=strides[n] - 1,  # type: ignore
             ))
 
             if config.dropout is not None and dropout_probability is not None:

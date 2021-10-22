@@ -190,7 +190,8 @@ class BackboneDecoder(nn.Module, ModuleWithIntermediate):
             output_channels=self.output_channels,
         )
 
-    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
+    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None, **kwargs) -> List[torch.Tensor]:
+        assert len(kwargs) == 0
         intermediates = self.backbone.forward_with_intermediate(x)
         last = self.middle_block(intermediates[-1], latent=latent)
 

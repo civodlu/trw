@@ -2,7 +2,7 @@ from typing import Union, Any, Dict, Optional, Sequence, Callable
 
 import torch.nn as nn
 from ..basic_typing import PoolingSizes, ConvStrides, ConvKernels, Activation, Paddings
-from .blocks import BlockConvNormActivation
+from .blocks import BlockConvNormActivation, ConvBlockType
 from .layer_config import NormType, default_layer_config, LayerConfig
 from .convs import ConvsBase
 
@@ -21,8 +21,8 @@ def convs_2d(
         norm_type: Optional[NormType] = None,
         norm_kwargs: Dict[str, Any] = {},
         pool_kwargs: Dict[str, Any] = {},
-        last_layer_is_output: Optional[bool] = False,
-        conv_block_fn: Callable[[LayerConfig, int, int], nn.Module] = BlockConvNormActivation,
+        last_layer_is_output: bool = False,
+        conv_block_fn: ConvBlockType = BlockConvNormActivation,
         config: LayerConfig = default_layer_config(dimensionality=None)):
     """
 

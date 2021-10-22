@@ -6,7 +6,7 @@ import torch.nn as nn
 from .utils import div_shape
 from .convs import ModuleWithIntermediate
 import collections
-from .blocks import BlockDeconvNormActivation
+from .blocks import BlockDeconvNormActivation, ConvTransposeBlockType
 from .layer_config import default_layer_config, NormType, LayerConfig
 
 
@@ -49,7 +49,7 @@ class FullyConvolutional(nn.Module):
             norm_type: NormType = NormType.BatchNorm,
             norm_kwargs: Dict = {},
             activation_kwargs: Dict = {},
-            deconv_block_fn: nn.Module = BlockDeconvNormActivation,
+            deconv_block_fn: ConvTransposeBlockType = BlockDeconvNormActivation,
             config: LayerConfig = default_layer_config(dimensionality=None)
     ):
         """
@@ -107,6 +107,8 @@ class FullyConvolutional(nn.Module):
             output_padding = stride - 1
             padding = div_shape(kernel, 2)
 
+            assert isinstance(stride, int)
+            assert isinstance(padding, int)
             ops = deconv_block_fn(config=config, input_channels=prev_filter, output_channels=current_filter, kernel_size=kernel, stride=stride, padding=padding, output_padding=output_padding)
             groups_deconv.append(ops)
 
@@ -120,6 +122,7 @@ class FullyConvolutional(nn.Module):
         self.deconvolutions = groups_deconv
 
         if nb_classes is not None:
+            assert config.conv is not None
             self.classifier = config.conv(deconv_filters[-1], nb_classes, kernel_size=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
