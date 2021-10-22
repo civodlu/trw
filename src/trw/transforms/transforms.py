@@ -13,14 +13,17 @@ class Transform:
         raise NotImplementedError()
 
 
+CriteriaFn = Callable[[Batch], Sequence[str]]
+
+
 class TransformBatchWithCriteria(Transform):
     """
     Helper function to apply a given transform function on features that satisfy a criteria
     """
     def __init__(
             self,
-            criteria_fn: Callable[[Batch], List[str]],
-            transform_fn: Callable[[List[str], Batch], Batch]):
+            criteria_fn: CriteriaFn,
+            transform_fn: Callable[[Sequence[str], Batch], Batch]):
         """
 
         Args:

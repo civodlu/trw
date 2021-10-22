@@ -1,7 +1,8 @@
 import collections
 
 import functools
-from typing import List
+from .transforms import CriteriaFn
+from typing import Optional
 
 from trw.basic_typing import ShapeX
 
@@ -26,7 +27,7 @@ class TransformResize(transforms.TransformBatchWithCriteria):
     """
     Resize a tensor to a fixed size
     """
-    def __init__(self, size: ShapeX, criteria_fn=None, mode='linear'):
+    def __init__(self, size: ShapeX, criteria_fn: Optional[CriteriaFn] = None, mode='linear'):
         """
         Args:
             size: the size to reshape to. Excluding the sample and filter

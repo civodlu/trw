@@ -1,6 +1,5 @@
 import copy
 from functools import partial
-from numbers import Number
 from typing import Sequence, List, Optional
 
 import torch
@@ -42,7 +41,7 @@ class PreActResNet(nn.Module, ModuleWithIntermediate):
             config: LayerConfig = default_layer_config(dimensionality=None, pool_type=PoolType.AvgPool)):
 
         super().__init__()
-        if isinstance(strides, Number):
+        if isinstance(strides, int):
             strides = [strides] * len(num_blocks)
 
         assert len(num_blocks) == len(strides)

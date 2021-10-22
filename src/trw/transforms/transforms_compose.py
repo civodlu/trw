@@ -1,4 +1,4 @@
-from typing import List
+from typing import Sequence
 
 from ..transforms.transforms import Transform
 import collections
@@ -10,7 +10,7 @@ class TransformCompose(Transform):
     """
     Sequentially apply a list of transformations
     """
-    def __init__(self, transforms: List[Transform]):
+    def __init__(self, transforms: Sequence[Transform]):
         """
 
         Args:

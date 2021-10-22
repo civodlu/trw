@@ -1,9 +1,10 @@
 import collections
 
 import functools
-from typing import Optional, Callable, List, Union
+from .transforms import CriteriaFn
+from typing import Optional, Callable, Union
 
-from ..basic_typing import Batch, ShapeX, ShapeCX, TensorNCX
+from ..basic_typing import ShapeCX, TensorNCX
 from ..transforms import transforms
 from ..transforms import cutout_function
 from ..transforms.copy import copy
@@ -37,7 +38,7 @@ class TransformRandomCutout(transforms.TransformBatchWithCriteria):
     def __init__(
             self,
             cutout_size: Union[ShapeCX, Callable[[], ShapeCX]],
-            criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+            criteria_fn: Optional[CriteriaFn] = None,
             probability: float = 1.0,
             cutout_value_fn: Callable[[TensorNCX], None] = functools.partial(
                 cutout_function.cutout_value_fn_constant,

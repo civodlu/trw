@@ -1,6 +1,7 @@
 import collections
 import functools
-from typing import Union, Callable, Dict, List, Sequence
+from .transforms import CriteriaFn
+from typing import Union, Callable, Dict, Sequence
 
 from typing_extensions import Literal
 
@@ -69,6 +70,8 @@ def _transform_resample_fn(
 
 def find_largest_geometry(geometries: Sequence[SpatialInfo]) -> SpatialInfo:
     assert geometries is not None
+    assert len(geometries) > 0
+
     if len(geometries) == 1:
         return geometries[0]
 
@@ -80,6 +83,7 @@ def find_largest_geometry(geometries: Sequence[SpatialInfo]) -> SpatialInfo:
         if volume > max_volume:
             max_volume = volume
             max_volume_geometry = g
+    assert max_volume_geometry is not None
     return max_volume_geometry
 
 
@@ -124,7 +128,7 @@ class TransformResample(transforms.TransformBatchWithCriteria):
             self,
             resampling_geometry: Union[SpatialInfo, Callable[[Dict[str, SpatialInfo]], SpatialInfo]],
             get_spatial_info_from_batch_name: get_spatial_info_type,
-            criteria_fn: Callable[[Batch], List[str]] = transforms.criteria_is_array_4_or_above,
+            criteria_fn: CriteriaFn = transforms.criteria_is_array_4_or_above,
             interpolation_mode: Literal['linear', 'nearest'] = 'linear',
             padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros'):
         """

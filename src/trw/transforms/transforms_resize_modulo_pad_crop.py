@@ -2,12 +2,13 @@ import collections
 
 import functools
 from numbers import Number
-from typing import Callable, Union, List
+from typing import Union, Optional
+import numpy as np
 
+from .transforms import CriteriaFn
 from ..transforms import transforms
 from ..transforms import crop
-import numpy as np
-from ..basic_typing import ShapeX, Batch
+from ..basic_typing import ShapeX
 from ..utils import batch_pad_minmax_joint
 from typing_extensions import Literal
 
@@ -91,7 +92,7 @@ class TransformResizeModuloCropPad(transforms.TransformBatchWithCriteria):
     def __init__(
             self,
             multiple_of: Union[int, ShapeX],
-            criteria_fn: Callable[[Batch], List[str]] = None,
+            criteria_fn: Optional[CriteriaFn] = None,
             mode: Literal['crop', 'pad'] = 'crop',
             padding_mode: Literal['edge', 'constant', 'symmetric'] = 'constant',
             padding_constant_value: int = 0):

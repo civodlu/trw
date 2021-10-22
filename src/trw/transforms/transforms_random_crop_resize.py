@@ -1,9 +1,10 @@
 import collections
 
 import functools
-from typing import Optional, Callable, List, Sequence
+from .transforms import CriteriaFn
+from typing import Optional
 
-from ..basic_typing import Batch, ShapeX
+from ..basic_typing import ShapeX
 from ..transforms import transforms
 from ..transforms import crop
 from ..transforms import resize
@@ -46,7 +47,7 @@ class TransformRandomCropResize(transforms.TransformBatchWithCriteria):
     """
     def __init__(self,
                  crop_size: ShapeX,
-                 criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+                 criteria_fn: Optional[CriteriaFn] = None,
                  resize_mode: Literal['nearest', 'linear', 'none'] = 'linear'):
 
         if criteria_fn is None:

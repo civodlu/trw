@@ -1,12 +1,11 @@
 import functools
 from numbers import Number
-from typing import Optional, Callable, List, Sequence
+from .transforms import CriteriaFn
+from typing import Optional, Sequence
 
 from ..transforms import transforms
 from ..transforms.normalize import normalize
 import collections
-
-from ..basic_typing import Batch
 
 
 def _transform_normalize(features_names, batch, mean, std):
@@ -40,7 +39,7 @@ class TransformNormalizeIntensity(transforms.TransformBatchWithCriteria):
             self,
             mean: Sequence[Number],
             std: Sequence[Number],
-            criteria_fn: Optional[Callable[[Batch], List[str]]] = None):
+            criteria_fn: Optional[CriteriaFn] = None):
 
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_4_or_above

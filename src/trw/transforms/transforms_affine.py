@@ -1,12 +1,13 @@
 import collections
 from numbers import Number
-from typing import Sequence, Callable, List
+
+from typing import Sequence, Optional
 
 import numpy as np
 import torch
+from .transforms import CriteriaFn
 from ..transforms import transforms
 from ..transforms import affine
-from ..basic_typing import Batch
 
 
 def rand_n_2(n_min_max):
@@ -105,7 +106,7 @@ class TransformAffine(transforms.TransformBatchWithCriteria):
             scaling_min_max: Sequence[Number],
             rotation_radian_min_max: Sequence[Number],
             isotropic: bool = True,
-            criteria_fn: Callable[[Batch], List[str]] = None,
+            criteria_fn: Optional[CriteriaFn] = None,
             padding_mode: str = 'zeros'):
         """
 

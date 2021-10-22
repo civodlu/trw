@@ -1,10 +1,8 @@
-from typing import Sequence, Callable, List, Union, Optional
+from typing import Sequence, Union, Optional
 from typing_extensions import Literal
-
+from .transforms import CriteriaFn
 from .deform import deform_image_random
-
 from ..transforms import transforms
-from ..basic_typing import Batch
 
 
 class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
@@ -19,7 +17,7 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
             self,
             control_points: Union[int, Sequence[int]] = 6,
             max_displacement: Optional[Union[float, Sequence[float]]] = 0.5,
-            criteria_fn: Callable[[Batch], List[str]] = None,
+            criteria_fn: Optional[CriteriaFn] = None,
             interpolation: Literal['linear', 'nearest'] = 'linear',
             padding_mode: Literal['zeros', 'border', 'reflection'] = 'zeros',
             gaussian_filter_sigma: Optional[float] = 1.5,
@@ -46,10 +44,11 @@ class TransformRandomDeformation(transforms.TransformBatchWithCriteria):
         self.control_points = control_points
         self.padding_mode = padding_mode
         self.gaussian_filter_sigma = gaussian_filter_sigma
-        self.criteria_fn = criteria_fn
 
         if criteria_fn is None:
             criteria_fn = transforms.criteria_is_array_4_or_above
+
+        self.criteria_fn = criteria_fn
 
         super().__init__(
             criteria_fn=criteria_fn,

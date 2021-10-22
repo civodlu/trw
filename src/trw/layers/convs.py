@@ -4,7 +4,7 @@ import copy
 from numbers import Number
 
 import torch
-from ..basic_typing import Activation, IntTupleList, ConvKernels, ConvStrides, PoolingSizes, Paddings
+from ..basic_typing import Activation, ConvKernels, ConvStrides, PoolingSizes, Paddings, IntListList
 from .utils import div_shape
 from .blocks import BlockConvNormActivation, BlockPool, ConvBlockType
 from .layer_config import default_layer_config, NormType, LayerConfig
@@ -32,7 +32,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             convolution_kernels: ConvKernels = 5,
             strides: ConvStrides = 1,
             pooling_size: Optional[PoolingSizes] = 2,
-            convolution_repeats: Union[int, List[int], IntTupleList] = 1,
+            convolution_repeats: Union[int, Sequence[int], IntListList] = 1,
             activation: Optional[Activation] = nn.ReLU,
             padding: Paddings = 'same',
             with_flatten: bool = False,
@@ -98,6 +98,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
         assert nb_convs == len(strides), 'must be specified for each convolutional layer'
         assert pooling_size is None or nb_convs == len(pooling_size), 'must be specified for each convolutional layer'
         assert nb_convs == len(convolution_repeats)
+        assert isinstance(convolution_repeats, collections.Sequence)
 
         self.with_flatten = with_flatten
 
@@ -111,11 +112,14 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
                 p = div_shape(convolution_kernels[n], 2)
             else:
                 assert not isinstance(padding, str)
-                p = padding[n]
+                p = padding[n]  # type: ignore
 
             ops = []
-            for r in range(convolution_repeats[n]):
-                is_last_repetition = (r + 1) == convolution_repeats[n]
+
+            nb_repeats = convolution_repeats[n]
+            assert isinstance(nb_repeats, int)
+            for r in range(nb_repeats):
+                is_last_repetition = (r + 1) == nb_repeats
                 if is_last_repetition:
                     stride = strides[n]
                 else:
@@ -126,7 +130,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
                     config.activation = None
                     config.norm = None
                     config.dropout = None
-                ops.append(conv_block_fn(config, prev, current, kernel_size=convolution_kernels[n], padding=p, stride=stride))
+                ops.append(conv_block_fn(config, prev, current, kernel_size=convolution_kernels[n], padding=p, stride=stride))  # type: ignore
                 prev = current
 
             if pooling_size is not None:

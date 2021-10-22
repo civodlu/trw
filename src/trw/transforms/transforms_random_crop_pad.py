@@ -1,14 +1,15 @@
 import collections
 
 import functools
-from typing import Optional, Callable, List
+from .transforms import CriteriaFn
+from typing import Optional
 
 from typing_extensions import Literal
 
 from ..utils import batch_pad_joint
 from ..transforms import transforms
 from ..transforms import crop
-from ..basic_typing import ShapeCX, Batch, Numeric
+from ..basic_typing import ShapeCX, Numeric
 
 
 def _transform_random_crop_pad(features_names, batch, padding, mode='edge', constant_value=0, shape=None):
@@ -75,7 +76,7 @@ class TransformRandomCropPad(transforms.TransformBatchWithCriteria):
     def __init__(
             self,
             padding: Optional[ShapeCX],
-            criteria_fn: Optional[Callable[[Batch], List[str]]] = None,
+            criteria_fn: Optional[CriteriaFn] = None,
             mode: Literal['constant', 'edge', 'symmetric'] = 'constant',
             constant_value: Numeric = 0,
             shape: Optional[ShapeCX] = None):

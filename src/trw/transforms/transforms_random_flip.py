@@ -1,9 +1,9 @@
 import collections
 
 import functools
-from typing import Optional, Callable, List
+from .transforms import CriteriaFn
+from typing import Optional
 
-from ..basic_typing import Batch
 from ..transforms import transforms
 from ..transforms.flip import transform_batch_random_flip_joint
 
@@ -27,7 +27,7 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
     def __init__(self,
                  axis: int,
                  flip_probability: float = 0.5,
-                 criteria_fn: Optional[Callable[[Batch], List[str]]] = None):
+                 criteria_fn: Optional[CriteriaFn] = None):
         """
         Args:
             axis: the axis to flip

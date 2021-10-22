@@ -81,6 +81,7 @@ Activation = Any
 
 
 IntTupleList = List[Tuple[int, ...]]
+IntListList = List[List[int]]
 
 ConvKernels = Union[int, Sequence[int], IntTupleList]
 ConvStrides = ConvKernels

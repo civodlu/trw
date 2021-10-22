@@ -25,6 +25,27 @@ class DownType(Protocol):
         ...
 
 
+class BlockConvType(Protocol):
+    def __call__(
+            self,
+            config: LayerConfig,
+            input_channels: int,
+            output_channels: int,
+            **kwargs) -> nn.Module:
+        pass
+
+
+class BlockTypeConvSkip(Protocol):
+    def __call__(
+            self,
+            config: LayerConfig,
+            skip_channels: int,
+            input_channels: int,
+            output_channels: int,
+            **kwargs) -> nn.Module:
+        pass
+
+
 class Down(nn.Module):
     def __init__(
             self,
@@ -32,7 +53,7 @@ class Down(nn.Module):
             bloc_level: int,
             input_channels: int,
             output_channels: int,
-            block: nn.Module = BlockConvNormActivation,
+            block: BlockConvType = BlockConvNormActivation,
             **block_kwargs):
         super().__init__()
 
@@ -67,7 +88,7 @@ class Up(nn.Module):
             skip_channels: int,
             input_channels: int,
             output_channels: int,
-            block: nn.Module = BlockUpDeconvSkipConv,
+            block: BlockTypeConvSkip = BlockUpDeconvSkipConv,
             **block_kwargs):
         super().__init__()
         self.ops = block(
@@ -106,7 +127,7 @@ class LatentConv(nn.Module):
             input_channels: int,
             output_channels: int,
             latent_channels: Optional[int] = None,
-            block: nn.Module = BlockConvNormActivation,
+            block: BlockConvType = BlockConvNormActivation,
             **block_kwargs):
         super().__init__()
         self.latent_channels = latent_channels
@@ -130,6 +151,7 @@ class LatentConv(nn.Module):
             assert len(x.shape) == len(latent.shape)
 
             assert latent.shape[1] == self.latent_channels
+            assert self.dim is not None
             assert len(latent.shape) == self.dim + 2
             if latent.shape[2:] != x.shape[2:]:
                 # we need to resize the latent variable
@@ -289,7 +311,8 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
         config.dropout = None
         self.output = output_block_fn(config, out_init_channels, self.output_channels)
 
-    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[torch.Tensor]:
+    def forward_with_intermediate(self, x: torch.Tensor, latent: Optional[torch.Tensor] = None, **kwargs) -> Sequence[torch.Tensor]:
+        assert len(kwargs) == 0
         prev = self.init_block(x)
         x_n = [prev]
         for down in self.downs:
@@ -327,6 +350,3 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
         intermediates = self.forward_with_intermediate(x, latent)
         assert len(intermediates)
         return intermediates[-1]
-
-
-
