@@ -3,14 +3,14 @@ import copy
 import torch.nn as nn
 from .layer_config import default_layer_config, LayerConfig, NormType
 from .flatten import Flatten
-from typing import Any, Sequence, List
+from typing import Any, Sequence, List, Optional
 
 
 def denses(
         sizes: Sequence[int],
         dropout_probability: float = None,
         activation: Any = nn.ReLU,
-        normalization_type: NormType = NormType.BatchNorm,
+        normalization_type: Optional[NormType] = NormType.BatchNorm,
         last_layer_is_output: bool = False,
         with_flatten: bool = True,
         config: LayerConfig = default_layer_config(dimensionality=None)) -> nn.Module:

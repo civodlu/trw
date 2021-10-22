@@ -4,7 +4,7 @@ from typing import Sequence, Union, Optional, Any, Dict, Callable, List
 
 import torch
 import torch.nn as nn
-from ..basic_typing import NestedIntSequence
+from ..basic_typing import IntTupleList
 from .utils import div_shape
 from .convs import ModuleWithIntermediate, NormType, LayerConfig, default_layer_config
 from .blocks import BlockDeconvNormActivation, ConvTransposeBlockType
@@ -25,9 +25,9 @@ class ConvsTransposeBase(nn.Module, ModuleWithIntermediate):
             input_channels: int,
             channels: Sequence[int],
             *,
-            convolution_kernels: Union[int, List[int], NestedIntSequence] = 5,
-            strides: Union[int, List[int], NestedIntSequence] = 2,
-            paddings: Optional[Union[str, int, List[int], NestedIntSequence]] = None,
+            convolution_kernels: Union[int, List[int], IntTupleList] = 5,
+            strides: Union[int, List[int], IntTupleList] = 2,
+            paddings: Optional[Union[str, int, List[int], IntTupleList]] = None,
             activation: Any = nn.ReLU,
             activation_kwargs: Dict = {},
             dropout_probability: Optional[float] = None,

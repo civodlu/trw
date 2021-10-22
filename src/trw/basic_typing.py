@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Sequence, Union, Dict, Any, List, Optional
+from typing import Sequence, Union, Dict, Any, List, Optional, Tuple
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
 import torch
@@ -80,16 +80,16 @@ History = List[HistoryStep]
 Activation = Any
 
 
-NestedIntSequence = List[Sequence[int]]
+IntTupleList = List[Tuple[int, ...]]
 
-ConvKernels = Union[int, List[int], NestedIntSequence]
+ConvKernels = Union[int, Sequence[int], IntTupleList]
 ConvStrides = ConvKernels
 PoolingSizes = Optional[ConvKernels]
 
-Stride = Union[int, Sequence[int]]
-KernelSize = Union[int, Sequence[int]]
-Padding = Union[int, str, Sequence[int]]
-Paddings = Union[str, int, List[int], List[str], NestedIntSequence]
+Stride = Union[int, Tuple[int, ...]]
+KernelSize = Union[int, Tuple[int, ...]]
+Padding = Union[int, str, Tuple[int, ...]]
+Paddings = Union[Padding, Sequence[int], Sequence[str], IntTupleList]
 
 
 class ModuleCreator(Protocol):

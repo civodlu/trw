@@ -1,3 +1,5 @@
+import collections
+
 from functools import partial
 
 import copy
@@ -40,7 +42,7 @@ class EncoderDecoderResnet(nn.Module):
         # encoding path
         #
         nb_convs = len(encoding_channels)
-        if not isinstance(encoding_strides, list):
+        if not isinstance(encoding_strides, collections.Sequence):
             encoding_strides = [encoding_strides] * nb_convs
         assert len(encoding_strides) == nb_convs
 
@@ -63,6 +65,7 @@ class EncoderDecoderResnet(nn.Module):
 
         self.encoders = nn.ModuleList()  # do NOT store in a list, else the layer parameters will not be found!
         for cur, stride in zip(encoding_channels, encoding_strides):
+            assert isinstance(stride, (int, tuple))
             block = encoding_block(config_enc, prev, cur, kernel_size=convolution_kernel, stride=stride)
             prev = cur
             self.encoders.append(block)
@@ -81,12 +84,13 @@ class EncoderDecoderResnet(nn.Module):
             config_dec.activation = activation
 
         nb_convs = len(decoding_channels)
-        if not isinstance(decoding_strides, list):
+        if not isinstance(decoding_strides, collections.Sequence):
             decoding_strides = [decoding_strides] * nb_convs
         assert len(decoding_strides) == nb_convs
 
         self.decoders = nn.ModuleList()  # do NOT store in a list, else the layer parameters will not be found!
         for cur, stride in zip(decoding_channels, encoding_strides):
+            assert isinstance(stride, int), 'todo: tuple not handled'
             block = decoding_block(
                 config_dec,
                 prev,

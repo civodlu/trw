@@ -2,7 +2,7 @@ import copy
 from numbers import Number
 
 import torch
-from ..basic_typing import Activation, NestedIntSequence, ConvKernels, ConvStrides, PoolingSizes, Paddings
+from ..basic_typing import Activation, IntTupleList, ConvKernels, ConvStrides, PoolingSizes, Paddings
 from .utils import div_shape
 from .blocks import BlockConvNormActivation, BlockPool, ConvBlockType
 from .layer_config import default_layer_config, NormType, LayerConfig
@@ -30,7 +30,7 @@ class ConvsBase(nn.Module, ModuleWithIntermediate):
             convolution_kernels: ConvKernels = 5,
             strides: ConvStrides = 1,
             pooling_size: Optional[PoolingSizes] = 2,
-            convolution_repeats: Union[int, List[int], NestedIntSequence] = 1,
+            convolution_repeats: Union[int, List[int], IntTupleList] = 1,
             activation: Optional[Activation] = nn.ReLU,
             padding: Paddings = 'same',
             with_flatten: bool = False,

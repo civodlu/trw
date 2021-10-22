@@ -1,7 +1,7 @@
 import collections
 import functools
 import os
-from typing import Optional, List, Callable, Any
+from typing import Optional, List, Callable, Any, Union
 
 import torchvision
 import torch
@@ -105,6 +105,7 @@ def create_dataset_from_archive_url(
     dataset = collections.OrderedDict()
     assert split_train_name in split_names, 'no training split!'
     for split_name in split_names:
+        sampler: Union[SamplerRandom, SamplerSequential]
         if split_name == split_train_name:
             sampler = SamplerRandom(batch_size=batch_size)
         else:

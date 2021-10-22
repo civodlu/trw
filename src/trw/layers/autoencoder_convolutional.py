@@ -6,7 +6,7 @@ from .layer_config import NormType, LayerConfig, default_layer_config
 from .convs_transpose import ConvsTransposeBase
 from .crop_or_pad import crop_or_pad_fun
 from ..layers.convs import ModuleWithIntermediate, ConvsBase
-from ..basic_typing import NestedIntSequence, Activation
+from ..basic_typing import IntTupleList, Activation
 
 
 class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
@@ -25,9 +25,9 @@ class AutoencoderConvolutional(nn.Module, ModuleWithIntermediate):
             encoder_channels: Sequence[int],
             decoder_channels: Sequence[int],
             convolution_kernels: Optional[Union[int, Sequence[int]]] = 5,
-            encoder_strides: Union[int, List[int], NestedIntSequence] = 1,
-            decoder_strides: Union[int, List[int], NestedIntSequence] = 2,
-            pooling_size: Optional[Union[int, List[int], NestedIntSequence]] = 2,
+            encoder_strides: Union[int, List[int], IntTupleList] = 1,
+            decoder_strides: Union[int, List[int], IntTupleList] = 2,
+            pooling_size: Optional[Union[int, List[int], IntTupleList]] = 2,
             convolution_repeats: Union[int, Sequence[int]] = 1,
             activation: Optional[Activation] = nn.ReLU,
             dropout_probability: Optional[float] = None,

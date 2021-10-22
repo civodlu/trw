@@ -113,11 +113,11 @@ def create_cycle_gan_dataset(
 
     if transform_train is not None:
         assert isinstance(transform_train, list)
-        transform_train = TransformCompose(transform_train)
+        transform_train = TransformCompose(transform_train)  # type: ignore
 
     if transform_valid is not None:
         assert isinstance(transform_valid, list)
-        transform_valid = TransformCompose(transform_valid)
+        transform_valid = TransformCompose(transform_valid)  # type: ignore
 
     url_dataset = os.path.join(url, dataset_name + '.zip')
     dataset_path = os.path.join(root, dataset_name + '_cycle')

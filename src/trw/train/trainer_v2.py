@@ -195,7 +195,7 @@ class TrainerV2:
             losses_fn:
             loss_creator:
             log_path: the path of the logs to be exported during the training of the model.
-                if the `log_path` is a relative path, the options.workflow_options.logging_directory
+                if the `log_path` is not an absolute path, the options.workflow_options.logging_directory
                 is used as root
             with_final_evaluation:
             history:
