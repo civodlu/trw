@@ -58,8 +58,6 @@ class SwishCompat(nn.Module):
         return x * torch.sigmoid(x)
 
 
-Swish: Union[nn.SiLU, SwishCompat]
-
 if hasattr(nn, 'SiLU'):
     Swish = nn.SiLU
 else:

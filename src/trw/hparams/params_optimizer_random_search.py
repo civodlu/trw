@@ -78,8 +78,8 @@ class HyperParametersOptimizerRandomSearchLocal(HyperParametersOptimizer):
                 status = 'FAILED'
                 self.log_string(f'iteration={iteration} was terminated early (epoch={len(history)}). Reason={e.reason}')
             except RuntimeError as e:
-                metrics = None
-                history = None
+                metrics = None  # type: ignore
+                history = None  # type: ignore
                 status = 'FAILED'
                 info = f'Run FAILED. Exception={e}'
                 self.log_string(f'iteration={iteration} FAILED. Exception={e}')

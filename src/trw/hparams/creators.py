@@ -12,7 +12,7 @@ from typing_extensions import Literal
 
 from .params import create_discrete_value, create_boolean, create_continuous_power
 from ..train.optimizers import create_sgd_optimizers_fn, create_adam_optimizers_fn
-from ..basic_typing import Datasets
+from ..basic_typing import Datasets, ModuleCreator
 from ..layers.layer_config import NormType, PoolType
 
 
@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 def create_optimizers_fn(
         datasets: Datasets,
         model: nn.Module,
-        optimizers: Sequence[Literal['adam', 'sgd']] = ('adam', 'sgd'),
+        optimizers: Sequence[Literal['adam', 'sgd']] = ('adam', 'sgd'),  # type: ignore  # TODO revisit this one
         lr_range: Tuple[float, float, float] = (1e-3, -5, -1),
         momentum: Sequence[float] = (0.5, 0.9, 0.99),
         beta_1: Sequence[float] = (0.9,),
@@ -55,6 +55,7 @@ def create_optimizers_fn(
         A dict of optimizer per dataset
     """
     optimizer_name = create_discrete_value(name_prefix + 'optimizers', default_value=optimizers[0], values=list(optimizers))
+
     if optimizer_name == 'sgd':
         learning_rate = create_continuous_power(name_prefix + 'optimizers.sgd.lr', lr_range[0], lr_range[1], lr_range[2])
         momentum = create_discrete_value(name_prefix + 'optimizers.sgd.momentum', momentum[0], list(momentum))
@@ -94,12 +95,14 @@ def create_optimizers_fn(
             weight_decay=w,
             eps=e
         )
+    else:
+        raise ValueError(f'unhandled value={optimizer_name}')
 
 
 def create_activation(
         name: str,
         default_value: nn.Module,
-        functions: Sequence[nn.Module] = (
+        functions: Sequence[ModuleCreator] = (
                 nn.ReLU,
                 nn.ReLU6,
                 nn.LeakyReLU,
