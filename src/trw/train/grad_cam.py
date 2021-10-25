@@ -95,8 +95,9 @@ class GradCam:
                         break
                 if selected_output is None:
                     # can't find a proper output to use
-                    logger.error('`No suitable output detected (must be derived from `trw.train.OutputClassification`! '
-                                 'Grad-CAM not calculated!'.format(target_class_name))
+                    logger.error(f'`No suitable output detected (must be derived from '
+                                 f'`trw.train.OutputClassification`! Grad-CAM not calculated! '
+                                 f'class={target_class_name}')
                     return None
         else:
             selected_output = model_outputs.get(target_class_name)

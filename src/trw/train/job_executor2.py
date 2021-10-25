@@ -107,6 +107,7 @@ def worker(
                     if transform is not None and item is not None:
                         try:
                             item = transform(item)
+                            assert job_metadata is not None
                             job_metadata.job_processing_finished = time.perf_counter()
                         except Exception as e:
                             # exception is intercepted and skip to next job
@@ -124,6 +125,7 @@ def worker(
 
                 while True:
                     try:
+                        assert job_metadata is not None
                         job_metadata.job_results_queued = time.perf_counter()
                         output_queue.put((job_metadata, item))
                         item = None
@@ -141,7 +143,7 @@ def worker(
             else:
                 flush_queue(input_queue)
                 print(f'Worker={os.getpid()} Stopping (abort_event SET)!!', flush=True)
-                synchronized_stop.wait()
+                synchronized_stop.wait()  # type: ignore
                 print(f'Worker={os.getpid()} Stopped (abort_event SET)!!', flush=True)
                 return
 
@@ -170,7 +172,7 @@ def worker(
             traceback.print_exc(file=string_io)
             print(string_io.getvalue())
             print('-------------------------------------------------------', flush=True)
-            global_abort_event.set()
+            global_abort_event.set()  # type: ignore
 
     print(f'worker unreachable! thread_id={os.getpid()}', flush=True)
 

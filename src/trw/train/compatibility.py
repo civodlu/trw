@@ -1,4 +1,4 @@
-from typing import Union
+from typing import List, Optional
 
 import warnings
 
@@ -9,7 +9,7 @@ from packaging.version import Version
 torch_version = Version(torch.__version__)
 
 
-def affine_grid(theta, size, align_corners):
+def affine_grid(theta: torch.Tensor, size: List[int], align_corners: Optional[bool]) -> torch.Tensor:
     """
     Compatibility layer for new arguments introduced in pytorch 1.3
 
@@ -25,7 +25,11 @@ def affine_grid(theta, size, align_corners):
         return torch.nn.functional.affine_grid(theta=theta, size=size)
 
 
-def grid_sample(input, grid, mode='bilinear', padding_mode='zeros', align_corners=None):
+def grid_sample(
+        input: torch.Tensor,
+        grid: torch.Tensor,
+        mode: str = 'bilinear',
+        padding_mode: str = 'zeros', align_corners: bool = None) -> torch.Tensor:
     """
     Compatibility layer for argument change between pytorch <= 1.2 and pytorch > 1.3
 
@@ -61,7 +65,7 @@ class SwishCompat(nn.Module):
 if hasattr(nn, 'SiLU'):
     Swish = nn.SiLU
 else:
-    Swish = SwishCompat
+    Swish = SwishCompat  # type: ignore
 
 
 if hasattr(torch, 'linalg'):
@@ -77,7 +81,7 @@ else:
 if hasattr(torch.nn, 'Identity'):
     Identity = torch.nn.Identity
 else:
-    class Identity(nn.Module):
+    class Identity(nn.Module):  # type: ignore
         def __init__(self):
             super(Identity, self).__init__()
 

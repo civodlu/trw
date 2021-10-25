@@ -1,7 +1,7 @@
 """
 Defines the main plots and reports used for the analysis of our models
 """
-from typing import List, Optional
+from typing import List, Optional, Dict, Union, Mapping, MutableMapping, Sequence, Tuple, Set
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -29,7 +29,7 @@ def fig_tight_layout(fig):
         logger.error('tight_layout failed=%s' % str(e))
 
 
-def auroc(trues, found_1_scores):
+def auroc(trues: np.ndarray, found_1_scores: np.ndarray) -> float:
     """
     Calculate the area under the curve of the ROC plot (AUROC)
 
@@ -271,7 +271,7 @@ def plot_roc(export_path, trues, found_scores_1, title, label_name=None, colors=
     plt.close()
 
 
-def list_classes_from_mapping(mappinginv: collections.Mapping, default_name='unknown'):
+def list_classes_from_mapping(mappinginv: Optional[collections.Mapping], default_name: str = 'unknown'):
     """
     Create a contiguous list of label names ordered from 0..N from the class mapping
 
@@ -293,7 +293,7 @@ def classification_report(
         predictions: np.ndarray,
         prediction_scores: np.ndarray,
         trues: collections.Sequence,
-        class_mapping: collections.Mapping=None):
+        class_mapping: Optional[collections.Mapping] = None):
     """
     Summarizes the important statistics for a classification problem
     :param predictions: the classes predicted
@@ -302,19 +302,20 @@ def classification_report(
     :param class_mapping: the class mapping (class id, class name)
     :return: a dictionary of statistics or sub-report
     """
-    assert trues.shape == predictions.shape
+    trues_np = np.asarray(trues)
+    assert trues_np.shape == predictions.shape
     assert isinstance(trues[0], numbers.Integral), 'must be a list of classes'
 
-    cm = sklearn.metrics.confusion_matrix(y_pred=predictions, y_true=trues)
+    cm = sklearn.metrics.confusion_matrix(y_pred=predictions, y_true=trues_np)
     labels = list_classes_from_mapping(class_mapping)
     try:
-        report_str = sklearn.metrics.classification_report(y_true=trues, y_pred=predictions, target_names=labels)
+        report_str = sklearn.metrics.classification_report(y_true=trues_np, y_pred=predictions, target_names=labels)
     except ValueError as e:
-        report_str = 'Report failed. Exception={}'.format(e)
+        report_str = f'Report failed. Exception={e}'
         
-    accuracy = float(np.sum(predictions == trues)) / len(trues)
+    accuracy = float(np.sum(predictions == trues_np)) / len(trues_np)
 
-    d = collections.OrderedDict()
+    d: Dict[str, Union[str, float]] = {}
     d['accuracy'] = accuracy
     d['sklearn_report'] = report_str
 
@@ -350,11 +351,12 @@ def classification_report(
         else:
             # handle binary outputs
             prediction_1_scores = prediction_scores
-        d['auroc'] = auroc(trues=trues, found_1_scores=prediction_1_scores)
+        d['auroc'] = auroc(trues=trues_np, found_1_scores=prediction_1_scores)
 
     # calculate the most common errors
-    error_by_class = collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
-    for found, groundtruth in zip(predictions, trues):
+    error_by_class: MutableMapping[int, MutableMapping[int, int]] = \
+        collections.defaultdict(lambda: collections.defaultdict(lambda: 0))
+    for found, groundtruth in zip(predictions, trues_np):
         if found != groundtruth:
             error_by_class[groundtruth][found] += 1
 
@@ -374,12 +376,19 @@ def classification_report(
                 key_name = key
             largest_errors.append((key_name, nb))
 
-        class_str = 'class (total=%d)=%s, errors=%s\n' % (np.sum(trues == groundtruth), str(c), str(largest_errors))
-        d['error_%d' % error_id] = class_str
+        class_str = f'class (total={np.sum(trues_np == groundtruth)})={str(c)}, errors={str(largest_errors)}\n'
+        d[f'error_{error_id}'] = class_str
     return d
 
 
-def plot_group_histories(root, history_values, title, xlabel, ylabel, max_nb_plots_per_group=5, colors=utilities.make_unique_colors_f()):
+def plot_group_histories(
+        root: str,
+        history_values: List[List[Tuple[int, numbers.Number]]],
+        title: str,
+        xlabel: str,
+        ylabel: str,
+        max_nb_plots_per_group: int = 5,
+        colors: Sequence[tuple] = utilities.make_unique_colors_f()) -> None:
     """
     Plot groups of histories
     :param root: the directory where the plot will be exported
@@ -424,24 +433,24 @@ def plot_group_histories(root, history_values, title, xlabel, ylabel, max_nb_plo
 
 
 def confusion_matrix(
-        export_path,
-        classes_predictions,
-        classes_trues,
-        classes: list=None,
-        normalize=False,
-        title='Confusion matrix',
+        export_path: str,
+        classes_predictions: np.ndarray,
+        classes_trues: np.ndarray,
+        classes: Sequence[str] = None,
+        normalize: bool = False,
+        title: str = 'Confusion matrix',
         cmap=plt.cm.Greens,
-        display_numbers=True,
-        maximum_chars_per_line=50,
-        rotate_x=None,
-        rotate_y=None,
-        display_names_x=True,
-        sort_by_decreasing_sample_size=True,
-        excludes_classes_with_samples_less_than=None,
-        main_font_size=16,
-        sub_font_size=8,
-        normalize_unit_percentage=False,
-        max_size_x_label=10):
+        display_numbers: bool = True,
+        maximum_chars_per_line: int = 50,
+        rotate_x: Optional[int] = None,
+        rotate_y: Optional[int] = None,
+        display_names_x: bool = True,
+        sort_by_decreasing_sample_size: bool = True,
+        excludes_classes_with_samples_less_than: bool = None,
+        main_font_size: int = 16,
+        sub_font_size: int = 8,
+        normalize_unit_percentage: bool = False,
+        max_size_x_label: int = 10) -> None:
     """
     Plot the confusion matrix of a predicted class versus the true class
 
@@ -464,7 +473,6 @@ def confusion_matrix(
     :param main_font_size: the font size of the text
     :param sub_font_size: the font size of the sub-elements (e.g., ticks)
     :param max_size_x_label: the maximum length of a label on the x-axis
-    :return:
     """
     if classes is not None:
         assert max(classes_trues) <= len(classes), 'there are more classes than class names!'
@@ -475,7 +483,8 @@ def confusion_matrix(
 
         # first, calculate the most classes with the highest number of samples
         # we need to keep track of the 2 trues & truths: these may be different
-        class_samples = collections.Counter(np.concatenate([np.asarray(classes_trues), np.asarray(classes_predictions)]))
+        class_samples: MutableMapping[int, int] = \
+            collections.Counter(np.concatenate([np.asarray(classes_trues), np.asarray(classes_predictions)]))
         sorted_classes = sorted(list(class_samples.items()), key=lambda t: t[1], reverse=True)
         new_mappings = {}
         for new_mapping, (old_mapping, nb_samples) in enumerate(sorted_classes):
@@ -496,9 +505,9 @@ def confusion_matrix(
 
     if sort_by_decreasing_sample_size and excludes_classes_with_samples_less_than is not None:
         # IMPORTANT: we must have sorted by size before excluding the classes with low number of samples!
-        # else the `classes` will not be consitent with the class id
+        # else the `classes` will not be consistent with the class id
         class_samples = collections.Counter(classes_trues)
-        indices_to_keep = set()
+        indices_to_keep: Set[int] = set()
         classes_to_keep = []
         for class_id, num_samples in class_samples.items():
             if num_samples >= excludes_classes_with_samples_less_than:
