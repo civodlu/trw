@@ -1,3 +1,6 @@
+from ..basic_typing import Batch
+from typing import Union, List, Dict, Mapping, Sequence, Any
+
 import collections
 import logging
 import numbers
@@ -10,7 +13,24 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def collate_tensors(values, device, pin_memory=False, non_blocking=False):
+def collate_tensors(
+        values: Union[
+            np.ndarray,
+            torch.Tensor,
+            Union[
+                List[np.ndarray],
+                List[torch.Tensor],
+                List[numbers.Number],
+                List[str],
+                List[List[np.ndarray]],
+                List[List[torch.Tensor]],
+                List[List[numbers.Number]],
+                List[List[str]]
+            ]
+        ],
+        device: torch.device,
+        pin_memory: bool = False,
+        non_blocking: bool = False) -> Union[torch.Tensor, List]:
     """
     express `values` as a torch.Tensor
 
@@ -18,7 +38,8 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     Args:
         values: nd.array or torch.Tensor
         device: the device where to create the torch.Tensor
-        pin_memory: if True, pin the memory. Required to be a `Cuda` allocated torch.Tensor
+        pin_memory: if True, pin the memory. Required to be a `CUDA` allocated torch.Tensor
+        non_blocking: if True, use non blocking memory transfer
 
     Returns:
         a torch.Tensor if of type numpy.ndarray else, the input type
@@ -30,11 +51,11 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     if isinstance(values, list) and isinstance(values[0], torch.Tensor):
         if len(values) == 1:
             # no need to concatenate if we have only a single element!
-            # this usecase is quite common with SequenceAsyncReservoir
+            # this scenario is quite common with SequenceAsyncReservoir
             # and taking significant time with large tensors
             tensor = values[0]
         else:
-            tensor = torch.cat(values)
+            tensor = torch.cat(values)  # type: ignore
     elif isinstance(values, list) and isinstance(values[0], np.ndarray):
         tensor = torch.as_tensor(np.concatenate(values))
     elif isinstance(values, np.ndarray):
@@ -42,7 +63,7 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
 
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], torch.Tensor):
         # this is from a list of dictionary
-        merged = [torch.cat(value) for value in values]
+        merged = [torch.cat(value) for value in values]  # type: ignore
         if len(merged) == 1:
             tensor = merged[0].view([1] + list(merged[0].shape))
         else:
@@ -59,9 +80,9 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], numbers.Number):
         tensor = torch.as_tensor(np.concatenate(values))
     elif isinstance(values, list) and isinstance(values[0], list) and isinstance(values[0][0], str):
-        r = []
+        r = []  # type: ignore
         for r_append in values:
-            r += r_append
+            r += r_append  # type: ignore
         tensor = r
 
     # on torch.Tensor only
@@ -75,7 +96,11 @@ def collate_tensors(values, device, pin_memory=False, non_blocking=False):
     return tensor
 
 
-def collate_dicts(batch, device, pin_memory=False, non_blocking=False):
+def collate_dicts(
+        batch: Batch,
+        device: torch.device,
+        pin_memory: bool = False,
+        non_blocking: bool = False) -> Mapping[str, Union[torch.Tensor, List]]:
     """
     Default function to collate a dictionary of samples to a dictionary of torch.Tensor
 
@@ -83,6 +108,7 @@ def collate_dicts(batch, device, pin_memory=False, non_blocking=False):
         batch: a dictionary of features
         device: the device where to create the torch.Tensor
         pin_memory: if True, pin the memory. Required to be a `CUDA` allocated torch.Tensor
+        non_blocking: if True, use non blocking memory transfer
 
     Returns:
         a dictionary of torch.Tensor
@@ -108,7 +134,11 @@ def collate_dicts(batch, device, pin_memory=False, non_blocking=False):
     return collated
 
 
-def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False):
+def collate_list_of_dicts(
+        batches: Sequence[Batch],
+        device: torch.device,
+        pin_memory: bool = False,
+        non_blocking: bool = False) -> Mapping[str, Union[torch.Tensor, List]]:
     """
         Default function to collate a list of dictionary to a dictionary of `torch.Tensor`s
 
@@ -116,6 +146,7 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
             batches: a list of dictionary of features
             device: the device where to create the torch.Tensor
             pin_memory: if True, pin the memory. Required to be a `CUDA` allocated torch.Tensor
+            non_blocking: if True, use non blocking memory transfer
 
         Returns:
             a dictionary of torch.Tensor
@@ -127,7 +158,7 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
     d = collections.OrderedDict()
     for key in batches[0]:
         try:
-            bs = [b[key] for b in batches]
+            bs: Union[torch.Tensor, List] = [b[key] for b in batches]
             bs = collate_tensors(bs, device=device, pin_memory=pin_memory, non_blocking=non_blocking)
             d[key] = bs
         except Exception as e:
@@ -140,13 +171,18 @@ def collate_list_of_dicts(batches, device, pin_memory=False, non_blocking=False)
     return d
 
 
-def default_collate_fn(batch, device, pin_memory=False, non_blocking=False):
+def default_collate_fn(
+        batch: Union[Sequence[Any], Mapping[str, Any]],
+        device: torch.device,
+        pin_memory: bool = False,
+        non_blocking: bool = False):
     """
 
     Args:
         batch: a dictionary of features or a list of dictionary of features
         device: the device where to create the torch.Tensor
         pin_memory: if True, pin the memory. Required to be a `CUDA` allocated torch.Tensor
+        non_blocking: if True, use non blocking memory transfer
 
     Returns:
         a dictionary of torch.Tensor

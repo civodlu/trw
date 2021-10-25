@@ -35,21 +35,24 @@ def cast_torch(tensor: torch.Tensor, cast_type: str) -> torch.Tensor:
 
 
 def cast(feature_names: Sequence[str], batch: Batch, cast_type: str) -> Batch:
+    batch_copy = {}
     for name in feature_names:
         t = batch[name]
         if isinstance(t, np.ndarray):
-            batch[name] = cast_np(t, cast_type)
+            batch_copy[name] = cast_np(t, cast_type)
         elif isinstance(t, torch.Tensor):
-            batch[name] = cast_torch(t, cast_type)
+            batch_copy[name] = cast_torch(t, cast_type)
         else:
-            raise NotImplementedError(f'type={type(t)} is not handled!')
+            batch_copy[name] = t
 
-    return batch
+    return batch_copy
 
 
 class TransformCast(transforms.TransformBatchWithCriteria):
     """
-    Cast tensors to a specified type
+    Cast tensors to a specified type.
+
+    Only :class:`numpy.ndarray` and :class:`torch.Tensor` types will be casted
     """
     def __init__(self, feature_names: Sequence[str], cast_type: str):
         """

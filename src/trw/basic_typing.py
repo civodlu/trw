@@ -1,5 +1,5 @@
 from numbers import Number
-from typing import Sequence, Union, Dict, Any, List, Optional, Tuple
+from typing import Sequence, Union, Dict, Any, List, Optional, Tuple, Mapping
 from typing_extensions import Protocol  # backward compatibility for python 3.6-3.7
 import numpy as np
 import torch
@@ -59,7 +59,7 @@ NumpyTensorNX = np.ndarray
 NumpyTensorX = np.ndarray
 
 """Represent a dictionary of (key, value)"""
-Batch = Dict[str, Any]
+Batch = Mapping[str, Any]
 
 """Length shaped as D, H, W, ..."""
 Length = Union[Sequence[float], np.ndarray, torch.Tensor]

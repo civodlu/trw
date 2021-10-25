@@ -143,7 +143,8 @@ def boxplots(
     :param ylabel: the label for axis y
     :param xlabel: the label for axis x
     :param meanline: if True, draw a line from the center of the plot for each history name to the next
-    :param maximum_chars_per_line: the maximum of characters allowed per line of title. If exceeded, newline will be created.
+    :param maximum_chars_per_line: the maximum of characters allowed per line of title. If exceeded,
+        newline will be created.
     :param plot_trials: if True, each trial of a feature will be plotted
     :param scale: the axis scale to be used
     :param y_range: if not None, the (min, max) of the y-axis
@@ -462,13 +463,16 @@ def confusion_matrix(
     :param title: the title of the plot
     :param cmap: the color map to use
     :param display_numbers: if True, display the numbers within each cell of the confusion matrix
-    :param maximum_chars_per_line: the title will be split every `maximum_chars_per_line` characters to avoid display issues
+    :param maximum_chars_per_line: the title will be split every `maximum_chars_per_line`
+        characters to avoid display issues
     :param rotate_x: if not None, indicates the rotation of the label on x axis
     :param rotate_y: if not None, indicates the rotation of the label on y axis
     :param display_names_x: if True, the class name, if specified, will also be displayed on the x axis
-    :param sort_by_decreasing_sample_size: if True, the confusion matrix will be sorted by decreasing number of samples. This can
+    :param sort_by_decreasing_sample_size: if True, the confusion matrix will
+        be sorted by decreasing number of samples. This can
     be useful to show if the errors may be due to low number of samples
-    :param excludes_classes_with_samples_less_than: if not None, the classes with less than `excludes_classes_with_samples_less_than` samples will be excluded
+    :param excludes_classes_with_samples_less_than: if not None, the classes with
+        less than `excludes_classes_with_samples_less_than` samples will be excluded
     :param normalize_unit_percentage if True, use 100% base as unit instead of 1.0
     :param main_font_size: the font size of the text
     :param sub_font_size: the font size of the sub-elements (e.g., ticks)
