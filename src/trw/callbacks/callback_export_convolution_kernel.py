@@ -1,7 +1,6 @@
 import os
 
-from trw.callbacks import Callback
-
+from .callback import Callback
 from ..utils import to_value
 from ..train import graph_reflection
 from ..train import utilities
