@@ -71,13 +71,15 @@ class TrainerV2:
         sql_database = None
         if metadata is not None:
             import copy
-            # we don't want this function to have side effects so copy
-            # the result
-            sql_database = metadata.options.workflow_options.sql_database
+            if metadata.options is not None:
+                # we don't want this function to have side effects so copy
+                # the result
+                sql_database = metadata.options.workflow_options.sql_database
 
-            # strip what can't be pickled
-            if sql_database is not None:
-                metadata.options.workflow_options.sql_database = None
+                # strip what can't be pickled
+                if sql_database is not None:
+                    metadata.options.workflow_options.sql_database = None
+
             metadata_cp = copy.copy(metadata)
             if metadata_cp.outputs is not None:
                 metadata_cp.outputs = strip_unpickable(metadata_cp.outputs)
@@ -96,7 +98,7 @@ class TrainerV2:
             pickle_module.dump(metadata_cp, f)
         torch.save(model.state_dict(), path, pickle_module=pickle_module)
 
-        if sql_database is not None:
+        if sql_database is not None and metadata.options is not None:
             # TODO find a cleaner and generic way of doing this...
             metadata.options.workflow_options.sql_database = sql_database
 

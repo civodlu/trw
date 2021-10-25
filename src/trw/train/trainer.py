@@ -13,7 +13,7 @@ try:
     from torch.cuda.amp import autocast
 except ModuleNotFoundError:
     # PyTorch version did not support autocast
-    autocast = None
+    autocast = None  # type: ignore
 
 from ..utils import to_value, len_batch, is_autocast_module_decorated
 

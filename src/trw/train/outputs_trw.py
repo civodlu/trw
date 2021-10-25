@@ -584,7 +584,7 @@ class OutputRegression(Output):
 
         if self.weights is not None:
             weights = self.weights
-            assert weights is not None, 'weight `` could not be found!'.format(self.weights)
+            assert weights is not None, f'weight `{self.weights}` could not be found!'
             assert len(weights) == len(losses), 'must have a weight per sample'
             assert len(weights.shape) == 1, 'must be a 1D vector'
         else:
@@ -645,7 +645,7 @@ class OutputTriplets(Output):
 
         if self.weight_name is not None:
             weights = batch.get(self.weight_name)
-            assert weights is not None, 'weight `` could not be found!'.format(self.weight_name)
+            assert weights is not None, f'weight `{self.weight_name}` could not be found!'
             assert len(weights) == len(losses), 'must have a weight per sample'
             assert len(weights.shape) == 1, 'must be a 1D vector'
             # expand to same shape size so that we can easily broadcast the weight

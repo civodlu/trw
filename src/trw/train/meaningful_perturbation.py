@@ -154,18 +154,18 @@ class MeaningfulPerturbation:
         if target_class_name is None and isinstance(outputs, collections.Mapping):
             for output_name, output in outputs.items():
                 if isinstance(output, outputs_trw.OutputClassification):
-                    logger.info('output found={}'.format(output_name))
+                    logger.info(f'output found={output_name}')
                     target_class_name = output_name
                     break
         output = MeaningfulPerturbation._get_output(target_class_name, outputs, self.model_output_postprocessing)
-        logger.info('original model output={}'.format(to_value(output)))
+        logger.info(f'original model output={output}')
         output_start = to_value(output)
 
         if target_class is None:
             target_class = torch.argmax(output, dim=1)
-            logger.info('target_class by sample={}, value={}'.format(target_class, output[:, target_class]))
+            logger.info(f'target_class by sample={target_class}, value={output[:, target_class]}')
         else:
-            logger.info('target class='.format(target_class))
+            logger.info(f'target class={target_class}')
 
         # construct our gradient target
         model_device = utilities.get_device(self.model, batch=inputs)
@@ -177,7 +177,8 @@ class MeaningfulPerturbation:
             img = input_value.detach()  # do not keep the gradient! This will be recorded by Callback_explain_decision
             if len(img.shape) != 4 and len(img.shape) != 5:
                 # must be (Sample, channel, Y, X) or (Sample, channel, Z, Y, X) input
-                logging.info('input={} was discarded as the shape={} do not match (Sample, channel, Y, X) or (Sample, channel, Z, Y, X)'.format(input_name, img.shape))
+                logging.info(f'input={input_name} was discarded as the shape={img.shape} do not match (Sample, '
+                             f'channel, Y, X) or (Sample, channel, Z, Y, X)')
                 continue
 
             logger.info('processing feature_name={}'.format(input_name))
@@ -196,6 +197,9 @@ class MeaningfulPerturbation:
 
             assert self.iterations > 0
             c_start = 0.0
+            upsampled_mask = None
+            perturbated_input = None
+            c = 1e1000
             for i in range(self.iterations):
                 optimizer.zero_grad()
 

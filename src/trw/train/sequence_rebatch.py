@@ -5,7 +5,7 @@ import torch
 import collections
 
 
-def split_in_2_batches(batch: collections.Mapping, first_batch_size: int):
+def split_in_2_batches(batch: collections.MutableMapping, first_batch_size: int):
     """
     Split a single batch into 2 batches. The first batch will have a fixed size.
 
