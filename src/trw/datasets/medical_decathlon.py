@@ -110,7 +110,7 @@ def _load_case_adaptor(batch: Batch, dataset: MedicalDecathlonDataset, transform
     data['sample_uid'] = ids
     if transform_fn is not None:
         data = transform_fn(data)  # type: ignore
-        
+
     return data
 
 

@@ -1,3 +1,5 @@
+import copy
+
 from typing import Sequence
 
 import numpy as np
@@ -35,15 +37,14 @@ def cast_torch(tensor: torch.Tensor, cast_type: str) -> torch.Tensor:
 
 
 def cast(feature_names: Sequence[str], batch: Batch, cast_type: str) -> Batch:
-    batch_copy = {}
+    # soft copy so that we don't modify the original batch values
+    batch_copy = copy.copy(batch)
     for name in feature_names:
-        t = batch[name]
+        t = batch_copy[name]
         if isinstance(t, np.ndarray):
-            batch_copy[name] = cast_np(t, cast_type)
+            batch_copy[name] = cast_np(t, cast_type)  # type: ignore  # local cope
         elif isinstance(t, torch.Tensor):
-            batch_copy[name] = cast_torch(t, cast_type)
-        else:
-            batch_copy[name] = t
+            batch_copy[name] = cast_torch(t, cast_type)  # type: ignore  # local cope
 
     return batch_copy
 

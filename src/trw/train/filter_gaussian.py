@@ -1,17 +1,20 @@
+from typing import Union, Optional, Any, Sequence
+
 import math
-import numbers
 import torch.nn as nn
 from torch.nn import functional as F
 import torch
 import functools
 import numpy as np
+from trw.basic_typing import TorchTensorNCX
+from typing_extensions import Literal
 
 
 class FilterFixed(nn.Module):
     """
     Apply a fixed filter to n-dimensional images
     """
-    def __init__(self, kernel, groups=1, padding=0):
+    def __init__(self, kernel: torch.Tensor, groups: int = 1, padding: int = 0):
         """
         Args:
             kernel: the kernel. format is expected to be [input_channels, output_channels, filter_size_n, ... filter_size_0]. For example,
@@ -33,9 +36,9 @@ class FilterFixed(nn.Module):
         elif len(kernel.shape) == 5:
             self.conv = functools.partial(F.conv3d, groups=groups, weight=self.kernel, padding=padding)
         else:
-            raise NotImplemented()
+            raise NotImplementedError()
 
-    def __call__(self, value):
+    def __call__(self, value: TorchTensorNCX) -> TorchTensorNCX:
         return self.conv(value)
 
 
@@ -43,25 +46,33 @@ class FilterGaussian(FilterFixed):
     """
     Implement a gaussian filter as a :class:`torch.nn.Module`
     """
-    def __init__(self, input_channels, nb_dims, sigma, kernel_sizes=None, padding='same', device=None):
+    def __init__(self,
+                 input_channels: int,
+                 nb_dims: int,
+                 sigma: Union[float, Sequence[float]],
+                 kernel_sizes: Optional[Union[int, Sequence[int]]] = None,
+                 padding: Literal['same', 'none'] = 'same',
+                 device: Optional[torch.device] = None):
         """
 
         Args:
             input_channels: the number of channels expected as input
-            kernel_sizes: the size of the gaussian kernel in each dimension. **Beware** if the kernel is too small, the gaussian approximation
-                will be inaccurate. If `None`, an appropriate guess will be used based on `sigma`
+            kernel_sizes: the size of the gaussian kernel in each dimension. **Beware** if the kernel is
+                too small, the gaussian approximation will be inaccurate. If too large, the computation
+                will be much slower for limited accuracy gain. If `None`, an appropriate guess will
+                be used based on ``sigma``
             sigma: the variance of the gaussian kernel
             padding: one of `same`, `none`
             nb_dims: the number of dimension of the image, excluding sample & channels dimensions
             device: the memory location of the kernel
         """
         # see https://discuss.pytorch.org/t/is-there-anyway-to-do-gaussian-filtering-for-an-image-2d-3d-in-pytorch/12351/8
-        if isinstance(sigma, numbers.Number):
+        if isinstance(sigma, float):
             sigma = [sigma] * nb_dims
         else:
             assert len(sigma) == nb_dims
 
-        if isinstance(kernel_sizes, numbers.Number):
+        if isinstance(kernel_sizes, int):
             kernel_sizes = [kernel_sizes] * nb_dims
 
         if kernel_sizes is None:
@@ -71,13 +82,13 @@ class FilterGaussian(FilterFixed):
                 k = 5 * s + s
                 if k % 2 == 0:
                     k += 1
-                kernel_sizes.append(k)
+                kernel_sizes.append(int(k))
         else:
             assert len(kernel_sizes) == nb_dims
 
         # The gaussian kernel is the product of the
         # gaussian function of each dimension.
-        kernel = 1
+        kernel = torch.tensor(1.0)
         meshgrids = torch.meshgrid(
             [
                 torch.arange(size, dtype=torch.float32)
@@ -97,7 +108,7 @@ class FilterGaussian(FilterFixed):
         kernel = kernel.repeat(input_channels, *[1] * (kernel.dim() - 1))
 
         if padding == 'same':
-            padding_value = tuple(np.asarray(kernel.shape[2:]) // 2)
+            padding_value: Any = tuple(np.asarray(kernel.shape[2:]) // 2)
         elif padding == 'none':
             padding_value = 0
         else:
