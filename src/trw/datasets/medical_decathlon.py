@@ -1,7 +1,7 @@
 import collections
 import functools
 import os
-from typing import Dict, Union, Callable, Optional
+from typing import Dict, Union, Callable, Optional, Mapping, MutableMapping
 
 from ..basic_typing import Batch, Dataset, Datasets
 from ..utils import optional_import
@@ -17,7 +17,7 @@ nib = optional_import('nibabel')
 
 def load_nifti(
         path: str,
-        dtype: np.dtype,
+        dtype,
         base_name: str,
         remove_patient_transform: bool = False) -> Dict[str, Union[str, torch.Tensor]]:
     """
@@ -83,7 +83,7 @@ class MedicalDecathlonDataset:
         self.task_root = os.path.join(root_data, task_name)
         self.remove_patient_transform = remove_patient_transform
 
-    def __call__(self, id: int) -> Dict[str, Union[str, torch.Tensor]]:
+    def __call__(self, id: int) -> MutableMapping[str, Union[str, torch.Tensor]]:
         data: Dict[str, Union[str, torch.Tensor]] = collections.OrderedDict()
         data_path = self.metadata[self.collection][id]
         for name, relative_path in data_path.items():
@@ -109,7 +109,8 @@ def _load_case_adaptor(batch: Batch, dataset: MedicalDecathlonDataset, transform
     data = dataset(ids[0])
     data['sample_uid'] = ids
     if transform_fn is not None:
-        data = transform_fn(data)
+        data = transform_fn(data)  # type: ignore
+        
     return data
 
 
