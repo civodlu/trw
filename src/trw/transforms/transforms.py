@@ -1,4 +1,4 @@
-from typing import Sequence, Callable, List
+from typing import Sequence, Callable
 
 import numpy as np
 import torch

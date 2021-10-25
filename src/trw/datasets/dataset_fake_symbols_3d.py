@@ -4,8 +4,7 @@ import numpy as np
 import functools
 
 from ..basic_typing import ShapeX, Datasets
-from ..datasets import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
-from ..datasets.dataset_fake_symbols import ShapeCreator
+from .dataset_fake_symbols import _random_color, _add_shape, _noisy, create_fake_symbols_datasset, ShapeCreator
 
 
 def _add_square_3d(imag, mask, shapes_added, scale_factor):
@@ -40,7 +39,7 @@ def create_fake_symbols_3d_dataset(
         nb_classes_at_once: Optional[int] = None,
         global_scale_factor: float = 1.0,
         normalize_0_1: bool = True,
-        noise_fn: Callable[[np.ndarray], np.ndarray] =functools.partial(_noisy, noise_type='poisson'),
+        noise_fn: Callable[[np.ndarray], np.ndarray] = functools.partial(_noisy, noise_type='poisson'),
         shapes_fn: ShapeCreator = default_shapes_3d,
         max_classes: Optional[int] = None,
         batch_size: int = 64,

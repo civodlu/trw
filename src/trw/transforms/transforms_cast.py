@@ -3,7 +3,7 @@ from typing import Sequence
 import numpy as np
 import torch
 import functools
-from ..transforms import transforms, criteria_feature_name
+from .transforms import criteria_feature_name, TransformBatchWithCriteria
 from ..basic_typing import Batch
 
 NUMPY_CONVERSION = {
@@ -48,7 +48,7 @@ def cast(feature_names: Sequence[str], batch: Batch, cast_type: str) -> Batch:
     return batch_copy
 
 
-class TransformCast(transforms.TransformBatchWithCriteria):
+class TransformCast(TransformBatchWithCriteria):
     """
     Cast tensors to a specified type.
 

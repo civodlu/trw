@@ -5,7 +5,7 @@ import numpy as np
 import functools
 
 from ..basic_typing import ShapeX, Datasets
-from ..datasets import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
+from .dataset_fake_symbols import _random_color, _add_shape, _noisy, create_fake_symbols_datasset
 from ..datasets.dataset_fake_symbols import ShapeCreator
 
 
