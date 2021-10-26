@@ -1,4 +1,4 @@
-import numbers
+import collections
 
 from typing import Union, Optional, Any, Sequence
 
@@ -51,7 +51,7 @@ class FilterGaussian(FilterFixed):
     def __init__(self,
                  input_channels: int,
                  nb_dims: int,
-                 sigma: Union[numbers.Real, Sequence[numbers.Real]],
+                 sigma: Union[float, Sequence[float]],
                  kernel_sizes: Optional[Union[int, Sequence[int]]] = None,
                  padding: Literal['same', 'none'] = 'same',
                  device: Optional[torch.device] = None):
@@ -69,12 +69,12 @@ class FilterGaussian(FilterFixed):
             device: the memory location of the kernel
         """
         # see https://discuss.pytorch.org/t/is-there-anyway-to-do-gaussian-filtering-for-an-image-2d-3d-in-pytorch/12351/8
-        if isinstance(sigma, numbers.Number):
+        if not isinstance(sigma, collections.Sequence):
             sigma = [sigma] * nb_dims
         else:
             assert len(sigma) == nb_dims
 
-        if isinstance(kernel_sizes, int):
+        if kernel_sizes is not None and not isinstance(kernel_sizes, collections.Sequence):
             kernel_sizes = [kernel_sizes] * nb_dims
 
         if kernel_sizes is None:
@@ -90,7 +90,7 @@ class FilterGaussian(FilterFixed):
 
         # The gaussian kernel is the product of the
         # gaussian function of each dimension.
-        kernel = 1.0
+        kernel = torch.tensor(1.0)
         meshgrids = torch.meshgrid(
             [
                 torch.arange(size, dtype=torch.float32)
@@ -100,7 +100,7 @@ class FilterGaussian(FilterFixed):
         for size, s, mgrid in zip(kernel_sizes, sigma, meshgrids):
             std = s * s
             mean = (size - 1) / 2
-            kernel *= 1 / (std * math.sqrt(2 * math.pi)) * torch.exp(-0.5 / std * (mgrid - mean) ** 2)
+            kernel = kernel * 1 / (std * math.sqrt(2 * math.pi)) * torch.exp(-0.5 / std * (mgrid - mean) ** 2)
 
         # Make sure sum of values in gaussian kernel equals 1.
         kernel = kernel / torch.sum(kernel)
