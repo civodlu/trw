@@ -1,3 +1,5 @@
+import numbers
+
 from typing import Union, Optional, Any, Sequence
 
 import math
@@ -49,7 +51,7 @@ class FilterGaussian(FilterFixed):
     def __init__(self,
                  input_channels: int,
                  nb_dims: int,
-                 sigma: Union[float, Sequence[float]],
+                 sigma: Union[numbers.Real, Sequence[numbers.Real]],
                  kernel_sizes: Optional[Union[int, Sequence[int]]] = None,
                  padding: Literal['same', 'none'] = 'same',
                  device: Optional[torch.device] = None):
@@ -67,7 +69,7 @@ class FilterGaussian(FilterFixed):
             device: the memory location of the kernel
         """
         # see https://discuss.pytorch.org/t/is-there-anyway-to-do-gaussian-filtering-for-an-image-2d-3d-in-pytorch/12351/8
-        if isinstance(sigma, float):
+        if isinstance(sigma, numbers.Number):
             sigma = [sigma] * nb_dims
         else:
             assert len(sigma) == nb_dims
@@ -88,7 +90,7 @@ class FilterGaussian(FilterFixed):
 
         # The gaussian kernel is the product of the
         # gaussian function of each dimension.
-        kernel = torch.tensor(1.0)
+        kernel = 1.0
         meshgrids = torch.meshgrid(
             [
                 torch.arange(size, dtype=torch.float32)
