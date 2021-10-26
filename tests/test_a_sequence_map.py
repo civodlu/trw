@@ -486,7 +486,7 @@ class TestSequenceMap(TestCase):
 
     def test_jobexecutor_process_killed(self):
         """
-        Simulate a crash of a job executor process,
+        Simulate a crash of a job executor process
         we expect the job executor to restart a new process
         and continue the processing, possibly losing one job result
         """
