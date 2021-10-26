@@ -20,10 +20,10 @@ matrix:
   #    - PATH=/Users/travis/Library/Python/3.6/bin:$PATH
   #    - TRW_LOGGING_ROOT=./test_tmp
       
-  - name: "Python 3.9 - Linux - torch 1.9.1"
+  - name: "Python 3.9 - Linux - torch 1.10.0"
     python: 3.9
     before_install:
-      - pip install torch==1.9.1+cpu torchvision==0.10.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
+      - pip install torch==1.10.0+cpu torchvision==0.11.1+cpu -f https://download.pytorch.org/whl/torch_stable.html
       
   - name: "Python 3.6 - Linux - torch 1.0.0"
     python: 3.6

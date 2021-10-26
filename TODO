@@ -20,8 +20,6 @@ Models
 https://github.com/kuangliu/pytorch-cifar/tree/master/models
 
 
-use SimpleQueue instead of Queue
-
 
 Debugging Python C/C++ extensions in gdb
 http://droettboom.com/blog/2015/11/20/gdb-python-extensions/
@@ -30,5 +28,4 @@ https://codewithoutrules.com/2017/08/16/concurrency-python/
 
 
 Fixes:
-- refactor all numpy/torch utilities in their own package to limit cross dependencies in higher level packages
 - BUG: aggregation of gradient issues when part of a model is frozen
