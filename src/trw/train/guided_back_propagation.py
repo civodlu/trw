@@ -1,20 +1,24 @@
+from trw.basic_typing import Batch
+from typing import Callable, Any, List, Tuple, Optional, Mapping
+
 from ..utils import to_value
 from . import outputs_trw
 import collections
 import torch
 import logging
 import numpy as np
+from torch import nn
 
 
 logger = logging.getLogger(__name__)
 
 
-def post_process_output_id(output):
+def post_process_output_id(output: outputs_trw.Output) -> torch.Tensor:
     assert isinstance(output, outputs_trw.Output), 'must be a `trw.train.Output`'
     return output.output
 
 
-def post_process_output_for_gradient_attribution(output):
+def post_process_output_for_gradient_attribution(output: outputs_trw.Output):
     """
     Postptocess the output to be suitable for gradient attribution.
 
@@ -35,7 +39,7 @@ def post_process_output_for_gradient_attribution(output):
     return output.output
 
 
-class GuidedBackprop():
+class GuidedBackprop:
     """
     Produces gradients generated with guided back propagation from the given image
 
@@ -45,7 +49,10 @@ class GuidedBackprop():
         * the model will be instrumented, use `trw.train.CleanAddedHooks` to remove the
             hooks once guided back-propagation is finished
     """
-    def __init__(self, model, unguided_gradient=False, post_process_output=post_process_output_id):
+    def __init__(self,
+                 model: nn.Module,
+                 unguided_gradient: bool = False,
+                 post_process_output: Callable[[Any], torch.Tensor] = post_process_output_id):
         """
 
         Args:
@@ -54,7 +61,7 @@ class GuidedBackprop():
             post_process_output: a function to post-process the output of a model so that it is suitable for gradient attribution
         """
         self.model = model
-        self.forward_relu_outputs = []
+        self.forward_relu_outputs: List[torch.Tensor] = []
 
         self.model.eval()
         self.unguided_gradient = unguided_gradient
@@ -63,7 +70,7 @@ class GuidedBackprop():
         if not unguided_gradient:
             self.update_relus()
 
-    def update_relus(self):
+    def update_relus(self) -> None:
         """
         Updates relu activation functions so that
             1- stores output in forward pass
@@ -110,7 +117,8 @@ class GuidedBackprop():
             i = [('input', inputs)]
         return i
 
-    def __call__(self, inputs, target_class, target_class_name):
+    def __call__(self, inputs: Tuple[torch.Tensor, Batch], target_class: int, target_class_name: str) \
+            -> Optional[Tuple[str, Mapping]]:
         """
         Generate the guided back-propagation gradient
 
@@ -153,11 +161,11 @@ class GuidedBackprop():
         # extract gradient
         inputs_kvp = {name: to_value(i.grad) for name, i in inputs_kvp}
 
-        self.forward_relu_outputs = None  # clean the state
+        self.forward_relu_outputs = []  # clean the state
         return target_class_name, inputs_kvp
 
     @staticmethod
-    def get_positive_negative_saliency(gradient):
+    def get_positive_negative_saliency(gradient: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """
             Generates positive and negative saliency maps based on the gradient
         Args:

@@ -1,3 +1,6 @@
+from trw.basic_typing import Batch
+from typing import Mapping, Optional, Callable, Union, Any, Tuple
+
 from ..utils import len_batch, to_value, upsample
 from . import graph_reflection
 from . import utilities
@@ -6,6 +9,7 @@ from . import guided_back_propagation
 import torch
 import numpy as np
 import logging
+from torch import nn
 
 
 logger = logging.getLogger(__name__)
@@ -18,7 +22,10 @@ class GradCam:
     This is based on the paper "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization",
     Ramprasaath R et al.
     """
-    def __init__(self, model, find_convolution=graph_reflection.find_last_forward_convolution, post_process_output=guided_back_propagation.post_process_output_id):
+    def __init__(self,
+                 model: nn.Module,
+                 find_convolution: Callable[[nn.Module, Union[Batch, torch.Tensor]], Optional[Mapping]] = graph_reflection.find_last_forward_convolution,
+                 post_process_output: Callable[[Any], torch.Tensor] = guided_back_propagation.post_process_output_id):
         """
 
         Args:
@@ -31,7 +38,8 @@ class GradCam:
         self.model = model
         self.post_process_output = post_process_output
 
-    def __call__(self, inputs, target_class_name=None, target_class=None):
+    def __call__(self, inputs: Union[Batch, torch.Tensor], target_class_name: str = None, target_class: int = None) \
+            -> Optional[Tuple[str, Mapping]]:
         """
 
         TODO:

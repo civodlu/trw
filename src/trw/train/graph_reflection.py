@@ -2,6 +2,7 @@
 The purpose of this file is to group all functions related to pytorch graph reflection
 such as finding layers of specified types in a nn.Module or using the `grad_fn`
 """
+from typing import Sequence, Any, Union, List, Optional, Mapping, Tuple
 
 import torch
 import torch.nn as nn
@@ -15,7 +16,7 @@ import io
 logger = logging.getLogger(__name__)
 
 
-def find_tensor_leaves_with_grad(tensor):
+def find_tensor_leaves_with_grad(tensor: torch.Tensor) -> Sequence[torch.Tensor]:
     """
     Find the input leaves of a tensor.
 
@@ -78,7 +79,8 @@ class _CaptureLastModuleType:
         return self.recorded_modules[0]
 
 
-def find_last_forward_types(model, inputs, types, relative_index=0):
+def find_last_forward_types(model: nn.Module, inputs: Any, types: Union[Any, Tuple[Any]], relative_index: int = 0) \
+        -> Optional[Mapping]:
     """
     Perform a forward pass of the model with given inputs and retrieve the last layer of the specified type
 
@@ -86,10 +88,11 @@ def find_last_forward_types(model, inputs, types, relative_index=0):
         inputs: the input of the model so that we can call `model(inputs)`
         model: the model
         types: the types to be captured. Can be a single type or a tuple of types
-        relative_index (int): indicate which module to return from the last collected module
+        relative_index: indicate which module to return from the last collected module
 
     Returns:
-        None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
+        None if no layer found or a dictionary of
+        (outputs, matched_module, matched_module_input, matched_module_output) if found
     """
     with utilities.CleanAddedHooks(model):
         try:
@@ -121,23 +124,32 @@ def find_last_forward_types(model, inputs, types, relative_index=0):
     return None
 
 
-def find_last_forward_convolution(model, inputs, types=(nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0):
+def find_last_forward_convolution(
+        model: nn.Module,
+        inputs: Any,
+        types: Union[Any, Tuple[Any]] = (nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0) \
+            -> Optional[Mapping]:
     """
-        Perform a forward pass of the model with given inputs and retrieve the last convolutional layer
+    Perform a forward pass of the model with given inputs and retrieve the last convolutional layer
 
-        Args:
-            inputs: the input of the model so that we can call `model(inputs)`
-            model: the model
-            types: the types to be captured. Can be a single type or a tuple of types
-            relative_index (int): indicate which module to return from the last collected module
+    Args:
+        inputs: the input of the model so that we can call `model(inputs)`
+        model: the model
+        types: the types to be captured. Can be a single type or a tuple of types
+        relative_index (int): indicate which module to return from the last collected module
 
-        Returns:
-            None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
-        """
+    Returns:
+        None if no layer found or a dictionary of
+        (outputs, matched_module, matched_module_input, matched_module_output) if found
+    """
     return find_last_forward_types(model, inputs, types=types, relative_index=relative_index)
 
 
-def find_first_forward_convolution(model, inputs=None, types=(nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0):
+def find_first_forward_convolution(
+        model: nn.Module,
+        inputs: Any = None,
+        types: Union[Any, Tuple[Any]] = (nn.Conv2d, nn.Conv3d, nn.Conv1d), relative_index=0) \
+            -> Optional[Mapping]:
     """
     Perform a forward pass of the model with given inputs and retrieve the last convolutional layer
 
@@ -148,7 +160,8 @@ def find_first_forward_convolution(model, inputs=None, types=(nn.Conv2d, nn.Conv
         relative_index (int): indicate which module to return from the last collected module
 
     Returns:
-        None if no layer found or a dictionary of (outputs, matched_module, matched_module_input, matched_module_output) if found
+        None if no layer found or a dictionary of
+        (outputs, matched_module, matched_module_input, matched_module_output) if found
     """
     modules_of_interest = []
     for module in model.modules():

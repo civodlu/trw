@@ -1,3 +1,5 @@
+from typing import Any, Callable, Optional, Tuple, Mapping
+
 import torch
 import logging
 
@@ -6,12 +8,13 @@ from . import outputs_trw
 from . import utilities
 from . import guided_back_propagation
 import numpy as np
+from torch import nn
 
 
 logger = logging.getLogger(__name__)
 
 
-def is_feature_metadata(name, value):
+def is_feature_metadata(name: str, value: Any) -> bool:
     """
     Return True is a feature name/value should be considered as metadata
     """
@@ -31,7 +34,12 @@ class IntegratedGradients:
     Mukund Sundararajan, Ankur Taly, Qiqi Yan
     as described in https://arxiv.org/abs/1703.01365
     """
-    def __init__(self, model, steps=100, baseline_inputs=None, use_output_as_target=False, post_process_output=guided_back_propagation.post_process_output_id):
+    def __init__(self,
+                 model: nn.Module,
+                 steps: int = 100,
+                 baseline_inputs: Any = None,
+                 use_output_as_target: bool = False,
+                 post_process_output: Callable[[Any], torch.Tensor] = guided_back_propagation.post_process_output_id):
         """
 
         Args:
@@ -47,7 +55,8 @@ class IntegratedGradients:
         self.use_output_as_target = use_output_as_target
         self.post_process_output = post_process_output
 
-    def __call__(self, inputs, target_class_name, target_class=None):
+    def __call__(self, inputs: Any, target_class_name: str, target_class: Optional[int] = None) \
+            -> Optional[Tuple[str, Mapping]]:
         """
             Generate the guided back-propagation gradient
 
@@ -86,7 +95,7 @@ class IntegratedGradients:
         model_output = self.post_process_output(model_output)
 
         if target_class is None:
-            target_class = torch.argmax(model_output, dim=1)
+            target_class = torch.argmax(model_output, dim=1)  # type: ignore
 
         # construct our gradient target
         model_device = utilities.get_device(self.model, batch=inputs)
