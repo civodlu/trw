@@ -45,7 +45,7 @@ matrix:
       - TRW_LOGGING_ROOT=./test_tmp
     
 install:
-  - pip3 install -r requirements-dependencies.txt
+  - pip3 install -r requirements.txt
   - pip3 install -r requirements-ci.txt
   - pip3 install .
   
