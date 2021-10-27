@@ -1,0 +1,15 @@
+pillow
+matplotlib
+numpy
+scikit-learn
+scikit-image
+pandas
+tensorboardX
+tensorboard
+onnx
+bokeh >= 2.1
+scipy
+typing-extensions
+threadpoolctl
+psutil
+
