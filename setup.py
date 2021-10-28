@@ -11,6 +11,7 @@ NAME = setup_utils.get_project_name()
 
 META_PATH = path.join('src', NAME, 'metadata.py')
 
+
 def find_meta(meta):
     """
     Extract __*meta*__ from META_FILE.
@@ -31,11 +32,11 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
     long_description = f.read()
 
 # get the dependencies and installs
-with open(path.join(here, 'requirements.txt'), encoding='utf-8') as f:
-    all_reqs = f.read().split('\n')
-    
+all_reqs = setup_utils.read_requirements(path.join(here, 'requirements.txt'))
+
 with open(META_PATH, encoding='utf-8') as f:
     META_FILE = f.read()
+
 
 install_requires = [x.strip() for x in all_reqs if 'git+' not in x]
 dependency_links = [x.strip().replace('git+', '') for x in all_reqs if x.startswith('git+')]
