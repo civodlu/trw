@@ -31,3 +31,7 @@ steps:
       pip install -r requirements-dependencies.txt
       pip install -e .
     displayName: 'Install dependencies'
+
+  - script: |
+      python tasks.py --task=task_test
+    displayName: 'Running tests'
