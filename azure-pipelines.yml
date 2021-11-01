@@ -29,6 +29,7 @@ steps:
       python -m pip install --upgrade pip
       pip install $(torch)
       pip install -r requirements-dependencies.txt
+      pip install -r requirements-ci.txt
       pip install -e .
     displayName: 'Install dependencies'
 
