@@ -1,8 +1,8 @@
 Torch Research Workflows
 ************************
 
-.. image:: https://www.travis-ci.com/civodlu/trw.svg?branch=master
-    :target: https://app.travis-ci.com/github/civodlu/trw
+.. image:: https://dev.azure.com/civodlu/trw/_apis/build/status/civodlu.trw?branchName=master
+    :target: https://dev.azure.com/civodlu/trw/_build
    
 
    
