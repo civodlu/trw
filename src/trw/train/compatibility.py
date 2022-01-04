@@ -67,16 +67,15 @@ if hasattr(nn, 'SiLU'):
 else:
     Swish = SwishCompat  # type: ignore
 
-
-if hasattr(torch, 'linalg'):
-    torch_linalg_norm = torch.linalg.norm
+try:
     inv = torch.linalg.inv
-else:
-    def torch_linalg_norm(input, ord, dim):
-        return torch.norm(input, p=ord, dim=dim)
-
+except:
     inv = torch.inverse
 
+try:
+    torch_linalg_norm = torch.linalg.norm
+except:
+    torch_linalg_norm = lambda input, ord, dim: torch.norm(input, p=ord, dim=dim)
 
 if hasattr(torch.nn, 'Identity'):
     Identity = torch.nn.Identity
