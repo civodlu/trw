@@ -110,3 +110,7 @@ venv.bak/
 
 # other
 /sandbox/
+
+# Macos
+.DS_Store
+
