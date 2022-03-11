@@ -3,6 +3,7 @@ import collections
 import torch
 import torch.utils.data.dataloader
 from . import sampler
+from .job_executor2 import default_queue_timeout
 from .collate import collate_list_of_dicts, default_collate_fn
 import functools
 import weakref
@@ -74,7 +75,7 @@ class Sequence:
         from . import sequence_collate
         return sequence_collate.SequenceCollate(self, collate_fn=collate_fn, device=device)
 
-    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=0.1, collate_fn=None):
+    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=default_queue_timeout, collate_fn=None):
         """
         Transform a sequence using a given function.
 

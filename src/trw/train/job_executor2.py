@@ -27,7 +27,7 @@ multiprocessing = multiprocessing.get_context("spawn")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
-default_queue_timeout = 0.1
+default_queue_timeout = 0.001
 
 
 def flush_queue(queue):
