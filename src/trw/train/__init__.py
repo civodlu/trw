@@ -18,6 +18,9 @@ from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_schedule
     create_scheduler_step_lr, create_adam_optimizers_fn, \
     create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn, \
     create_sgd_optimizers_scheduler_one_cycle_lr_fn, create_adam_optimizers_scheduler_one_cycle_lr_fn
+
+from .optimizers_v2 import Optimizer, OptimizerAdam, OptimizerSGD
+
 from .analysis_plots import plot_group_histories, confusion_matrix, classification_report, \
     list_classes_from_mapping, plot_roc, boxplots, export_figure, auroc
 from .graph_reflection import find_tensor_leaves_with_grad, find_last_forward_convolution, \

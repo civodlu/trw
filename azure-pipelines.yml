@@ -13,7 +13,7 @@ strategy:
 
     windows:
       imageName: 'windows-latest'
-      python.version: '3.6'
+      python.version: '3.7'
       torch: 'torch==1.0.0 torchvision==0.2.1 -f https://download.pytorch.org/whl/torch_stable.html'
 
 pool:

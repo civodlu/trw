@@ -1,7 +1,6 @@
-from functools import partial
 import torch.nn as nn
 import numpy as np
-import trw.utils
+import trw
 from trw.train.outputs_trw import OutputClassification
 
 
@@ -42,7 +41,7 @@ results = trainer.fit(
     datasets=trw.datasets.create_mnist_dataset(normalize_0_1=True),
     log_path='mnist_cnn',
     model=Net(),
-    optimizers_fn=partial(trw.train.create_sgd_optimizers_fn, learning_rate=0.1))
+    optimizers_fn=trw.train.OptimizerSGD(learning_rate=0.1))
 
 # calculate statistics of the final epoch
 output = results.outputs['mnist']['test']['classification']
