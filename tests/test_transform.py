@@ -5,6 +5,8 @@ import trw.transforms
 import numpy as np
 import torch
 import functools
+from trw.transforms import TransformSqueeze
+from trw.transforms.transforms_unsqueeze import TransformUnsqueeze
 import trw.utils
 
 
@@ -517,3 +519,35 @@ class TestTransform(TestCase):
         for tfm, tfm_count in kvp.items():
             deviation = abs(tfm_count - nb_samples / len(transforms))
             assert deviation < tolerance, f'deviation={deviation}, tolerance={tolerance}'
+
+    def test_transform_squeeze(self):
+        nb_samples = 10
+        split = {
+            'float_torch': torch.zeros([nb_samples, 4, 1, 5, 6], dtype=torch.float32),
+            'float_np': np.zeros([nb_samples, 4, 1, 5, 6], dtype=np.float32),
+            'str': 'a string',
+            'number': 4.0
+        }
+
+        tfm = TransformSqueeze(axis=2)
+
+        split_tfm = tfm(split) 
+        assert len(split_tfm) == 4
+        assert split_tfm['float_torch'].shape == (nb_samples, 4, 5, 6)
+        assert split_tfm['float_np'].shape == (nb_samples, 4, 5, 6)
+
+    def test_transform_unsqueeze(self):
+        nb_samples = 10
+        split = {
+            'float_torch': torch.zeros([nb_samples, 4, 5, 6], dtype=torch.float32),
+            'float_np': np.zeros([nb_samples, 4, 5, 6], dtype=np.float32),
+            'str': 'a string',
+            'number': 4.0
+        }
+
+        tfm = TransformUnsqueeze(axis=2)
+
+        split_tfm = tfm(split) 
+        assert len(split_tfm) == 4
+        assert split_tfm['float_torch'].shape == (nb_samples, 4, 1, 5, 6)
+        assert split_tfm['float_np'].shape == (nb_samples, 4, 1, 5, 6)

@@ -47,18 +47,25 @@ class TransformBatchWithCriteria(Transform):
             return batch
 
 
+def criteria_is_array_n_or_above(batch: Batch, dim: int) -> Sequence[str]:
+    """
+    Return `True` if the feature is a numpy or torch array dim >= dim
+    """
+    features = []
+    for feature_name, feature_value in batch.items():
+        if isinstance(feature_value, np.ndarray) and len(feature_value.shape) >= dim:
+            features.append(feature_name)
+        elif isinstance(feature_value, torch.Tensor) and len(feature_value.shape) >= dim:
+            features.append(feature_name)
+    return features
+
+
 def criteria_is_array_4_or_above(batch: Batch) -> Sequence[str]:
     """
     Return `True` if the feature is a numpy or torch array dim >= 4, typically all
     n-d images, n >= 2
     """
-    features = []
-    for feature_name, feature_value in batch.items():
-        if isinstance(feature_value, np.ndarray) and len(feature_value.shape) >= 4:
-            features.append(feature_name)
-        elif isinstance(feature_value, torch.Tensor) and len(feature_value.shape) >= 4:
-            features.append(feature_name)
-    return features
+    return criteria_is_array_n_or_above(batch, dim=4)
 
 
 def criteria_feature_name(batch: Batch, feature_names: Sequence[str]) -> Sequence[str]:
