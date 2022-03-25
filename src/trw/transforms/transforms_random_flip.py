@@ -30,7 +30,7 @@ class TransformRandomFlip(transforms.TransformBatchWithCriteria):
                  criteria_fn: Optional[CriteriaFn] = None):
         """
         Args:
-            axis: the axis to flip
+            axis: the axis to flip. Must be in range [0..dim]. For example, 0=N component, 1=C component and so on 
             flip_probability: the probability that a sample is flipped
             criteria_fn: how to select the features to transform. If `None` transform all arrays with dim >= 3
         """

@@ -51,7 +51,7 @@ def transform_batch_random_flip(
     samples = []
     for flip_choice, sample in zip(flip_choices, array):
         if flip_choice:
-            samples.append(flip(sample, axis=axis - 1))
+            samples.append(flip(sample, axis=axis - 1))  # `-1` since the `N` axis is removed 
         else:
             samples.append(sample)
 
