@@ -37,5 +37,7 @@ steps:
     displayName: 'Install dependencies'
 
   - script: |
+      echo '##[debug] Starting tests...'
       python tasks.py --task=task_test
+      echo '##[debug] Tests done!'
     displayName: 'Running tests'
