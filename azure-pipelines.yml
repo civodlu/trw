@@ -10,13 +10,11 @@ strategy:
       imageName: 'ubuntu-latest'
       python.version: '3.9'
       torch: 'torch==1.10.0+cpu torchvision==0.11.1+cpu -f https://download.pytorch.org/whl/torch_stable.html'
-      pillow: 'pillow'
 
     windows:
       imageName: 'windows-latest'
-      python.version: '3.7'
+      python.version: '3.9'
       torch: 'torch==1.0.0 torchvision==0.2.1 -f https://download.pytorch.org/whl/torch_stable.html'
-      pillow: 'pillow==6.1'
 
 pool:
   vmImage: $(imageName)
@@ -33,7 +31,6 @@ steps:
       pip install -r requirements-dependencies.txt
       pip install -r requirements-ci.txt
       pip install -e .
-      pip install $(pillow)
     displayName: 'Install dependencies'
 
   - script: |
