@@ -98,13 +98,13 @@ class TestTransform(TestCase):
 
     def test_random_crop_padd_transform_numpy(self):
         size = [1, 46, 63]
-        d = np.zeros([60000] + size, dtype=np.float)
+        d = np.zeros([6000] + size, dtype=np.float)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1
 
         transform = trw.transforms.TransformRandomCropPad(padding=[0, 8, 8])
         batch = transform({'d': d})
 
-        assert batch['d'].shape == (60000, 1, 46, 63)
+        assert batch['d'].shape == (6000, 1, 46, 63)
         d_summed = np.sum(batch['d'], axis=0).squeeze()
         ys, xs = np.where(d_summed > 0)
 
@@ -118,7 +118,7 @@ class TestTransform(TestCase):
 
     def test_random_crop_padd_transform_torch(self):
         size = [1, 46, 63]
-        nb = 60000
+        nb = 6000
 
         d = np.zeros([nb] + size, dtype=np.float)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
