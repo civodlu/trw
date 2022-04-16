@@ -2,6 +2,7 @@ from typing import Optional, Any
 import os
 import torch
 import logging
+import platform
 
 
 logger = logging.getLogger(__name__)
@@ -73,7 +74,10 @@ class Options:
         if logging_directory is None:
             logging_directory = os.environ.get('TRW_LOGGING_ROOT')
         if logging_directory is None:
-            logging_directory = 'c:/trw_logs/'
+            if 'Windows' in platform.system():
+                logging_directory = 'c:/trw_logs/'
+            else:
+                logging_directory = '$HOME/trw_logs/'
 
         if device is None:
             if torch.cuda.device_count() > 0:
