@@ -31,6 +31,9 @@ class WorkflowOptions:
     Define here workflow options
     """
     def __init__(self, logging_directory: str, device: torch.device):
+        # expand special characters/variables
+        logging_directory = os.path.expandvars(os.path.expanduser(logging_directory))
+        
         self.device: torch.device = device
         self.train_split: str = 'train'
         self.logging_directory: str = logging_directory

@@ -81,13 +81,12 @@ def create_or_recreate_folder(path, nb_tries=3, wait_time_between_tries=2.0):
         ``True`` if successful or ``False`` if failed.
     """
     assert len(path) > 6, 'short path? just as a precaution...'
-    expanded_path = os.path.expandvars(os.path.expanduser(path))
-    if os.path.exists(expanded_path):
-        shutil.rmtree(expanded_path, ignore_errors=True)
+    if os.path.exists(path):
+        shutil.rmtree(path, ignore_errors=True)
 
     def try_create():
         try:
-            os.makedirs(expanded_path, exist_ok=True)
+            os.makedirs(path, exist_ok=True)
             return True
         except Exception as e:
             print('[ignored] create_or_recreate_folder error:', str(e))
