@@ -75,7 +75,7 @@ class Sequence:
         from . import sequence_collate
         return sequence_collate.SequenceCollate(self, collate_fn=collate_fn, device=device)
 
-    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=default_queue_timeout, collate_fn=None):
+    def map(self, function_to_run, nb_workers=0, max_jobs_at_once=None, queue_timeout=default_queue_timeout, collate_fn=None, max_queue_size_pin=None):
         """
         Transform a sequence using a given function.
 
@@ -87,6 +87,9 @@ class Sequence:
             If None, it will be set equal to the number of workers
         :param queue_timeout: the timeout used to pull results from the output queue
         :param collate_fn: a function to collate each batch of data
+        : param max_queue_size_pin: defines the max number of batches prefected. If None, defaulting to
+            a size based on the number of workers. This only controls the final queue sized of the pin
+            thread (the workers queue can be independently set)
         :return: a sequence of batches
         """
         from . import sequence_map
@@ -96,7 +99,8 @@ class Sequence:
             nb_workers=nb_workers,
             max_jobs_at_once=max_jobs_at_once,
             queue_timeout=queue_timeout,
-            collate_fn=collate_fn)
+            collate_fn=collate_fn,
+            max_queue_size_pin=max_queue_size_pin)
     
     def batch(self, batch_size, discard_batch_not_full=False, collate_fn=default_collate_list_of_dicts):
         """

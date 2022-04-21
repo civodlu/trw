@@ -18,6 +18,19 @@ def function_to_run(batch):
 def function_to_run_id(batch):
     return batch
 
+def function_to_run_id_wait(batch, wait_time: float, text=None):
+    time.sleep(wait_time)
+    if text is not None:
+        print(text, batch)
+    return batch
+
+def function_to_run_multiple_wait(batch, nb: int, wait_time: float, text=None):
+    time.sleep(wait_time)
+    #if text is not None:
+    #    print(text, batch)
+    v = float(batch['path'])
+    return {'path2': torch.arange(v * 100, v * 100 + nb)}
+
 
 def function_to_run2(batch):
     print('JOB starte', batch['path'])
@@ -291,4 +304,108 @@ class TestSequenceReservoir(TestCase):
 
             last_uids = current_uids
 
+    def test_slow_sequence_reservoir_fast_map_id(self):
+        """
+        Test the loading of the reservoir doesn't affect the iteration
+        of the reservoir (i.e., once the minimum of jobs is loaded,
+        iterating the reservoir should be instantaneous)
+        """
+        nb_indices = 15
+        nb_epochs = 4
+        split = {'path': np.asarray([[i] for i in range(nb_indices)])}
+        max_reservoir_samples = 5
+        max_reservoir_replacement_size = 5
+        max_jobs_at_once = max_reservoir_samples
+        wait_time_reservoir = 1.0
+        wait_time_map = 0.5
+        numpy_sequence = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            function_to_run=functools.partial(function_to_run_id_wait, wait_time=wait_time_reservoir, text='reservoir_loaded'),
+            max_reservoir_samples=max_reservoir_samples,
+            min_reservoir_samples=max_reservoir_samples,
+            max_jobs_at_once=max_jobs_at_once,
+            max_reservoir_replacement_size=max_reservoir_replacement_size,
+            reservoir_sampler=trw.train.SamplerSequential())        
+        sequence = sequence.map(functools.partial(function_to_run_id_wait, wait_time=wait_time_map), nb_workers=1)
 
+        expected_time = max_reservoir_samples * wait_time_map * (nb_epochs - 1)
+        time_start = None
+        for epoch in range(nb_epochs):
+            if epoch == 1:
+                # discard first epoch timing due to processes/threads creation time
+                time_start = time.perf_counter()
+
+            epoch_start = time.perf_counter()
+            for batch_id, batch in enumerate(sequence):
+                print(batch_id, str(batch))
+            epoch_end = time.perf_counter()
+            epoch_time = epoch_end - epoch_start
+            print(f'epoch={epoch}, epoch_time={epoch_time}')
+        time_end = time.perf_counter()
+        time_taken = time_end - time_start
+        print(f'DONE, time_taken={time_taken}, expected_time={expected_time}')
+        assert abs(time_taken - expected_time) < 0.5
+
+    def test_slow_sequence_reservoir_fast_map_multiple(self):
+        """
+        Test the loading of the reservoir doesn't affect the iteration
+        of the reservoir (i.e., once the minimum of jobs is loaded,
+        iterating the reservoir should be instantaneous).
+
+        Many more batches to process than reservoir size. Since
+        there is almost no data transferred between processes
+        the overhead SHOULD be minimal.
+        """
+        nb_indices = 15
+        nb_epochs = 3
+        split = {'path': np.asarray([[i] for i in range(nb_indices)])}
+        max_reservoir_samples = 5
+        max_reservoir_replacement_size = 5
+        multiple = 10
+        max_jobs_at_once = max_reservoir_samples
+        wait_time_reservoir = 1.0
+        wait_time_map = 0.1
+        nb_map_workers = 2
+        max_queue_size_pin = 4
+        numpy_sequence = trw.train.SequenceArray(split, sampler=trw.train.SamplerSequential())
+        sequence = trw.train.SequenceAsyncReservoir(
+            numpy_sequence,
+            function_to_run=functools.partial(function_to_run_multiple_wait, nb=multiple, wait_time=wait_time_reservoir, text='reservoir_loaded'),
+            max_reservoir_samples=max_reservoir_samples,
+            min_reservoir_samples=max_reservoir_samples,
+            max_jobs_at_once=max_jobs_at_once,
+            max_reservoir_replacement_size=max_reservoir_replacement_size,
+            reservoir_sampler=trw.train.SamplerSequential()).collate()
+        
+        sequence = sequence.rebatch(batch_size=1).map(functools.partial(function_to_run_id_wait, wait_time=0), nb_workers=nb_map_workers, max_queue_size_pin=max_queue_size_pin)
+
+        nb_samples = 0
+        expected_time = max_reservoir_samples * wait_time_map * (nb_epochs - 1) * multiple #/ max(1, nb_map_workers)
+        time_start = None
+        for epoch in range(nb_epochs):
+            if epoch == 1:
+                # discard first epoch timing due to processes/threads creation time
+                time_start = time.perf_counter()
+
+            epoch_start = time.perf_counter()
+            for _, batch in enumerate(sequence):
+                # simulate a workload. Overhead of the map
+                # should be hidden!
+                time.sleep(wait_time_map)
+                nb_samples += trw.utils.len_batch(batch)
+
+            # check the expected prefetch size: how many batches
+            # are already processed and queued? 
+            average_prefetch = sequence.debug_metadata.pin_queue_size / sequence.debug_metadata.nb_batches
+            assert abs(max_queue_size_pin - 1 - average_prefetch) < 0.5, f'expected={max_queue_size_pin}, got={average_prefetch}'
+            epoch_end = time.perf_counter()
+            epoch_time = epoch_end - epoch_start
+            print(f'epoch={epoch}, epoch_time={epoch_time}')
+        time_end = time.perf_counter()
+        time_taken = time_end - time_start
+        print(f'DONE, time_taken={time_taken}, expected_time={expected_time}')
+        assert abs(time_taken - expected_time) < 0.5
+
+        expected_samples = max_reservoir_samples * nb_epochs * multiple
+        assert expected_samples == nb_samples, f'nb_samples={nb_samples}, expected_samples={expected_samples}'

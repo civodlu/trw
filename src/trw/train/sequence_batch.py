@@ -3,7 +3,7 @@ from . import sequence
 
 class SequenceBatch(sequence.Sequence, sequence.SequenceIterator):
     """
-    Group several samples into a single data batch
+    Group several batches into a single batch
     """
     def __init__(self, source_split, batch_size, discard_batch_not_full=False, collate_fn=sequence.default_collate_list_of_dicts):
         """

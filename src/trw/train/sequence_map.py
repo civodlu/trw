@@ -29,6 +29,7 @@ class Metadata:
         self.time_processing = 0
         self.time_pinning = 0
         self.time_start = time.perf_counter()
+        self.pin_queue_size = 0  # record the number of batches ready when map is retrieving the next batch
 
 
 class SequenceMap(sequence.Sequence):
@@ -40,21 +41,27 @@ class SequenceMap(sequence.Sequence):
             max_jobs_at_once=None,
             queue_timeout=default_queue_timeout,
             debug_job_report_timeout=30.0,
-            collate_fn=None):
+            collate_fn=None,
+            max_queue_size_pin=None):
         """
         Transform a sequence using a given function.
 
-        .. note:: The map may create more samples than the original sequence.
+        Args:
+            source_split: the input sequence
+            function_to_run: the mapping function
+            nb_workers: the number of workers that will process the split. If 0, no workers will be created.
+            max_jobs_at_once: the maximum number of results that can be pushed in the result queue per process
+                at once. If 0, no limit. If None, it will be set equal to the number of workers
+            queue_timeout: the timeout used to pull results from the output queue
+            collate_fn: a function to collate the batch of data or `None`
+            debug_job_report_timeout: timeout after which if no job were processed a job report will be
+                printed (e.g., to debug pipeline stalling)
+            max_queue_size_pin: defines the max number of batches prefected. If None, defaulting to
+                a size based on the number of workers. This only controls the final queue sized of the pin
+                thread (the workers queue can be independently set)
 
-        :param source_split: the input sequence
-        :param function_to_run: the mapping function
-        :param nb_workers: the number of workers that will process the split. If 0, no workers will be created.
-        :param max_jobs_at_once: the maximum number of results that can be pushed in the result queue per process
-            at once. If 0, no limit. If None, it will be set equal to the number of workers
-        :param queue_timeout: the timeout used to pull results from the output queue
-        :param collate_fn: a function to collate the batch of data or `None`
-        :param debug_job_report_timeout: timeout after which if no job were processed a job report will be
-            printed (e.g., to debug pipeline stalling)
+        Note:
+            The map may create more samples than the original sequence
         """
         super().__init__(source_split)
 
@@ -81,7 +88,8 @@ class SequenceMap(sequence.Sequence):
             self.job_executor = JobExecutor2(
                 nb_workers=nb_workers,
                 function_to_run=self.function_to_run,
-                max_queue_size_per_worker=max_jobs_at_once)
+                max_queue_size_per_worker=max_jobs_at_once,
+                max_queue_size_pin=max_queue_size_pin)
 
         self.iter_source = None
         self.jobs_processed = None
@@ -214,6 +222,8 @@ class SequenceMap(sequence.Sequence):
                         f'{self.debug_metadata.time_processing / self.debug_metadata.nb_batches}, '
                         f'average_batch_pin_time='
                         f'{self.debug_metadata.time_pinning / self.debug_metadata.nb_batches}, '
+                        f'average_batch_prefetch_size='
+                        f'{self.debug_metadata.pin_queue_size / self.debug_metadata.nb_batches}, '
                     )
 
                 # stop the sequence
@@ -258,6 +268,7 @@ class SequenceMap(sequence.Sequence):
             self.debug_metadata.time_to_get_next_batch += next_item_end - next_item_start
             self.debug_metadata.time_processing += metadata.job_processing_finished - metadata.job_created
             self.debug_metadata.time_pinning += metadata.job_pin_thread_received - metadata.job_results_queued
+            self.debug_metadata.pin_queue_size += self.job_executor.pin_memory_queue.qsize()
             return items
 
         if self.job_executor is None:

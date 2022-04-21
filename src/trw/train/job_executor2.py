@@ -9,7 +9,7 @@ import traceback
 from time import sleep, perf_counter
 
 from threadpoolctl import threadpool_limits
-from typing import Callable
+from typing import Callable, Optional
 
 from ..basic_typing import Batch
 import logging
@@ -27,7 +27,7 @@ multiprocessing = multiprocessing.get_context("spawn")
 from multiprocessing import Event, Process, Queue, Value
 
 # timeout used for the queues
-default_queue_timeout = 0.001
+default_queue_timeout = 1e-3
 
 
 def flush_queue(queue):
@@ -294,9 +294,9 @@ class JobExecutor2:
 
     Pushing data on a queue is very fast BUT retrieving it from a different process takes time.
     Even if PyTorch claims to have memory shared arrays, retrieving a large array from a queue
-    has a linear runtime complexity. To limit this copy penalty, we can use threads that copy
-    from the worker process to the main process (`pinning` threads. Here, sharing data between
-    threads is almost free).
+    has a linear runtime complexity (still true with pytorch 1.11). To limit this copy penalty, 
+    we can use threads that copy from the worker process to the main process (`pinning` threads. 
+    Here, sharing data between threads is almost free).
 
     Notes:
         - This class was designed for maximum speed and not reproducibility in mind.
@@ -315,7 +315,8 @@ class JobExecutor2:
             function_to_run: Callable[[Batch], Batch],
             max_queue_size_per_worker: int = 2,
             max_queue_size_pin_thread_per_worker: int = 3,
-            wait_time: float = 0.01,
+            max_queue_size_pin: Optional[int] = None,
+            wait_time: float = default_queue_timeout,
             wait_until_processes_start: bool = True,
             restart_crashed_worker: bool = True):
         """
@@ -329,7 +330,9 @@ class JobExecutor2:
                 the blocked process can continue its processing.
             max_queue_size_pin_thread_per_worker: define the maximum number of results available on the main
                 process (i.e., larger queue size will improve performance but will require more memory
-                to store the results).
+                to store the results). Overriden by `max_queue_size_pin` if defined
+            max_queue_size_pin: define the maximum number of results available on the main
+                process. Overrides `max_queue_size_pin_thread_per_worker` if not None
             wait_time: the default wait time for a process or thread to sleep if no job is available
             wait_until_processes_start: if True, the main process will wait until the worker processes and
                 pin threads are fully running
@@ -340,6 +343,7 @@ class JobExecutor2:
         self.wait_time = wait_time
         self.max_queue_size_pin_thread_per_worker = max_queue_size_pin_thread_per_worker
         self.max_queue_size_per_worker = max_queue_size_per_worker
+        self.max_queue_size_pin = max_queue_size_pin
         self.function_to_run = function_to_run
         self.nb_workers = nb_workers
 
@@ -387,7 +391,13 @@ class JobExecutor2:
         self.synchronized_stop.clear()
 
         if self.pin_memory_queue is None:
-            self.pin_memory_queue = ThreadQueue(self.max_queue_size_pin_thread_per_worker * self.nb_workers)
+            queue_size = self.max_queue_size_pin_thread_per_worker * self.nb_workers
+            if self.max_queue_size_pin is not None:
+                queue_size = self.max_queue_size_pin
+            else:
+                queue_size = self.max_queue_size_pin_thread_per_worker * self.nb_workers
+                
+            self.pin_memory_queue = ThreadQueue(queue_size)
 
         if self.nb_workers == 0:
             # nothing to do, this will be executed synchronously on
