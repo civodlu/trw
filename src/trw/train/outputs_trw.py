@@ -136,7 +136,6 @@ class OutputEmbedding(Output):
     def loss_term_cleanup(self, loss_term):
         if self.clean_loss_term_each_batch:
             del loss_term['output']
-            del self.output
             self.output = None
 
 
@@ -340,7 +339,6 @@ class OutputClassification(Output):
         super().loss_term_cleanup(loss_term)
 
         # delete possibly large outputs
-        del self.output
         self.output = None
 
         del self.output_truth
@@ -703,6 +701,5 @@ class OutputLoss(Output):
         super().loss_term_cleanup(loss_term)
 
         # delete possibly large outputs
-        del self.output
         self.output = None
 

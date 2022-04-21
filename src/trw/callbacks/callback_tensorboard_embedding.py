@@ -228,6 +228,7 @@ class CallbackTensorboardEmbedding(CallbackTensorboardBased):
 
         from ..train.trainer import eval_loop
         eval_loop(
+            options,
             device,
             self.dataset_name,
             self.split_name,

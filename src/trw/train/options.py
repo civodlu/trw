@@ -12,7 +12,7 @@ class TrainingParameters:
     """
     Define here specific training parameters
     """
-    def __init__(self, num_epochs: int, mixed_precision_enabled: bool = False):
+    def __init__(self, num_epochs: int, mixed_precision_enabled: bool = False, gradient_update_frequency: int = 1):
         self.num_epochs = num_epochs
 
         self.gradient_scaler = None
@@ -24,6 +24,7 @@ class TrainingParameters:
             except Exception as e:
                 # mixed precision is not enabled
                 logger.error(f'Mixed precision not enabled! Exception={e}')
+        self.gradient_update_frequency = gradient_update_frequency
 
 
 class WorkflowOptions:
@@ -60,8 +61,8 @@ class Options:
                  logging_directory: Optional[str] = None,
                  num_epochs: int = 50,
                  device: Optional[torch.device] = None,
-                 mixed_precision_enabled: bool = False
-                 ):
+                 mixed_precision_enabled: bool = False,
+                 gradient_update_frequency: int =1):
         """
 
         Args:
@@ -73,6 +74,9 @@ class Options:
             device: the device to train the model on. If `None`, we will try first any available GPU then
                 revert to CPU
             mixed_precision_enabled: if `True`, enable mixed precision for the training
+            gradient_update_frequency: defines how often (every `X` batches) the gradient is updated. This
+                is done to simulate a larger effective batch size (e.g., batch_size = 64 and gradient_update_frequency = 3
+                the effective batch size is gradient_update_frequency * batch_size)
         """
         if logging_directory is None:
             logging_directory = os.environ.get('TRW_LOGGING_ROOT')
@@ -94,7 +98,8 @@ class Options:
 
         self.training_parameters: TrainingParameters = TrainingParameters(
             num_epochs=num_epochs,
-            mixed_precision_enabled=mixed_precision_enabled
+            mixed_precision_enabled=mixed_precision_enabled,
+            gradient_update_frequency=gradient_update_frequency
         )
         self.workflow_options: WorkflowOptions = WorkflowOptions(
             logging_directory=logging_directory,

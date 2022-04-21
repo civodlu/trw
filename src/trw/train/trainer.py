@@ -169,6 +169,7 @@ def loss_term_cleanup(loss_terms):
 
 
 def train_loop(
+        options,
         device,
         dataset_name,
         split_name,
@@ -208,7 +209,7 @@ def train_loop(
     # make sure the model is in training mode (e.g., batch norm, dropout)
     model.train()
 
-    # if mixed prevision, the model must have the autocast decorator
+    # if mixed precision, the model must have the autocast decorator
     if gradient_scaler is not None:
         assert is_autocast_module_decorated(model), 'When operating in mixed mode precision, the model\'s forward' \
                                                     'method must be decorated with torch.cuda.amp.autocast'
@@ -220,8 +221,19 @@ def train_loop(
     loop_started = time.perf_counter()
     total_collate_and_postprocess = 0.0
     nb_samples = 0
+
+    # start by zeroing the gradients. In particular to
+    # handle the `gradient_update_frequency` the order
+    # of the `zero_grad` and `step` is "reversed"
+    if optimizer is not None:
+        optimizer.zero_grad()
+
     try:
         for i, batch in enumerate(split):
+            # to simulate larger effective batch size (and save GPU memory)
+            # we can update gradient every few batches
+            update_parameters = (i + 1) % options.training_parameters.gradient_update_frequency == 0
+
             assert isinstance(batch, collections.Mapping), 'batch must be a mapping of (feature name, feature values)'
             # calculate the time for batch processing. In particular
             # this may be significant when using large data augmentations
@@ -236,9 +248,6 @@ def train_loop(
             total_collate_and_postprocess_end = time.perf_counter()
             total_collate_and_postprocess += total_collate_and_postprocess_end - total_collate_and_postprocess_start
 
-            if optimizer is not None:
-                optimizer.zero_grad()
-
             with NullableContextManager(autocast() if gradient_scaler is not None else None):
                 assert model.training
                 outputs = model(batch)
@@ -249,6 +258,9 @@ def train_loop(
                 assert isinstance(outputs, collections.Mapping), 'model must create a dict of outputs'
                 loss_terms = prepare_loss_terms(outputs, batch, is_training=True)
                 loss = loss_fn(dataset_name, batch, loss_terms)
+
+                # the loss is averaged over the frequency updates
+                loss /= options.training_parameters.gradient_update_frequency
 
             if optimizer is not None and isinstance(loss, torch.Tensor):
                 if isinstance(loss, torch.Tensor):
@@ -274,15 +286,17 @@ def train_loop(
                     )
 
             # call optimizer step after the callbacks (e.g., a callback could be used to clip the gradient)
-            if optimizer is not None:
-                if gradient_scaler is None:
-                    optimizer.step()
-                else:
-                    gradient_scaler.step(optimizer)
-                    gradient_scaler.update()
+            if update_parameters:
+                if optimizer is not None:
+                    if gradient_scaler is None:
+                        optimizer.step()
+                    else:
+                        gradient_scaler.step(optimizer)
+                        gradient_scaler.update()
+                    optimizer.zero_grad()
 
-            if per_step_scheduler is not None:
-                per_step_scheduler.step()
+                if per_step_scheduler is not None:
+                    per_step_scheduler.step()
 
             # once we are done, we want to perform some cleanup. For example, we do NOT want to keep CUDA based
             # tensors in the output so we can run clean up to transfer CUDA based memory to numpy
@@ -308,6 +322,7 @@ def train_loop(
 
 
 def eval_loop(
+        options,
         device,
         dataset_name,
         split_name,
@@ -445,6 +460,7 @@ def epoch_train_eval(
                 # * if we don't have optimizers, we still want to have
                 # gradients (e.g., for model with their own internal optimizers)
                 all_loss_terms = train_loop_fn(
+                    options,
                     device,
                     dataset_name,
                     split_name,
@@ -463,6 +479,7 @@ def epoch_train_eval(
                     continue
 
                 all_loss_terms = eval_loop_fn(
+                    options,
                     device,
                     dataset_name,
                     split_name,

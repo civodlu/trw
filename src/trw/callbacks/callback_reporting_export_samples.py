@@ -259,7 +259,7 @@ class CallbackReportingExportSamples(Callback):
 
             for split_name, split in dataset.items():
                 exported_cases = []
-                eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
+                eval_loop(options, device, dataset_name, split_name, split, model, losses[dataset_name],
                           history=None,
                           callbacks_per_batch=callbacks_per_batch,
                           callbacks_per_batch_loss_terms=[

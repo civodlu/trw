@@ -264,6 +264,7 @@ class CallbackLearningRateFinder(Callback):
 
             callback_stop_epoch.reset()
             all_loss_terms = trainer.train_loop(
+                options=options,
                 device=device,
                 dataset_name=self.dataset_name,
                 split_name=self.split_name,

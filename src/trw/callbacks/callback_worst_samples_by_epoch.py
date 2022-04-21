@@ -88,7 +88,7 @@ def export_samples_v2(dataset_name, split_name, device, split, model, losses, ro
             raise StopIteration()  # abort the loop, we have already too many samples
 
     from ..train.trainer import eval_loop
-    eval_loop(device, dataset_name, split_name, split, model, losses[dataset_name],
+    eval_loop(None, device, dataset_name, split_name, split, model, losses[dataset_name],
               history=None,
               callbacks_per_batch=callbacks_per_batch,
               callbacks_per_batch_loss_terms=[per_batch_export_fn])
