@@ -1,11 +1,11 @@
-
-
 from functools import partial
-from pyparsing import Opt
 import torch
 from torch import nn
 from typing import Any, Callable, Dict, Iterator, Optional, Tuple
+
+import warnings
 from trw.basic_typing import Datasets
+from .optimizer_clipping import ClippingGradientNorm
 
 
 SchedulerType = Any
@@ -21,6 +21,7 @@ class Optimizer:
         self.optimizer_fn = optimizer_fn
         self.scheduler_fn = scheduler_fn
         self.per_step_scheduler_fn = step_scheduler_fn
+        self.clipping_fn = None
 
     def set_scheduler_fn(self, scheduler_fn: Optional[Callable[[torch.optim.Optimizer], SchedulerType]]):
         self.scheduler_fn = scheduler_fn
@@ -46,6 +47,10 @@ class Optimizer:
             else:
                 optimizer = self.optimizer_fn(model.parameters())
 
+            if self.clipping_fn is not None:
+                # apply gradient clipping
+                optimizer = self.clipping_fn(optimizer)
+
             optimizers[dataset_name] = optimizer
 
             if self.scheduler_fn is not None and optimizer is not None:
@@ -59,10 +64,33 @@ class Optimizer:
         return optimizers, schedulers, per_step_schedulers
 
     def scheduler_step_lr(self, step_size: int, gamma: float = 0.1) -> 'Optimizer':
+        """
+        Apply a scheduler on the learning rate.
+
+        Decays the learning rate of each parameter group by gamma every
+        step_size epochs.
+        """
         scheduler_fn = partial(torch.optim.lr_scheduler.StepLR, step_size=step_size, gamma=gamma)
         self.set_scheduler_fn(scheduler_fn)
         return self
 
+    def clip_gradient_norm(self, max_norm: float = 1.0, norm_type: float = 2.0):
+        """
+        Clips the gradient norm during optimization
+
+        Args:
+            max_norm: the maximum norm of the concatenated gradients of the optimizer. Note: the gradient is modulated
+                by the learning rate
+            norm_type: type of the used p-norm. Can be ``'inf'`` for infinity norm
+
+        See:
+            :func:`torch.nn.utils.clip_grad_norm_`
+        """
+        if self.clipping_fn is not None:
+            warnings.warn('`self.clipping_fn` is already set and will be replaced!')
+
+        self.clipping_fn = partial(ClippingGradientNorm, max_norm=max_norm, norm_type=norm_type)
+        return self
 
 class OptimizerSGD(Optimizer):
     def __init__(self, learning_rate: float, momentum: float = 0.9, weight_decay: float = 0, nesterov: bool = False):

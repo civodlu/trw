@@ -18,6 +18,7 @@ from .optimizers import create_sgd_optimizers_fn, create_sgd_optimizers_schedule
     create_scheduler_step_lr, create_adam_optimizers_fn, \
     create_adam_optimizers_scheduler_step_lr_fn, create_optimizers_fn, \
     create_sgd_optimizers_scheduler_one_cycle_lr_fn, create_adam_optimizers_scheduler_one_cycle_lr_fn
+from .optimizer_clipping import ClippingGradientNorm
 
 from .optimizers_v2 import Optimizer, OptimizerAdam, OptimizerSGD, OptimizerAdamW
 
