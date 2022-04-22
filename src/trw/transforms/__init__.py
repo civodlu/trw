@@ -22,7 +22,7 @@ from .affine import affine_transformation_translation, affine_transformation_rot
 from .spatial_info import SpatialInfo
 
 from .transforms import Transform, TransformBatchWithCriteria, criteria_feature_name, criteria_is_array_4_or_above, \
-    criteria_is_array_n_or_above
+    criteria_is_array_n_or_above, criteria_is_tensor
 from .transforms_random_crop_pad import TransformRandomCropPad
 from .transforms_random_flip import TransformRandomFlip
 from .transforms_random_cutout import TransformRandomCutout
@@ -38,3 +38,4 @@ from .transforms_one_of import TransformOneOf
 from .transforms_random_deformation import TransformRandomDeformation
 from .transforms_squeeze import TransformSqueeze
 from .transforms_unsqueeze import TransformUnsqueeze
+from .transform_move_to_device import TransformMoveToDevice

@@ -27,10 +27,11 @@ def create_cifar10_dataset(
         # else default a standard folder
         root = './data'
 
-    if nb_workers > 0 and data_processing_batch_size is None:
-        data_processing_batch_size = batch_size // nb_workers
-    else:
-        data_processing_batch_size = batch_size
+    if data_processing_batch_size is None:
+        if nb_workers > 0:
+            data_processing_batch_size = batch_size // nb_workers
+        else:
+            data_processing_batch_size = batch_size
 
     cifar_path = os.path.join(root, 'cifar10')
 
@@ -52,8 +53,9 @@ def create_cifar10_dataset(
             sequence = SequenceArray(ds, SamplerRandom(batch_size=batch_size))
         else:
             assert batch_size % data_processing_batch_size == 0
+            nb_jobs_for_one_batch = batch_size // data_processing_batch_size
             sampler = SamplerRandom(batch_size=data_processing_batch_size)
-            sequence = SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=nb_workers * 2)
+            sequence = SequenceArray(ds, sampler=sampler).map(transforms, nb_workers=nb_workers, max_jobs_at_once=1 * nb_workers, max_queue_size_pin=nb_jobs_for_one_batch)
             sequence = sequence.batch(batch_size // data_processing_batch_size)
         return sequence
 

@@ -551,3 +551,20 @@ class TestTransform(TestCase):
         assert len(split_tfm) == 4
         assert split_tfm['float_torch'].shape == (nb_samples, 4, 1, 5, 6)
         assert split_tfm['float_np'].shape == (nb_samples, 4, 1, 5, 6)
+
+    def test_transform_to_device(self):
+        device = 'cpu'
+        if torch.cuda.device_count() > 0:
+            device = 'cuda:0'
+        device = torch.device(device)
+
+        batch = {
+            'test': 'should not be moved!',
+            'test2': torch.zeros([5, 5], dtype=torch.float32, device=torch.device('cpu'))
+        }
+
+        tfm = trw.transforms.TransformMoveToDevice(device=device)
+        batch_tfm = tfm(batch)
+        assert len(batch_tfm) == len(batch)
+        assert batch_tfm['test'] is batch['test']
+        assert batch_tfm['test2'].device == device

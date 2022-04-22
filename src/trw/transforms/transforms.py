@@ -62,7 +62,7 @@ def criteria_is_array_n_or_above(batch: Batch, dim: int) -> Sequence[str]:
 
 def criteria_is_array_4_or_above(batch: Batch) -> Sequence[str]:
     """
-    Return `True` if the feature is a numpy or torch array dim >= 4, typically all
+    Return list of feature names which is a numpy or torch array dim >= 4, typically all
     n-d images, n >= 2
     """
     return criteria_is_array_n_or_above(batch, dim=4)
@@ -70,6 +70,17 @@ def criteria_is_array_4_or_above(batch: Batch) -> Sequence[str]:
 
 def criteria_feature_name(batch: Batch, feature_names: Sequence[str]) -> Sequence[str]:
     """
-    Return `True` if the feature name belongs to a given set of names
+    Return list of feature names which belong to a given set of names
     """
     return feature_names
+
+
+def criteria_is_tensor(batch: Batch) -> Sequence[str]:
+    """
+    Return list of feature names which is :class:`torch.Tensor`
+    """
+    features = []
+    for feature_name, feature_value in batch.items():
+        if isinstance(feature_value, torch.Tensor):
+            features.append(feature_name)
+    return features
