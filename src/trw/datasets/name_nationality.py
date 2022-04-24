@@ -12,7 +12,7 @@ from typing import Optional, Any
 import torch
 from ..train import SamplerRandom, SequenceArray
 from ..basic_typing import Datasets
-from .utils import download_and_extract_archive
+from .utils import download_and_extract_archive, get_data_root
 
 
 def find_files(root):
@@ -60,14 +60,7 @@ def create_name_nationality_dataset(
         seed: int = 0,
         batch_size: int = 1) -> Datasets:
     torch.manual_seed(seed)
-
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     dataset_path = os.path.join(root, 'name_nationality')
     download_and_extract_archive(url, dataset_path)

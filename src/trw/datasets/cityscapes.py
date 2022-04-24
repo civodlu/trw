@@ -6,6 +6,7 @@ import numpy as np
 from ..basic_typing import Datasets
 from ..train import SequenceArray
 from ..train import SamplerRandom, SamplerSequential
+from .utils import get_data_root
 import functools
 import collections
 import os
@@ -71,13 +72,7 @@ def create_cityscapes_dataset(
     Returns:
         a dict of splits. Each split is a :class:`trw.train.Sequence`
     """
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     cityscapes_path = os.path.join(root, 'cityscapes')
     train_dataset = torchvision.datasets.cityscapes.Cityscapes(cityscapes_path, mode='fine', split='train', target_type=target_type)

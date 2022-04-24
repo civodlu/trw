@@ -6,6 +6,7 @@ import numpy as np
 from ..train import SamplerRandom, SequenceArray
 from ..basic_typing import Datasets, DatasetsInfo
 from ..transforms import Transform
+from .utils import get_data_root
 
 
 def identity(batch):
@@ -38,13 +39,7 @@ def create_mnist_dataset(
     Returns:
 
     """
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     train_dataset = torchvision.datasets.MNIST(
         root=root,

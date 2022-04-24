@@ -8,6 +8,23 @@ import platform
 logger = logging.getLogger(__name__)
 
 
+def get_logging_root(logging_root: Optional[str] = None) -> str:
+    """
+    Return the data root directory
+    """
+    if logging_root is None:
+        logging_root = os.environ.get('TRW_LOGGING_ROOT')
+
+    if logging_root is None:
+        if 'Windows' in platform.system():
+            logging_root = 'c:/trw_logs/'
+        else:
+            logging_root = '$HOME/trw_logs/'
+
+    logging_root = os.path.expandvars(os.path.expanduser(logging_root))
+    return logging_root
+
+
 class TrainingParameters:
     """
     Define here specific training parameters
@@ -78,13 +95,7 @@ class Options:
                 is done to simulate a larger effective batch size (e.g., batch_size = 64 and gradient_update_frequency = 3
                 the effective batch size is gradient_update_frequency * batch_size)
         """
-        if logging_directory is None:
-            logging_directory = os.environ.get('TRW_LOGGING_ROOT')
-        if logging_directory is None:
-            if 'Windows' in platform.system():
-                logging_directory = 'c:/trw_logs/'
-            else:
-                logging_directory = '$HOME/trw_logs/'
+        logging_directory = get_logging_root(logging_directory)
 
         if device is None:
             if torch.cuda.device_count() > 0:

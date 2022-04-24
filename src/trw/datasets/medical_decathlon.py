@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from ..train import SequenceArray, SamplerSequential, SamplerRandom
 from ..transforms import Transform
+from .utils import get_data_root
 
 nib = optional_import('nibabel')
 
@@ -142,14 +143,7 @@ def create_decathlon_dataset(
     Returns:
         a dictionary of datasets
     """
-
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     dataset = MedicalDecathlonDataset(task_name, root, remove_patient_transform=remove_patient_transform)
 

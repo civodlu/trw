@@ -5,6 +5,7 @@ import torchvision
 import os
 import numpy as np
 import torch
+from .utils import get_data_root
 from ..train import SequenceArray, SamplerRandom
 from ..basic_typing import Datasets
 from ..transforms import Transform
@@ -12,20 +13,14 @@ from ..transforms import Transform
 
 def create_cifar10_dataset(
         batch_size: int = 300,
-        root: str = None,
+        root: Optional[str] = None,
         transform_train: Optional[List[Transform]] = None,
         transform_valid: Optional[List[Transform]] = None,
         nb_workers: int = 2,
         data_processing_batch_size: int = None,
         normalize_0_1: bool = True) -> Datasets:
 
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     if data_processing_batch_size is None:
         if nb_workers > 0:

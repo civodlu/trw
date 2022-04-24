@@ -10,6 +10,7 @@ from trw.train import SequenceArray, SamplerRandom
 
 from ..basic_typing import ShapeX, Datasets, DatasetsInfo
 from ..transforms import Transform
+from .utils import get_data_root
 
 
 def _clutter(images, cluttered_size, clutter_window, nb_clutter_windows, normalization_factor):
@@ -66,13 +67,7 @@ def create_mnist_cluttered_datasset(
     Returns:
         datasets
     """
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     train_dataset = torchvision.datasets.MNIST(
         root=root,

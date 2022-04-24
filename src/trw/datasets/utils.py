@@ -1,8 +1,11 @@
+import os
+from typing import Optional
 import numpy as np
 import torch
 from PIL.Image import Image
 from PIL import Image
 import torchvision
+from ..train import get_logging_root
 
 
 def pic_to_tensor(pic: Image) -> torch.Tensor:
@@ -23,6 +26,30 @@ def pic_to_numpy(pic: Image) -> np.ndarray:
         i = np.reshape(i, [i.shape[0], i.shape[1], 1])
     i = i.transpose((2, 0, 1))
     return i
+
+
+def get_data_root(data_root: Optional[str]) -> str:
+    """
+    Returns the location where all the data will be stored.
+
+    data_root: a path where to store the data. if `data_root` is None,
+        the environment variable `TRW_DATA_ROOT` will be used.
+        If it is not defined, the default location of `get_logging_root` 
+        will be used instead.
+    """
+    if data_root is None:
+        # first, check if we have some environment variables configured
+        data_root = os.environ.get('TRW_DATA_ROOT')
+
+    if data_root is None:
+        # else default a standard folder
+        logging_root = get_logging_root(None)
+        data_root = os.path.join(logging_root, 'datasets')
+
+    assert data_root is not None
+
+    data_root = os.path.expandvars(os.path.expanduser(data_root))
+    return data_root
 
 
 def download_and_extract_archive(url: str, dataset_path: str) -> None:

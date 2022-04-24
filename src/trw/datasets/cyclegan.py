@@ -9,6 +9,7 @@ from ..basic_typing import Datasets
 from ..train import SamplerRandom, SequenceArray, SamplerSequential
 from ..datasets.utils import download_and_extract_archive
 from ..transforms import Transform, TransformCompose, TransformResize, TransformRandomFlip, TransformRandomCropPad
+from .utils import get_data_root
 import glob
 from PIL import Image
 
@@ -102,14 +103,7 @@ def create_cycle_gan_dataset(
     Returns:
         a dataset
     """
-
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     if transform_train is not None:
         assert isinstance(transform_train, list)

@@ -16,7 +16,7 @@ from ..basic_typing import Datasets
 from ..transforms import Transform
 from typing_extensions import Literal
 
-from . import utils
+from .utils import pic_to_tensor, get_data_root
 import numpy as np
 import torch
 
@@ -25,13 +25,13 @@ def _load_image_and_mask(batch, transform, normalize_0_1=True):
     images = []
     masks = []
     for image_path, mask_path in zip(batch['images'], batch['masks']):
-        image = utils.pic_to_tensor(Image.open(image_path).convert('RGB'))
+        image = pic_to_tensor(Image.open(image_path).convert('RGB'))
         if normalize_0_1:
             image = image.float() / 255.0
 
         images.append(image)
 
-        mask = utils.pic_to_tensor(Image.open(mask_path))
+        mask = pic_to_tensor(Image.open(mask_path))
         masks.append(mask)
 
     batch = {
@@ -105,7 +105,7 @@ def _load_image_and_bb(batch, transform, normalize_0_1=True):
 
     for image_path, annotation_path in zip(batch['images'], batch['annotations']):
         image_paths.append(image_path)
-        image = utils.pic_to_tensor(Image.open(image_path).convert('RGB'))
+        image = pic_to_tensor(Image.open(image_path).convert('RGB'))
         if normalize_0_1:
             image = image.float() / 255.0
         images.append(image)
@@ -187,14 +187,7 @@ def create_voc_segmentation_dataset(
     Returns:
         a datasets with dataset `voc2012` and splits `train`, `valid`.
     """
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
-
+    root = get_data_root(root)
     path = os.path.join(root, f'VOC{year}')
 
     download = False
@@ -257,13 +250,7 @@ def create_voc_detection_dataset(
           locations depending on the task (so each sample should be post-processed by a custom
           transform)
     """
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     #path = os.path.join(root, f'VOC{year}')  # TODO
     path = root

@@ -1,7 +1,7 @@
 import collections
 import functools
 import os
-from typing import Optional, List, Callable, Any, Union
+from typing import Optional, List, Any, Union
 
 import torchvision
 import torch
@@ -10,6 +10,7 @@ import numpy as np
 from ..basic_typing import Datasets
 from ..train import SamplerSequential, SamplerRandom, SequenceArray
 from ..transforms import Transform
+from .utils import get_data_root
 
 from .utils import download_and_extract_archive
 
@@ -87,13 +88,7 @@ def create_dataset_from_archive_url(
         nb_workers: int = 0,
         ) -> Datasets:
 
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
+    root = get_data_root(root)
 
     path = os.path.join(root, 'facades')
     os.makedirs(path, exist_ok=True)

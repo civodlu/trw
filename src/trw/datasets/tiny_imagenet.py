@@ -9,6 +9,7 @@ import numpy as np
 from ..train import SequenceArray, SamplerSequential, SamplerRandom
 from ..basic_typing import Datasets, DatasetsInfo
 from ..transforms import Transform, TransformCompose
+from .utils import get_data_root
 
 
 class TinyImageNet(Dataset):
@@ -86,14 +87,7 @@ def create_tiny_imagenet_dataset(
         nb_workers: int = 4,
         root: Optional[str] = None) -> Tuple[Datasets, DatasetsInfo]:
 
-    if root is None:
-        # first, check if we have some environment variables configured
-        root = os.environ.get('TRW_DATA_ROOT')
-
-    if root is None:
-        # else default a standard folder
-        root = './data'
-
+    root = get_data_root(root)
     root_imagenet = os.path.join(root, 'tiny_imagenet/tiny-imagenet-200')
     dataset_train = TinyImageNet(root_imagenet, split='train', num_images_per_class=num_images_per_class)
     dataset_valid = TinyImageNet(root_imagenet, split='val', num_images_per_class=num_images_per_class)

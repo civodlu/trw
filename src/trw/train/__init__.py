@@ -1,4 +1,4 @@
-from .options import Options
+from .options import Options, get_logging_root
 from .utilities import create_or_recreate_folder, set_optimizer_learning_rate, \
     CleanAddedHooks, safe_filename, \
     get_device, transfer_batch_to_device, find_default_dataset_and_split_names, get_class_name,\
