@@ -1,3 +1,5 @@
+from asyncio.log import logger
+import time
 from ..utils import len_batch
 from . import sequence
 import numpy as np
@@ -39,6 +41,18 @@ def split_in_2_batches(batch: collections.MutableMapping, first_batch_size: int)
     return batch_1, batch_2
 
 
+class RebatchStatistics:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.nb_batches_input = 0
+        self.nb_batches_output = 0
+        self.waiting_time_batches = 0
+        self.waiting_time_rebatch = 0
+        self.waiting_time_split = 0
+
+
 class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
     """
     This sequence will normalize the batch size of an underlying sequence
@@ -66,6 +80,7 @@ class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
         self.iter_source = None
         self.iter_overflow = None
         self.collate_fn = collate_fn
+        self.statistics = RebatchStatistics()
 
     def subsample(self, nb_samples):
         subsampled_source = self.source_split.subsample(nb_samples)
@@ -86,7 +101,11 @@ class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
                     self.iter_overflow = None
                 else:
                     # if not, get the next batch
+                    time_wait_start = time.perf_counter()
                     batch = self.iter_source.__next__()
+                    time_wait_end = time.perf_counter()
+                    self.statistics.waiting_time_batches += time_wait_end - time_wait_start
+                    self.statistics.nb_batches_input += 1
 
                 if batch is None or len(batch) == 0:
                     # for some reason, the batch is empty
@@ -102,7 +121,12 @@ class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
                 if total_nb_samples + nb_samples > self.batch_size:
                     # too many samples, split the batch and keep the extra samples in the overflow
                     first_batch_size = self.batch_size - total_nb_samples
+
+                    time_start = time.perf_counter() 
                     first_batch, overflow_batch = split_in_2_batches(batch, first_batch_size)
+                    time_end = time.perf_counter()
+                    self.statistics.waiting_time_split += time_end - time_start
+
                     batches.append(first_batch)
                     self.iter_overflow = overflow_batch
                     break
@@ -114,15 +138,22 @@ class SequenceReBatch(sequence.Sequence, sequence.SequenceIterator):
         except StopIteration:
             if len(batches) == 0 or (len(batches) != self.batch_size and self.discard_batch_not_full):
                 # end the sequence
+                overhead_time = self.statistics.waiting_time_batches + self.statistics.waiting_time_rebatch + self.statistics.waiting_time_split
+                logger.info(f'SequenceReBatch={self}, overhead={overhead_time}, waiting_time_batches={self.statistics.waiting_time_batches}, waiting_time_rebatch={self.statistics.waiting_time_rebatch}, waiting_time_split={self.statistics.waiting_time_split}')
                 raise StopIteration()
 
         if self.collate_fn is not None:
             # finally make a batch
+            time_start = time.perf_counter()
             batches = self.collate_fn(batches)
+            time_end = time.perf_counter()
+            self.statistics.waiting_time_rebatch += time_end - time_start
 
+        self.statistics.nb_batches_output += 1
         return batches
 
     def __iter__(self):
+        self.statistics.reset()
         self.iter_source = self.source_split.__iter__()
         return self
 
