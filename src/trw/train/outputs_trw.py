@@ -336,18 +336,16 @@ class OutputClassification(Output):
         return loss_term
 
     def loss_term_cleanup(self, loss_term):
-        super().loss_term_cleanup(loss_term)
-
-        # delete possibly large outputs
-        self.output = None
-
-        del self.output_truth
-        self.output_truth = None
-
         if not self.collect_output:
             del loss_term['output_raw']
             del loss_term['output']
             del loss_term['output_truth']
+
+        # delete possibly large outputs
+        self.output = None
+        self.output_truth = None
+
+        
 
 
 bce_logits_loss = lambda output, target: nn.functional.binary_cross_entropy_with_logits(

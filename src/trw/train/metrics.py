@@ -493,7 +493,9 @@ def default_segmentation_metrics():
     return [
         MetricLoss(),
         MetricSegmentationDice(),
-        MetricClassificationBinarySensitivitySpecificity(),
+
+        # this implementation is slow. By default it should be disabled!
+        #MetricClassificationBinarySensitivitySpecificity(),
     ]
 
 
