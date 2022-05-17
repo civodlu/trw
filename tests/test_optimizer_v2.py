@@ -72,6 +72,18 @@ class TestOptimizerV2(unittest.TestCase):
         assert (abs(lrs[10 * 30:2 * 10 * 30] - 0.01) < 1e-5).all()
         assert (abs(lrs[2 * 10 * 30: ] - 0.001) < 1e-5).all()
 
+    def test_option(self):
+        options = Options(device=torch.device('cpu'), num_epochs=10)
+
+        options_str = str(options)
+        assert 'runtime' in options_str
+        assert 'current_logging_directory' in options_str
+        assert 'gradient_scaler' in options_str
+        assert 'num_epochs' in options_str
+        assert 'gradient_update_frequency' in options_str
+        assert 'sql_database' in options_str
+        assert 'workflow_options' in options_str
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,7 +3,7 @@ import os
 import torch
 import logging
 import platform
-
+from pprint import pformat
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +43,9 @@ class TrainingParameters:
                 logger.error(f'Mixed precision not enabled! Exception={e}')
         self.gradient_update_frequency = gradient_update_frequency
 
+    def __repr__(self) -> str:
+        return pformat(vars(self), indent=3, width=1)
+
 
 class WorkflowOptions:
     """
@@ -61,6 +64,9 @@ class WorkflowOptions:
         self.sql_database_path: Optional[str] = None
         self.sql_database: Optional[Any] = None
 
+    def __repr__(self) -> str:
+        return pformat(vars(self), indent=3, width=1)
+
 
 class Runtime:
     """
@@ -68,6 +74,9 @@ class Runtime:
     """
     def __init__(self):
         pass
+
+    def __repr__(self) -> str:
+        return pformat(vars(self), indent=3, width=1)
 
 
 class Options:
@@ -117,3 +126,6 @@ class Options:
             device=device
         )
         self.runtime: Runtime = Runtime()
+
+    def __repr__(self) -> str:
+        return pformat(vars(self), indent=3, width=1)
