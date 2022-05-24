@@ -239,6 +239,7 @@ class UNetBase(nn.Module, ModuleWithIntermediate):
 
     def _build(self, config, init_block_fn, down_block_fn, up_block_fn, middle_block_fn, output_block_fn, strides):
         # make only local copy of config
+        self.config = config
         config = copy.copy(config)
 
         self.downs = nn.ModuleList()

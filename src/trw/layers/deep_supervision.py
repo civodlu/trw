@@ -27,7 +27,7 @@ def adaptative_weighting(outputs: Sequence[TorchTensorNCX]) -> np.ndarray:
 
 def select_third_to_last_skip_before_last(s: Sequence[TorchTensorNCX]) -> Sequence[TorchTensorNCX]:
     assert len(s) >= 4
-    last: TorchTensorNCX = s[-1]
+    last: TorchTensorNCX = s[-2]  # use before the last (the last layer will have nb_features == nb_classes)
     return list(s[1:-2]) + [last]  # typing: convert to list so that we have operator `+`
 
 

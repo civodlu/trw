@@ -56,9 +56,10 @@ class LossDiceMulticlass(nn.Module):
                  normalization_fn=nn.Sigmoid,
                  eps=1e-5,
                  return_dice_by_class=False,
-                 smooth=1.0,
+                 smooth=1e-3,
                  power=1.0,
-                 per_class_weights: Sequence[float] = None):
+                 per_class_weights: Sequence[float] = None,
+                 discard_background_loss: bool = True):
         """
 
         Args:
@@ -70,6 +71,7 @@ class LossDiceMulticlass(nn.Module):
             smooth: a smoothing factor
             per_class_weights: a weighting of the classes
             power: power of the denominator components
+            discard_background_loss: if True, the loss will NOT include the background `class`
 
         Notes:
         * if return_dice_by_class is True, to calculate dice by class by sample:
@@ -88,6 +90,7 @@ class LossDiceMulticlass(nn.Module):
         self.smooth = smooth
         self.per_class_weights = torch.tensor(per_class_weights).unsqueeze(0) if per_class_weights is not None else None
         self.power = power
+        self.discard_background_loss = discard_background_loss
 
         if normalization_fn is not None:
             self.normalization = normalization_fn()
@@ -141,6 +144,11 @@ class LossDiceMulticlass(nn.Module):
                 if self.per_class_weights.device != average_loss_per_channel.device:
                     self.per_class_weights = self.per_class_weights.to(average_loss_per_channel.device)
                 average_loss_per_channel = average_loss_per_channel * self.per_class_weights.detach()
+
+            if self.discard_background_loss:
+                # the background portion most likely will
+                # overwhelm the foreground so discard it
+                average_loss_per_channel = average_loss_per_channel[:, 1:]
 
             average_loss_per_channel = average_loss_per_channel.mean(dim=1)
             return average_loss_per_channel
