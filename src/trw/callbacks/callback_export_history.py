@@ -105,7 +105,6 @@ class CallbackExportHistory(Callback):
                     for _, h_split in h_dataset.items():
                         for output_name, output in h_split.items():
                             output_names.add(output_name)
-                            print(output_name)
                             for metric_name, _ in output.items():
                                 print(metric_name)
                                 metrics_names.add(metric_name)
