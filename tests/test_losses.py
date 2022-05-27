@@ -54,7 +54,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1], dtype=np.float32).reshape((1, 2, 5, 6)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0, discard_background_loss=False)
         l = loss(t1, t2)
 
         # calculate the mask intersection
@@ -110,7 +110,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([sample_0, sample_1], dtype=np.float32).reshape((2, 2, 2, 3)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((2, 1, 2, 3)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0, discard_background_loss=False)
         l = loss(t1, t2)
         assert len(l.shape) == 1
         assert l.shape[0] == 2
@@ -182,7 +182,7 @@ class TestLosses(TestCase):
         t1 = torch.from_numpy(np.asarray([found_channel0, found_channel1, found_channel2], dtype=np.float32).reshape((1, 3, 5, 6)))
         t2 = torch.from_numpy(np.asarray(targets, dtype=np.int64).reshape((1, 1, 5, 6)))
 
-        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0)
+        loss = trw.train.LossDiceMulticlass(normalization_fn=None, eps=1e-7, smooth=0, discard_background_loss=False)
         l = loss(t1, t2)
 
         # calculate the mask intersection
