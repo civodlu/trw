@@ -95,15 +95,23 @@ class CallbackExportHistory(Callback):
         utilities.create_or_recreate_folder(sample_root_dir)
 
         for dataset_name, dataset in outputs.items():
-            split_name, outputs = next(iter(dataset.items()))
-            for output_name, output in outputs.items():
-                metrics_names = extract_metrics_name(
-                    history,
-                    dataset_name,
-                    split_name,
-                    output_name,
-                    self.dicarded_metrics)
+            metrics_names = set()
+            output_names = set()
+            
+            # find all possible metric names & output names
+            for h in history:
+                h_dataset = h.get(dataset_name)
+                if h_dataset is not None:
+                    for _, h_split in h_dataset.items():
+                        for output_name, output in h_split.items():
+                            output_names.add(output_name)
+                            print(output_name)
+                            for metric_name, _ in output.items():
+                                print(metric_name)
+                                metrics_names.add(metric_name)
 
+            # extract the values and graph them
+            for output_name in output_names:
                 for metric_name in metrics_names:
                     r = extract_from_history(history, dataset_name, output_name, metric_name)
                     if r is None:
