@@ -209,3 +209,27 @@ class TestSampler(TestCase):
             error = abs(expected_sampling - sampling) / expected_sampling
             print('error=', error)
             assert error < tolerance, 'expected={}, found={}'.format(expected_sampling, sampling)
+
+    def test_sampler_subset_interleaved(self):
+        l1 = np.asarray([1, 2])
+        l2 = np.asarray([3, 4, 5])
+
+        indices_l1 = set()
+        indices_l2 = set()
+        for _ in range(20):
+            sampler = trw.train.SamplerSubsetRandomByListInterleaved([l1, l2])
+            sampler.initializer(None)
+            indices = [i for i in sampler]
+
+            for i in indices[0::2]:
+                assert i in l1
+            for i in indices[1::2]:
+                assert i in l2
+            assert len(indices) == 4
+
+            indices_l1 = indices_l1.union(set(indices[0::2]))
+            indices_l2 = indices_l2.union(set(indices[1::2]))
+
+        # make sure all indices were selected at some point
+        assert set(l1) == indices_l1
+        assert set(l2) == indices_l2

@@ -44,7 +44,7 @@ from .sequence_sub_batch import SequenceSubBatch
 from .metrics import Metric, MetricClassificationError, MetricClassificationBinarySensitivitySpecificity, MetricLoss, \
     MetricClassificationBinaryAUC, MetricClassificationF1
 
-from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler
+from .sampler import SamplerRandom, SamplerSequential, SamplerSubsetRandom, SamplerClassResampling, Sampler, SamplerSubsetRandomByListInterleaved
 from .filter_gaussian import FilterFixed, FilterGaussian
 from .meaningful_perturbation import MeaningfulPerturbation, default_information_removal_smoothing
 from .data_parallel_extented import DataParallelExtended

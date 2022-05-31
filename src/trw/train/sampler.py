@@ -1,6 +1,8 @@
+import typing
 import torch
 import collections
 import numpy as np
+
 from ..utils import len_batch, to_value
 
 
@@ -138,6 +140,53 @@ class SamplerSubsetRandom(Sampler):
 
     def __iter__(self):
         return (self.indices[i] for i in torch.randperm(len(self.indices)))
+
+
+class SamplerSubsetRandomByListInterleaved(Sampler):
+    """
+    Elements from a given list of list of indices are randomly drawn without replacement,
+    one element per list at a time.
+    
+    For sequences with different sizes, the longest of the sequences will be trimmed to
+    the size of the shortest sequence. 
+
+    This can be used for example to resample without replacement imbalanced
+    classes in a classification task.
+
+    Examples::
+
+        >>> l1 = np.asarray([1, 2])
+        >>> l2 = np.asarray([3, 4, 5])
+        >>> sampler = trw.train.SamplerSubsetRandomByListInterleaved([l1, l2])
+        >>> sampler.initializer(None)
+        >>> indices = [i for i in sampler]
+        # indices could be [1, 5, 2, 4]
+
+    Arguments:
+        indices: a sequence of sequence of indices
+    """
+
+    def __init__(self, indices: typing.Sequence[typing.Sequence[int]]):
+        super().__init__()
+        self.indices = indices
+        self.indices_interleaved = None
+
+    def initializer(self, data_source):
+        nb_elements = [len(l) for l in self.indices]
+        min_element = min(nb_elements)
+
+        # trim and randomize the list elements
+        indices_trimmed = []
+        for l in self.indices:
+            l = np.asarray(l)
+            shuffled_indices = torch.randperm(len(l))
+            indices_trimmed.append(l[shuffled_indices[:min_element]])
+
+        # interleave each element of the list
+        self.indices_interleaved = np.vstack(indices_trimmed).reshape((-1,), order='F')
+
+    def __iter__(self):
+        return self.indices_interleaved.__iter__()
 
 
 class SamplerClassResampling(Sampler):
