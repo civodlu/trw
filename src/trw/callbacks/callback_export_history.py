@@ -79,7 +79,6 @@ class CallbackExportHistory(Callback):
                         for output_name, output in h_split.items():
                             output_names.add(output_name)
                             for metric_name, _ in output.items():
-                                print(metric_name)
                                 metrics_names.add(metric_name)
 
             # extract the values and graph them
