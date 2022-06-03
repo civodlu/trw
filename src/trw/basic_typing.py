@@ -38,6 +38,8 @@ TensorNX = Union[np.ndarray, torch.Tensor]
 """Generic Tensor with th `N` and `C` components removed"""
 TensorX = Union[np.ndarray, torch.Tensor]
 
+"""Generic Tensor with N component only"""
+TensorN = Union[np.ndarray, torch.Tensor]
 
 """Torch Tensor. Must be shaped as [N, C, D, H, W, ...]"""
 TorchTensorNCX = torch.Tensor
@@ -47,6 +49,9 @@ TorchTensorNX = torch.Tensor
 
 """Torch Tensor with th `N` and `C` components removed"""
 TorchTensorX = torch.Tensor
+
+"""Generic Tensor with N component only"""
+TorchTensorN = torch.Tensor
 
 
 """Numpy Tensor. Must be shaped as [N, C, D, H, W, ...]"""

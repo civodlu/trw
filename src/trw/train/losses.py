@@ -5,9 +5,14 @@ import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from typing_extensions import Literal
+from trw.basic_typing import TorchTensorNX, TorchTensorNCX
 
 
-def one_hot(targets, num_classes, dtype=torch.float32, device=None):
+def one_hot(
+        targets: TorchTensorNX, 
+        num_classes: int, 
+        dtype=torch.float32, 
+        device: Optional[torch.device]=None) -> TorchTensorNCX:
     """
     Encode the targets (an tensor of integers representing a class)
     as one hot encoding.
