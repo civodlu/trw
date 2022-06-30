@@ -310,6 +310,7 @@ class BlockUpDeconvSkipConv(nn.Module):
             *,
             nb_repeats: int = 1,
             kernel_size: Optional[KernelSize] = None,
+            deconv_kernel_size: Optional[KernelSize] = None,
             padding: Optional[Padding] = None,
             output_padding: Optional[Union[int, Sequence[int]]] = None,
             deconv_block=BlockDeconvNormActivation,
@@ -317,6 +318,9 @@ class BlockUpDeconvSkipConv(nn.Module):
             mode: Literal['concatenation', 'sum'] = 'concatenation'):
         super().__init__()
         self.mode = mode
+
+        if deconv_kernel_size is None:
+            deconv_kernel_size = kernel_size
 
         if mode == 'sum':
             assert skip_channels == output_channels, f'for the sum, skip channels must match ' \
@@ -327,7 +331,7 @@ class BlockUpDeconvSkipConv(nn.Module):
             config,
             input_channels=input_channels,
             output_channels=output_channels,
-            kernel_size=kernel_size,
+            kernel_size=deconv_kernel_size,
             padding=padding,
             output_padding=output_padding,
             stride=stride
