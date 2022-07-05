@@ -74,6 +74,20 @@ class Optimizer:
         self.set_scheduler_fn(scheduler_fn)
         return self
 
+    def scheduler_cosine_annealing_warm_restart(self, T_0: int, T_mult: int = 1, eta_min: float = 0, last_epoch=-1) -> 'Optimizer':
+        """
+        Apply a scheduler on the learning rate.
+
+        Restart the learning rate every T_0 * (T_mult)^(#restart) epochs.
+        
+        References:
+            https://arxiv.org/pdf/1608.03983v5.pdf
+
+        """
+        scheduler_fn = partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
+        self.set_scheduler_fn(scheduler_fn)
+        return self
+
     def clip_gradient_norm(self, max_norm: float = 1.0, norm_type: float = 2.0):
         """
         Clips the gradient norm during optimization
