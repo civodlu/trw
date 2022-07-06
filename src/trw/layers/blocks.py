@@ -300,6 +300,36 @@ class BlockUpsampleNnConvNormActivation(nn.Module):
         return self.ops(x)
 
 
+class BlockMerge(nn.Module):
+    """
+    Merge multiple layers (e.g., concatenate, sum...)
+    """
+    def __init__(self, config: LayerConfig, layer_channels: Sequence[int], mode: Literal['concatenation', 'sum'] = 'concatenation') -> None:
+        super().__init__()
+        self.layer_channels = layer_channels
+        self.mode = mode
+        assert len(layer_channels) > 0
+        if self.mode == 'sum':
+            assert len(set(layer_channels)) == 1, 'all layers must have the same number of channels to sum!'
+            self.output_channels = self.layer_channels[0]
+        elif self.mode == 'concatenation':
+            self.output_channels = sum(self.layer_channels)
+        else:
+            raise ValueError(f'unsupported mode={mode}')
+
+    def get_output_channels(self):
+        return self.output_channels
+
+    def forward(self, layers: Sequence[torch.Tensor]):
+        assert len(layers) == len(self.layer_channels)
+        if self.mode == 'sum':
+            return torch.add(*layers)
+        elif self.mode == 'concatenation':
+            return torch.concat(layers, dim=1)
+        else:
+            raise ValueError(f'unsupported mode={self.mode}')
+
+
 class BlockUpDeconvSkipConv(nn.Module):
     def __init__(
             self,
@@ -315,17 +345,13 @@ class BlockUpDeconvSkipConv(nn.Module):
             output_padding: Optional[Union[int, Sequence[int]]] = None,
             deconv_block=BlockDeconvNormActivation,
             stride: Optional[Stride] = None,
-            mode: Literal['concatenation', 'sum'] = 'concatenation'):
+            merge_layer_fn=BlockMerge):
         super().__init__()
-        self.mode = mode
+
+        self.merge_layer = merge_layer_fn(config=config, layer_channels=[skip_channels, output_channels])
 
         if deconv_kernel_size is None:
             deconv_kernel_size = kernel_size
-
-        if mode == 'sum':
-            assert skip_channels == output_channels, f'for the sum, skip channels must match ' \
-                                                     f'up convolution channels. Got={output_channels} ' \
-                                                     f'Expected={skip_channels}'
 
         self.ops_deconv = deconv_block(
             config,
@@ -340,14 +366,14 @@ class BlockUpDeconvSkipConv(nn.Module):
         convs = [
             BlockConvNormActivation(
                 config,
-                input_channels=output_channels + skip_channels if mode == 'concatenation' else skip_channels,
+                input_channels=self.merge_layer.get_output_channels(),
                 output_channels=output_channels,
                 kernel_size=kernel_size,
                 stride=1
             )
         ]
 
-        for n in range(1, nb_repeats):
+        for _ in range(1, nb_repeats):
             conv = BlockConvNormActivation(
                 config,
                 input_channels=output_channels,
@@ -373,12 +399,7 @@ class BlockUpDeconvSkipConv(nn.Module):
         x = self.ops_deconv(previous)
         assert x.shape[2:] == skip.shape[2:], f'got shape={x.shape[2:]}, expected={skip.shape[2:]}'
 
-        if self.mode == 'concatenation':
-            x = torch.cat([skip, x], dim=1)
-        elif self.mode == 'sum':
-            x = skip + x
-        else:
-            raise ValueError(f'unexpected mode! got={self.mode}')
+        x = self.merge_layer([skip, x])
         x = self.ops_conv(x)
         return x
 

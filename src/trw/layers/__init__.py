@@ -26,3 +26,4 @@ from .deep_supervision import DeepSupervision
 from .backbone_decoder import BackboneDecoder
 from .efficient_net import EfficientNet, MBConvN
 from .resnet_preact import PreActResNet, PreActResNet18, PreActResNet34
+from .unet_attention import UNetAttention
