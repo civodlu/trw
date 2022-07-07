@@ -285,7 +285,7 @@ class TestOutput(TestCase):
         o2 = torch.as_tensor(o2, dtype=torch.long).unsqueeze(0).unsqueeze(0)
 
         metrics = [MetricSegmentationDice()]
-        criterion_fn = functools.partial(LossDiceMulticlass, smooth=0, power=1, eps=0, discard_background_loss=False)
+        criterion_fn = functools.partial(LossDiceMulticlass, smooth=0, power=1, eps=0, discard_background_loss=False, normalization_fn=nn.Sigmoid)
 
         output = trw.train.OutputSegmentationBinary(i1, o1, metrics=metrics, criterion_fn=criterion_fn)
         v1 = output.evaluate_batch({}, is_training=True)

@@ -1,11 +1,12 @@
-from typing import Sequence, Optional
+from functools import partial
+from typing import Callable, Sequence, Optional
 
 import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
 from typing_extensions import Literal
-from trw.basic_typing import TorchTensorNX, TorchTensorNCX
+from trw.basic_typing import TensorNCX, TorchTensorNX, TorchTensorNCX
 
 
 def one_hot(
@@ -58,11 +59,11 @@ class LossDiceMulticlass(nn.Module):
         Image Segmentation" https://arxiv.org/pdf/1606.04797.pdf
     """
     def __init__(self,
-                 normalization_fn=nn.Sigmoid,
-                 eps=1e-5,
-                 return_dice_by_class=False,
-                 smooth=1e-3,
-                 power=1.0,
+                 normalization_fn: Callable[[torch.Tensor], torch.Tensor]=partial(nn.Softmax, dim=1),
+                 eps: float =1e-5,
+                 return_dice_by_class: bool =False,
+                 smooth: float =1e-3,
+                 power: float =1.0,
                  per_class_weights: Sequence[float] = None,
                  discard_background_loss: bool = True):
         """
@@ -104,16 +105,16 @@ class LossDiceMulticlass(nn.Module):
         """
         
         Args:
-            output: must have W x C x d0 x ... x dn shape, where C is the total number of classes to predict
-            target: must have W x 1 x d0 x ... x dn shape
+            output: must have N x C x d0 x ... x dn shape, where C is the total number of classes to predict
+            target: must have N x 1 x d0 x ... x dn shape
 
         Returns:
             if return_dice_by_class is False, return 1 - dice score suitable for optimization.
             Else, return the (numerator, cardinality) by class and by sample
         """
         assert len(output.shape) > 2
-        assert len(output.shape) == len(target.shape), 'output: must have W x C x d0 x ... x dn shape and ' \
-                                                       'target: must have W x 1 x d0 x ... x dn shape'
+        assert len(output.shape) == len(target.shape), 'output: must have N x C x d0 x ... x dn shape and ' \
+                                                       'target: must have N x 1 x d0 x ... x dn shape'
         assert output.shape[0] == target.shape[0]
         assert target.shape[1] == 1, 'segmentation must have a single channel!'
 
