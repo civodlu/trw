@@ -8,7 +8,7 @@ from unittest import TestCase
 from trw.layers import default_layer_config, AutoencoderConvolutionalVariationalConditional, EncoderDecoderResnet, \
     NormType
 from trw.layers.autoencoder_convolutional_variational import AutoencoderConvolutionalVariational
-from trw.layers.blocks import BlockRes, BlockConvNormActivation, BlockUpsampleNnConvNormActivation
+from trw.layers.blocks import BlockMerge, BlockRes, BlockConvNormActivation, BlockUpsampleNnConvNormActivation
 from trw.train import one_hot
 
 
@@ -666,7 +666,7 @@ class TestLayers2(TestCase):
             input_channels=1,
             output_channels=3,
             nb_repeats=4,
-            mode='sum',
+            merge_layer_fn=functools.partial(BlockMerge, mode='sum'),
             kernel_size=3,
             padding=1,
             output_padding=1,
