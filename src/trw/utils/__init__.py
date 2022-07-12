@@ -19,7 +19,6 @@ from .optional_import import optional_import
 from .requires import torch_requires
 from .load_module import find_global_name
 from .number_formatting import bytes2human, number2human
-from .autocast import is_autocast_module_decorated
 
 
 def collect_hierarchical_module_name(base_name, model, module_to_name=None):

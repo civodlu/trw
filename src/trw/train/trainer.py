@@ -15,7 +15,7 @@ except ModuleNotFoundError:
     # PyTorch version did not support autocast
     autocast = None  # type: ignore
 
-from ..utils import to_value, len_batch, is_autocast_module_decorated
+from ..utils import to_value, len_batch
 
 from . import outputs_trw
 from trw.callbacks import callback_epoch_summary, callback_export_classification_report, callback_explain_decision, \
@@ -208,11 +208,6 @@ def train_loop(
     """
     # make sure the model is in training mode (e.g., batch norm, dropout)
     model.train()
-
-    # if mixed precision, the model must have the autocast decorator
-    if gradient_scaler is not None:
-        assert is_autocast_module_decorated(model), 'When operating in mixed mode precision, the model\'s forward' \
-                                                    'method must be decorated with torch.cuda.amp.autocast'
 
     all_loss_terms = []
     
