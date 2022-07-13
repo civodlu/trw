@@ -14,6 +14,11 @@ def linear_embedding(config: LayerConfig, input_channels: int, output_channels: 
         input_channels=input_channels, 
         output_channels=output_channels
     )
+
+    assert len(block.ops) == 1
+    # from section 3.3 of the paper by initializing Wz to 0, this block can be inserted to any existing architecture
+    #nn.init.constant_(block.ops[0].weight, 0)
+    #nn.init.constant_(block.ops[0].bias, 0)
     return block
 
 
@@ -28,7 +33,7 @@ class BlockNonLocal(nn.Module):
 
     Defaults to dot product of each feature of each location and using
     a softmax layer to normalize the attention mask.
-        
+
     [1] https://openaccess.thecvf.com/content_cvpr_2018/papers/Wang_Non-Local_Neural_Networks_CVPR_2018_paper.pdf
 
     Support n-d input data.
@@ -41,7 +46,7 @@ class BlockNonLocal(nn.Module):
             f_mapping_fn: Callable[[LayerConfig, int, int], nn.Module] = identity,
             g_mapping_fn: Callable[[LayerConfig, int, int], nn.Module] = identity,
             w_mapping_fn: Callable[[LayerConfig, int, int], nn.Module] = linear_embedding,
-            normalize_output_fn: nn.Module = nn.Softmax(dim=1)
+            normalize_output_fn: nn.Module = nn.Softmax(dim=-1)
             ):
         super().__init__()
         self.input_channels = input_channels
@@ -67,20 +72,18 @@ class BlockNonLocal(nn.Module):
             f'shape should match. Got={f_mapping_i.shape}, expected={g_x_mapping.shape}'
         f_mapping_i = f_mapping_i.view(batch_size, intermediate_channels, -1)
         f_mapping_i = f_mapping_i.permute(0, 2, 1)
-
         f_mapping_j = self.f_mapping_j(x).view(batch_size, intermediate_channels, -1)
         
         f = torch.matmul(f_mapping_i, f_mapping_j)
-
-        y = torch.matmul(f, g_x)
-
         # normalize relative to the window position
-        y_norm = self.normalize_output_fn(y)
-        assert y_norm.shape == y.shape
+        f_norm = self.normalize_output_fn(f)
+        assert f_norm.shape == f.shape
 
-        y_norm = y_norm.permute(0, 2, 1).contiguous()
-        y_norm = y_norm.view(batch_size, intermediate_channels, *x.size()[2:])
-        W_y = self.w_mapping(y_norm)
+        y = torch.matmul(f_norm, g_x)
+
+        y = y.permute(0, 2, 1).contiguous()
+        y = y.view(batch_size, intermediate_channels, *x.size()[2:])
+        W_y = self.w_mapping(y)
         z = W_y + x
 
         if return_non_local_map:

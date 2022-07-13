@@ -1,7 +1,7 @@
 from .ops_conversion import OpsConversion
 from .layer_config import LayerConfig, default_layer_config, NormType
 from .blocks import BlockConvNormActivation, BlockDeconvNormActivation, BlockUpDeconvSkipConv, BlockPool, BlockRes, \
-    BlockConv, BlockSqueezeExcite, ConvBlockType
+    BlockConv, BlockSqueezeExcite, ConvBlockType, BlockMerge
 
 from .utils import div_shape
 from .flatten import Flatten
