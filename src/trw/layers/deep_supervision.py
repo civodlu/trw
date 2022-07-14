@@ -1,5 +1,5 @@
 import copy
-from typing import Callable, Sequence, Optional, List
+from typing import Callable, Sequence, Optional, List, Tuple, Union
 
 import torch
 import torch.nn as nn
@@ -58,7 +58,8 @@ class DeepSupervision(nn.Module):
             select_outputs_fn: Callable[[Sequence[TorchTensorNCX]], Sequence[TorchTensorNCX]] = select_third_to_last_skip_before_last,
             resize_mode: Literal['nearest', 'linear'] = 'linear',
             weighting_fn: Optional[Callable[[Sequence[TorchTensorNCX]], Sequence[float]]] = adaptative_weighting,
-            config: LayerConfig = default_layer_config(dimensionality=None)):
+            config: LayerConfig = default_layer_config(dimensionality=None),
+            return_intermediate: bool = False):
         """
 
         Args:
@@ -72,10 +73,13 @@ class DeepSupervision(nn.Module):
             resize_mode: how to resize the outputs to match the target
             config: default layer configuration
             weighting_fn: a weighting function to scale the loss of the different outputs
+            return_intermediate: if `True`, intermediate layer tensors will be returned in the
+                `forward` method
         """
 
         super().__init__()
         self.backbone = backbone
+        self.return_intermediate = return_intermediate
 
         device = get_device(backbone)
         self.select_outputs_fn = select_outputs_fn
@@ -118,7 +122,7 @@ class DeepSupervision(nn.Module):
         self.output_creator = output_creator
         self.resize_mode = resize_mode
 
-    def forward(self, x: torch.Tensor, target: torch.Tensor, latent: Optional[torch.Tensor] = None) -> List[Output]:
+    def forward(self, x: torch.Tensor, target: torch.Tensor, latent: Optional[torch.Tensor] = None) -> Union[List[Output], Tuple[List[Output], List[torch.Tensor]]]:
         os = self.backbone.forward_with_intermediate(x, latent=latent)
 
         outputs = []
@@ -138,4 +142,6 @@ class DeepSupervision(nn.Module):
             output = self.output_creator(o_tfm_resized, target, loss_scaling=loss_scaling)
             outputs.append(output)
 
+        if self.return_intermediate:
+            return outputs, os
         return outputs
