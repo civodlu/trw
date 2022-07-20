@@ -128,7 +128,7 @@ def collate_dicts(
             # useful debugging info
             info = f'collate_dicts with name={name}. Exception={e}'
             print(info, file=sys.stderr)
-            logger.error(info)
+            logger.error(info, exc_info=1)
             raise e
 
     return collated
@@ -165,7 +165,7 @@ def collate_list_of_dicts(
             # useful debugging info
             info = f'ERROR collate_list_of_dicts with name={key}. Exception={e}'
             print(info, file=sys.stderr)
-            logger.error(info)
+            logger.error(info, exc_info=1)
             raise e
 
     return d
