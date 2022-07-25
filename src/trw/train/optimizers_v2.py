@@ -13,6 +13,25 @@ SchedulerType = Any
 StepSchedulerType = Any
 
 
+class CosineAnnealingWarmRestartsDecayed(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts):
+    """
+    Scheduler based on :class:`torch.optim.lr_scheduler.CosineAnnealingWarmRestarts`. In addition,
+    every time the learning rate is restarted, the base learning rate is decayed by `decay_factor`
+    """
+    def __init__(self, optimizer: torch.optim.Optimizer, T_0: int, T_mult: int = 1, eta_min: float = 0, last_epoch: int = -1, decay_factor: float = 0.7) -> None:
+        super().__init__(optimizer, T_0, T_mult, eta_min, last_epoch)
+        self.decay_factor = decay_factor
+
+    def step(self, epoch=None):
+        # decay the base learning rate at the last epoch of the cycle
+        if self.T_i == self.T_cur + 1:
+            for i in range(len(self.base_lrs)):
+                self.base_lrs[i] *= self.decay_factor
+
+        # resume the processing 
+        super().step(epoch=epoch)
+
+
 class Optimizer:
     def __init__(
             self, 
@@ -86,6 +105,20 @@ class Optimizer:
 
         """
         scheduler_fn = partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
+        self.set_scheduler_fn(scheduler_fn)
+        return self
+
+    def scheduler_cosine_annealing_warm_restart_decayed(self, T_0: int, T_mult: int = 1, eta_min: float = 0, last_epoch=-1, decay_factor=0.7) -> 'Optimizer':
+        """
+        Apply a scheduler on the learning rate. Each time the learning rate is restarted, the base learning rate is decayed 
+
+        Restart the learning rate every T_0 * (T_mult)^(#restart) epochs.
+        
+        References:
+            https://arxiv.org/pdf/1608.03983v5.pdf
+
+        """
+        scheduler_fn = partial(CosineAnnealingWarmRestartsDecayed, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch, decay_factor=decay_factor)
         self.set_scheduler_fn(scheduler_fn)
         return self
 

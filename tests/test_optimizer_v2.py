@@ -20,7 +20,6 @@ class Model(nn.Module):
         c = i['input1'].float()
         o = self.layer(c)
         loss = (o - c).abs()
-        print(self.layer.weight)
         return {
             'Loss': trw.train.OutputLoss(loss)
         }
@@ -41,6 +40,24 @@ class CallbackLearningRateRecorderPerStep(Callback):
         if optimizer is not None:
             lr = optimizer.param_groups[0].get('lr')
             self.lr_optimizers[dataset_name].append(lr)
+
+
+class CallbackLearningRateRecorderPerEpoch(Callback):
+    """
+    Record the learning rate of the optimizers.
+
+    This is useful as a debugging tool.
+    """
+    def __init__(self):
+        self.lr_optimizers = collections.defaultdict(list)
+
+    # options, history, model, losses, outputs, datasets, datasets_infos, callbacks_per_batch, **kwargs
+    def __call__(self, options, history, model, **kwargs):
+        optimizers = kwargs.get('optimizers')
+        if optimizers is not None:
+            for dataset_name, optimizer in optimizers.items():
+                lr = optimizer.param_groups[0].get('lr')
+                self.lr_optimizers[dataset_name].append(lr)
 
 
 class TestOptimizerV2(unittest.TestCase):
@@ -128,6 +145,41 @@ class TestOptimizerV2(unittest.TestCase):
         assert abs(lrs[-1] - max_learning_rate / div_factor / final_div_factor) < 1e-8
         assert abs(float(model.layer.weight) - 1.0) < 0.1
 
+
+    def test_scheduler_warm_restart(self):
+        a = np.arange(0, 10)
+        datasets = {
+            'dataset1': {
+                'train': trw.train.SequenceArray({'input1': a})
+            }
+        }
+        num_epochs = 1000
+
+        model = Model()
+        options = Options(device=torch.device('cpu'), num_epochs=num_epochs)
+        callback_per_step = CallbackLearningRateRecorderPerEpoch()
+        trainer = trw.train.TrainerV2(
+            callbacks_per_batch_loss_terms=None,
+            callbacks_pre_training=None,
+            callbacks_post_training=None,
+            callbacks_per_epoch=[callback_per_step]
+        )
+
+        optimizers_fn = trw.train.OptimizerSGD(learning_rate=0.5).scheduler_cosine_annealing_warm_restart_decayed(T_0=200, decay_factor=0.7)
+        trainer.fit(options, datasets, model, optimizers_fn)
+
+        lrs = np.asarray(callback_per_step.lr_optimizers['dataset1'])        
+
+        assert len(lrs) == num_epochs
+        assert abs(lrs[199] - 0.5 * 0.7 ** 1) < 1e-5
+        assert lrs[198] < 1e-4
+        assert abs(lrs[399] - 0.5 * 0.7 ** 2) < 1e-5
+        assert lrs[398] < 1e-4
+        assert abs(lrs[599] - 0.5 * 0.7 ** 3) < 1e-5
+        assert lrs[798] < 1e-4
+        assert abs(lrs[799] - 0.5 * 0.7 ** 4) < 1e-5
+        assert lrs[998] < 1e-4
+        assert abs(lrs[999] - 0.5 * 0.7 ** 5) < 1e-5
 
 if __name__ == '__main__':
     unittest.main()
