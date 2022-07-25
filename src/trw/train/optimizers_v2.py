@@ -4,7 +4,8 @@ from torch import nn
 from typing import Any, Callable, Dict, Iterator, Optional, Tuple
 
 import warnings
-from trw.basic_typing import Datasets
+from ..basic_typing import Datasets
+from ..utils.requires import torch_requires
 from .optimizer_clipping import ClippingGradientNorm
 
 
@@ -27,7 +28,7 @@ class Optimizer:
         self.scheduler_fn = scheduler_fn
 
     def set_step_scheduler_fn(self, step_scheduler_fn: Optional[Callable[[torch.optim.Optimizer], StepSchedulerType]]):
-        self.step_scheduler_fn = step_scheduler_fn
+        self.per_step_scheduler_fn = step_scheduler_fn
 
     def __call__(self, datasets: Datasets, model: nn.Module) -> Tuple[Dict[str, torch.optim.Optimizer], Optional[Dict[str, SchedulerType]], Optional[Dict[str, StepSchedulerType]]]:
         per_step_schedulers = None
@@ -86,6 +87,36 @@ class Optimizer:
         """
         scheduler_fn = partial(torch.optim.lr_scheduler.CosineAnnealingWarmRestarts, T_0=T_0, T_mult=T_mult, eta_min=eta_min, last_epoch=last_epoch)
         self.set_scheduler_fn(scheduler_fn)
+        return self
+
+    @torch_requires(min_version='1.3')
+    def scheduler_one_cycle(
+            self,
+            max_learning_rate: float, 
+            epochs: int, 
+            steps_per_epoch: int,
+            learning_rate_start_div_factor: float = 25.0,
+            learning_rate_end_div_factor: float = 10000.0,
+            percentage_cycle_increase: float = 0.3,
+            anneal_strategy: str = 'cos', 
+            cycle_momentum: bool = True, 
+            base_momentum: float = 0.85, 
+            max_momentum: float = 0.95):
+        assert self.scheduler_fn is None, 'this scheduler cannot be chained!'
+        step_scheduler_fn = partial(torch.optim.lr_scheduler.OneCycleLR,
+            max_lr=max_learning_rate,
+            epochs=epochs,
+            steps_per_epoch=steps_per_epoch,
+            pct_start=percentage_cycle_increase,
+            anneal_strategy=anneal_strategy,
+            base_momentum=base_momentum,
+            max_momentum=max_momentum,
+            div_factor=learning_rate_start_div_factor,
+            final_div_factor=learning_rate_end_div_factor,
+            cycle_momentum=cycle_momentum
+        )
+        
+        self.set_step_scheduler_fn(step_scheduler_fn)
         return self
 
     def clip_gradient_norm(self, max_norm: float = 1.0, norm_type: float = 2.0):

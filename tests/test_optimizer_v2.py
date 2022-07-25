@@ -84,6 +84,50 @@ class TestOptimizerV2(unittest.TestCase):
         assert 'sql_database' in options_str
         assert 'workflow_options' in options_str
 
+    @torch_requires(min_version='1.3', silent_fail=True)
+    def test_onecycle_sgd(self):
+        a = np.arange(0, 10)
+        datasets = {
+            'dataset1': {
+                'train': trw.train.SequenceArray({'input1': a})
+            }
+        }
+        num_epochs = 100
+
+        model = Model()
+        options = Options(device=torch.device('cpu'), num_epochs=num_epochs)
+        callback_per_step = CallbackLearningRateRecorderPerStep()
+        trainer = trw.train.TrainerV2(
+            callbacks_per_batch_loss_terms=[callback_per_step],
+            callbacks_pre_training=None,
+            callbacks_post_training=None,
+            callbacks_per_epoch=None
+        )
+
+        max_learning_rate = 0.1
+        div_factor = 100
+        final_div_factor = 10
+        fraction_increasing = 0.2
+        optimizers_fn = trw.train.OptimizerSGD(learning_rate=0, momentum=0).scheduler_one_cycle(
+            epochs=num_epochs,
+            max_learning_rate=max_learning_rate,
+            steps_per_epoch=len(a),
+            learning_rate_start_div_factor=div_factor,
+            learning_rate_end_div_factor=final_div_factor,
+            percentage_cycle_increase=fraction_increasing
+        )
+        trainer.fit(options, datasets, model, optimizers_fn)
+
+        lrs = np.asarray(callback_per_step.lr_optimizers['dataset1'])
+        assert len(lrs) == num_epochs * len(a)
+
+        max_index = lrs.argmax()
+        assert abs((max_index + 1) / len(lrs) - fraction_increasing) < 1e-8
+        assert abs(lrs[max_index] - max_learning_rate) < 1e-8
+        assert abs(lrs[0] - max_learning_rate / div_factor) < 1e-8
+        assert abs(lrs[-1] - max_learning_rate / div_factor / final_div_factor) < 1e-8
+        assert abs(float(model.layer.weight) - 1.0) < 0.1
+
 
 if __name__ == '__main__':
     unittest.main()
