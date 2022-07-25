@@ -102,6 +102,12 @@ class Optimizer:
             cycle_momentum: bool = True, 
             base_momentum: float = 0.85, 
             max_momentum: float = 0.95):
+        """
+        This scheduler should not be used with another scheduler!
+
+        The learning rate or momentum provided by the Optimizer will
+        be overriden by this scheduler.
+        """
         assert self.scheduler_fn is None, 'this scheduler cannot be chained!'
         step_scheduler_fn = partial(torch.optim.lr_scheduler.OneCycleLR,
             max_lr=max_learning_rate,
