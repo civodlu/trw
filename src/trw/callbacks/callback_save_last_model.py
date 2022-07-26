@@ -14,7 +14,12 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class ModelWithLowestMetric:
+class ModelWithLowestMetricBase:
+    def update(self, metric_value, model, metadata, root_path):
+        raise NotImplementedError()
+
+
+class ModelWithLowestMetric(ModelWithLowestMetricBase):
     def __init__(self, dataset_name, split_name, output_name, metric_name, minimum_metric=0.2):
         """
 
@@ -122,7 +127,7 @@ class CallbackSaveLastModel(Callback):
             revert_if_nan_metrics: if any of the metrics have NaN, reload the model from the last checkpoint
         """
         if keep_model_with_best_metric is not None:
-            assert isinstance(keep_model_with_best_metric, ModelWithLowestMetric), \
+            assert isinstance(keep_model_with_best_metric, ModelWithLowestMetricBase), \
                 'must be ``None`` or ``ModelWithLowestMetric`` instance'
         self.keep_model_with_best_metric = keep_model_with_best_metric
         self.model_name = model_name
