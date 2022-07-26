@@ -59,12 +59,12 @@ class TestCallbackSaveLastModel(TestCase):
 
     def test_keep_best_model(self):
         callback = trw.callbacks.CallbackSaveLastModel(
-            keep_model_with_lowest_metric=trw.callbacks.ModelWithLowestMetric(
+            keep_model_with_best_metric=trw.callbacks.ModelWithLowestMetric(
                 dataset_name='dataset1',
                 split_name='split1',
                 output_name='output1',
                 metric_name='metric1',
-                lowest_metric=0.2
+                minimum_metric=0.2
             ))
 
         model = ModelDense()
