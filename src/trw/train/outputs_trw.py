@@ -261,13 +261,14 @@ class OutputClassification(Output):
             assert self.per_voxel_weights.shape[2:] == self.output.shape[2:]
             assert len(self.per_voxel_weights) == len(self.output)
 
-        if len(output.shape) != len(output_truth.shape):
-            if len(output.shape) == len(output_truth.shape) + 1:
-                warnings.warn('output and output_truth must have the same shape!'
-                              'For binary classification, output_truth.shape == (X, 1).'
-                              'This will be disabled in the future! Simply replace by'
-                              '`output_truth` by `output_truth.unsqueeze(1)`', FutureWarning)
-                self.output_truth = output_truth.unsqueeze(1)
+        if output_truth is not None:
+            if len(output.shape) != len(output_truth.shape):
+                if len(output.shape) == len(output_truth.shape) + 1:
+                    warnings.warn('output and output_truth must have the same shape!'
+                                'For binary classification, output_truth.shape == (X, 1).'
+                                'This will be disabled in the future! Simply replace by'
+                                '`output_truth` by `output_truth.unsqueeze(1)`', FutureWarning)
+                    self.output_truth = output_truth.unsqueeze(1)
 
     def evaluate_batch(self, batch, is_training):
         truth = self.output_truth
@@ -448,7 +449,8 @@ class OutputSegmentation(OutputClassification):
             sample_uid_name (str): if not None, collect the sample UID
             per_voxel_weights: a per voxel weighting that will be passed to criterion_fn
         """
-        assert len(output.shape) == len(output_truth.shape), 'must have the same dimensionality!'
+        if output_truth is not None:
+            assert len(output.shape) == len(output_truth.shape), 'must have the same dimensionality!'
 
         super().__init__(
             output=output,
