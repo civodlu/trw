@@ -2,6 +2,7 @@ from .callback import Callback
 from ..train import utilities
 from ..train import analysis_plots
 from ..train import outputs_trw as trf_outputs
+from ..utils import to_value
 import os
 import matplotlib.pyplot as plt
 import logging
@@ -60,9 +61,9 @@ class CallbackExportClassificationReport(Callback):
 
                     if output.get('output_raw') is None:
                         continue
-                    raw_values = output['output_raw'].squeeze()
-                    output_values = output['output'].squeeze()
-                    trues_values = output['output_truth'].squeeze()
+                    raw_values = to_value(output['output_raw'].squeeze())
+                    output_values = to_value(output['output'].squeeze())
+                    trues_values = to_value(output['output_truth'].squeeze())
 
                     # we have a classification task, so extract important statistics & figures
                     if self.with_confusion_matrix:

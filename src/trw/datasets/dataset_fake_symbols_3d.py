@@ -10,7 +10,7 @@ from .dataset_fake_symbols import _random_color, _add_shape, _noisy, create_fake
 def _add_square_3d(imag, mask, shapes_added, scale_factor):
     color = _random_color()
 
-    shape = np.zeros([10, 10, 10], dtype=np.float)
+    shape = np.zeros([10, 10, 10], dtype=np.float32)
     shape[1:9, 1:9, 1:9] = 1
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
@@ -19,7 +19,7 @@ def _add_square_3d(imag, mask, shapes_added, scale_factor):
 def _add_rectangle_3d(imag, mask, shapes_added, scale_factor):
     color = _random_color()
 
-    shape = np.zeros([10, 10, 10], dtype=np.float)
+    shape = np.zeros([10, 10, 10], dtype=np.float32)
     shape[1:9, 3:7, 1:9] = 1
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)

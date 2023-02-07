@@ -98,7 +98,7 @@ class TestTransform(TestCase):
 
     def test_random_crop_padd_transform_numpy(self):
         size = [1, 46, 63]
-        d = np.zeros([6000] + size, dtype=np.float)
+        d = np.zeros([6000] + size, dtype=np.float32)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1
 
         transform = trw.transforms.TransformRandomCropPad(padding=[0, 8, 8])
@@ -120,7 +120,7 @@ class TestTransform(TestCase):
         size = [1, 46, 63]
         nb = 6000
 
-        d = np.zeros([nb] + size, dtype=np.float)
+        d = np.zeros([nb] + size, dtype=np.float32)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 
@@ -143,7 +143,7 @@ class TestTransform(TestCase):
 
     def test_random_crop_no_padding(self):
         size = [1, 31, 63]
-        d = np.zeros([1000] + size, dtype=np.float)
+        d = np.zeros([1000] + size, dtype=np.float32)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 
@@ -156,7 +156,7 @@ class TestTransform(TestCase):
 
     def test_random_crop_resize(self):
         size = [1, 31, 63]
-        d = np.zeros([1000] + size, dtype=np.float)
+        d = np.zeros([1000] + size, dtype=np.float32)
         d[:, size[0] // 2, size[1] // 2, size[2] // 2] = 1.0
         d = torch.from_numpy(d)
 

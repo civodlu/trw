@@ -5,7 +5,8 @@ from bokeh.io import output_file, show, curdoc
 import os
 
 from bokeh.layouts import column
-from bokeh.models import Div, Panel
+from bokeh.models import Div
+from bokeh.models import TabPanel as Panel
 from tornado import web
 from .reporting_bokeh_graph import process_data_graph
 from .reporting_bokeh_samples import process_data_samples, process_data_tabular

@@ -45,5 +45,5 @@ results = trainer.fit(
 
 # calculate statistics of the final epoch
 output = results.outputs['mnist']['test']['classification']
-accuracy = float(np.sum(output['output'] == output['output_truth'])) / len(output['output_truth'])
+accuracy = float((output['output'] == output['output_truth']).sum()) / len(output['output_truth'])
 assert accuracy >= 0.95

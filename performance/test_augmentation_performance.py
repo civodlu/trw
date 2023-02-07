@@ -8,7 +8,7 @@ class TestTransform(TestCase):
     def test_augmented_split_performance(self):
         # mimic MNSIT shapes
         N = 60000
-        data = np.random.rand(N, 1, 28, 28).astype(np.float)
+        data = np.random.rand(N, 1, 28, 28).astype(np.float32)
         c = np.zeros([N], dtype=int)
         split_np = {'images': data, 'classes' :c}
 

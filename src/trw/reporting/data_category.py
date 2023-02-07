@@ -15,7 +15,7 @@ class DataCategory(Enum):
                 return DataCategory.DiscreteOrdered
             elif np.issubdtype(array.dtype, np.floating):
                 return DataCategory.Continuous
-            elif np.issubdtype(array.dtype, np.str):
+            elif np.issubdtype(array.dtype, str):
                 return DataCategory.DiscreteUnordered
 
         return DataCategory.Other

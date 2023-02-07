@@ -188,7 +188,7 @@ class TestMetrics(TestCase):
         input_values = torch.from_numpy(np.random.choice([0, 1], size=[nb_samples]))
 
         r = np.random.uniform(0, 1, size=[nb_samples])
-        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target = np.zeros([nb_samples, 2], dtype=np.float32)
         target[:, 0] = r
         target[:, 1] = 1 - r
         target_values = torch.from_numpy(target)
@@ -203,7 +203,7 @@ class TestMetrics(TestCase):
         nb_samples = 100
 
         r = np.random.uniform(0, 1, size=[nb_samples])
-        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target = np.zeros([nb_samples, 2], dtype=np.float32)
         target[:, 0] = r
         target[:, 1] = 1 - r
         target_values = torch.from_numpy(target)
@@ -219,7 +219,7 @@ class TestMetrics(TestCase):
         nb_samples = 20
 
         r = np.random.uniform(0, 1, size=[nb_samples])
-        target = np.zeros([nb_samples, 2], dtype=np.float)
+        target = np.zeros([nb_samples, 2], dtype=np.float32)
         target[:, 0] = r
         target[:, 1] = 1 - r
         target_values = torch.from_numpy(target)

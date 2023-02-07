@@ -19,7 +19,7 @@ def _add_square(imag, mask, shapes_added, scale_factor):
         [0, 1, 1, 1, 1, 0],
         [0, 1, 1, 1, 1, 0],
         [0, 0, 0, 0, 0, 0],
-    ], dtype=np.float)
+    ], dtype=np.float32)
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 
@@ -34,7 +34,7 @@ def _add_rectangle(imag, mask, shapes_added, scale_factor):
         [0, 1, 1, 1, 1, 0],
         [0, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-    ], dtype=np.float)
+    ], dtype=np.float32)
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 
@@ -49,7 +49,7 @@ def _add_cross(imag, mask, shapes_added, scale_factor):
         [1, 1, 1, 1, 1, 1],
         [0, 0, 1, 1, 0, 0],
         [0, 0, 1, 1, 0, 0],
-    ], dtype=np.float)
+    ], dtype=np.float32)
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 
@@ -64,7 +64,7 @@ def _add_triangle(imag, mask, shapes_added, scale_factor):
         [1, 1, 1, 1, 0, 0],
         [1, 1, 1, 1, 1, 0],
         [1, 1, 1, 1, 1, 1],
-    ], dtype=np.float)
+    ], dtype=np.float32)
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 
@@ -79,7 +79,7 @@ def _add_circle(imag, mask, shapes_added, scale_factor):
         [1, 1, 1, 1, 1, 1],
         [0, 1, 1, 1, 1, 0],
         [0, 0, 1, 1, 0, 0],
-    ], dtype=np.float)
+    ], dtype=np.float32)
 
     return _add_shape(imag, mask, shape, shapes_added, scale_factor, color)
 

@@ -154,15 +154,15 @@ class TestSimplifiedNN(TestCase):
         
         network = trw.simple_layers.compile_nn([n])
         inputs = {
-            'i1': torch.from_numpy(np.asarray([[1]], dtype=np.float)),
-            'i2': torch.from_numpy(np.asarray([[2]], dtype=np.float))
+            'i1': torch.from_numpy(np.asarray([[1]], dtype=np.float32)),
+            'i2': torch.from_numpy(np.asarray([[2]], dtype=np.float32))
         }
         outputs = network(inputs)
         
         # the order is important!
         assert len(outputs) == 1
         print(outputs['concat'].output)
-        assert (outputs['concat'].output == torch.from_numpy(np.asarray([[1, 2]], dtype=np.float))).all()
+        assert (outputs['concat'].output == torch.from_numpy(np.asarray([[1, 2]], dtype=np.float32))).all()
 
     def test_simple_module_non_nn_module_output_intermediate(self):
         # make sure the intermediate values are NOT freed

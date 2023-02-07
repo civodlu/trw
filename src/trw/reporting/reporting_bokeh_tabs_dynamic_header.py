@@ -1,5 +1,5 @@
-from bokeh.models import Panel
-from bokeh.models.widgets import Tabs
+from bokeh.models import TabPanel as Panel
+from bokeh.models.layouts import Tabs
 import os
 from .bokeh_ui import BokehUi
 from .table_sqlite import get_tables_name_and_role

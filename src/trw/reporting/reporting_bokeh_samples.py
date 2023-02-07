@@ -6,7 +6,8 @@ import collections
 from bokeh.layouts import column, row
 from bokeh.models import ColumnDataSource, TableColumn, DataTable, HTMLTemplateFormatter, Select, \
     CategoricalColorMapper, HoverTool, LinearColorMapper, ColorBar, FixedTicker, NumberFormatter
-from bokeh.models.widgets import Panel, Div
+from bokeh.models.widgets import Div
+from bokeh.models import TabPanel as Panel
 from bokeh.plotting import figure
 import numpy as np
 from bokeh.transform import transform
@@ -435,8 +436,8 @@ def render_data_frame(fig_title, fig_name, options, data_source, data, groups, d
     groups_transpose[1] = tmp
     groups = groups.transpose(groups_transpose)
 
-    data_x = np.zeros(nb_data, dtype=np.float)
-    data_y = np.zeros(nb_data, dtype=np.float)
+    data_x = np.zeros(nb_data, dtype=np.float32)
+    data_y = np.zeros(nb_data, dtype=np.float32)
     for y in range(groups.shape[0]):
         for x in range(groups.shape[1]):
             group = groups[y, x]

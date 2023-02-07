@@ -34,7 +34,7 @@ if __name__ == '__main__':
     options = trw.train.Options(num_epochs=num_epochs)
     trainer = trw.train.TrainerV2(
         callbacks_post_training=None,
-        callbacks_pre_training=None,
+        #callbacks_pre_training=None,
     )
 
     mean = np.asarray([0.4914, 0.4822, 0.4465], dtype=np.float32)

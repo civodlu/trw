@@ -3,7 +3,7 @@ import collections
 import sqlite3
 import logging
 
-from bokeh.models.widgets import Tabs
+from bokeh.models.layouts import Tabs
 from .bokeh_ui import BokehUi
 from .normalize_data import normalize_data
 from .table_sqlite import get_table_data, get_table_number_of_rows, get_tables_name_and_role, table_create, \

@@ -212,7 +212,7 @@ class CallbackWorstSamplesByEpoch(Callback):
             logger.info('sorting done!')
 
             nb_samples = len(sorted_errors_by_sample)
-            image = np.zeros([nb_epochs, nb_samples, 3], dtype=np.float)
+            image = np.zeros([nb_epochs, nb_samples, 3], dtype=np.float32)
 
             for sample_index, (uid, loss_epochs) in enumerate(sorted_errors_by_sample):
                 for loss, epoch in loss_epochs:

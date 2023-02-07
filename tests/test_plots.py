@@ -37,7 +37,7 @@ class TestPlots(TestCase):
 
 
         values_1 = np.random.rand(d * 2)
-        values_2 = np.arange(0, d * 2, dtype=np.float) / (d * 2)
+        values_2 = np.arange(0, d * 2, dtype=np.float32) / (d * 2)
         values = [values_1, values_2]
         trw.train.plot_roc(utils.root_output, trues, values, 'ROC classifier 1 vs classifier 2', label_name=['Random classifier', 'Perfect Classifier'])
 

@@ -10,7 +10,7 @@ from ..basic_typing import Batch
 
 NUMPY_CONVERSION = {
     'float': np.float32,
-    'long': np.long,
+    'long': np.int64,
     'byte': np.int8,
 }
 

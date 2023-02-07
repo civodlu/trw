@@ -139,7 +139,7 @@ def normalize_data(options, data, table_name):
             indices_not_none = np.asarray([i for i, v in enumerate(t) if v is not None])  # consider only full row
 
             try:
-                t_np = np.asarray(t[indices_not_none], dtype=np.int)  # if e have a float, it will raise exception
+                t_np = np.asarray(t[indices_not_none], dtype=np.int64)  # if e have a float, it will raise exception
                 type_categories[name] = DataCategory.DiscreteOrdered
                 full = np.ndarray(len(t), dtype=object)  # handle the ``None`` values
                 full[indices_not_none] = t_np
@@ -160,7 +160,7 @@ def normalize_data(options, data, table_name):
                 type_categories[name] = DataCategory.Other
 
             try:
-                _ = np.asarray(t[indices_not_none], dtype=np.str)  # test data conversion
+                _ = np.asarray(t[indices_not_none], dtype=str)  # test data conversion
                 type_categories[name] = DataCategory.DiscreteUnordered
                 continue  # success, go to next item
             except ValueError:

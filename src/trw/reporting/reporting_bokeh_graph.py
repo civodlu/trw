@@ -2,7 +2,8 @@ import collections
 import time
 
 from bokeh.layouts import column, row, gridplot
-from bokeh.models import Panel, CheckboxGroup, PreText, RadioGroup, ColumnDataSource, HoverTool
+from bokeh.models import CheckboxGroup, PreText, RadioGroup, ColumnDataSource, HoverTool
+from bokeh.models import TabPanel as Panel
 from bokeh.palettes import Category20
 from bokeh.plotting import figure
 from ..utils import get_batch_n, safe_lookup, len_batch
