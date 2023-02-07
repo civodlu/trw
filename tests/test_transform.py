@@ -458,9 +458,9 @@ class TestTransform(TestCase):
 
     def test_cast_numpy(self):
         batch = {
-            'float': np.zeros([10], dtype=np.long),
-            'long': np.zeros([10], dtype=np.long),
-            'byte': np.zeros([10], dtype=np.long),
+            'float': np.zeros([10], dtype=np.int64),
+            'long': np.zeros([10], dtype=np.int64),
+            'byte': np.zeros([10], dtype=np.int64),
         }
 
         transforms = [
@@ -472,7 +472,7 @@ class TestTransform(TestCase):
 
         batch_tfm = tfm(batch)
         assert batch_tfm['float'].dtype == np.float32
-        assert batch_tfm['long'].dtype == np.long
+        assert batch_tfm['long'].dtype == np.int64
         assert batch_tfm['byte'].dtype == np.byte
 
     def test_cast_torch(self):

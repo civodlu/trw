@@ -4,8 +4,9 @@ import tempfile
 from unittest import TestCase
 import trw.reporting
 import numpy as np
-from bokeh.models import Div, DataTable, Panel, ImageURL, Rect
-from bokeh.plotting import Figure
+from bokeh.models import Div, DataTable, ImageURL, Rect
+from bokeh.models import TabPanel as Panel
+from bokeh.plotting import figure as Figure
 
 from trw.reporting import TableStream, export_sample
 from trw.reporting.bokeh_ui import BokehUi

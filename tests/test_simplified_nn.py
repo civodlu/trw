@@ -140,7 +140,7 @@ class TestSimplifiedNN(TestCase):
         network = trw.simple_layers.compile_nn([n])
         
         inputs = {
-            'i': torch.from_numpy(np.asarray([0, 1, 2, 3], dtype=np.int)).view([4, 1])
+            'i': torch.from_numpy(np.asarray([0, 1, 2, 3], dtype=np.int32)).view([4, 1])
         }
         outputs = network(inputs)
         assert len(outputs) == 1

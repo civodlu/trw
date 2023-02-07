@@ -67,7 +67,7 @@ class TestUpsample(TestCase):
                 [[[7, 8, 9],
                  [10, 11, 12]]],
             ],
-            dtype=np.int)
+            dtype=np.int32)
 
         upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[4, 6])
         assert upsampled_a.shape == (2, 1, 4, 6)
@@ -87,7 +87,7 @@ class TestUpsample(TestCase):
 
     def test_upsample_int_1d(self):
         a = np.asarray(
-            [[[1, 2]]], dtype=np.int)
+            [[[1, 2]]], dtype=np.int32)
 
         upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[4])
         assert upsampled_a.shape == (1, 1, 4)
@@ -107,7 +107,7 @@ class TestUpsample(TestCase):
                  [[6, 7],
                   [8, 9]]],
             ]],
-            dtype=np.int)
+            dtype=np.int32)
 
         upsampled_a = trw.utils.upsample(torch.from_numpy(a), size=[2, 4, 6])
         assert upsampled_a.shape == (1, 1, 2, 4, 6)
