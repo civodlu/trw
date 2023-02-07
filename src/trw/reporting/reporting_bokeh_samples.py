@@ -547,7 +547,7 @@ def render_data_frame(fig_title, fig_name, options, data_source, data, groups, d
             )
 
     elif icon.value == 'Icon':
-        fig.oval(x=data_x_name, y=data_y_name, width=options.image_size, height=options.image_size, width_units='data',
+        fig.ellipse(x=data_x_name, y=data_y_name, width=options.image_size, height=options.image_size, width_units='data',
                  height_units='data', source=data_source, fill_color=fill_color)
     elif icon.value == 'Dot':
         fig.circle(x=data_x_name, y=data_y_name, size=5, source=data_source, line_color='black', fill_color=fill_color)
