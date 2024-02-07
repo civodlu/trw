@@ -26,6 +26,3 @@ http://droettboom.com/blog/2015/11/20/gdb-python-extensions/
 https://devguide.python.org/gdb/
 https://codewithoutrules.com/2017/08/16/concurrency-python/
 
-
-Fixes:
-- BUG: aggregation of gradient issues when part of a model is frozen
